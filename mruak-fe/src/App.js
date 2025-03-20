@@ -41,6 +41,15 @@ function App() {
                         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard"/> : <Login/>}/>
                         {/*<Route path="/" element={<Login/>}/>*/}
                         {/*<Route path="/dashboard" element={isAuthenticated ? <DashboardRe/> : <Navigate to="/"/>}/>*/}
+
+                        {/* Customer Pages */}
+                        <Route path="/" element={<CustomerHome />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/signup" element={<SignupPage />} />
+
+                        {/* Admin Pages */}
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                        <Route path="/admin/add-user" element={<AddUser />} />
                     </Routes>
                 </div>
             </div>
