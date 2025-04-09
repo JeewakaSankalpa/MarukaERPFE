@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import Colors from "../resources/Colors";
-import api from "../services/api"; // Ensure this is correctly set up
+// import api from "../services/api"; // Ensure this is correctly set up
 
 const Login = () => {
     const [show, setShow] = useState(true);
@@ -22,36 +22,36 @@ const Login = () => {
 
         const requestData = { username, password };
 
-        try {
-            const response = await api.post("/user/login", requestData);
+        // try {
+        //     const response = await api.post("/user/login", requestData);
 
-            if (response.data && response.data.token) {
-                const userType = response.data.role; // Assuming role is sent in response
+        //     if (response.data && response.data.token) {
+        //         const userType = response.data.role; // Assuming role is sent in response
 
-                localStorage.setItem("firstName", response.data.firstName);
-                localStorage.setItem("lastName", response.data.lastName);
-                localStorage.setItem("username", username);
-                localStorage.setItem("userType", userType); // ✅ Store user role
+        //         localStorage.setItem("firstName", response.data.firstName);
+        //         localStorage.setItem("lastName", response.data.lastName);
+        //         localStorage.setItem("username", username);
+        //         localStorage.setItem("userType", userType); // ✅ Store user role
 
-                login(response.data.token);
-                setShow(false);
+        //         login(response.data.token);
+        //         setShow(false);
 
-                // ✅ Redirect based on user type
-                if (userType === "c1") {
-                    navigate("/CustomerDashboard");
-                } else if (userType === "a1") {
-                    navigate("/AdminDashboard");
-                } else {
-                    setError("Invalid user type. Contact support.");
-                }
-            } else {
-                throw new Error("Invalid login credentials");
-            }
-        } catch (error) {
-            setError(error.response?.data?.message || "Login failed. Please try again.");
-        } finally {
-            setLoading(false);
-        }
+        //         // ✅ Redirect based on user type
+        //         if (userType === "c1") {
+        //             navigate("/CustomerDashboard");
+        //         } else if (userType === "a1") {
+        //             navigate("/AdminDashboard");
+        //         } else {
+        //             setError("Invalid user type. Contact support.");
+        //         }
+        //     } else {
+        //         throw new Error("Invalid login credentials");
+        //     }
+        // } catch (error) {
+        //     setError(error.response?.data?.message || "Login failed. Please try again.");
+        // } finally {
+        //     setLoading(false);
+        // }
     };
 
     return (

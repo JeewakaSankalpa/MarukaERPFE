@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 // import "../styles/Dashboard.css";
-import "../styles/DashboardRe.css";
+// import "../styles/DashboardRe.css";
 import {
     FaBox,
     FaClipboardList,
@@ -18,10 +18,10 @@ import {
 import { Navigate, useNavigate } from "react-router-dom";
 import { Button, Container } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+// import api from "../services/api";
 import Images from "../resources/Images";
 
-function DashboardRe({ onLogout }) {
+function AdminDashboard({ onLogout }) {
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -41,17 +41,17 @@ function DashboardRe({ onLogout }) {
         return () => clearInterval(interval);
     }, []);
 
-    const handleLogout = async () => {
-        try {
-            await api.post("/user/logout", {
-                username: localStorage.getItem("username"),
-            });
-            logout();
-            navigate("/");
-        } catch (error) {
-            console.error("Logout failed:", error);
-        }
-    };
+    // const handleLogout = async () => {
+    //     try {
+    //         await api.post("/user/logout", {
+    //             username: localStorage.getItem("username"),
+    //         });
+    //         logout();
+    //         navigate("/");
+    //     } catch (error) {
+    //         console.error("Logout failed:", error);
+    //     }
+    // };
 
     const menuItems = [
         {
@@ -227,32 +227,32 @@ function DashboardRe({ onLogout }) {
     const [lowStockProducts, setLowStockProducts] = useState([]);
     const [expiringSoon, setExpiringSoon] = useState([]);
 
-    useEffect(() => {
-        fetchLowStockProducts(user.store);
-        fetchExpiringSoon(user.store);
-    }, [user.store]);
+    // useEffect(() => {
+    //     fetchLowStockProducts(user.store);
+    //     fetchExpiringSoon(user.store);
+    // }, [user.store]);
 
-    const fetchLowStockProducts = async (locationId) => {
-        try {
-            const response = await api.get('/inventory/low-stock', {
-                params: { locationId }
-            });
-            setLowStockProducts(response.data);
-        } catch (error) {
-            console.error('Failed to fetch low stock products:', error);
-        }
-    };
+    // const fetchLowStockProducts = async (locationId) => {
+    //     try {
+    //         const response = await api.get('/inventory/low-stock', {
+    //             params: { locationId }
+    //         });
+    //         setLowStockProducts(response.data);
+    //     } catch (error) {
+    //         console.error('Failed to fetch low stock products:', error);
+    //     }
+    // };
 
-    const fetchExpiringSoon = async (locationId) => {
-        try {
-            const response = await api.get('/inventory/expiring-soon', {
-                params: { locationId }
-            });
-            setExpiringSoon(response.data);
-        } catch (error) {
-            console.error('Failed to fetch expiring soon products:', error);
-        }
-    };
+    // const fetchExpiringSoon = async (locationId) => {
+    //     try {
+    //         const response = await api.get('/inventory/expiring-soon', {
+    //             params: { locationId }
+    //         });
+    //         setExpiringSoon(response.data);
+    //     } catch (error) {
+    //         console.error('Failed to fetch expiring soon products:', error);
+    //     }
+    // };
 
     const [windowSize, setWindowSize] = useState({
         width: window.innerWidth,
@@ -260,7 +260,7 @@ function DashboardRe({ onLogout }) {
     });
 
     useEffect(() => {
-        const handleResize = () => { 
+        const handleResize = () => {
             setWindowSize({
                 width: window.innerWidth,
                 height: window.innerHeight,
@@ -422,4 +422,4 @@ function DashboardRe({ onLogout }) {
     // );
 }
 
-export default DashboardRe;
+export default AdminDashboard;
