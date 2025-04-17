@@ -20,6 +20,8 @@ const Login = () => {
         setLoading(true);
         setError(null);
 
+        // navigate("../Dashboard");
+
         const requestData = { username, password };
 
         // try {

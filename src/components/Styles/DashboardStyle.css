@@ -1,0 +1,198 @@
+/* Dashboard Container */
+.header-container {
+    /*display: flex;*/
+    /*flex-direction: column;*/
+    /* height: 100vh;*/
+    width: 100vw;
+     /*width: 100%; */
+    font-family: Arial, sans-serif;
+
+    /*display: flex;*/
+    /*flex-direction: column;*/
+}
+
+/* Dashboard Header */
+.dashboard-header {
+     /*width: 100vw;*/
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    /*background-color: #007bff;*/
+    background-color: #ADE8F4;
+    /*color: #fff;*/
+    color: #000000;
+}
+
+.user-info {
+    display: flex;
+    gap: 20px;
+}
+
+.fullDashboard {
+    display: flex;
+    grid-template-columns: 1fr 3fr 1fr;
+    /* margin-top: 20px; */
+    /*gap: 20px;*/
+    /*padding: 20px;*/
+    /*display: flex;*/
+    flex-direction: column;
+}
+
+/* Main Menu */
+/*.dashboard-menu {*/
+/*    display: flex;*/
+/*    flex-direction: column;*/
+/*    width: 100px;*/
+/*    background-color: #f8f9fa;*/
+/*    padding: 20px;*/
+/*}*/
+.lowerStock-container {
+    background-color: #f8f9fa;
+}
+
+.expiring-lowStock-container {
+    border-radius: 12px; /* Rounded corners */
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.2); /* 3D shadow effect */
+    transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease; /* Smooth hover effect */
+    /*border: 0px solid black;*/
+    padding: 20px;
+    /*background-color: #FFCDD2;*/
+    background-color: #FFEBEE;
+    width: 20vw;
+    margin-top: 20px;
+}
+
+.expiring-lowStock-container:hover {
+    background-color: #FFCDD2; /* Darker blue on hover */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.3); /* Enhanced shadow on hover */
+    transform: translateY(-3px); /* Slight lift effect */
+}
+
+/* Blinking effect for the warning mark */
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+.warning-mark {
+    font-size: 2rem; /* Large size for emphasis */
+    /*color: #ffcc00; !* Warning yellow *!*/
+    color: #FF0000;
+    animation: blink 1s infinite; /* Blink every second */
+}
+
+.warning-text {
+    font-size: 1.2rem; /* Adjust size as needed */
+    color: #FF0000;
+}
+
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    width: 60vw;
+    align-items: center;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+    /*background-color: #f8f9fa;*/
+    /*justify-content: space-around;*/
+}
+
+.fullMenuDesign {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns */
+    gap: 10px;
+    place-items: center;
+}
+
+.menu-item {
+    /*position: relative;*/
+    /*padding: 15px;*/
+    margin-top: 15px;
+    background-color: #3f8efc; /* A moderate shade of blue */
+    /*background-color: #ADE8F4;*/
+    color: #fff;
+    cursor: pointer;
+    border-radius: 12px; /* Rounded corners */
+    font-weight: bold;
+    width: 15vw;
+    height: 7.5vw;
+    /*width: 10vw;*/
+    /*height: 5vw;*/
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.2); /* 3D shadow effect */
+    transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease; /* Smooth hover effect */
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+    /*font-size: 1.2rem;*/
+    font-size: clamp(8px, 1.5vw, 20px);
+}
+
+/* Hover Effect */
+.menu-item:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.3); /* Enhanced shadow on hover */
+    transform: translateY(-3px); /* Slight lift effect */
+}
+
+.submenu {
+    display: flex;
+    position: fixed; /* Position the submenu absolutely */
+    right: -150px; /* Adjust the left position to move it to the left of the title */
+    top: 0; /* Align to the top */
+    width: 150px; /* Set a fixed width for the submenu */
+    z-index: 10; /* Ensure it appears on top */
+    background-color: #007bff;
+    /*background-color: #ADE8F4;!* Blue shade background color *!*/
+    border-radius: 4px;
+    padding: 10px;
+    /*font-size: 1rem;*/
+}
+
+.submenu-active {
+    display: block;
+}
+
+.submenu-item {
+    padding: 10px;
+    color: #fff; /* White text color */
+    background-color: #007bff; /* Blue shade background color */
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    margin-bottom: 5px; /* Space between submenu items */
+    font-size: 0.8rem;
+;
+}
+
+.submenu-item:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+/* Text inside menu-item */
+.menu-title {
+    /*font-size: 1.2rem;*/
+    font-size: 1rem; /* Adjust font size */
+    font-weight: bold;
+}
+
+.menu-icon-container {
+    margin-bottom: 10px; /* Spacing between icon and text */
+}
+
+.menu-icon {
+    /*font-size: 4rem;*/
+    font-size: 1.5rem; /* Larger icon size */
+    color: #fff;
+}
+
+.table-lines {
+    border: 1px solid #3f8efc;
+    padding: 8px;
+}
+

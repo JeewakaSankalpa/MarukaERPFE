@@ -17,13 +17,15 @@ const SideBarForDashboard = () => {
   return (
     <div
       style={{
-        width: "16rem", // 64
+        // width: "16rem", // 64
+        width: "20vw",
         height: "100vh",
         backgroundColor: "white",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
+        // justifyContent: "space-between",
+        justifyContent: "center",
       }}
     >
       <div>

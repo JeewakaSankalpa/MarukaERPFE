@@ -20,11 +20,11 @@ import { Button, Container } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext";
 // import api from "../services/api";
 import Images from "../resources/Images";
-import Sidebar from "./SideBar";
-import ProjectCard from "./ProjectCard";
-import MenuCard from "./MenuCard";
-import SideBarForDashboard from "./SideBarForDashboard";
-import Header from "./Header";
+import Sidebar from "./ReusableComponents/SideBar";
+import ProjectCard from "./ReusableComponents/ProjectCard";
+import MenuCard from "./ReusableComponents/MenuCard";
+import SideBarForDashboard from "./ReusableComponents/SideBarForDashboard";
+import Header from "./ReusableComponents/Header";
 
 function Dashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -379,90 +379,102 @@ function Dashboard({ onLogout }) {
 
   return (
     <div className="fullDashboard">
-        <Header/>
-      {/* <Sidebar /> */}
-      {/* <Header/> */}
-      <SideBarForDashboard />
-      {/* <Header/> */}
+      <div style={{ height: "10vh", width: "100vw" }}>
+        <Header />
+      </div>
 
-      <Container fluid className="dashboard-container">
-        <Container className="fullMenuDesign">
-          {menuItems.map((item, index) => (
-            <div
-              key={index}
-              className="menu-item"
-              onMouseEnter={() => setActiveSection(index)}
-              onMouseLeave={() => setActiveSection(null)}
-            >
-              <div className="menu-title">
-                {item.title}
-                <div className="menu-icon-container">{item.icon}</div>
-              </div>
+      <div style={{display: "flex"}}>
+        <SideBarForDashboard />
+
+        <Container fluid className="dashboard-container">
+          <Container className="fullMenuDesign">
+            {menuItems.map((item, index) => (
               <div
-                className={`submenu ${
-                  activeSection === index ? "submenu-active" : ""
-                }`}
+                key={index}
+                className="menu-item"
+                onMouseEnter={() => setActiveSection(index)}
+                onMouseLeave={() => setActiveSection(null)}
               >
-                {item.subItems.map((subItem, subIndex) => (
-                  <div
-                    key={subIndex}
-                    className="submenu-item"
-                    onClick={() => navigate(subItem.path)}
-                  >
-                    {subItem.icon} {subItem.name}
-                  </div>
+                <div className="menu-title">
+                  {item.title}
+                  <div className="menu-icon-container">{item.icon}</div>
+                </div>
+                <div
+                  className={`submenu ${
+                    activeSection === index ? "submenu-active" : ""
+                  }`}
+                >
+                  {item.subItems.map((subItem, subIndex) => (
+                    <div
+                      key={subIndex}
+                      className="submenu-item"
+                      onClick={() => navigate(subItem.path)}
+                    >
+                      {subItem.icon} {subItem.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </Container>
+        </Container>
+
+        <Container>
+          <Container>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                padding: "24px",
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  marginBottom: "16px",
+                }}
+              >
+                Reporting
+              </h1>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                {projects.map((project, index) => (
+                  <ProjectCard key={index} {...project} />
                 ))}
               </div>
             </div>
-          ))}
-        </Container>
-      </Container>
-
-      <Container >
-      <Container >
-        <div
-          style={{ display: "flex", flexDirection: "column", padding: "24px" }}
-        >
-          <h1
-            style={{
-              fontSize: "24px",
-              fontWeight: "700",
-              marginBottom: "16px",
-            }}
-          >
-            Reporting
-          </h1>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-            {projects.map((project, index) => (
-              <ProjectCard key={index} {...project} />
-            ))}
-          </div>
-        </div>
-        </Container>
+          </Container>
         </Container>
 
-        <Container >
-      <Container >
-        <div
-          style={{ display: "flex", flexDirection: "column", padding: "24px" }}
-        >
-          <h1
-            style={{
-              fontSize: "24px",
-              fontWeight: "700",
-              marginBottom: "16px",
-            }}
-          >
-            Reporting
-          </h1>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-            {MenuList.map((project, index) => (
-              <MenuCard key={index} {...project} />
-            ))}
-          </div>
-        </div>
-        </Container>
-        </Container>
+        {/* <Container>
+          <Container>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                padding: "24px",
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  marginBottom: "16px",
+                }}
+              >
+                Reporting
+              </h1>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                {MenuList.map((project, index) => (
+                  <MenuCard key={index} {...project} />
+                ))}
+              </div>
+            </div>
+          </Container>
+        </Container> */}
+      </div>
+
+      {/* <Sidebar /> */}
     </div>
   );
 }
