@@ -125,10 +125,24 @@
 // ======================================
 
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
+import { FaClock, FaUser } from "react-icons/fa";
+import { FaStore } from "react-icons/fa6";
 
 const Header = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  const [user, setUser] = useState({
+    firstName: localStorage.getItem("firstName") || "Guest",
+    lastName: localStorage.getItem("lastName") || "",
+    store: localStorage.getItem("store") || "",
+  });
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <header
       style={{
@@ -138,7 +152,7 @@ const Header = () => {
         padding: "1rem 1.5rem",
         // borderBottom: "1px solid #e5e7eb",
         backgroundColor: "#ffffff",
-        height: "4rem",
+        height: "2rem",
         position: "sticky",
         top: 0,
         zIndex: 10,
@@ -167,7 +181,7 @@ const Header = () => {
       </div>
 
       {/* Center Section - Search */}
-      <div style={{ flex: 1, maxWidth: "400px", marginLeft: "2rem", marginRight: "2rem" }}>
+      {/* <div style={{ flex: 1, maxWidth: "400px", marginLeft: "2rem", marginRight: "2rem" }}>
         <input
           type="text"
           placeholder="Search ..."
@@ -180,6 +194,20 @@ const Header = () => {
             fontSize: "0.875rem",
           }}
         />
+      </div> */}
+      <div style={{ flex: 1, maxWidth: "400px", marginLeft: "2rem", marginRight: "2rem" }}>
+      <div className="user-info">
+          {/* <FaUser/>{" "}
+          <span>
+            {user.firstName} {user.lastName}
+          </span>
+          <FaStore/> <span>{user.store}</span> */}
+          <FaClock/>{" "}
+          <span>
+            {currentTime.toLocaleTimeString()}&nbsp;&nbsp;&nbsp;
+            {new Date().toLocaleDateString()}
+          </span>
+        </div>
       </div>
 
       {/* Right Section - Notifications & Profile */}
@@ -222,7 +250,7 @@ const Header = () => {
                 color: "#1f2937",
               }}
             >
-              Augusta Ryan
+              {user.firstName} {user.lastName}
             </h3>
             <p
               style={{
@@ -231,7 +259,7 @@ const Header = () => {
                 margin: 0,
               }}
             >
-              Director
+              {user.firstName}
             </p>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import React from "react";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const MenuCard = ({ title, icon, path }) => {
+const MenuCard = ({ title, icon, path}) => {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
@@ -14,7 +14,8 @@ const MenuCard = ({ title, icon, path }) => {
     <div
       onClick={handleCardClick}
       style={{
-        backgroundColor: "#ffffff",
+        // backgroundColor: "#ffffff",
+        backgroundColor: "#118ab2",
         padding: "16px",
         borderRadius: "12px",
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
@@ -29,7 +30,7 @@ const MenuCard = ({ title, icon, path }) => {
         style={{
           width: "40px",
           height: "40px",
-          backgroundColor: "#e5e7eb", // gray-200
+          backgroundColor: "#ffffff", // gray-200
           borderRadius: "50%",
           display: "flex",
           alignItems: "center",
@@ -39,10 +40,10 @@ const MenuCard = ({ title, icon, path }) => {
       >
         {icon}
       </div>
-      <h3 style={{ fontWeight: "600", fontSize: "18px", margin: "0 0 4px 0" }}>
+      <h3 style={{ fontWeight: "700", fontSize: "18px", margin: "0 0 4px 0", color: "#ffffff"}}>
         {title}
       </h3>
-      
+
       <div
         style={{
           width: "100%",
@@ -55,7 +56,7 @@ const MenuCard = ({ title, icon, path }) => {
         <div
           style={{
             height: "100%",
-            backgroundColor: "#3b82f6", // blue-500
+            backgroundColor: "#ffc107", // blue-500
             width: "100%",
           }}
         ></div>

@@ -12,8 +12,11 @@ import {
 } from "lucide-react";
 
 import { FaHome, FaUser, FaCog, FaChartBar } from "react-icons/fa";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const SideBarForDashboard = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   return (
     <div
       style={{
@@ -82,14 +85,96 @@ const SideBarForDashboard = () => {
           <NavItem icon={<Map size={20} />} label="Roadmap" />
           <NavItem icon={<Settings size={20} />} label="Setting" /> */}
 
-          <NavItem icon={<FaHome size={20} />} label="Home" />
-          <NavItem icon={<LayoutDashboard size={20} />} label="Admin" />
-          <NavItem icon={<Calendar size={20} />} label="Inventory" />
-          <NavItem icon={<FaUser size={20} />} label="Employee" active />
-          <NavItem icon={<Users size={20} />} label="Customer" />
-          <NavItem icon={<MessageSquare size={20} />} label="Projects" />
-          <NavItem icon={<FaChartBar size={20} />} label="Analytics" />
-          <NavItem icon={<Settings size={20} />} label="Setting" />
+          <NavItem
+            icon={<FaHome size={20} />}
+            label="Home"
+            path="/"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+          <NavItem
+            icon={<LayoutDashboard size={20} />}
+            label="Admin"
+            path="/"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+          <NavItem
+            icon={<Calendar size={20} />}
+            label="Inventory"
+            path="/inventory/dashboard"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+          <NavItem
+            icon={<FaUser size={20} />}
+            label="Employee"
+            path="/employee/dashboard"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+          <NavItem
+            icon={<Users size={20} />}
+            label="Customer"
+            path="/customer/dashboard"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+          <NavItem
+            icon={<MessageSquare size={20} />}
+            label="Projects"
+            path="/"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+          <NavItem
+            icon={<FaChartBar size={20} />}
+            label="Analytics"
+            path="/"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+          <NavItem
+            icon={<Settings size={20} />}
+            label="Setting"
+            path="/"
+            activePath={location.pathname}
+            navigate={navigate}
+          />
+
+
+{/* <NavItem
+            icon={<FaHome size={20} />}
+            label="Home"
+          />
+          <NavItem
+            icon={<LayoutDashboard size={20} />}
+            label="Admin"
+          />
+          <NavItem
+            icon={<Calendar size={20} />}
+            label="Inventory"
+          />
+          <NavItem
+            icon={<FaUser size={20} />}
+            label="Employee"
+          />
+          <NavItem
+            icon={<Users size={20} />}
+            label="Customer"
+          />
+          <NavItem
+            icon={<MessageSquare size={20} />}
+            label="Projects"
+          />
+          <NavItem
+            icon={<FaChartBar size={20} />}
+            label="Analytics"
+          />
+          <NavItem
+            icon={<Settings size={20} />}
+            label="Setting"
+          /> */}
         </nav>
       </div>
 
@@ -106,6 +191,7 @@ const SideBarForDashboard = () => {
             width: "100%",
             cursor: "pointer",
           }}
+          
           onMouseOver={(e) =>
             (e.currentTarget.style.backgroundColor = "#fef2f2")
           }
@@ -121,7 +207,7 @@ const SideBarForDashboard = () => {
   );
 };
 
-const NavItem = ({ icon, label, active }) => {
+const NavItem = ({ icon, label, active, activePath, navigate, path }) => {
   const baseStyle = {
     display: "flex",
     alignItems: "center",
@@ -139,6 +225,7 @@ const NavItem = ({ icon, label, active }) => {
   return (
     <button
       style={baseStyle}
+      onClick={() => navigate(path)}
       onMouseOver={(e) =>
         !active && (e.currentTarget.style.backgroundColor = "#f3f4f6")
       }
