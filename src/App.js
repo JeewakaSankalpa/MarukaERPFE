@@ -10,6 +10,11 @@ import CustomerDashboard from './components/Customer/CustomerDashboard';
 import EmployerDashboard from './components/Employee/EmployeeDashboard';
 import EmployerCreate from './components/Employee/EmployeeCreate';
 import InventoryDashboard from './components/Inventory/InventoryDashboard';
+import InventoryAdd from './components/Inventory/InventoryAdd';
+import InventoryView from './components/Inventory/InventoryView';
+import CustomerCreate from './components/Customer/CustomerCreate';
+import CustomerView from './components/Customer/CustomerView';
+import ProjectDashboard from './components/Project/ProjectDashboard';
 
 // import Sidebar from './components/Sidebar';
 
@@ -45,7 +50,6 @@ function App() {
                     <Routes>
                         {/* <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard"/> : <Login/>}/> */}
                         <Route path="/" element={<Dashboard />} />
-                        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
 
                         <Route path="/employee/dashboard" element={<EmployerDashboard />} />
                         <Route path="/employee/create" element={<EmployerCreate mode="create"/>} />
@@ -53,6 +57,16 @@ function App() {
                         <Route path="/employee/search" element={<EmployerCreate />} />
 
                         <Route path="/inventory/dashboard" element={<InventoryDashboard />} />
+                        <Route path="/inventory/add" element={<InventoryAdd />} />
+                        <Route path="/inventory/view" element={<InventoryView />} />
+
+                        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+                        <Route path="/customer/create" element={<CustomerCreate />} />
+                        <Route path="/customer/search" element={<CustomerView />} />
+
+                        <Route path="/project/dashboard" element={<ProjectDashboard />} />
+                        <Route path="/project/view" element={<ProjectDashboard />} />
+                        <Route path="/project/current" element={<ProjectDashboard />} />
                         {/*<Route path="/" element={<Login/>}/>*/}
                         {/*<Route path="/dashboard" element={isAuthenticated ? <DashboardRe/> : <Navigate to="/"/>}/>*/}
                     </Routes>

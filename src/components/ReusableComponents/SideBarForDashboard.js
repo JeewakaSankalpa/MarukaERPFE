@@ -13,10 +13,27 @@ import {
 
 import { FaHome, FaUser, FaCog, FaChartBar } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const SideBarForDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    console.error("Logout failed:");
+    try {
+      // await api.post("/user/logout", {
+      //   username: localStorage.getItem("username"),
+      // });
+      logout();
+      navigate("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <div
       style={{
@@ -123,7 +140,7 @@ const SideBarForDashboard = () => {
           <NavItem
             icon={<MessageSquare size={20} />}
             label="Projects"
-            path="/"
+            path="/project/dashboard"
             activePath={location.pathname}
             navigate={navigate}
           />
@@ -198,6 +215,8 @@ const SideBarForDashboard = () => {
           onMouseOut={(e) =>
             (e.currentTarget.style.backgroundColor = "transparent")
           }
+
+          onClick={handleLogout}
         >
           <LogOut size={20} />
           Logout

@@ -6,6 +6,8 @@
     "axios": "^1.8.4",
     "bootstrap": "^5.3.3",
     "cra-template": "1.2.0",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.487.0",
     "mruak-fe": "file:",
     "react": "^19.0.0",
