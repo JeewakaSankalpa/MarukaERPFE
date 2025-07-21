@@ -10,6 +10,11 @@ const Colors = {
     dark: "#343a40",
     white: "#ffffff",
     black: "#000000",
+
+    sideBar: "#1e3a8a",
+    loginBackground1: "#e0f7fa",
+    loginBackground2: "#b2ebf2",
+    mainBlue: "#007bff",
 };
 
 export default Colors;

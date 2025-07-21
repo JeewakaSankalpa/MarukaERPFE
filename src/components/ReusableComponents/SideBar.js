@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { FaHome, FaUser, FaCog, FaChartBar } from "react-icons/fa";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Sidebar = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState(null);
 
   const menuItems = [
@@ -9,24 +12,28 @@ const Sidebar = () => {
       id: 1,
       icon: <FaHome />,
       title: "Dashboard",
+      route: "/",
       subMenu: ["Overview", "Stats", "Reports"],
     },
     {
       id: 2,
       icon: <FaUser />,
       title: "Users",
+      route: "/",
       subMenu: ["Add User", "Manage Users", "Profile"],
     },
     {
       id: 3,
       icon: <FaCog />,
       title: "Settings",
+      route: "/",
       subMenu: ["General", "Security", "Notifications"],
     },
     {
       id: 4,
       icon: <FaChartBar />,
       title: "Analytics",
+      route: "/",
       subMenu: ["Traffic", "Sales", "Performance"],
     },
   ];

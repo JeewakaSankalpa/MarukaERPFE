@@ -25,6 +25,8 @@ import ProjectCard from "./ReusableComponents/ProjectCard";
 import MenuCard from "./ReusableComponents/MenuCard";
 import SideBarForDashboard from "./ReusableComponents/SideBarForDashboard";
 import Header from "./ReusableComponents/Header";
+import NewSideBar from "./ReusableComponents/NewSideBar";
+import Colors from "../resources/Colors";
 
 function Dashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -378,104 +380,113 @@ function Dashboard({ onLogout }) {
   }, []);
 
   return (
-    <div className="fullDashboard">
-      <div style={{ height: "10vh", width: "100vw" }}>
-        <Header />
+    <div style={styles.mainView}>
+      {/* <Header /> */}
+      <div style={styles.afterHeader}>
+        <div style={styles.sidebar}>
+          {/* <NewSideBar /> */}
+          {/* <SideBarForDashboard /> */}
+        </div>
+        <div style={styles.content}>
+          
+        </div>
       </div>
-
-      <div style={{display: "flex"}}>
-        <SideBarForDashboard />
-
-        <Container fluid className="dashboard-container">
-          <Container className="fullMenuDesign">
-            {menuItems.map((item, index) => (
-              <div
-                key={index}
-                className="menu-item"
-                onMouseEnter={() => setActiveSection(index)}
-                onMouseLeave={() => setActiveSection(null)}
-              >
-                <div className="menu-title">
-                  {item.title}
-                  <div className="menu-icon-container">{item.icon}</div>
-                </div>
-                <div
-                  className={`submenu ${
-                    activeSection === index ? "submenu-active" : ""
-                  }`}
-                >
-                  {item.subItems.map((subItem, subIndex) => (
-                    <div
-                      key={subIndex}
-                      className="submenu-item"
-                      onClick={() => navigate(subItem.path)}
-                    >
-                      {subItem.icon} {subItem.name}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </Container>
-        </Container>
-
-        <Container>
-          <Container>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                padding: "24px",
-              }}
-            >
-              <h1
-                style={{
-                  fontSize: "24px",
-                  fontWeight: "700",
-                  marginBottom: "16px",
-                }}
-              >
-                Reporting
-              </h1>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-                {projects.map((project, index) => (
-                  <ProjectCard key={index} {...project} />
-                ))}
-              </div>
-            </div>
-          </Container>
-        </Container>
-
-        {/* <Container>
-          <Container>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                padding: "24px",
-              }}
-            >
-              <h1
-                style={{
-                  fontSize: "24px",
-                  fontWeight: "700",
-                  marginBottom: "16px",
-                }}
-              >
-                Reporting
-              </h1>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-                {MenuList.map((project, index) => (
-                  <MenuCard key={index} {...project} />
-                ))}
-              </div>
-            </div>
-          </Container>
-        </Container> */}
-      </div>
-
-      {/* <Sidebar /> */}
     </div>
+
+    // <div
+    //   // className="fullDashboard"
+    //   style={styles.main}
+    // >
+    //   <div style={{ height: "10vh", width: "100vw" }}>
+    //     <Header />
+    //   </div>
+
+    //   <div style={{ display: "flex" }}>
+    //     {/* <SideBarForDashboard /> */}
+
+    //     <NewSideBar />
+
+    //     <Container fluid className="dashboard-container">
+    //       <Container className="fullMenuDesign">
+    //         {menuItems.map((item, index) => (
+    //           <div
+    //             key={index}
+    //             className="menu-item"
+    //             onMouseEnter={() => setActiveSection(index)}
+    //             onMouseLeave={() => setActiveSection(null)}
+    //           >
+    //             <div className="menu-title">
+    //               {item.title}
+    //               <div className="menu-icon-container">{item.icon}</div>
+    //             </div>
+    //             <div
+    //               className={`submenu ${
+    //                 activeSection === index ? "submenu-active" : ""
+    //               }`}
+    //             >
+    //               {item.subItems.map((subItem, subIndex) => (
+    //                 <div
+    //                   key={subIndex}
+    //                   className="submenu-item"
+    //                   onClick={() => navigate(subItem.path)}
+    //                 >
+    //                   {subItem.icon} {subItem.name}
+    //                 </div>
+    //               ))}
+    //             </div>
+    //           </div>
+    //         ))}
+    //       </Container>
+    //     </Container>
+
+    //     <Container>
+    //       <Container>
+    //         <div
+    //           style={{
+    //             display: "flex",
+    //             flexDirection: "column",
+    //             padding: "24px",
+    //           }}
+    //         >
+    //           <h1
+    //             style={{
+    //               fontSize: "24px",
+    //               fontWeight: "700",
+    //               marginBottom: "16px",
+    //             }}
+    //           >
+    //             Reporting
+    //           </h1>
+    //           <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+    //             {projects.map((project, index) => (
+    //               <ProjectCard key={index} {...project} />
+    //             ))}
+    //           </div>
+    //         </div>
+    //       </Container>
+    //     </Container>
+    //   </div>
+    // </div>
   );
 }
+
+const styles = {
+  // main: {
+  //   display: "flex",
+  //   height: "100vh",
+  //   // gridtTemplateColumns: "1fr 3fr 1fr",
+  //   // flexDirection: "column",
+  // },
+  mainView: {
+    // display: "flex",
+    width: "100vw",
+  },
+  afterHeader: {
+    display: "flex",
+    height: "100vh",
+  },
+  sidebar: {
+    backgroundColor: `${Colors.error}`,
+  },
+};
 export default Dashboard;
