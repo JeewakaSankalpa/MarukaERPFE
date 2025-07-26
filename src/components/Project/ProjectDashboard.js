@@ -8,7 +8,7 @@ import MenuCard from "../ReusableComponents/MenuCard";
 import { Container } from "react-bootstrap";
 import { Calendar } from "lucide-react";
 
-const InventoryDashboard = () => {
+const ProjectDashboard = () => {
   const navigate = useNavigate(); // ✅ Hook
 
   const handleCreateEmployer = () => {
@@ -21,34 +21,28 @@ const InventoryDashboard = () => {
 
   const MenuList = [
     {
-      title: "+ Add Inventory",
-      path: "/inventory/add",
+      title: "+ Create New Project",
+      path: "/Inventory/add",
       icon: <FaUserPlus />,
     },
     {
-      title: "View Inventory",
-      path: "/inventory/view",
+      title: "All Projects",
+      path: "/employee/view",
       // icon: <Calender />,
       icon: <Calendar size={20} />,
     },
     {
-        title: "Returns for SUpplier",
+        title: "Ongoing Project",
         path: "/employee/view",
         // icon: <Calender />,
         icon: <Calendar size={20} />,
       },
       {
-        title: "Allocate Goods for Projects",
+        title: "Inventory Request",
         path: "/employee/view",
         // icon: <Calender />,
         icon: <Calendar size={20} />,
-      },
-      {
-        title: "Project Returns",
-        path: "/employee/view",
-        // icon: <Calender />,
-        icon: <Calendar size={20} />,
-      },
+      }
   ];
 
   return (
@@ -143,4 +137,4 @@ const InventoryDashboard = () => {
   );
 };
 
-export default InventoryDashboard;
+export default ProjectDashboard;
