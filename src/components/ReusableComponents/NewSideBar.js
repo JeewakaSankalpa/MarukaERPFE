@@ -2,15 +2,21 @@ import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Colors from "../../resources/Colors";
 import { Button } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
-import { FaBoxes, FaBriefcase, FaHome, FaProjectDiagram, FaUsers } from "react-icons/fa";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  FaBoxes,
+  FaBriefcase,
+  FaHome,
+  FaProjectDiagram,
+  FaUsers,
+} from "react-icons/fa";
 
 function NewSideBar() {
   const [collapsed, setCollapsed] = useState(false);
   const [hoveredMenu, setHoveredMenu] = useState(null);
 
   const navigate = useNavigate();
-
+  const location = useLocation();
 
   // const menus = [
   //   {
@@ -29,54 +35,52 @@ function NewSideBar() {
 
   const menus = [
     {
-    title: "Home",
-    icon: <FaHome />,
-    submenus: [
-      { name: "Home", path: "/dashboard" },
-    ],
-  },
-  {
-    title: "Project",
-    icon: <FaProjectDiagram />,
-    submenus: [
-      { name: "New Project", path: "/Projects/new" },
-      { name: "View Projects", path: "/projects/view" },
-      { name: "Return Goods", path: "/projects/return" },
-    ],
-  },
-  {
-    title: "Inventory",
-    icon: <FaBoxes />,
-    submenus: [
-      { name: "Add Inventory", path: "/inventory/add" },
-      { name: "Search Inventory", path: "/inventory/search" },
-      { name: "Return Inventory", path: "/inventory/return" },
-    ],
-  },
-  {
-    title: "Users",
-    icon: <FaUsers />,
-    submenus: [
-      { name: "Create Users", path: "/user/create" },
-      { name: "Search Users", path: "/user/search" },
-    ],
-  },
-  {
-    title: "Customer",
-    icon: <FaBriefcase />,
-    submenus: [
-      { name: "Add Customers", path: "/user/create" },
-      { name: "Search Customers", path: "/user/search" },
-    ],
-  },
-];
+      title: "Home",
+      icon: <FaHome />,
+      submenus: [{ name: "Home", path: "/dashboard" }],
+    },
+    {
+      title: "Project",
+      icon: <FaProjectDiagram />,
+      submenus: [
+        { name: "New Project", path: "/projects/create" },
+        { name: "View Projects", path: "/projects/edit/:id" },
+        { name: "Return Goods", path: "/projects/return" },
+      ],
+    },
+    {
+      title: "Inventory",
+      icon: <FaBoxes />,
+      submenus: [
+        { name: "Add Inventory", path: "/inventory/add" },
+        { name: "Search Inventory", path: "/inventory/search" },
+        { name: "Return Inventory", path: "/inventory/return" },
+      ],
+    },
+    {
+      title: "Users",
+      icon: <FaUsers />,
+      submenus: [
+        { name: "Create Users", path: "/user/create" },
+        { name: "Search Users", path: "/user/search" },
+      ],
+    },
+    {
+      title: "Customer",
+      icon: <FaBriefcase />,
+      submenus: [
+        { name: "Add Customers", path: "/customer/create" },
+        { name: "Search Customers", path: "/customer/view" },
+      ],
+    },
+  ];
 
   const sideBarStyle = {
     transition: "width 0.3s ease",
     backgroundColor: `${Colors.sideBar}`, // blue-900
     color: "white",
     height: "100vh",
-    width: collapsed ? "60px" : "200px",
+    width: collapsed ? "50px" : "200px",
     overflow: "hidden",
     position: "relative",
   };
@@ -85,8 +89,13 @@ function NewSideBar() {
     display: "block",
     width: "100%",
     textAlign: "left",
-    padding: "10px",
-    backgroundColor: "transparent",
+    // padding: "10px",
+    // marginLeft: "10px",
+    // marginRight: "10px",
+    marginTop: "2px",    
+    marginBottom: "1px",
+    // backgroundColor: "transparent",
+    backgroundColor: `${Colors.mainBlue}`,
     border: "none",
     color: "white",
     cursor: "pointer",
@@ -95,6 +104,7 @@ function NewSideBar() {
   const subMenuStyle = {
     paddingLeft: "20px",
     fontSize: "14px",
+    marginBottom: "5px",
     // color: "#d1d5db", // gray-300
     color: `${Colors.black}`,
   };
@@ -111,68 +121,105 @@ function NewSideBar() {
   };
 
   return (
-  <div style={{ display: "flex" }}>
-    {/* Sidebar */}
-    <div style={sideBarStyle}>
-      {/* Collapse/Expand Button */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          padding: "8px",
-          cursor: "pointer",
-        }}
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-      </div>
+    <div style={{ display: "flex" }}>
+      {/* Sidebar */}
+      <div style={sideBarStyle}>
+        {/* Collapse/Expand Button */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            padding: "5px",
+            cursor: "pointer",
+          }}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        </div>
 
-      {/* Menu Items */}
-      <div>
-        {menus.map((menu, idx) => (
-          <div
-            key={idx}
-            onMouseEnter={() => setHoveredMenu(menu.title)}
-            onMouseLeave={() => setHoveredMenu(null)}
-            style={{ position: "relative" }}
-          >
-            <Button style={buttonStyle}>{menu.title}</Button>
+        {/* Menu Items */}
+        <div>
+          {menus.map((menu, idx) => (
+            <div
+              key={idx}
+              onMouseEnter={() => setHoveredMenu(menu.title)}
+              onMouseLeave={() => setHoveredMenu(null)}
+              style={{ position: "relative" }}
+            >
+              {/* <Button style={buttonStyle}>{menu.title}</Button> */}
 
-            {/* Submenus (collapsed & hovered) */}
-            {hoveredMenu === menu.title && collapsed && (
-              <button style={hoveredSubmenuStyle}>
-                {menu.submenus.map((sub, subIdx) => (
-                  <button
-                    key={subIdx}
-                    style={{
-                      padding: "6px 12px",
-                      cursor: "pointer",
-                      color: "black",
-                    }}
-                  >
-                    {sub.name}
-                  </button>
-                ))}
-              </button>
-            )}
+              <Button
+                style={buttonStyle}
+                onClick={() => !collapsed && navigate(menu.submenus[0].path)}
+              >
+                {menu.icon}
+                {!collapsed && (
+                  <span style={{ marginLeft: "10px" }}>{menu.title}</span>
+                )}
+              </Button>
 
-            {/* Submenus (expanded) */}
-            {!collapsed && (
-              <div>
-                {menu.submenus.map((sub, subIdx) => (
-                  <Button key={subIdx} style={subMenuStyle} onClick={() => navigate(sub.path)}>
-                    {sub.name}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+              {/* Submenus (collapsed & hovered) */}
+              {hoveredMenu === menu.title && collapsed && (
+                <button style={hoveredSubmenuStyle}>
+                  {menu.submenus.map((sub, subIdx) => (
+                    <button
+                      key={subIdx}
+                      style={{
+                        padding: "6px 12px",
+                        marginBottom: "4px",
+                        cursor: "pointer",
+                        color: "black",
+                      }}
+                    >
+                      {sub.name}
+                    </button>
+                  ))}
+                </button>
+              )}
+
+              {/* Submenus (expanded) */}
+              {/* {!collapsed && (
+                <div>
+                  {menu.submenus.map((sub, subIdx) => (
+                    <Button
+                      key={subIdx}
+                      style={subMenuStyle}
+                      onClick={() => navigate(sub.path)}
+                    >
+                      {sub.name}
+                    </Button>
+                  ))}
+                </div>
+              )} */}
+              {!collapsed && (
+                <div>
+                  {menu.submenus.map((sub, subIdx) => {
+                    const isActive = location.pathname === sub.path;
+
+                    return (
+                      <Button
+                        key={subIdx}
+                        style={{
+                          ...subMenuStyle,
+                          // backgroundColor: isActive ? "#f0f0f0" : Colors.mainBlue,
+                          backgroundColor: isActive ? Colors.white : "transparent",
+                          color: isActive ? Colors.mainBlue : Colors.white,
+                          fontWeight: isActive ? "bold" : "normal",
+                        }}
+                        onClick={() => navigate(sub.path)}
+                      >
+                        {sub.name}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
-  </div>
-);
-
+  );
 
   // return React.createElement(
   //   "div",

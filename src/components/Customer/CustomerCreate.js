@@ -5,9 +5,11 @@ import { Navigate, useNavigate } from "react-router-dom";
 
 function CustomerCreate() {
   const navigate = useNavigate();
+  const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [taxId, setTaxId] = useState("");
 //   const [dateOfBirth, setDateOfBirth] = useState("");
   const [address, setAddress] = useState("");
   const [showForm, setShowForm] = useState(true);
@@ -36,12 +38,30 @@ function CustomerCreate() {
         <Container className="my-5">
           <h2 className="text-center mb-4">Add Customer</h2>
           <Form onSubmit={handleSubmit}>
+            <Form.Group controlId="id" className="mb-3">
+              <Form.Label>Customer ID</Form.Label>
+              <Form.Control
+                type="text"
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+                required
+              />
+            </Form.Group>
             <Form.Group controlId="name" className="mb-3">
               <Form.Label>Name</Form.Label>
               <Form.Control
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </Form.Group>
+            <Form.Group controlId="address" className="mb-3">
+              <Form.Label>Address</Form.Label>
+              <Form.Control
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
                 required
               />
             </Form.Group>
@@ -63,12 +83,12 @@ function CustomerCreate() {
                 required
               />
             </Form.Group>
-            <Form.Group controlId="address" className="mb-3">
-              <Form.Label>Address</Form.Label>
+            <Form.Group controlId="taxId" className="mb-3">
+              <Form.Label>Tax ID</Form.Label>
               <Form.Control
                 type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={taxId}
+                onChange={(e) => setTaxId(e.target.value)}
                 required
               />
             </Form.Group>
