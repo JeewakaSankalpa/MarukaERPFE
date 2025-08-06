@@ -20,6 +20,7 @@ import UserSearch from './components/Users/UserSearch';
 import CustomerCreate from './components/Customer/CustomerCreate';
 import CustomerView from './components/Customer/CustomerView';
 import ProjectCreate from './components/Project/ProjectCreate';
+import ProjectSearch from './components/Project/ProjectSearch';
 
 // import Sidebar from './components/Sidebar';
 
@@ -77,7 +78,7 @@ function App() {
                         <Route path="/inventory/return" element={<InventoryReturn />} />
 
                         <Route path="/projects/create" element={<ProjectCreate mode="create"/>} />
-                        <Route path="/projects/search" element={<UserSearch />} />
+                        <Route path="/projects/search" element={<ProjectSearch />} />
                         <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit"/>} />
                         <Route path="/projects/view/:id" element={<ProjectCreate mode="view"/>} />
 

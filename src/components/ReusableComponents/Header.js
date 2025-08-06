@@ -44,8 +44,8 @@ const Header = () => {
             <p style={styles.profileDetails}>Director</p>
           </div>
         </div>
-        <FaClock />{" "}
-        <span>
+        {/* <FaClock color={Colors.white}/>{" "} */}
+        <span style={styles.dateTime}>
           {currentTime.toLocaleTimeString()}&nbsp;&nbsp;&nbsp;
           {new Date().toLocaleDateString()}
         </span>
@@ -54,7 +54,7 @@ const Header = () => {
       {/* Right Section - Notifications & Profile */}
       <div style={styles.rightSection}>
         <div style={styles.notification}>
-          <Bell size={20} />
+          <Bell size={20} color={Colors.white}/>
           <span style={styles.notificationCount}>1</span>
         </div>
         {/* <div style={styles.profile}>
@@ -86,7 +86,8 @@ const styles = {
     alignItems: "center",
     padding: "1rem 1.5rem",
     // borderBottom: "1px solid #e5e7eb",
-    backgroundColor: `${Colors.light}`,
+    // backgroundColor: `${Colors.light}`,
+    backgroundColor: `${Colors.sideBar}`,
     // backgroundColor: "#ffffff",
     height: "4rem",
     position: "sticky",
@@ -112,7 +113,8 @@ const styles = {
   name: {
     fontSize: "1.25rem",
     fontWeight: "600",
-    color: "#1f2937",
+    // color: "#1f2937",
+    color: `${Colors.white}`,
     margin: 0,
   },
   centerSection: {
@@ -166,13 +168,18 @@ const styles = {
     fontWeight: "600",
     fontSize: "0.875rem",
     margin: "0 0 2px 0",
-    color: "#1f2937",
+    // color: "#1f2937",
+    color: `${Colors.white}`,
   },
   profileDetails: {
     fontSize: "0.75rem",
-    color: "#6b7280",
+    // color: "#6b7280",
+    color: `${Colors.white}`,
     margin: 0,
   },
+  dateTime: {
+    color: `${Colors.white}`,
+  }
 };
 
 export default Header;

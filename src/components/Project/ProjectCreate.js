@@ -214,12 +214,12 @@ function UserCreate({ mode }) {
 
           <Row>
             <Col md={6}>
-              <Form.Group controlId="firstName" className="mb-3">
+              <Form.Group controlId="createdDate" className="mb-3">
                 <Form.Label>Created Date</Form.Label>
                 <Form.Control
-                  type="text"
-                  name="firstName"
-                  placeholder="Enter first name"
+                  type="date"
+                  name="createdDate"
+                //   placeholder="Enter created date"
                   value={userData.createdDate}
                   onChange={handleChange}
                   required
@@ -228,12 +228,12 @@ function UserCreate({ mode }) {
               </Form.Group>
             </Col>
             <Col md={6}>
-              <Form.Group controlId="lastName" className="mb-3">
+              <Form.Group controlId="updatedDate" className="mb-3">
                 <Form.Label>Last Updated Date</Form.Label>
                 <Form.Control
-                  type="text"
-                  name="lastName"
-                  placeholder="Enter last name"
+                  type="date"
+                  name="updatedDate"
+                //   placeholder="Enter updated date"
                   value={userData.updatedDate}
                   onChange={handleChange}
                   required
