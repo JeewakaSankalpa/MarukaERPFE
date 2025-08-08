@@ -1,306 +1,226 @@
-import React, { useState, useEffect } from "react";
-import api from "../../services/api";
-import { useParams, useNavigate } from "react-router-dom";
-import { Form, Button, Container, Row, Col, Table } from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import { Form, Button, Row, Col, Container } from "react-bootstrap";
+import api from '../../services/api';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-function UserCreate({ mode }) {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [isEditMode, setIsEditMode] = useState(mode === "create");
-  const [userData, setUserData] = useState({
-    projectId: "",
+const ProjectForm = () => {
+  const [projectData, setProjectData] = useState({
+    id: "",
     projectName: "",
     customerId: "",
-    status: "",
-    stage: "",
-    createdDate: "",
-    updatedDate: "",
-    active: true,
-    // allowedStores: [] // Ensure allowedStores is initialized as an empty array
+    salesRep: "",
+    comment: "",
+    documentURL: "",
   });
-  const [stages, setStages] = useState([]);
+
+  const [customers, setCustomers] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [validated, setValidated] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(true);
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        const response = await api.get("/store/all");
-        setStages(response.data);
-      } catch (error) {
-        console.error("Failed to fetch stores:", error);
-      }
-    };
-    fetchStores();
+    api.get("/customer/all")
+        .then(res => setCustomers(res.data))
+        .catch(() => toast.error("Failed to load customers"));
 
-    if (mode === "edit" || mode === "view") {
-      const fetchUser = async () => {
-        try {
-          const response = await api.get(`/user/${id}`);
-          setUserData({
-            ...response.data,
-            allowedStores: response.data.allowedStores || [], // Ensure allowedStores is an array
-          });
-          if (mode === "view") {
-            setIsEditMode(false);
-          }
-        } catch (error) {
-          console.error("Failed to fetch user:", error);
-        }
-      };
-      fetchUser();
-    }
-  }, [mode, id]);
+    api.get("/employee/all")
+        .then(res => setEmployees(res.data))
+        .catch(() => toast.error("Failed to load employees"));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUserData((prevData) => ({ ...prevData, [name]: value }));
+    setProjectData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleStoreChange = (storeName) => {
-    setUserData((prevData) => {
-      const allowedStores = prevData.allowedStores.includes(storeName)
-        ? prevData.allowedStores.filter((store) => store !== storeName)
-        : [...prevData.allowedStores, storeName];
-      return { ...prevData, allowedStores };
-    });
+  const handleFileChange = (e) => {
+    setFiles(Array.from(e.target.files));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setValidated(true);
+
+    const { projectName, customerId, salesRep, comment } = projectData;
+    if (!projectName || !customerId || !salesRep || !comment) return;
+
     try {
-      if (mode === "create") {
-        await api.post("/user/create", userData);
-        alert("User created successfully");
-      } else if (isEditMode) {
-        await api.put(`/user/update/${id}`, userData);
-        alert("User updated successfully");
-      }
-      navigate("/user/search");
+      const formData = new FormData();
+      const projectBlob = new Blob([JSON.stringify({ projectName, customerId, salesRep, comment })], {
+        type: "application/json"
+      });
+      formData.append("project", projectBlob);
+
+      files.forEach(file => {
+        formData.append("file", file);
+      });
+
+      const response = await api.post("/projects/create", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setProjectData(response.data);
+      setIsEditMode(false);
+      toast.success("Project created successfully!");
     } catch (error) {
-      console.error("User save failed:", error);
-      alert("User save failed. Please try again.");
+      if (error.response?.status === 404) {
+        toast.error("Endpoint not found (404)");
+      } else if (error.response?.status === 500) {
+        toast.error("Server error (500)");
+      } else if (error.response?.status === 413) {
+        toast.error("Uploaded files are too large (413)");
+      } else {
+        toast.error("Failed to create project");
+      }
     }
   };
 
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
-  };
-
   return (
-    <Container
-      fluid
-      className="d-flex justify-content-center align-items-center"
-      style={{ minHeight: "80vh" }}
-    >
       <div
-        style={{ maxWidth: "600px", width: "100%" }}
-        className="p-4 bg-white rounded shadow"
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2vh 2vw",
+            boxSizing: "border-box",
+          }}
       >
-        <h2 className="text-center mb-4">
-          {mode === "create"
-            ? "Create New Project"
-            : isEditMode
-            ? "Edit Project"
-            : "View Project"}
-        </h2>
-        <Form onSubmit={handleSubmit}>
-          <Row>
-            <Col md={6}>
-              <Form.Group controlId="projectId" className="mb-3">
-                <Form.Label>Project ID</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="projectId"
-                  placeholder="Enter Project ID"
-                  value={userData.projectId}
-                  onChange={handleChange}
-                  required
-                  disabled={mode !== "create"}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
+        <Container style={{ width: "80vw", maxWidth: "900px" }}>
+          <div className="bg-white shadow rounded p-4" style={{ fontSize: "1rem" }}>
+            <h2 className="text-center mb-4" style={{ fontSize: "1.5rem" }}>
+              {projectData.id ? "View Project" : "Create New Project"}
+            </h2>
+
+            <Form noValidate validated={validated} onSubmit={handleSubmit}>
+              {projectData.id && (
+                  <Form.Group controlId="projectId" className="mb-3">
+                    <Form.Label>Project ID</Form.Label>
+                    <Form.Control type="text" value={projectData.id} readOnly />
+                  </Form.Group>
+              )}
+
               <Form.Group controlId="projectName" className="mb-3">
                 <Form.Label>Project Name</Form.Label>
                 <Form.Control
-                  type="text"
-                  name="projectName"
-                  placeholder="Enter Project Name"
-                  value={userData.projectName}
-                  onChange={handleChange}
-                  required
-                  disabled={mode !== "create"}
+                    type="text"
+                    name="projectName"
+                    value={projectData.projectName}
+                    onChange={handleChange}
+                    disabled={!isEditMode}
+                    required
+                    isInvalid={validated && !projectData.projectName}
                 />
+                <Form.Control.Feedback type="invalid">
+                  Project name is required.
+                </Form.Control.Feedback>
               </Form.Group>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={6}>
-              <Form.Group controlId="customerId" className="mb-3">
-                <Form.Label>Customer ID</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="customerId"
-                  placeholder="Enter Customer ID"
-                  value={userData.customerId}
-                  onChange={handleChange}
-                  required
-                  disabled={!isEditMode}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group controlId="accessLevel" className="mb-3">
-                <Form.Label>Stage</Form.Label>
-                <Form.Control
-                  as="select"
-                  name="accessLevel"
-                  value={userData.accessLevel}
-                  onChange={handleChange}
-                  required
-                  disabled={!isEditMode}
-                >
-                  <option value="">Select Stage</option>
-                  <option value="admin">Stage 1</option>
-                  <option value="manager">Stage 2</option>
-                  <option value="cashier">Stage 3</option>
-                </Form.Control>
-              </Form.Group>
-            </Col>
-          </Row>
-          {/* <Row>
-                        <Col md={6}>
-                            <Form.Group controlId="email" className="mb-3">
-                                <Form.Label>Email</Form.Label>
-                                <Form.Control
-                                    type="email"
-                                    name="email"
-                                    placeholder="Enter email"
-                                    value={userData.email}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={!isEditMode}
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group controlId="status" className="mb-3">
-                                <Form.Label>Status</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    name="status"
-                                    placeholder="Enter Project Status"
-                                    value={userData.status}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={!isEditMode}
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row> */}
-          <Row>
-            <Form.Group controlId="status" className="mb-3">
-              <Form.Label>Status</Form.Label>
-              <Form.Control
-                type="text"
-                name="status"
-                placeholder="Enter Project Status"
-                value={userData.status}
-                onChange={handleChange}
-                required
-                disabled={!isEditMode}
-              />
-            </Form.Group>
-          </Row>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group controlId="createdDate" className="mb-3">
-                <Form.Label>Created Date</Form.Label>
+              <Row className="g-3">
+                <Col xs={12} md={6}>
+                  <Form.Group controlId="customerId">
+                    <Form.Label>Customer</Form.Label>
+                    <Form.Select
+                        name="customerId"
+                        value={projectData.customerId}
+                        onChange={handleChange}
+                        disabled={!isEditMode}
+                        required
+                        isInvalid={validated && !projectData.customerId}
+                    >
+                      <option value="">Select Customer</option>
+                      {customers.map((cust) => (
+                          <option key={cust.id} value={cust.id}>
+                            {cust.name || cust.companyName || "Unnamed Customer"}
+                          </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Please select a customer.
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+
+                <Col xs={12} md={6}>
+                  <Form.Group controlId="salesRep">
+                    <Form.Label>Sales Representative</Form.Label>
+                    <Form.Select
+                        name="salesRep"
+                        value={projectData.salesRep}
+                        onChange={handleChange}
+                        disabled={!isEditMode}
+                        required
+                        isInvalid={validated && !projectData.salesRep}
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.firstName} {emp.lastName}
+                          </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Please select a sales representative.
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Form.Group controlId="comment" className="mb-3 mt-3">
+                <Form.Label>Comment</Form.Label>
                 <Form.Control
-                  type="date"
-                  name="createdDate"
-                //   placeholder="Enter created date"
-                  value={userData.createdDate}
-                  onChange={handleChange}
-                  required
-                  disabled={mode !== "create"}
+                    as="textarea"
+                    rows={3}
+                    name="comment"
+                    value={projectData.comment}
+                    onChange={handleChange}
+                    required
+                    disabled={!isEditMode}
+                    isInvalid={validated && !projectData.comment}
                 />
+                <Form.Control.Feedback type="invalid">
+                  Comment is required.
+                </Form.Control.Feedback>
               </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group controlId="updatedDate" className="mb-3">
-                <Form.Label>Last Updated Date</Form.Label>
-                <Form.Control
-                  type="date"
-                  name="updatedDate"
-                //   placeholder="Enter updated date"
-                  value={userData.updatedDate}
-                  onChange={handleChange}
-                  required
-                  disabled={!isEditMode}
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-          {/* <Form.Group controlId="allowedStores" className="mb-3">
-                        <Form.Label>Allowed Stores</Form.Label>
-                        <Table striped bordered hover>
-                            <thead>
-                            <tr>
-                                <th>Select</th>
-                                <th>Store Name</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {stages.map(store => (
-                                <tr key={store.name}>
-                                    <td>
-                                        <Form.Check
-                                            type="checkbox"
-                                            checked={userData.allowedStores.includes(store.name)}
-                                            onChange={() => handleStoreChange(store.name)}
-                                            disabled={!isEditMode}
-                                        />
-                                    </td>
-                                    <td>{store.name}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </Table>
-                    </Form.Group> */}
-          <Form.Group controlId="active" className="mb-3">
-            <Form.Check
-              type="checkbox"
-              label="Active"
-              checked={userData.active}
-              onChange={() =>
-                setUserData((prevData) => ({
-                  ...prevData,
-                  active: !prevData.active,
-                }))
-              }
-              disabled={!isEditMode}
-            />
-          </Form.Group>
-          {!isEditMode && (
-            <Button
-              type="button"
-              variant="primary"
-              className="w-100 mb-3"
-              onClick={toggleEditMode}
-            >
-              Edit User
-            </Button>
-          )}
-          {isEditMode && (
-            <Button variant="success" type="submit" className="w-100">
-              Save Changes
-            </Button>
-          )}
-        </Form>
+
+              {isEditMode && (
+                  <Form.Group controlId="document" className="mb-3">
+                    <Form.Label>Upload Documents (optional)</Form.Label>
+                    <Form.Control
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileChange}
+                        multiple
+                    />
+                  </Form.Group>
+              )}
+
+              {projectData.documentURL && (
+                  <div className="mb-3">
+                    <Form.Label>Project Document</Form.Label>
+                    <div>
+                      <a href={projectData.documentURL} target="_blank" rel="noopener noreferrer">
+                        View Document
+                      </a>
+                    </div>
+                  </div>
+              )}
+
+              {!projectData.id && (
+                  <Button variant="success" type="submit" className="w-100 mt-3">
+                    Save Project
+                  </Button>
+              )}
+            </Form>
+          </div>
+        </Container>
+        <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
       </div>
-    </Container>
   );
-}
+};
 
-export default UserCreate;
+export default ProjectForm;
