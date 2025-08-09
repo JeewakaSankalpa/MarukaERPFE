@@ -24,37 +24,6 @@ const Login = () => {
     // navigate("/dashboard");
 
     const requestData = { username, password };
-
-    // try {
-    //     const response = await api.post("/user/login", requestData);
-
-    //     if (response.data && response.data.token) {
-    //         const userType = response.data.role; // Assuming role is sent in response
-
-    //         localStorage.setItem("firstName", response.data.firstName);
-    //         localStorage.setItem("lastName", response.data.lastName);
-    //         localStorage.setItem("username", username);
-    //         localStorage.setItem("userType", userType); // ✅ Store user role
-
-    //         login(response.data.token);
-    //         setShow(false);
-
-    //         // ✅ Redirect based on user type
-    //         if (userType === "c1") {
-    //             navigate("/CustomerDashboard");
-    //         } else if (userType === "a1") {
-    //             navigate("/AdminDashboard");
-    //         } else {
-    //             setError("Invalid user type. Contact support.");
-    //         }
-    //     } else {
-    //         throw new Error("Invalid login credentials");
-    //     }
-    // } catch (error) {
-    //     setError(error.response?.data?.message || "Login failed. Please try again.");
-    // } finally {
-    //     setLoading(false);
-    // }
   };
 
   return (
