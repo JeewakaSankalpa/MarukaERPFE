@@ -174,7 +174,7 @@ function InventoryReturn() {
             </Row>
 
             <Button type="submit" variant="primary" className="me-2">
-              Add to Inventory
+              Return
             </Button>
             <Button type="reset" variant="secondary">
               Reset

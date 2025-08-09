@@ -1,26 +1,32 @@
-import logo from './logo.svg';
-import './components/Styles/App.css';
+import logo from "./logo.svg";
+import "./components/Styles/App.css";
 
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from "react";
+import {
+  HashRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import AdminDashboard from './components/AdminDashboard';
-import CustomerDashboard from './components/Customer/CustomerDashboard';
+import Login from "./components/Login";
+import Dashboard from "./components/Dashboard";
+import AdminDashboard from "./components/AdminDashboard";
+import CustomerDashboard from "./components/Customer/CustomerDashboard";
 // import EmployerDashboard from './components/Users/UserEdit';
-import InventoryAdd from './components/Inventory/InventoryAdd';
-import InventoryView from './components/Inventory/InventoryView';
-import Header from './components/ReusableComponents/Header';
-import NewSideBar from './components/ReusableComponents/NewSideBar';
-import InventoryReturn from './components/Inventory/InventoryReturn';
-import ReturnToInventory from './components/Project/ReturnToInventory';
-import UserCreate from './components/Users/UserCreate';
-import UserSearch from './components/Users/UserSearch';
-import CustomerCreate from './components/Customer/CustomerCreate';
-import CustomerView from './components/Customer/CustomerView';
-import ProjectCreate from './components/Project/ProjectCreate';
-import ProjectSearch from './components/Project/ProjectSearch';
+import InventoryAdd from "./components/Inventory/InventoryAdd";
+import InventoryView from "./components/Inventory/InventoryView";
+import Header from "./components/ReusableComponents/Header";
+import NewSideBar from "./components/ReusableComponents/NewSideBar";
+import InventoryReturn from "./components/Inventory/InventoryReturn";
+import ReturnToInventory from "./components/Project/ReturnToInventory";
+import UserCreate from "./components/Users/UserCreate";
+import UserSearch from "./components/Users/UserSearch";
+import CustomerCreate from "./components/Customer/CustomerCreate";
+import CustomerView from "./components/Customer/CustomerView";
+import ProjectCreate from "./components/Project/ProjectCreate";
+import ProjectSearch from "./components/Project/ProjectSearch";
 
 // import Sidebar from './components/Sidebar';
 

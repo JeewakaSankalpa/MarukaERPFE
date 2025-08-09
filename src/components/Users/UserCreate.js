@@ -13,16 +13,18 @@ function UserCreate({ mode }) {
         firstName: '',
         lastName: '',
         email: '',
-        accessLevel: '',
+        address: '',
+        nicNumber: '',
+        role: '',
         active: true,
-        allowedStores: [] // Ensure allowedStores is initialized as an empty array
+        // allowedStores: [] // Ensure allowedStores is initialized as an empty array
     });
     const [stores, setStores] = useState([]);
 
     useEffect(() => {
         const fetchStores = async () => {
             try {
-                const response = await api.get('/store/all');
+                const response = await api.get('/employee/all');
                 setStores(response.data);
             } catch (error) {
                 console.error('Failed to fetch stores:', error);
@@ -33,7 +35,7 @@ function UserCreate({ mode }) {
         if (mode === 'edit' || mode === 'view') {
             const fetchUser = async () => {
                 try {
-                    const response = await api.get(`/user/${id}`);
+                    const response = await api.get(`/employee/${id}`);
                     setUserData({
                         ...response.data,
                         allowedStores: response.data.allowedStores || [] // Ensure allowedStores is an array
@@ -165,25 +167,56 @@ function UserCreate({ mode }) {
                             </Form.Group>
                         </Col>
                         <Col md={6}>
-                            <Form.Group controlId="accessLevel" className="mb-3">
-                                <Form.Label>Access Level</Form.Label>
+                            <Form.Group controlId="address" className="mb-3">
+                                <Form.Label>Adress</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="address"
+                                    placeholder="Enter Adress"
+                                    value={userData.address}
+                                    onChange={handleChange}
+                                    required
+                                    disabled={!isEditMode}
+                                />
+                            </Form.Group>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col md={6}>
+                            <Form.Group controlId="nicNumber" className="mb-3">
+                                <Form.Label>Email</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="nicNumber"
+                                    placeholder="Enter NIC"
+                                    value={userData.nicNumber}
+                                    onChange={handleChange}
+                                    required
+                                    disabled={!isEditMode}
+                                />
+                            </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                            <Form.Group controlId="role" className="mb-3">
+                                <Form.Label>User Role</Form.Label>
                                 <Form.Control
                                     as="select"
-                                    name="accessLevel"
-                                    value={userData.accessLevel}
+                                    name="role"
+                                    value={userData.role}
                                     onChange={handleChange}
                                     required
                                     disabled={!isEditMode}
                                 >
-                                    <option value="">Select Access Level</option>
+                                    <option value="">Select Role</option>
                                     <option value="admin">Admin</option>
+                                    <option value="admin">HR</option>
                                     <option value="manager">Manager</option>
-                                    <option value="cashier">Cashier</option>
+                                    <option value="cashier">Employee</option>
                                 </Form.Control>
                             </Form.Group>
                         </Col>
                     </Row>
-                    <Form.Group controlId="allowedStores" className="mb-3">
+                    {/* <Form.Group controlId="allowedStores" className="mb-3">
                         <Form.Label>Allowed Stores</Form.Label>
                         <Table striped bordered hover>
                             <thead>
@@ -208,7 +241,7 @@ function UserCreate({ mode }) {
                             ))}
                             </tbody>
                         </Table>
-                    </Form.Group>
+                    </Form.Group> */}
                     <Form.Group controlId="active" className="mb-3">
                         <Form.Check
                             type="checkbox"

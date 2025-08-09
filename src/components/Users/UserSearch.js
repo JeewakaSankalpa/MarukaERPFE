@@ -36,8 +36,8 @@ function UserSearch() {
     };
 
     return (
-        <Container className="d-flex justify-content-center align-items-center min-vh-100">
-            <div className="p-4 rounded shadow" style={{ width: '100%', maxWidth: '700px', backgroundColor: '#f9f9f9' }}>
+        <Container className="my-5">
+            {/* <div className="p-4 rounded shadow" style={{ width: '100%', maxWidth: '700px', backgroundColor: '#f9f9f9' }}> */}
                 <h2 className="text-center mb-4">User Search</h2>
                 <Form className="d-flex mb-3">
                     <Form.Control
@@ -80,7 +80,7 @@ function UserSearch() {
                     )}
                     </tbody>
                 </Table>
-            </div>
+            {/* </div> */}
         </Container>
     );
 }
