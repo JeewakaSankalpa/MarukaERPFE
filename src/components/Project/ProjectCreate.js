@@ -54,8 +54,9 @@ const ProjectForm = () => {
       formData.append("project", projectBlob);
 
       files.forEach(file => {
-        formData.append("file", file);
+        formData.append("files", file); // ✅ correct key
       });
+
 
       const response = await api.post("/projects/create", formData, {
         headers: {
