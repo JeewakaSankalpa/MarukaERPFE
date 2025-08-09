@@ -1,17 +1,20 @@
+import logo from "./logo.svg";
 import "./components/Styles/App.css";
+
 import React from "react";
 import {
-    HashRouter as Router,
-    Routes,
-    Route,
-    Navigate,
-    useLocation,
+  HashRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
 } from "react-router-dom";
 
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import CustomerDashboard from "./components/Customer/CustomerDashboard";
+// import EmployerDashboard from './components/Users/UserEdit';
 import InventoryAdd from "./components/Inventory/InventoryAdd";
 import InventoryView from "./components/Inventory/InventoryView";
 import Header from "./components/ReusableComponents/Header";
@@ -24,70 +27,82 @@ import CustomerCreate from "./components/Customer/CustomerCreate";
 import CustomerView from "./components/Customer/CustomerView";
 import ProjectCreate from "./components/Project/ProjectCreate";
 import ProjectSearch from "./components/Project/ProjectSearch";
-// ✅ use relative import unless you configured absolute aliases
-import PrivateRoute from "./components/routes/PrivateRoute";
+import ItemAdd from "./components/Inventory/ItemAdd";
 
-function Layout({ children }) {
-    const location = useLocation();
-    const isLoginRoute = location.pathname === "/login";
+// import Sidebar from './components/Sidebar';
 
-    // Hide chrome on login
-    if (isLoginRoute) return <>{children}</>;
-
-    return (
-        <div className="app-container">
-            <Header />
-            <div className="main-content">
-                <NewSideBar />
-                {children}
-            </div>
-        </div>
-    );
-}
+// function App() {
+//   return (
+//     <div className="App">
+//       <header className="App-header">
+//         <img src={logo} className="App-logo" alt="logo" />
+//         <p>
+//           Edit <code>src/App.js</code> and save to reload.
+//         </p>
+//         <a
+//           className="App-link"
+//           href="https://reactjs.org"
+//           target="_blank"
+//           rel="noopener noreferrer"
+//         >
+//           Learn React
+//         </a>
+//       </header>
+//     </div>
+//   );
+// }
 
 function App() {
-    return (
-        <Router>
-            <Layout>
-                <Routes>
-                    {/* Login is main/initial UI */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/" element={<Navigate to="/login" replace />} />
+  // const {isAuthenticated} = useAuth();
 
-                    {/* Protected area */}
-                    <Route element={<PrivateRoute />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/admin" element={<AdminDashboard />} />
-                        <Route path="/customerDashboard" element={<CustomerDashboard />} />
+//   const location = useLocation();
+//   const hideLayoutForRoutes = ["/", "/login"];
 
-                        {/* Users */}
-                        <Route path="/user/create" element={<UserCreate mode="create" />} />
-                        <Route path="/user/search" element={<UserSearch />} />
-                        <Route path="/user/edit/:id" element={<UserCreate mode="edit" />} />
-                        <Route path="/user/view/:id" element={<UserCreate mode="view" />} />
+//   const isLoginPage = hideLayoutForRoutes.includes(location.pathname);
 
-                        {/* Inventory */}
-                        <Route path="/inventory/add" element={<InventoryAdd />} />
-                        <Route path="/inventory/search" element={<InventoryView />} />
-                        <Route path="/inventory/return" element={<InventoryReturn />} />
+  return (
+    <Router>
+      <div className="app-container">
+        {/*{isAuthenticated}*/}
+        {/* {!isLoginPage && <Header /> } */}
+        {<Header />}
 
-                        {/* Projects */}
-                        <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
-                        <Route path="/projects/search" element={<ProjectSearch />} />
-                        <Route path="/projects/:id" element={<ProjectCreate mode="edit" />} />
-                        <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit" />} />
-                        <Route path="/projects/view/:id" element={<ProjectCreate mode="view" />} />
+        <div className="main-content">
+          {<NewSideBar />}
+          <Routes>
+            {/* <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard"/> : <Login/>}/> */}
+            {/*<Route path="/" element={<Login/>}/>*/}
+            {/*<Route path="/dashboard" element={isAuthenticated ? <DashboardRe/> : <Navigate to="/"/>}/>*/}
 
-                        {/* Misc */}
-                        <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
-                    </Route>
+            <Route path="/" element={<Login />} />
+            {/* <Route path="/" element={<Dashboard />} /> */}
+            <Route path="/dashboard" element={<Dashboard />} />
 
-                    {/* Fallback */}
-                    <Route path="*" element={<Navigate to="/login" replace />} />
-                </Routes>
-            </Layout>
-        </Router>
-    );
+            <Route path="/customerDashboard" element={<CustomerDashboard />} />
+
+            {/* <Route path="/userDashboard" element={<EmployerDashboard />} /> */}
+            <Route path="/user/create" element={<UserCreate mode="create" />} />
+            <Route path="/user/search" element={<UserSearch />} />
+            <Route path="/user/edit/:id" element={<UserCreate mode="edit" />} />
+            <Route path="/user/view/:id" element={<UserCreate mode="view" />} />
+
+            <Route path="/item/add" element={<ItemAdd />} />
+            <Route path="/inventory/add" element={<InventoryAdd />} />
+            <Route path="/inventory/search" element={<InventoryView />} />
+            <Route path="/inventory/return" element={<InventoryReturn />} />
+
+            <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
+            <Route path="/projects/search" element={<ProjectSearch />} />
+            <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit" />} />
+            <Route path="/projects/view/:id" element={<ProjectCreate mode="view" />} />
+
+            <Route path="/customer/create" element={<CustomerCreate />} />
+            <Route path="/customer/view" element={<CustomerView />} />
+          </Routes>
+        </div>
+      </div>
+    </Router>
+  );
 }
 
 export default App;

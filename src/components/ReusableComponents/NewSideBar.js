@@ -53,6 +53,7 @@ function NewSideBar() {
       title: "Inventory",
       icon: <FaBoxes />,
       submenus: [
+        { name: "Add Item", path: "/item/add" },
         { name: "Add Inventory", path: "/inventory/add" },
         { name: "Search Inventory", path: "/inventory/search" },
         { name: "Return Inventory", path: "/inventory/return" },
