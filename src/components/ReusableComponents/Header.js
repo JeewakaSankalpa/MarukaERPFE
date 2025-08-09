@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import Colors from "../../resources/Colors";
-import { FaClock, FaSignOutAlt, FaStore, FaUser } from "react-icons/fa";
+import { FaSignOutAlt } from "react-icons/fa";
 import { Button } from "react-bootstrap";
+import logo from "../../assets/logo.jpeg"; // ✅ Import your logo
+import { useAuth } from "../../context/AuthContext"; // ✅ Access logged in user info
 
 const Header = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { username, role, userType, logout } = useAuth();
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -13,69 +16,44 @@ const Header = () => {
   }, []);
 
   return (
-    <header style={styles.main}>
-      {/* Left Section - Logo */}
-      <div style={styles.leftSection}>
-        <div style={styles.logo}>M</div>
-        <h2 style={styles.name}>Maruka</h2>
-      </div>
-
-      {/* Center Section - Search */}
-      <div style={styles.centerSection}>
-        {/* <input type="text" placeholder="Search ..." style={styles.searchBar} /> */}
-        {/* <FaUser />{" "} */}
-        {/* <span>
-          <h3>Didula Tharuka</h3>
-          {user.firstName} {user.lastName}
-        </span> */}
-        {/* <FaStore />{" "} */}
-        {/* <span>
-          {user.s/tore}
-          <h3>nugegoda</h3>
-        </span> */}
-        <div style={styles.profile}>
-          <img
-            src="https://i.pravatar.cc/40"
-            alt="User"
-            style={styles.profilePicture}
-          />
-          <div>
-            <h3 style={styles.profileName}>Augusta Ryan</h3>
-            <p style={styles.profileDetails}>Director</p>
-          </div>
+      <header style={styles.main}>
+        {/* Left Section - Logo */}
+        <div style={styles.leftSection}>
+          <img src={logo} alt="Maruka Logo" style={styles.logoImage} />
         </div>
-        {/* <FaClock color={Colors.white}/>{" "} */}
-        <span style={styles.dateTime}>
-          {currentTime.toLocaleTimeString()}&nbsp;&nbsp;&nbsp;
-          {new Date().toLocaleDateString()}
+
+        {/* Center Section - Profile Info */}
+        <div style={styles.centerSection}>
+          <div style={styles.profile}>
+            <img
+                src={`https://ui-avatars.com/api/?name=${username || "User"}&background=3b82f6&color=fff`}
+                alt="User"
+                style={styles.profilePicture}
+            />
+            <div>
+              <h3 style={styles.profileName}>{username || "User"}</h3>
+              <p style={styles.profileDetails}>
+                {role || userType || ""}
+              </p>
+            </div>
+          </div>
+
+          <span style={styles.dateTime}>
+          {currentTime.toLocaleTimeString()} &nbsp; {new Date().toLocaleDateString()}
         </span>
-      </div>
-
-      {/* Right Section - Notifications & Profile */}
-      <div style={styles.rightSection}>
-        <div style={styles.notification}>
-          <Bell size={20} color={Colors.white}/>
-          <span style={styles.notificationCount}>1</span>
         </div>
-        {/* <div style={styles.profile}>
-          <img
-            src="https://i.pravatar.cc/40"
-            alt="User"
-            style={styles.profilePicture}
-          />
-          <div>
-            <h3 style={styles.profileName}>Augusta Ryan</h3>
-            <p style={styles.profileDetails}>Director</p>
+
+        {/* Right Section - Notifications & Logout */}
+        <div style={styles.rightSection}>
+          <div style={styles.notification}>
+            <Bell size={20} color={Colors.white} />
+            <span style={styles.notificationCount}>1</span>
           </div>
-        </div> */}
-        <Button
-          variant="danger"
-          //  onClick={handleLogout}
-        >
-          <FaSignOutAlt /> Logout
-        </Button>
-      </div>
-    </header>
+          <Button variant="danger" onClick={logout}>
+            <FaSignOutAlt /> Logout
+          </Button>
+        </div>
+      </header>
   );
 };
 
@@ -85,10 +63,7 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "1rem 1.5rem",
-    // borderBottom: "1px solid #e5e7eb",
-    // backgroundColor: `${Colors.light}`,
     backgroundColor: `${Colors.sideBar}`,
-    // backgroundColor: "#ffffff",
     height: "4rem",
     position: "sticky",
     top: 0,
@@ -99,39 +74,16 @@ const styles = {
     alignItems: "center",
     gap: "0.75rem",
   },
-  logo: {
-    backgroundColor: "#3b82f6",
-    color: "white",
-    borderRadius: "9999px",
-    width: "2rem",
-    height: "2rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "bold",
-  },
-  name: {
-    fontSize: "1.25rem",
-    fontWeight: "600",
-    // color: "#1f2937",
-    color: `${Colors.white}`,
-    margin: 0,
+  logoImage: {
+    height: "40px",
+    width: "auto",
+    borderRadius: "5px",
+    objectFit: "contain",
   },
   centerSection: {
     display: "flex",
     gap: "20px",
-    // flex: 1,
-    // maxWidth: "400px",
-    // marginLeft: "2rem",
-    // marginRight: "2rem",
-  },
-  searchBar: {
-    width: "100%",
-    padding: "0.5rem 1rem",
-    borderRadius: "0.375rem",
-    border: "1px solid #e5e7eb",
-    backgroundColor: "#f9fafb",
-    fontSize: "0.875rem",
+    alignItems: "center",
   },
   rightSection: {
     display: "flex",
@@ -168,18 +120,16 @@ const styles = {
     fontWeight: "600",
     fontSize: "0.875rem",
     margin: "0 0 2px 0",
-    // color: "#1f2937",
     color: `${Colors.white}`,
   },
   profileDetails: {
     fontSize: "0.75rem",
-    // color: "#6b7280",
     color: `${Colors.white}`,
     margin: 0,
   },
   dateTime: {
     color: `${Colors.white}`,
-  }
+  },
 };
 
 export default Header;
