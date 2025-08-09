@@ -52,64 +52,50 @@ import ProjectSearch from "./components/Project/ProjectSearch";
 // }
 
 function App() {
-  // const {isAuthenticated} = useAuth();
+    // const {isAuthenticated} = useAuth();
 
-//   const location = useLocation();
-//   const hideLayoutForRoutes = ["/", "/login"];
+    return (
+        <Router>
+            <div className="app-container">
+                {/*{isAuthenticated}*/}
+                {<Header /> }
+                
+                <div className="main-content">
+                    {<NewSideBar />}
+                    <Routes>
+                        {/* <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard"/> : <Login/>}/> */}
+                        {/*<Route path="/" element={<Login/>}/>*/}
+                        {/*<Route path="/dashboard" element={isAuthenticated ? <DashboardRe/> : <Navigate to="/"/>}/>*/}
 
-//   const isLoginPage = hideLayoutForRoutes.includes(location.pathname);
+                        <Route path="/" element={<Login />} />
+                        {/* <Route path="/" element={<Dashboard />} /> */}
+                        <Route path="/dashboard" element={<Dashboard />} />
 
-  return (
-    <Router>
-      <div className="app-container">
-        {/*{isAuthenticated}*/}
-        {/* {!isLoginPage && <Header /> } */}
-        {<Header />}
+                        <Route path="/customerDashboard" element={<CustomerDashboard />} />
 
-        <div className="main-content">
-          {<NewSideBar />}
-          <Routes>
-            {/* <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard"/> : <Login/>}/> */}
-            {/*<Route path="/" element={<Login/>}/>*/}
-            {/*<Route path="/dashboard" element={isAuthenticated ? <DashboardRe/> : <Navigate to="/"/>}/>*/}
+                        {/* <Route path="/userDashboard" element={<EmployerDashboard />} /> */}
+                        <Route path="/user/create" element={<UserCreate mode="create"/>} />
+                        <Route path="/user/search" element={<UserSearch />} />
+                        <Route path="/user/edit/:id" element={<UserCreate mode="edit"/>} />
+                        <Route path="/user/view/:id" element={<UserCreate mode="view"/>} />
 
-            <Route path="/" element={<Login />} />
-            {/* <Route path="/" element={<Dashboard />} /> */}
-            <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/inventory/add" element={<InventoryAdd />} />
+                        <Route path="/inventory/search" element={<InventoryView />} />
+                        <Route path="/inventory/return" element={<InventoryReturn />} />
 
-            <Route path="/customerDashboard" element={<CustomerDashboard />} />
+                        <Route path="/projects/create" element={<ProjectCreate mode="create"/>} />
+                        <Route path="/projects/search" element={<ProjectSearch />} />
+                        <Route path="/projects/:id" element={<ProjectCreate mode="edit"/>} />
+                        <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit"/>} />
+                        <Route path="/projects/view/:id" element={<ProjectCreate mode="view"/>} />
 
-            {/* <Route path="/userDashboard" element={<EmployerDashboard />} /> */}
-            <Route path="/user/create" element={<UserCreate mode="create" />} />
-            <Route path="/user/search" element={<UserSearch />} />
-            <Route path="/user/edit/:id" element={<UserCreate mode="edit" />} />
-            <Route path="/user/view/:id" element={<UserCreate mode="view" />} />
-
-            <Route path="/inventory/add" element={<InventoryAdd />} />
-            <Route path="/inventory/search" element={<InventoryView />} />
-            <Route path="/inventory/return" element={<InventoryReturn />} />
-
-            <Route
-              path="/projects/create"
-              element={<ProjectCreate mode="create" />}
-            />
-            <Route path="/projects/search" element={<ProjectSearch />} />
-            <Route
-              path="/projects/edit/:id"
-              element={<ProjectCreate mode="edit" />}
-            />
-            <Route
-              path="/projects/view/:id"
-              element={<ProjectCreate mode="view" />}
-            />
-
-            <Route path="/customer/create" element={<CustomerCreate />} />
-            <Route path="/customer/view" element={<CustomerView />} />
-          </Routes>
-        </div>
-      </div>
-    </Router>
-  );
+                        <Route path="/customer/create" element={<CustomerCreate />} />
+                        <Route path="/customer/view" element={<CustomerView />} />
+                    </Routes>
+                </div>
+            </div>
+        </Router>
+    );
 }
 
 export default App;

@@ -1,306 +1,429 @@
-import React, { useState, useEffect } from "react";
+// src/components/projects/ProjectForm.jsx
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import {
+  Form,
+  Button,
+  Row,
+  Col,
+  Container,
+  ListGroup,
+  Badge,
+} from "react-bootstrap";
 import api from "../../services/api";
-import { useParams, useNavigate } from "react-router-dom";
-import { Form, Button, Container, Row, Col, Table } from "react-bootstrap";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-function UserCreate({ mode }) {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [isEditMode, setIsEditMode] = useState(mode === "create");
-  const [userData, setUserData] = useState({
-    projectId: "",
+const ProjectForm = () => {
+  const { id: routeId } = useParams();
+
+  const [projectData, setProjectData] = useState({
+    id: "",
     projectName: "",
     customerId: "",
-    status: "",
-    stage: "",
-    createdDate: "",
-    updatedDate: "",
-    active: true,
-    // allowedStores: [] // Ensure allowedStores is initialized as an empty array
+    salesRep: "",
+    comment: "",
+    documentURL: "",
+    fileList: [], // URLs after save or load
   });
-  const [stages, setStages] = useState([]);
 
+  const [customers, setCustomers] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [validated, setValidated] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(!routeId); // create: editable, edit: view-only
+  const [files, setFiles] = useState([]); // selected File[] before submit
+
+  // load dropdown data
   useEffect(() => {
-    const fetchStores = async () => {
+    api
+        .get("/customer/all")
+        .then((res) => setCustomers(res.data || []))
+        .catch(() => toast.error("Failed to load customers"));
+
+    api
+        .get("/employee/all")
+        .then((res) => setEmployees(res.data || []))
+        .catch(() => toast.error("Failed to load employees"));
+  }, []);
+
+  // load project if route has ID
+  useEffect(() => {
+    const load = async () => {
+      if (!routeId) return;
+
       try {
-        const response = await api.get("/store/all");
-        setStages(response.data);
-      } catch (error) {
-        console.error("Failed to fetch stores:", error);
+        // project details
+        const pRes = await api.get(`/projects/${routeId}`);
+        const p = pRes.data || {};
+
+        // try files endpoint; fallback to p.fileList
+        let fileItems = [];
+        try {
+          const fRes = await api.get(`/projects/${routeId}/files`);
+          const list = fRes.data || [];
+          fileItems =
+              list.map((f, i) =>
+                  typeof f === "string"
+                      ? {
+                        name:
+                            decodeURIComponent(f.split("/").pop()) ||
+                            `file-${i + 1}`,
+                        url: f,
+                      }
+                      : f
+              ) || [];
+        } catch {
+          // fallback to fileList on project
+          const list = p.fileList || [];
+          fileItems = list.map((url, i) => ({
+            url,
+            name:
+                decodeURIComponent(url.split("/").pop()) || `file-${i + 1}`,
+          }));
+        }
+
+        setProjectData((prev) => ({
+          ...prev,
+          ...p,
+          id: p.id,
+          fileList: fileItems.map((x) => x.url),
+        }));
+        setIsEditMode(false); // start read-only on edit route
+        setFiles([]);
+      } catch (e) {
+        toast.error("Failed to load project");
       }
     };
-    fetchStores();
 
-    if (mode === "edit" || mode === "view") {
-      const fetchUser = async () => {
-        try {
-          const response = await api.get(`/user/${id}`);
-          setUserData({
-            ...response.data,
-            allowedStores: response.data.allowedStores || [], // Ensure allowedStores is an array
-          });
-          if (mode === "view") {
-            setIsEditMode(false);
-          }
-        } catch (error) {
-          console.error("Failed to fetch user:", error);
-        }
-      };
-      fetchUser();
-    }
-  }, [mode, id]);
+    load();
+  }, [routeId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUserData((prevData) => ({ ...prevData, [name]: value }));
+    setProjectData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleStoreChange = (storeName) => {
-    setUserData((prevData) => {
-      const allowedStores = prevData.allowedStores.includes(storeName)
-        ? prevData.allowedStores.filter((store) => store !== storeName)
-        : [...prevData.allowedStores, storeName];
-      return { ...prevData, allowedStores };
-    });
+  const handleFileChange = (e) => {
+    const picked = Array.from(e.target.files || []);
+    // Merge with existing selections; avoid duplicates by name+size
+    const existingKeys = new Set(files.map((f) => `${f.name}-${f.size}`));
+    const merged = [
+      ...files,
+      ...picked.filter((f) => !existingKeys.has(`${f.name}-${f.size}`)),
+    ];
+    setFiles(merged);
+  };
+
+  const removeFileAt = (idx) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const fmtSize = (bytes) => {
+    if (bytes == null) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
+    // (add GB if you want)
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setValidated(true);
+
+    const { projectName, customerId, salesRep, comment } = projectData;
+    if (!projectName || !customerId || !salesRep || !comment) return;
+
     try {
-      if (mode === "create") {
-        await api.post("/user/create", userData);
-        alert("User created successfully");
-      } else if (isEditMode) {
-        await api.put(`/user/update/${id}`, userData);
-        alert("User updated successfully");
+      if (!routeId) {
+        // CREATE
+        const formData = new FormData();
+        const projectBlob = new Blob(
+            [JSON.stringify({ projectName, customerId, salesRep, comment })],
+            { type: "application/json" }
+        );
+        formData.append("project", projectBlob);
+        files.forEach((file) => formData.append("files", file));
+
+        const response = await api.post("/projects/create", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        setProjectData((prev) => ({ ...prev, ...response.data }));
+        setIsEditMode(false);
+        setFiles([]);
+        toast.success("Project created successfully!");
+      } else {
+        // UPDATE (optional backend)
+        // 1) update basic fields
+        try {
+          await api.put(`/projects/${routeId}`, {
+            projectName,
+            customerId,
+            salesRep,
+            comment,
+            status: projectData.status, // keep status if you want to allow change later
+          });
+          toast.success("Project updated");
+        } catch {
+          toast.warn("Update endpoint not available (PUT /projects/{id})");
+        }
+
+        // 2) upload additional files if any
+        if (files.length > 0) {
+          try {
+            const fd = new FormData();
+            files.forEach((f) => fd.append("files", f));
+            const upRes = await api.post(
+                `/projects/${routeId}/files`,
+                fd,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+            // merge new URLs with existing
+            const newUrls = (upRes.data || []).map((x) =>
+                typeof x === "string" ? x : x.url
+            );
+            setProjectData((prev) => ({
+              ...prev,
+              fileList: [...(prev.fileList || []), ...newUrls],
+            }));
+            setFiles([]);
+          } catch {
+            toast.warn("File upload endpoint not available (POST /projects/{id}/files)");
+          }
+        }
+
+        setIsEditMode(false);
       }
-      navigate("/user/search");
     } catch (error) {
-      console.error("User save failed:", error);
-      alert("User save failed. Please try again.");
+      if (error.response?.status === 404) {
+        toast.error("Endpoint not found (404)");
+      } else if (error.response?.status === 500) {
+        toast.error("Server error (500)");
+      } else if (error.response?.status === 413) {
+        toast.error("Uploaded files are too large (413)");
+      } else {
+        toast.error("Request failed");
+      }
     }
   };
 
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
-  };
-
   return (
-    <Container
-      fluid
-      className="d-flex justify-content-center align-items-center"
-      style={{ minHeight: "80vh" }}
-    >
       <div
-        style={{ maxWidth: "600px", width: "100%" }}
-        className="p-4 bg-white rounded shadow"
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2vh 2vw",
+            boxSizing: "border-box",
+          }}
       >
-        <h2 className="text-center mb-4">
-          {mode === "create"
-            ? "Create New Project"
-            : isEditMode
-            ? "Edit Project"
-            : "View Project"}
-        </h2>
-        <Form onSubmit={handleSubmit}>
-          <Row>
-            <Col md={6}>
-              <Form.Group controlId="projectId" className="mb-3">
-                <Form.Label>Project ID</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="projectId"
-                  placeholder="Enter Project ID"
-                  value={userData.projectId}
-                  onChange={handleChange}
-                  required
-                  disabled={mode !== "create"}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
+        <Container style={{ width: "80vw", maxWidth: "900px" }}>
+          <div className="bg-white shadow rounded p-4" style={{ fontSize: "1rem" }}>
+            <div className="d-flex justify-content-between align-items-center">
+              <h2 className="mb-4" style={{ fontSize: "1.5rem" }}>
+                {routeId
+                    ? isEditMode
+                        ? "Edit Project"
+                        : "View Project"
+                    : "Create New Project"}
+              </h2>
+
+              {routeId && (
+                  <Button
+                      size="sm"
+                      variant={isEditMode ? "secondary" : "primary"}
+                      onClick={() => setIsEditMode((v) => !v)}
+                  >
+                    {isEditMode ? "Cancel Edit" : "Edit"}
+                  </Button>
+              )}
+            </div>
+
+            <Form noValidate validated={validated} onSubmit={handleSubmit}>
+              {projectData.id && (
+                  <Form.Group controlId="projectId" className="mb-3">
+                    <Form.Label>Project ID</Form.Label>
+                    <Form.Control type="text" value={projectData.id} readOnly />
+                  </Form.Group>
+              )}
+
               <Form.Group controlId="projectName" className="mb-3">
                 <Form.Label>Project Name</Form.Label>
                 <Form.Control
-                  type="text"
-                  name="projectName"
-                  placeholder="Enter Project Name"
-                  value={userData.projectName}
-                  onChange={handleChange}
-                  required
-                  disabled={mode !== "create"}
+                    type="text"
+                    name="projectName"
+                    value={projectData.projectName}
+                    onChange={handleChange}
+                    disabled={!isEditMode}
+                    required
+                    isInvalid={validated && !projectData.projectName}
                 />
+                <Form.Control.Feedback type="invalid">
+                  Project name is required.
+                </Form.Control.Feedback>
               </Form.Group>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={6}>
-              <Form.Group controlId="customerId" className="mb-3">
-                <Form.Label>Customer ID</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="customerId"
-                  placeholder="Enter Customer ID"
-                  value={userData.customerId}
-                  onChange={handleChange}
-                  required
-                  disabled={!isEditMode}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group controlId="accessLevel" className="mb-3">
-                <Form.Label>Stage</Form.Label>
-                <Form.Control
-                  as="select"
-                  name="accessLevel"
-                  value={userData.accessLevel}
-                  onChange={handleChange}
-                  required
-                  disabled={!isEditMode}
-                >
-                  <option value="">Select Stage</option>
-                  <option value="admin">Stage 1</option>
-                  <option value="manager">Stage 2</option>
-                  <option value="cashier">Stage 3</option>
-                </Form.Control>
-              </Form.Group>
-            </Col>
-          </Row>
-          {/* <Row>
-                        <Col md={6}>
-                            <Form.Group controlId="email" className="mb-3">
-                                <Form.Label>Email</Form.Label>
-                                <Form.Control
-                                    type="email"
-                                    name="email"
-                                    placeholder="Enter email"
-                                    value={userData.email}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={!isEditMode}
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group controlId="status" className="mb-3">
-                                <Form.Label>Status</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    name="status"
-                                    placeholder="Enter Project Status"
-                                    value={userData.status}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={!isEditMode}
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row> */}
-          <Row>
-            <Form.Group controlId="status" className="mb-3">
-              <Form.Label>Status</Form.Label>
-              <Form.Control
-                type="text"
-                name="status"
-                placeholder="Enter Project Status"
-                value={userData.status}
-                onChange={handleChange}
-                required
-                disabled={!isEditMode}
-              />
-            </Form.Group>
-          </Row>
 
-          <Row>
-            <Col md={6}>
-              <Form.Group controlId="createdDate" className="mb-3">
-                <Form.Label>Created Date</Form.Label>
+              <Row className="g-3">
+                <Col xs={12} md={6}>
+                  <Form.Group controlId="customerId">
+                    <Form.Label>Customer</Form.Label>
+                    <Form.Select
+                        name="customerId"
+                        value={projectData.customerId}
+                        onChange={handleChange}
+                        disabled={!isEditMode}
+                        required
+                        isInvalid={validated && !projectData.customerId}
+                    >
+                      <option value="">Select Customer</option>
+                      {customers.map((cust) => (
+                          <option key={cust.id} value={cust.id}>
+                            {cust.name || cust.companyName || "Unnamed Customer"}
+                          </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Please select a customer.
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+
+                <Col xs={12} md={6}>
+                  <Form.Group controlId="salesRep">
+                    <Form.Label>Sales Representative</Form.Label>
+                    <Form.Select
+                        name="salesRep"
+                        value={projectData.salesRep}
+                        onChange={handleChange}
+                        disabled={!isEditMode}
+                        required
+                        isInvalid={validated && !projectData.salesRep}
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.firstName} {emp.lastName}
+                          </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Please select a sales representative.
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Form.Group controlId="comment" className="mb-3 mt-3">
+                <Form.Label>Comment</Form.Label>
                 <Form.Control
-                  type="date"
-                  name="createdDate"
-                //   placeholder="Enter created date"
-                  value={userData.createdDate}
-                  onChange={handleChange}
-                  required
-                  disabled={mode !== "create"}
+                    as="textarea"
+                    rows={3}
+                    name="comment"
+                    value={projectData.comment}
+                    onChange={handleChange}
+                    required
+                    disabled={!isEditMode}
+                    isInvalid={validated && !projectData.comment}
                 />
+                <Form.Control.Feedback type="invalid">
+                  Comment is required.
+                </Form.Control.Feedback>
               </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group controlId="updatedDate" className="mb-3">
-                <Form.Label>Last Updated Date</Form.Label>
-                <Form.Control
-                  type="date"
-                  name="updatedDate"
-                //   placeholder="Enter updated date"
-                  value={userData.updatedDate}
-                  onChange={handleChange}
-                  required
-                  disabled={!isEditMode}
-                />
-              </Form.Group>
-            </Col>
-          </Row>
-          {/* <Form.Group controlId="allowedStores" className="mb-3">
-                        <Form.Label>Allowed Stores</Form.Label>
-                        <Table striped bordered hover>
-                            <thead>
-                            <tr>
-                                <th>Select</th>
-                                <th>Store Name</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {stages.map(store => (
-                                <tr key={store.name}>
-                                    <td>
-                                        <Form.Check
-                                            type="checkbox"
-                                            checked={userData.allowedStores.includes(store.name)}
-                                            onChange={() => handleStoreChange(store.name)}
-                                            disabled={!isEditMode}
-                                        />
-                                    </td>
-                                    <td>{store.name}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </Table>
-                    </Form.Group> */}
-          <Form.Group controlId="active" className="mb-3">
-            <Form.Check
-              type="checkbox"
-              label="Active"
-              checked={userData.active}
-              onChange={() =>
-                setUserData((prevData) => ({
-                  ...prevData,
-                  active: !prevData.active,
-                }))
-              }
-              disabled={!isEditMode}
-            />
-          </Form.Group>
-          {!isEditMode && (
-            <Button
-              type="button"
-              variant="primary"
-              className="w-100 mb-3"
-              onClick={toggleEditMode}
-            >
-              Edit User
-            </Button>
-          )}
-          {isEditMode && (
-            <Button variant="success" type="submit" className="w-100">
-              Save Changes
-            </Button>
-          )}
-        </Form>
+
+              {isEditMode && (
+                  <>
+                    <Form.Group controlId="document" className="mb-2">
+                      <Form.Label>Upload Documents (optional)</Form.Label>
+                      <Form.Control
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={handleFileChange}
+                          multiple
+                      />
+                    </Form.Group>
+
+                    {/* Selected files preview list (pre-submit) */}
+                    {files.length > 0 && (
+                        <ListGroup className="mb-3">
+                          {files.map((f, idx) => (
+                              <ListGroup.Item
+                                  key={`${f.name}-${f.size}-${idx}`}
+                                  className="d-flex justify-content-between align-items-center"
+                              >
+                                <div className="text-truncate" style={{ maxWidth: "75%" }}>
+                                  {f.name}{" "}
+                                  <Badge bg="light" text="dark">
+                                    {fmtSize(f.size)}
+                                  </Badge>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline-danger"
+                                    onClick={() => removeFileAt(idx)}
+                                    aria-label={`Remove ${f.name}`}
+                                >
+                                  Remove
+                                </Button>
+                              </ListGroup.Item>
+                          ))}
+                        </ListGroup>
+                    )}
+                  </>
+              )}
+
+              {/* After save/load: show uploaded file links with short names */}
+              {!isEditMode &&
+                  projectData.fileList &&
+                  projectData.fileList.length > 0 && (
+                      <div className="mb-3">
+                        <Form.Label>Uploaded Files</Form.Label>
+                        <ListGroup>
+                          {projectData.fileList.map((url, i) => {
+                            const nameFromUrl =
+                                decodeURIComponent(url.split("/").pop() || "") ||
+                                `file-${i + 1}`;
+                            return (
+                                <ListGroup.Item
+                                    key={url}
+                                    className="d-flex justify-content-between align-items-center"
+                                >
+                          <span className="text-truncate" style={{ maxWidth: "75%" }}>
+                            {nameFromUrl}
+                          </span>
+                                  <div className="d-flex gap-2">
+                                    <a
+                                        className="btn btn-sm btn-outline-primary"
+                                        href={url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                      View
+                                    </a>
+                                    <a className="btn btn-sm btn-success" href={url} download>
+                                      Download
+                                    </a>
+                                  </div>
+                                </ListGroup.Item>
+                            );
+                          })}
+                        </ListGroup>
+                      </div>
+                  )}
+
+              {(!routeId || isEditMode) && (
+                  <Button variant="success" type="submit" className="w-100 mt-3">
+                    {routeId ? "Update Project" : "Save Project"}
+                  </Button>
+              )}
+            </Form>
+          </div>
+        </Container>
+        <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
       </div>
-    </Container>
   );
-}
+};
 
-export default UserCreate;
+export default ProjectForm;
