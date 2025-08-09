@@ -79,6 +79,7 @@ function App() {
 
                         <Route path="/projects/create" element={<ProjectCreate mode="create"/>} />
                         <Route path="/projects/search" element={<ProjectSearch />} />
+                        <Route path="/projects/:id" element={<ProjectCreate mode="edit"/>} />
                         <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit"/>} />
                         <Route path="/projects/view/:id" element={<ProjectCreate mode="view"/>} />
 

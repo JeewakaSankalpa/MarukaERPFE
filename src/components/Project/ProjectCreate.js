@@ -1,10 +1,22 @@
+// src/components/projects/ProjectForm.jsx
 import React, { useEffect, useState } from "react";
-import { Form, Button, Row, Col, Container } from "react-bootstrap";
-import api from '../../services/api';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useParams } from "react-router-dom";
+import {
+  Form,
+  Button,
+  Row,
+  Col,
+  Container,
+  ListGroup,
+  Badge,
+} from "react-bootstrap";
+import api from "../../services/api";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ProjectForm = () => {
+  const { id: routeId } = useParams();
+
   const [projectData, setProjectData] = useState({
     id: "",
     projectName: "",
@@ -12,31 +24,108 @@ const ProjectForm = () => {
     salesRep: "",
     comment: "",
     documentURL: "",
+    fileList: [], // URLs after save or load
   });
 
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [validated, setValidated] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(true);
-  const [files, setFiles] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(!routeId); // create: editable, edit: view-only
+  const [files, setFiles] = useState([]); // selected File[] before submit
 
+  // load dropdown data
   useEffect(() => {
-    api.get("/customer/all")
-        .then(res => setCustomers(res.data))
+    api
+        .get("/customer/all")
+        .then((res) => setCustomers(res.data || []))
         .catch(() => toast.error("Failed to load customers"));
 
-    api.get("/employee/all")
-        .then(res => setEmployees(res.data))
+    api
+        .get("/employee/all")
+        .then((res) => setEmployees(res.data || []))
         .catch(() => toast.error("Failed to load employees"));
   }, []);
 
+  // load project if route has ID
+  useEffect(() => {
+    const load = async () => {
+      if (!routeId) return;
+
+      try {
+        // project details
+        const pRes = await api.get(`/projects/${routeId}`);
+        const p = pRes.data || {};
+
+        // try files endpoint; fallback to p.fileList
+        let fileItems = [];
+        try {
+          const fRes = await api.get(`/projects/${routeId}/files`);
+          const list = fRes.data || [];
+          fileItems =
+              list.map((f, i) =>
+                  typeof f === "string"
+                      ? {
+                        name:
+                            decodeURIComponent(f.split("/").pop()) ||
+                            `file-${i + 1}`,
+                        url: f,
+                      }
+                      : f
+              ) || [];
+        } catch {
+          // fallback to fileList on project
+          const list = p.fileList || [];
+          fileItems = list.map((url, i) => ({
+            url,
+            name:
+                decodeURIComponent(url.split("/").pop()) || `file-${i + 1}`,
+          }));
+        }
+
+        setProjectData((prev) => ({
+          ...prev,
+          ...p,
+          id: p.id,
+          fileList: fileItems.map((x) => x.url),
+        }));
+        setIsEditMode(false); // start read-only on edit route
+        setFiles([]);
+      } catch (e) {
+        toast.error("Failed to load project");
+      }
+    };
+
+    load();
+  }, [routeId]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setProjectData(prev => ({ ...prev, [name]: value }));
+    setProjectData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
-    setFiles(Array.from(e.target.files));
+    const picked = Array.from(e.target.files || []);
+    // Merge with existing selections; avoid duplicates by name+size
+    const existingKeys = new Set(files.map((f) => `${f.name}-${f.size}`));
+    const merged = [
+      ...files,
+      ...picked.filter((f) => !existingKeys.has(`${f.name}-${f.size}`)),
+    ];
+    setFiles(merged);
+  };
+
+  const removeFileAt = (idx) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const fmtSize = (bytes) => {
+    if (bytes == null) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
+    // (add GB if you want)
   };
 
   const handleSubmit = async (e) => {
@@ -47,26 +136,66 @@ const ProjectForm = () => {
     if (!projectName || !customerId || !salesRep || !comment) return;
 
     try {
-      const formData = new FormData();
-      const projectBlob = new Blob([JSON.stringify({ projectName, customerId, salesRep, comment })], {
-        type: "application/json"
-      });
-      formData.append("project", projectBlob);
+      if (!routeId) {
+        // CREATE
+        const formData = new FormData();
+        const projectBlob = new Blob(
+            [JSON.stringify({ projectName, customerId, salesRep, comment })],
+            { type: "application/json" }
+        );
+        formData.append("project", projectBlob);
+        files.forEach((file) => formData.append("files", file));
 
-      files.forEach(file => {
-        formData.append("files", file); // ✅ correct key
-      });
+        const response = await api.post("/projects/create", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
+        setProjectData((prev) => ({ ...prev, ...response.data }));
+        setIsEditMode(false);
+        setFiles([]);
+        toast.success("Project created successfully!");
+      } else {
+        // UPDATE (optional backend)
+        // 1) update basic fields
+        try {
+          await api.put(`/projects/${routeId}`, {
+            projectName,
+            customerId,
+            salesRep,
+            comment,
+            status: projectData.status, // keep status if you want to allow change later
+          });
+          toast.success("Project updated");
+        } catch {
+          toast.warn("Update endpoint not available (PUT /projects/{id})");
+        }
 
-      const response = await api.post("/projects/create", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+        // 2) upload additional files if any
+        if (files.length > 0) {
+          try {
+            const fd = new FormData();
+            files.forEach((f) => fd.append("files", f));
+            const upRes = await api.post(
+                `/projects/${routeId}/files`,
+                fd,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+            // merge new URLs with existing
+            const newUrls = (upRes.data || []).map((x) =>
+                typeof x === "string" ? x : x.url
+            );
+            setProjectData((prev) => ({
+              ...prev,
+              fileList: [...(prev.fileList || []), ...newUrls],
+            }));
+            setFiles([]);
+          } catch {
+            toast.warn("File upload endpoint not available (POST /projects/{id}/files)");
+          }
+        }
 
-      setProjectData(response.data);
-      setIsEditMode(false);
-      toast.success("Project created successfully!");
+        setIsEditMode(false);
+      }
     } catch (error) {
       if (error.response?.status === 404) {
         toast.error("Endpoint not found (404)");
@@ -75,7 +204,7 @@ const ProjectForm = () => {
       } else if (error.response?.status === 413) {
         toast.error("Uploaded files are too large (413)");
       } else {
-        toast.error("Failed to create project");
+        toast.error("Request failed");
       }
     }
   };
@@ -93,9 +222,25 @@ const ProjectForm = () => {
       >
         <Container style={{ width: "80vw", maxWidth: "900px" }}>
           <div className="bg-white shadow rounded p-4" style={{ fontSize: "1rem" }}>
-            <h2 className="text-center mb-4" style={{ fontSize: "1.5rem" }}>
-              {projectData.id ? "View Project" : "Create New Project"}
-            </h2>
+            <div className="d-flex justify-content-between align-items-center">
+              <h2 className="mb-4" style={{ fontSize: "1.5rem" }}>
+                {routeId
+                    ? isEditMode
+                        ? "Edit Project"
+                        : "View Project"
+                    : "Create New Project"}
+              </h2>
+
+              {routeId && (
+                  <Button
+                      size="sm"
+                      variant={isEditMode ? "secondary" : "primary"}
+                      onClick={() => setIsEditMode((v) => !v)}
+                  >
+                    {isEditMode ? "Cancel Edit" : "Edit"}
+                  </Button>
+              )}
+            </div>
 
             <Form noValidate validated={validated} onSubmit={handleSubmit}>
               {projectData.id && (
@@ -189,31 +334,88 @@ const ProjectForm = () => {
               </Form.Group>
 
               {isEditMode && (
-                  <Form.Group controlId="document" className="mb-3">
-                    <Form.Label>Upload Documents (optional)</Form.Label>
-                    <Form.Control
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={handleFileChange}
-                        multiple
-                    />
-                  </Form.Group>
+                  <>
+                    <Form.Group controlId="document" className="mb-2">
+                      <Form.Label>Upload Documents (optional)</Form.Label>
+                      <Form.Control
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={handleFileChange}
+                          multiple
+                      />
+                    </Form.Group>
+
+                    {/* Selected files preview list (pre-submit) */}
+                    {files.length > 0 && (
+                        <ListGroup className="mb-3">
+                          {files.map((f, idx) => (
+                              <ListGroup.Item
+                                  key={`${f.name}-${f.size}-${idx}`}
+                                  className="d-flex justify-content-between align-items-center"
+                              >
+                                <div className="text-truncate" style={{ maxWidth: "75%" }}>
+                                  {f.name}{" "}
+                                  <Badge bg="light" text="dark">
+                                    {fmtSize(f.size)}
+                                  </Badge>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline-danger"
+                                    onClick={() => removeFileAt(idx)}
+                                    aria-label={`Remove ${f.name}`}
+                                >
+                                  Remove
+                                </Button>
+                              </ListGroup.Item>
+                          ))}
+                        </ListGroup>
+                    )}
+                  </>
               )}
 
-              {projectData.documentURL && (
-                  <div className="mb-3">
-                    <Form.Label>Project Document</Form.Label>
-                    <div>
-                      <a href={projectData.documentURL} target="_blank" rel="noopener noreferrer">
-                        View Document
-                      </a>
-                    </div>
-                  </div>
-              )}
+              {/* After save/load: show uploaded file links with short names */}
+              {!isEditMode &&
+                  projectData.fileList &&
+                  projectData.fileList.length > 0 && (
+                      <div className="mb-3">
+                        <Form.Label>Uploaded Files</Form.Label>
+                        <ListGroup>
+                          {projectData.fileList.map((url, i) => {
+                            const nameFromUrl =
+                                decodeURIComponent(url.split("/").pop() || "") ||
+                                `file-${i + 1}`;
+                            return (
+                                <ListGroup.Item
+                                    key={url}
+                                    className="d-flex justify-content-between align-items-center"
+                                >
+                          <span className="text-truncate" style={{ maxWidth: "75%" }}>
+                            {nameFromUrl}
+                          </span>
+                                  <div className="d-flex gap-2">
+                                    <a
+                                        className="btn btn-sm btn-outline-primary"
+                                        href={url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                      View
+                                    </a>
+                                    <a className="btn btn-sm btn-success" href={url} download>
+                                      Download
+                                    </a>
+                                  </div>
+                                </ListGroup.Item>
+                            );
+                          })}
+                        </ListGroup>
+                      </div>
+                  )}
 
-              {!projectData.id && (
+              {(!routeId || isEditMode) && (
                   <Button variant="success" type="submit" className="w-100 mt-3">
-                    Save Project
+                    {routeId ? "Update Project" : "Save Project"}
                   </Button>
               )}
             </Form>
