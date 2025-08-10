@@ -28,6 +28,7 @@ import CustomerView from "./components/Customer/CustomerView";
 import ProjectCreate from "./components/Project/ProjectCreate";
 import ProjectSearch from "./components/Project/ProjectSearch";
 import ItemAdd from "./components/Inventory/ItemAdd";
+import InventoryDashboard from "./components/Inventory/InventoryDashboard";
 
 // import Sidebar from './components/Sidebar';
 
@@ -86,6 +87,7 @@ function App() {
             <Route path="/user/edit/:id" element={<UserCreate mode="edit" />} />
             <Route path="/user/view/:id" element={<UserCreate mode="view" />} />
 
+            <Route path="/inventory/dashboard" element={<InventoryDashboard />} />
             <Route path="/item/add" element={<ItemAdd />} />
             <Route path="/inventory/add" element={<InventoryAdd />} />
             <Route path="/inventory/search" element={<InventoryView />} />

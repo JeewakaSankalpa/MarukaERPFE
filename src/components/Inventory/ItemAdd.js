@@ -54,7 +54,7 @@ function ItemAdd() {
 
   return (
     <Container className="my-5">
-      <h2 className="text-center mb-4">Add Inventory</h2>
+      <h2 className="text-center mb-4">Add Item</h2>
 
       <Form onSubmit={handleSubmit}>
         {/* Search Product */}
@@ -94,7 +94,7 @@ function ItemAdd() {
                 value={inventoryData.itemName}
                 onChange={handleChange}
                 required
-                disabled
+                // disabled
               />
             </Form.Group>
           </Col>
