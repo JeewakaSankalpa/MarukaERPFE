@@ -149,13 +149,13 @@ function ProjectSearch() {
                             <td>{r.customerName || '-'}</td>
                             <td>{r.salesRepName || '-'}</td>
                             <td>{r.status || '-'}</td>
-                            <td>
-                                <Button
-                                    size="sm"
-                                    variant="warning"
-                                    onClick={() => navigate(`/projects/${r.id}`)}
-                                >
+
+                            <td className="d-flex gap-2 justify-content-center">
+                                <Button size="sm" variant="warning" onClick={() => openDetails(r.id)}>
                                     Edit
+                                </Button>
+                                <Button size="sm" variant="info" onClick={() => navigate(`/projects/manage/${r.id}`)}>
+                                    Manage
                                 </Button>
                             </td>
                         </tr>

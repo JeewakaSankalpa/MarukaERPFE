@@ -26,6 +26,8 @@ import ProjectCreate from "./components/Project/ProjectCreate";
 import ProjectSearch from "./components/Project/ProjectSearch";
 // ✅ use relative import unless you configured absolute aliases
 import PrivateRoute from "./components/routes/PrivateRoute";
+import ProjectDetails from "./components/Project/ProjectDetails";
+import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 
 function Layout({ children }) {
     const location = useLocation();
@@ -77,6 +79,8 @@ function App() {
                         <Route path="/projects/:id" element={<ProjectCreate mode="edit" />} />
                         <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit" />} />
                         <Route path="/projects/view/:id" element={<ProjectCreate mode="view" />} />
+                        <Route path="/projects/manage/:id" element={<ProjectDetails />} />
+                        <Route path="/projects/workflow" element={<WorkflowBuilder />} />
 
                         {/* Misc */}
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />

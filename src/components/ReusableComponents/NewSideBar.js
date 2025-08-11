@@ -44,7 +44,8 @@ function NewSideBar() {
       icon: <FaProjectDiagram />,
       submenus: [
         { name: "New Project", path: "/projects/create" },
-        { name: "View Projects", path: "/projects/search" },
+        { name: "Workflow Management", path: "/projects/workflow" },
+        { name: "Manage Projects", path: "/projects/search" },
         // { name: "View Projects", path: "/projects/edit/:id" },
         { name: "Return Goods", path: "/projects/edit/:id" },
       ],
