@@ -1,4 +1,6 @@
+import logo from "./logo.svg";
 import "./components/Styles/App.css";
+
 import React from "react";
 import {
     HashRouter as Router,
@@ -12,6 +14,7 @@ import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import CustomerDashboard from "./components/Customer/CustomerDashboard";
+// import EmployerDashboard from './components/Users/UserEdit';
 import InventoryAdd from "./components/Inventory/InventoryAdd";
 import InventoryView from "./components/Inventory/InventoryView";
 import Header from "./components/ReusableComponents/Header";
@@ -28,6 +31,10 @@ import ProjectSearch from "./components/Project/ProjectSearch";
 import PrivateRoute from "./components/routes/PrivateRoute";
 import ProjectDetails from "./components/Project/ProjectDetails";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
+import ItemAdd from "./components/Inventory/ItemAdd";
+import InventoryDashboard from "./components/Inventory/InventoryDashboard";
+
+// import Sidebar from './components/Sidebar';
 
 function Layout({ children }) {
     const location = useLocation();

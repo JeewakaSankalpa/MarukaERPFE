@@ -26,7 +26,7 @@ const MenuCard = ({ title, icon, path}) => {
         boxSizing: "border-box",
       }}
     >
-      <div
+      {/* <div
         style={{
           width: "40px",
           height: "40px",
@@ -39,12 +39,12 @@ const MenuCard = ({ title, icon, path}) => {
         }}
       >
         {icon}
-      </div>
-      <h3 style={{ fontWeight: "700", fontSize: "18px", margin: "0 0 4px 0", color: "#ffffff"}}>
+      </div> */}
+      <h3 style={{ fontWeight: "700", fontSize: "18px", margin: "0 0 4px 0", color: "#ffffff", alignItems: "center"}}>
         {title}
       </h3>
 
-      <div
+      {/* <div
         style={{
           width: "100%",
           height: "8px",
@@ -60,7 +60,7 @@ const MenuCard = ({ title, icon, path}) => {
             width: "100%",
           }}
         ></div>
-      </div>
+      </div> */}
     </div>
   );
 };
