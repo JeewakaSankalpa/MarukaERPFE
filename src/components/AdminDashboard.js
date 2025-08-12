@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 // import "../styles/Dashboard.css";
-// import "../styles/DashboardRe.css";
+import "../styleSheets/AdminDashboard.css";
 import {
     FaBox,
     FaClipboardList,
@@ -278,7 +278,7 @@ function AdminDashboard({ onLogout }) {
 
     return (
         <div className="fullDashboard">
-            <Container
+            {/* <Container
                 className="expiring-lowStock-container"
                 style={{marginTop: "20px", height: `${0.8*windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
             >
@@ -286,7 +286,6 @@ function AdminDashboard({ onLogout }) {
                     {expiringSoon.length > 0 && (
                         <div className="warning-mark">⚠</div>
                     )}
-                    {/*<span className="warning-text">Upcoming expirations</span >*/}
                     <h2 className="warning-text">Upcoming expirations</h2>
                     <table style={{fontSize: '0.7rem', borderCollapse: "collapse"}}>
                         <thead className="table-primary">
@@ -295,7 +294,6 @@ function AdminDashboard({ onLogout }) {
                             <th className="table-lines">Batch Number</th>
                             <th className="table-lines">Quantity</th>
                             <th className="table-lines">Expiry Date</th>
-                            {/*<th>Batch Number</th>*/}
                         </tr>
                         </thead>
                         <tbody >
@@ -304,16 +302,15 @@ function AdminDashboard({ onLogout }) {
                                 <td className="table-lines">{expiry.productName}</td>
                                 <td className="table-lines">{expiry.batchNumber}</td>
                                 <td className="table-lines">{expiry.quantity}</td>
-                                {/*<td>{expiry.expiryDate}</td>*/}
                                 <td className="table-lines">{new Date(expiry.expiryDate).toISOString().split("T")[0]}</td>
-                                {/*<td>{lowStock.batchNumber}</td>*/}
                             </tr>
                         ))}
                         </tbody>
                     </table>
                 </div>
-            </Container>
-            <Container fluid className="dashboard-container">
+            </Container> */}
+            
+            {/* <Container fluid className="dashboard-container">
                 <Container className="fullMenuDesign">
                     {menuItems.map((item, index) => (
                         <div
@@ -344,11 +341,11 @@ function AdminDashboard({ onLogout }) {
                         </div>
                     ))}
                 </Container>
-            </Container>
+            </Container> */}
 
             <Container
                 className="expiring-lowStock-container"
-                style={{marginTop: "20px", height: `${0.8*windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
+                style={{marginTop: "20px", marginLeft: "20px", height: `${0.8*windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
             >
                 <div>
                     {lowStockProducts.length > 0 && (
@@ -375,51 +372,40 @@ function AdminDashboard({ onLogout }) {
                     </table>
                 </div>
             </Container>
+
+            {/* <Container
+                className="expiring-lowStock-container"
+                style={{marginTop: "20px", marginLeft: "20px", height: `${0.8*windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
+            >
+                <div>
+                    {lowStockProducts.length > 0 && (
+                        <div className="warning-mark">⚠</div>
+                    )}
+                    <h2 className="warning-text">Low Stock</h2>
+                    <table style={{fontSize: '0.7rem', borderCollapse: "collapse"}}>
+                        <thead className="table-primary">
+                        <tr style={{ borderBottom: "2px solid #3f8efc" }}>
+                            <th className="table-lines">Product</th>
+                            <th className="table-lines">Quantity</th>
+                            <th className="table-lines">Re-order Level</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {lowStockProducts.map((lowStock) => (
+                            <tr className="table-lines">
+                                <td className="table-lines">{lowStock.productName}</td>
+                                <td className="table-lines">{lowStock.totalQuantity}</td>
+                                <td className="table-lines">{lowStock.reorderLevel}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Container> */}
         </div>
     );
 
-    // return (
-    //     <Container className="dashboard-container">
-    //       <div className="fullMenuDesign">
-    //       {menuItems.map((item, index) => (
-    //           <Container
-    //               key={index}
-    //               className="menu-item"
-    //               onMouseEnter={() => setActiveSection(index)}
-    //               onMouseLeave={() => setActiveSection(null)}
-    //           >
-    //             <Container className="menu-title">
-    //                {item.title}
-    //                <div className="menu-icon-container">{item.icon}</div>
-    //             </Container>
-    //             <Container
-    //                 className={`submenu ${
-    //                                           activeSection === index ? "submenu-active" : ""
-    //                                       }`}>
-    //               {item.subItems.map((subItem, subIndex) => (
-    //                   <Container
-    //                                         key={subIndex}
-    //                                         className="submenu-item"
-    //                                         onClick={() => navigate(subItem.path)}
-    //                                     >
-    //                                       {subItem.icon} {subItem.name}
-    //                                      </Container>
-    //               ))}
-    //             </Container>
-    //
-    //
-    //           </Container>
-    //       ))}
-    //       </div>
-    //       <div style={{display: "flex", flex-direction: "column"}}>
-    //         <div style={{border: "1px solid black", padding: "20px", backgroundColor: "blue", width: "80%"}}></div>
-    //         <div style={{border: "1px solid black", padding: "20px", backgroundColor: "yellow"}}></div>
-    //       </div>
-    //
-    //       <Container style={{border: "1px solid black", padding: "20px", backgroundColor: "blue"}}></Container>
-    //       <Container style={{border: "1px solid black", padding: "20px", backgroundColor: "yellow"}}></Container>
-    //     </Container>
-    // );
+    
 }
 
 export default AdminDashboard;

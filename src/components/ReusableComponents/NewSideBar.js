@@ -37,7 +37,7 @@ function NewSideBar() {
     {
       title: "Home",
       icon: <FaHome />,
-      submenus: [{ name: "Home", path: "/dashboard" }],
+      submenus: [{ name: "Home", path: "/admin" }],
     },
     {
       title: "Project",
@@ -54,9 +54,9 @@ function NewSideBar() {
       title: "Inventory",
       icon: <FaBoxes />,
       submenus: [
-        { name: "Add Inventory", path: "/inventory/dashboard" },
-        // { name: "Add Item", path: "/item/add" },
-        // { name: "Add Inventory", path: "/inventory/add" },
+        // { name: "Add Inventory", path: "/inventory/dashboard" },
+        { name: "Add Item", path: "/item/add" },
+        { name: "Add Inventory", path: "/inventory/add" },
         { name: "Search Inventory", path: "/inventory/search" },
         { name: "Return Inventory", path: "/inventory/return" },
       ],
@@ -83,10 +83,15 @@ function NewSideBar() {
     transition: "width 0.3s ease",
     backgroundColor: `${Colors.sideBar}`, // blue-900
     color: "white",
-    height: "100vh",
+    // height: "100vh",
+    height: "calc(100vh - 4rem)",
+    // position: "fixed",
+    // height: "100%",
     width: collapsed ? "50px" : "200px",
-    overflow: "hidden",
+    // overflow: "hidden",
     position: "relative",
+    display: "flex",           // Enables flexbox
+  flexDirection: "column",   // Arrange items vertically
   };
 
   const buttonStyle = {
@@ -96,7 +101,7 @@ function NewSideBar() {
     // padding: "10px",
     // marginLeft: "10px",
     // marginRight: "10px",
-    marginTop: "2px",    
+    marginTop: "2px",
     marginBottom: "1px",
     // backgroundColor: "transparent",
     backgroundColor: `${Colors.mainBlue}`,
@@ -125,7 +130,7 @@ function NewSideBar() {
   };
 
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{ display: "flex",height: "100%"}}>
       {/* Sidebar */}
       <div style={sideBarStyle}>
         {/* Collapse/Expand Button */}
@@ -135,6 +140,7 @@ function NewSideBar() {
             justifyContent: "flex-end",
             padding: "5px",
             cursor: "pointer",
+            flexShrink: 0,
           }}
           onClick={() => setCollapsed(!collapsed)}
         >
@@ -142,7 +148,7 @@ function NewSideBar() {
         </div>
 
         {/* Menu Items */}
-        <div>
+        <div style={{ flex: 1, overflowY: "auto", paddingRight: "6px" }}>
           {menus.map((menu, idx) => (
             <div
               key={idx}
@@ -206,7 +212,9 @@ function NewSideBar() {
                         style={{
                           ...subMenuStyle,
                           // backgroundColor: isActive ? "#f0f0f0" : Colors.mainBlue,
-                          backgroundColor: isActive ? Colors.white : "transparent",
+                          backgroundColor: isActive
+                            ? Colors.white
+                            : "transparent",
                           color: isActive ? Colors.mainBlue : Colors.white,
                           fontWeight: isActive ? "bold" : "normal",
                         }}

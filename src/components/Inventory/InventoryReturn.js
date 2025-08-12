@@ -98,7 +98,7 @@ function InventoryReturn() {
                     value={inventoryData.itemName}
                     onChange={handleChange}
                     required
-                    disabled
+                    // disabled
                   />
                 </Form.Group>
               </Col>

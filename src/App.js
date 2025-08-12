@@ -33,6 +33,7 @@ import ProjectDetails from "./components/Project/ProjectDetails";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 import ItemAdd from "./components/Inventory/ItemAdd";
 import InventoryDashboard from "./components/Inventory/InventoryDashboard";
+import { useAuth } from "./context/AuthContext";
 
 // import Sidebar from './components/Sidebar';
 
@@ -55,6 +56,9 @@ function Layout({ children }) {
 }
 
 function App() {
+
+    const { isAuthenticated } = useAuth();
+
     return (
         <Router>
             <Layout>
@@ -65,9 +69,9 @@ function App() {
 
                     {/* Protected area */}
                     <Route element={<PrivateRoute />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
+                        {/* <Route path="/dashboard" element={<Dashboard />} /> */}
                         <Route path="/admin" element={<AdminDashboard />} />
-                        <Route path="/customerDashboard" element={<CustomerDashboard />} />
+                        {/* <Route path="/customerDashboard" element={<CustomerDashboard />} /> */}
 
                         {/* Users */}
                         <Route path="/user/create" element={<UserCreate mode="create" />} />
@@ -77,6 +81,7 @@ function App() {
 
                         {/* Inventory */}
                         <Route path="/inventory/add" element={<InventoryAdd />} />
+                        <Route path="/item/add" element={<ItemAdd />} />
                         <Route path="/inventory/search" element={<InventoryView />} />
                         <Route path="/inventory/return" element={<InventoryReturn />} />
 
@@ -89,6 +94,10 @@ function App() {
                         <Route path="/projects/manage/:id" element={<ProjectDetails />} />
                         <Route path="/projects/workflow" element={<WorkflowBuilder />} />
 
+                        {/* Customer */}
+                        <Route path="/customer/create" element={<CustomerCreate />} />
+                        <Route path="/customer/view" element={<CustomerView />} />
+
                         {/* Misc */}
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
                     </Route>
@@ -99,6 +108,54 @@ function App() {
             </Layout>
         </Router>
     );
+
+    // return (
+    //     <Router>
+    //         {/* {isAuthenticated} */}
+    //         <Layout>
+    //             <Routes>
+    //                 {/* Login is main/initial UI */}
+    //                 {/* <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} /> */}
+    //                 <Route path="/login" element={<Login />} />
+    //                 <Route path="/" element={<Navigate to="/login" replace />} />
+
+    //                 {/* Protected area */}
+    //                 <Route element={<PrivateRoute />}>
+    //                     <Route path="/dashboard" element={<Dashboard />} />
+    //                     <Route path="/admin" element={<AdminDashboard />} />
+    //                     <Route path="/customerDashboard" element={<CustomerDashboard />} />
+
+    //                     {/* Users */}
+    //                     <Route path="/user/create" element={<UserCreate mode="create" />} />
+    //                     <Route path="/user/search" element={<UserSearch />} />
+    //                     <Route path="/user/edit/:id" element={<UserCreate mode="edit" />} />
+    //                     <Route path="/user/view/:id" element={<UserCreate mode="view" />} />
+
+    //                     {/* Inventory */}
+    //                     <Route path="/inventory/add" element={<InventoryAdd />} />
+    //                     <Route path="/item/add" element={<ItemAdd />} />
+    //                     <Route path="/inventory/search" element={<InventoryView />} />
+    //                     <Route path="/inventory/return" element={<InventoryReturn />} />
+
+    //                     {/* Projects */}
+    //                     <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
+    //                     <Route path="/projects/search" element={<ProjectSearch />} />
+    //                     <Route path="/projects/:id" element={<ProjectCreate mode="edit" />} />
+    //                     <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit" />} />
+    //                     <Route path="/projects/view/:id" element={<ProjectCreate mode="view" />} />
+    //                     <Route path="/projects/manage/:id" element={<ProjectDetails />} />
+    //                     <Route path="/projects/workflow" element={<WorkflowBuilder />} />
+
+    //                     {/* Misc */}
+    //                     <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
+    //                 </Route>
+
+    //                 {/* Fallback */}
+    //                 <Route path="*" element={<Navigate to="/login" replace />} />
+    //             </Routes>
+    //         </Layout>
+    //     </Router>
+    // );
 }
 
 export default App;
