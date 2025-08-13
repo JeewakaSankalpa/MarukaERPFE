@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Form, Button, Container, Table, Row, Col, Modal } from 'react-bootstrap';
 import Select from 'react-select';
-import api from '../../services/api';
+import api from '../../api/api';
 import DatePicker from 'react-datepicker';
 import { useParams } from "react-router-dom";
 

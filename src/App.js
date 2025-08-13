@@ -35,6 +35,15 @@ import ItemAdd from "./components/Inventory/ItemAdd";
 import InventoryDashboard from "./components/Inventory/InventoryDashboard";
 import { useAuth } from "./context/AuthContext";
 
+import SupplierCreate from "./components/Supplier/SupplierPage";
+import ProductCreate from "./components/Inventory/ProductPage";
+import SupplierView from "./components/Supplier/SupplierView";
+import SupplierDashboard from "./components/Supplier/SupplierDashboard";
+
+
+// import InventoryAdd from "./components/Supplier/SupplierCreate";
+
+
 // import Sidebar from './components/Sidebar';
 
 function Layout({ children }) {
@@ -100,6 +109,10 @@ function App() {
 
                         {/* Misc */}
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
+                        {/*Supplier*/}
+                        <Route path="/supplier/create" element={<SupplierCreate />} />
+                        {/*Inventory*/}
+                        <Route path="/product/create" element={<ProductCreate />} />
                     </Route>
 
                     {/* Fallback */}

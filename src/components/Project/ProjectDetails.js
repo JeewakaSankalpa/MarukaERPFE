@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     Row, Col, Card, Button, Badge, Table, Spinner, ProgressBar, Form,
 } from 'react-bootstrap';
-import api from '../../services/api';
+import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Form, Button, Row, Col } from "react-bootstrap";
-import api from "../../services/api";
+import api from "../../api/api";
 
 function ItemAdd() {
   const [products, setProducts] = useState([]);

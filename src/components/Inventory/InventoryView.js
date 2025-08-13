@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Container, Form, Button, Row, Col, Modal } from 'react-bootstrap';
 import Select from 'react-select';
-import api from '../../services/api';
+import api from '../../api/api';
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 

@@ -1,7 +1,7 @@
 // src/components/customer/CustomerList.js
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Container, Form } from 'react-bootstrap';
-import api from '../../services/api';
+import api from '../../api/api';
 
 function CustomerView({ onEditCustomer }) {
     const [customers, setCustomers] = useState([]);

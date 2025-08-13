@@ -10,7 +10,7 @@ import {
   ListGroup,
   Badge,
 } from "react-bootstrap";
-import api from "../../services/api";
+import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 

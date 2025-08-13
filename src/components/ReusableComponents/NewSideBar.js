@@ -55,7 +55,7 @@ function NewSideBar() {
       icon: <FaBoxes />,
       submenus: [
         // { name: "Add Inventory", path: "/inventory/dashboard" },
-        { name: "Add Item", path: "/item/add" },
+        { name: "Manage Products", path: "/product/create" },
         { name: "Add Inventory", path: "/inventory/add" },
         { name: "Search Inventory", path: "/inventory/search" },
         { name: "Return Inventory", path: "/inventory/return" },
@@ -67,6 +67,14 @@ function NewSideBar() {
       submenus: [
         { name: "Create Users", path: "/user/create" },
         { name: "Search Users", path: "/user/search" },
+      ],
+    },
+    {
+      title: "Supplier",
+      icon: <FaUsers />,
+      submenus: [
+        { name: "Create Supplier", path: "/supplier/create" },
+        { name: "Search Supplier", path: "/supplier/search" },
       ],
     },
     {
