@@ -1,411 +1,178 @@
 import React, { useEffect, useState } from "react";
-// import "../styles/Dashboard.css";
-import "../styleSheets/AdminDashboard.css";
-import {
-    FaBox,
-    FaClipboardList,
-    FaClock,
-    FaCogs,
-    FaFileInvoiceDollar,
-    FaPhone,
-    FaSearch,
-    FaSignOutAlt,
-    FaStore,
-    FaTruck,
-    FaUser,
-    FaUserPlus,
-} from "react-icons/fa";
-import { Navigate, useNavigate } from "react-router-dom";
-import { Button, Container } from "react-bootstrap";
-import { useAuth } from "../context/AuthContext";
-// import api from "../services/api";
-import Images from "../resources/Images";
+import { Row, Col, Card, Spinner, Table, Badge } from "react-bootstrap";
+import api from "../api/api";
 
-function AdminDashboard({ onLogout }) {
-    const navigate = useNavigate();
-    const [currentTime, setCurrentTime] = useState(new Date());
 
-    const [hoveredMenu, setHoveredMenu] = useState(null);
+const money = (n) => Number(n || 0).toLocaleString();
 
-    const [activeSection, setActiveSection] = useState(null);
-    const { logout } = useAuth();
-
-    const [user, setUser] = useState({
-        firstName: localStorage.getItem("firstName") || "Guest",
-        lastName: localStorage.getItem("lastName") || "",
-        store: localStorage.getItem("store") || "",
-    });
-
-    useEffect(() => {
-        const interval = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // const handleLogout = async () => {
-    //     try {
-    //         await api.post("/user/logout", {
-    //             username: localStorage.getItem("username"),
-    //         });
-    //         logout();
-    //         navigate("/");
-    //     } catch (error) {
-    //         console.error("Logout failed:", error);
-    //     }
-    // };
-
-    const menuItems = [
-        {
-            title: "User Management",
-            icon: <FaUser className="menu-icon" />,
-            subItems: [
-                { name: "Create User", path: "/user/create", icon: <FaUserPlus /> },
-                { name: "Search User", path: "/user/search", icon: <FaSearch /> },
-            ],
-        },
-        {
-            title: "Customer Management",
-            icon: <FaPhone className="menu-icon" />,
-            subItems: [
-                {
-                    name: "Create Customer",
-                    path: "/customer/create",
-                    icon: <FaUserPlus />,
-                },
-                {
-                    name: "Search Customer",
-                    path: "/customer/search",
-                    icon: <FaPhone />,
-                },
-            ],
-        },
-        {
-            title: "Supplier Management",
-            icon: <FaTruck className="menu-icon" />,
-            subItems: [
-                {
-                    name: "Create Supplier",
-                    path: "/supplier/create",
-                    icon: <FaTruck />,
-                },
-                {
-                    name: "Search Supplier",
-                    path: "/supplier/search",
-                    icon: <FaSearch />,
-                },
-                // { name: "Returns", path: "/supplier/return", icon: <FaBox /> },
-                {
-                    name: "Create Supplier Invoice",
-                    path: "/supplier/invoice",
-                    icon: <FaFileInvoiceDollar />,
-                },
-                {
-                    name: "Search Supplier Invoices",
-                    path: "/supplier/invoices",
-                    icon: <FaClipboardList />,
-                },
-            ],
-        },
-        {
-            title: "Inventory Management",
-            icon: <FaBox className="menu-icon" />,
-            subItems: [
-                { name: "Add Inventory", path: "/inventory/add", icon: <FaBox /> },
-                {
-                    name: "Transfer to Store",
-                    path: "/inventory/transfer",
-                    icon: <FaClipboardList />,
-                },
-                {
-                    name: "Return to Inventory",
-                    path: "/inventory/return",
-                    icon: <FaBox />,
-                },
-                {
-                    name: "Accept GRN",
-                    path: "/inventory/acceptgrn",
-                    icon: <FaClipboardList />,
-                },
-                {
-                    name: "Manual Stock",
-                    path: "/inventory/manual",
-                    icon: <FaClipboardList />,
-                },
-                {
-                    name: "View Stock",
-                    path: "/inventory/view",
-                    icon: <FaClipboardList />,
-                },
-            ],
-        },
-        {
-            title: "Product Management",
-            icon: <FaBox className="menu-icon" />,
-            subItems: [
-                { name: "Create Product", path: "/product/create", icon: <FaBox /> },
-                { name: "Search Product", path: "/product/search", icon: <FaSearch /> },
-                {
-                    name: "Create Generic Name",
-                    path: "/generic-name/create",
-                    icon: <FaBox />,
-                },
-                {
-                    name: "Search Generic Name",
-                    path: "/generic-name/search",
-                    icon: <FaSearch />,
-                },
-            ],
-        },
-        {
-            title: "Store Management",
-            icon: <FaStore className="menu-icon" />,
-            subItems: [
-                { name: "Create Store", path: "/store/create", icon: <FaStore /> },
-                { name: "Search Store", path: "/store/search", icon: <FaSearch /> },
-            ],
-        },
-        {
-            title: "Invoice Management",
-            icon: <FaFileInvoiceDollar className="menu-icon" />,
-            subItems: [
-                {
-                    name: "Issue Invoice",
-                    path: "/invoice/create",
-                    icon: <FaFileInvoiceDollar />,
-                },
-                {
-                    name: "View Invoices",
-                    path: "/invoice/list",
-                    icon: <FaClipboardList />,
-                },
-                // {
-                //   name: "Sales Returns",
-                //   path: "/invoice/return",
-                //   icon: <FaClipboardList />,
-                // },
-            ],
-        },
-        {
-            title: "Reports",
-            icon: <FaClipboardList className="menu-icon" />,
-            subItems: [
-                {
-                    name: "Sales Reports",
-                    path: "/sales-report",
-                    icon: <FaClipboardList />,
-                },
-                {
-                    name: "Product Sales Report",
-                    path: "/product-sales-report",
-                    icon: <FaClipboardList />,
-                },
-                {
-                    name: "Sales Charts",
-                    path: "/sales-charts",
-                    icon: <FaClipboardList />,
-                },
-                { name: "Accept Return", path: "/cashier/return", icon: <FaBox /> },
-            ],
-        },
-        {
-            title: "Manufacturer Management",
-            icon: <FaStore className="menu-icon" />,
-            subItems: [
-                {
-                    name: "Create Manufacturer",
-                    path: "/manufacturer/create",
-                    icon: <FaStore />,
-                },
-                {
-                    name: "Search Manufacturer",
-                    path: "/manufacturer/search",
-                    icon: <FaSearch />,
-                },
-            ],
-        },
-    ];
-
-    const [lowStockProducts, setLowStockProducts] = useState([]);
-    const [expiringSoon, setExpiringSoon] = useState([]);
-
-    // useEffect(() => {
-    //     fetchLowStockProducts(user.store);
-    //     fetchExpiringSoon(user.store);
-    // }, [user.store]);
-
-    // const fetchLowStockProducts = async (locationId) => {
-    //     try {
-    //         const response = await api.get('/inventory/low-stock', {
-    //             params: { locationId }
-    //         });
-    //         setLowStockProducts(response.data);
-    //     } catch (error) {
-    //         console.error('Failed to fetch low stock products:', error);
-    //     }
-    // };
-
-    // const fetchExpiringSoon = async (locationId) => {
-    //     try {
-    //         const response = await api.get('/inventory/expiring-soon', {
-    //             params: { locationId }
-    //         });
-    //         setExpiringSoon(response.data);
-    //     } catch (error) {
-    //         console.error('Failed to fetch expiring soon products:', error);
-    //     }
-    // };
-
-    const [windowSize, setWindowSize] = useState({
-        width: window.innerWidth,
-        height: window.innerHeight,
-    });
-
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowSize({
-                width: window.innerWidth,
-                height: window.innerHeight,
-            });
-        };
-
-        // Add resize event listener
-        window.addEventListener("resize", handleResize);
-
-        // Clean up the event listener on component unmount
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
-
+function FlipCard({ front, back }) {
+    const [flipped, setFlipped] = useState(false);
     return (
-        <div className="fullDashboard">
-            {/* <Container
-                className="expiring-lowStock-container"
-                style={{marginTop: "20px", height: `${0.8*windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
-            >
-                <div>
-                    {expiringSoon.length > 0 && (
-                        <div className="warning-mark">⚠</div>
-                    )}
-                    <h2 className="warning-text">Upcoming expirations</h2>
-                    <table style={{fontSize: '0.7rem', borderCollapse: "collapse"}}>
-                        <thead className="table-primary">
-                        <tr style={{ borderBottom: "2px solid #3f8efc" }}>
-                            <th className="table-lines">Product</th>
-                            <th className="table-lines">Batch Number</th>
-                            <th className="table-lines">Quantity</th>
-                            <th className="table-lines">Expiry Date</th>
-                        </tr>
-                        </thead>
-                        <tbody >
-                        {expiringSoon.map((expiry) => (
-                            <tr className="table-lines">
-                                <td className="table-lines">{expiry.productName}</td>
-                                <td className="table-lines">{expiry.batchNumber}</td>
-                                <td className="table-lines">{expiry.quantity}</td>
-                                <td className="table-lines">{new Date(expiry.expiryDate).toISOString().split("T")[0]}</td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
-            </Container> */}
-            
-            {/* <Container fluid className="dashboard-container">
-                <Container className="fullMenuDesign">
-                    {menuItems.map((item, index) => (
-                        <div
-                            key={index}
-                            className="menu-item"
-                            onMouseEnter={() => setActiveSection(index)}
-                            onMouseLeave={() => setActiveSection(null)}
-                        >
-                            <div className="menu-title">
-                                {item.title}
-                                <div className="menu-icon-container">{item.icon}</div>
-                            </div>
-                            <div
-                                className={`submenu ${
-                                    activeSection === index ? "submenu-active" : ""
-                                }`}
-                            >
-                                {item.subItems.map((subItem, subIndex) => (
-                                    <div
-                                        key={subIndex}
-                                        className="submenu-item"
-                                        onClick={() => navigate(subItem.path)}
-                                    >
-                                        {subItem.icon} {subItem.name}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </Container>
-            </Container> */}
-
-            <Container
-                className="expiring-lowStock-container"
-                style={{marginTop: "20px", marginLeft: "20px", height: `${0.8*windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
-            >
-                <div>
-                    {lowStockProducts.length > 0 && (
-                        <div className="warning-mark">⚠</div>
-                    )}
-                    <h2 className="warning-text">Low Stock</h2>
-                    <table style={{fontSize: '0.7rem', borderCollapse: "collapse"}}>
-                        <thead className="table-primary">
-                        <tr style={{ borderBottom: "2px solid #3f8efc" }}>
-                            <th className="table-lines">Product</th>
-                            <th className="table-lines">Quantity</th>
-                            <th className="table-lines">Re-order Level</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {lowStockProducts.map((lowStock) => (
-                            <tr className="table-lines">
-                                <td className="table-lines">{lowStock.productName}</td>
-                                <td className="table-lines">{lowStock.totalQuantity}</td>
-                                <td className="table-lines">{lowStock.reorderLevel}</td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
-            </Container>
-
-            {/* <Container
-                className="expiring-lowStock-container"
-                style={{marginTop: "20px", marginLeft: "20px", height: `${0.8*windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
-            >
-                <div>
-                    {lowStockProducts.length > 0 && (
-                        <div className="warning-mark">⚠</div>
-                    )}
-                    <h2 className="warning-text">Low Stock</h2>
-                    <table style={{fontSize: '0.7rem', borderCollapse: "collapse"}}>
-                        <thead className="table-primary">
-                        <tr style={{ borderBottom: "2px solid #3f8efc" }}>
-                            <th className="table-lines">Product</th>
-                            <th className="table-lines">Quantity</th>
-                            <th className="table-lines">Re-order Level</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {lowStockProducts.map((lowStock) => (
-                            <tr className="table-lines">
-                                <td className="table-lines">{lowStock.productName}</td>
-                                <td className="table-lines">{lowStock.totalQuantity}</td>
-                                <td className="table-lines">{lowStock.reorderLevel}</td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
-            </Container> */}
+        <div className={`flip-wrapper ${flipped ? "flipped" : ""}`} onClick={() => setFlipped(f => !f)} style={{ cursor: "pointer" }}>
+            <div className="flip-inner">
+                <div className="flip-face flip-front">{front}</div>
+                <div className="flip-face flip-back">{back}</div>
+            </div>
+            <style>{`
+        .flip-wrapper { perspective: 1000px; }
+        .flip-inner { position: relative; width: 100%; height: 100%; transition: transform .6s; transform-style: preserve-3d; }
+        .flip-wrapper.flipped .flip-inner { transform: rotateY(180deg); }
+        .flip-face { position: absolute; inset: 0; backface-visibility: hidden; }
+        .flip-back { transform: rotateY(180deg); }
+      `}</style>
         </div>
     );
-
-    
 }
 
-export default AdminDashboard;
+export default function AdminDashboard() {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    const load = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get("/dashboard/summary");
+            setData(res.data);
+        } catch (e) {
+            setData(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { load(); }, []);
+
+    if (loading && !data) {
+        return <div className="p-3"><Spinner size="sm" className="me-2" /> Loading dashboard…</div>;
+    }
+
+    const proj = data?.project;
+    const due  = data?.due;
+    const acc  = data?.accounts;
+
+    const DueList = ({ list }) => (
+        <Table size="sm" bordered responsive className="mb-0">
+            <thead>
+            <tr><th style={{width:140}}>ID</th><th>Name</th><th style={{width:180}}>Due</th></tr>
+            </thead>
+            <tbody>
+            {(!list || list.length === 0) ? (
+                <tr><td colSpan={3} className="text-muted text-center">None</td></tr>
+            ) : list.map(x => (
+                <tr key={x.id}>
+                    <td><Badge bg="secondary">{x.id}</Badge></td>
+                    <td className="text-truncate">{x.name || "-"}</td>
+                    <td>{x.dueAt ? new Date(x.dueAt).toLocaleString() : "-"}</td>
+                </tr>
+            ))}
+            </tbody>
+        </Table>
+    );
+
+    return (
+        <div className="p-2" style={{ width: "100%" }}>
+            <Row className="g-3">
+                {/* Project Stats */}
+                <Col lg={4} md={6}>
+                    <Card className="h-100">
+                        <Card.Header className="d-flex justify-content-between align-items-center">
+                            <span>Project Stats</span>
+                            <span role="button" className="text-muted small" onClick={load}>{loading ? "…" : "Reload"}</span>
+                        </Card.Header>
+                        <Card.Body>
+                            {!proj ? (
+                                <div className="text-muted">No data</div>
+                            ) : (
+                                <>
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <div>Total Ongoing</div>
+                                        <div><strong>{proj.totalOngoing}</strong></div>
+                                    </div>
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <div>Total Completed</div>
+                                        <div><strong>{proj.totalCompleted}</strong></div>
+                                    </div>
+                                    <hr />
+                                    <div className="fw-semibold mb-2">By Status</div>
+                                    <Table size="sm" bordered responsive className="mb-0">
+                                        <tbody>
+                                        {Object.entries(proj.byStatus || {}).map(([k,v]) => (
+                                            <tr key={k}><td>{k}</td><td className="text-end">{v}</td></tr>
+                                        ))}
+                                        </tbody>
+                                    </Table>
+                                </>
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Col>
+
+                {/* Due Dates (flip) */}
+                <Col lg={4} md={6}>
+                    <Card className="h-100">
+                        <Card.Header>Project Due Dates (click to flip)</Card.Header>
+                        <Card.Body style={{ position: "relative", minHeight: 260 }}>
+                            {!due ? (
+                                <div className="text-muted">No data</div>
+                            ) : (
+                                <FlipCard
+                                    front={
+                                        <div className="p-1">
+                                            <div className="d-flex justify-content-between mb-2">
+                                                <div>Due Today</div><div><strong>{due.dueTodayCount}</strong></div>
+                                            </div>
+                                            <div className="d-flex justify-content-between mb-2">
+                                                <div>Due This Week</div><div><strong>{due.dueThisWeekCount}</strong></div>
+                                            </div>
+                                            <div className="d-flex justify-content-between">
+                                                <div>Due This Month</div><div><strong>{due.dueThisMonthCount}</strong></div>
+                                            </div>
+                                            <div className="text-muted small mt-3">Flip to view project IDs & names</div>
+                                        </div>
+                                    }
+                                    back={
+                                        <div className="p-1">
+                                            <div className="fw-semibold mb-1">Due Today</div>
+                                            <DueList list={due.dueToday} />
+                                            <div className="fw-semibold mt-3 mb-1">Due This Week</div>
+                                            <DueList list={due.dueThisWeek} />
+                                            <div className="fw-semibold mt-3 mb-1">Due This Month</div>
+                                            <DueList list={due.dueThisMonth} />
+                                        </div>
+                                    }
+                                />
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Col>
+
+                {/* Accounts */}
+                <Col lg={4} md={12}>
+                    <Card className="h-100">
+                        <Card.Header>Accounts</Card.Header>
+                        <Card.Body>
+                            {!acc ? (
+                                <div className="text-muted">No data</div>
+                            ) : (
+                                <>
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <div>Outstanding (to collect)</div>
+                                        <div><strong>₹ {money(acc.outstanding)}</strong></div>
+                                    </div>
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <div>Payments Received This Week</div>
+                                        <div><strong>₹ {money(acc.receivedThisWeek)}</strong></div>
+                                    </div>
+                                    <div className="d-flex justify-content-between">
+                                        <div>Payments Received This Month</div>
+                                        <div><strong>₹ {money(acc.receivedThisMonth)}</strong></div>
+                                    </div>
+                                </>
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+        </div>
+    );
+}

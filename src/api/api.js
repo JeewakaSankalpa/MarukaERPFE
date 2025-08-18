@@ -1,24 +1,44 @@
-// src/api/api.js  (your file; you can keep the name you used)
+// src/api/api.js
 import axios from 'axios';
 
+// ---- Base URL (CRA-safe) ----
+// Priority: REACT_APP_API_URL env -> window.__API_URL__ -> localhost fallback
+const baseURL =
+    process.env.REACT_APP_API_URL ||
+    (typeof window !== 'undefined' && window.__API_URL__) ||
+    'http://localhost:8080/api';
+
 const api = axios.create({
-    baseURL: import.meta?.env?.VITE_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:8080/api',
+    baseURL,
     timeout: 20000,
 });
 
-// Attach JWT if present
+// ---- Array param handling: status=A&status=B (no [] brackets) ----
+api.defaults.paramsSerializer = (params) => {
+    const usp = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+        if (Array.isArray(v)) {
+            v.forEach((val) => usp.append(k, String(val)));
+        } else if (v !== undefined && v !== null) {
+            usp.append(k, String(v));
+        }
+    });
+    return usp.toString();
+};
+
+// ---- Attach JWT if present ----
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
 
-// Optionally unwrap {data} and auto-handle 401
+// ---- Optional 401 handling ----
 api.interceptors.response.use(
     (res) => res,
     (err) => {
         if (err?.response?.status === 401) {
-            // e.g., redirect to login or clear token
+            // Example:
             // localStorage.removeItem('token');
             // window.location.assign('/login');
         }

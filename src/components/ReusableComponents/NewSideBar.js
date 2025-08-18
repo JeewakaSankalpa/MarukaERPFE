@@ -48,6 +48,7 @@ function NewSideBar() {
         { name: "Manage Projects", path: "/projects/search" },
         // { name: "View Projects", path: "/projects/edit/:id" },
         { name: "Return Goods", path: "/projects/edit/:id" },
+        { name: "Project Estimation", path: "/projects/estimation" },
       ],
     },
     {
@@ -56,9 +57,23 @@ function NewSideBar() {
       submenus: [
         // { name: "Add Inventory", path: "/inventory/dashboard" },
         { name: "Manage Products", path: "/product/create" },
-        { name: "Add Inventory", path: "/inventory/add" },
+        { name: "Purchase Requests", path: "/inventory/pr" },
         { name: "Search Inventory", path: "/inventory/search" },
         { name: "Return Inventory", path: "/inventory/return" },
+      ],
+    },
+    {
+      title: "Stores",
+      icon: <FaBoxes />,
+      submenus: [
+        // { name: "Add Inventory", path: "/inventory/dashboard" },
+        { name: "Stores Planning", path: "/stores/planning" },
+        { name: "Pending POs", path: "/stores/pending-to-po" },
+        { name: "Transfers", path: "/transfers/inbox" },
+        { name: "PO", path: "/pos" },
+        { name: "GRN", path: "/grn" },
+        { name: "Create ItemRequests", path: "/item/requests" },
+        { name: "View Item Requests", path: "/stores/fulfil-requests" },
       ],
     },
     {
@@ -67,6 +82,14 @@ function NewSideBar() {
       submenus: [
         { name: "Create Users", path: "/user/create" },
         { name: "Search Users", path: "/user/search" },
+      ],
+    },
+    {
+      title: "Department",
+      icon: <FaUsers />,
+      submenus: [
+        { name: "Department Management", path: "/departments" },
+        { name: "Create new Department", path: "/departments/new" },
       ],
     },
     {

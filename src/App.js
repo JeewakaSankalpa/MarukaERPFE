@@ -8,13 +8,15 @@ import {
     Route,
     Navigate,
     useLocation,
+    useParams,
+    useNavigate,
 } from "react-router-dom";
 
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import CustomerDashboard from "./components/Customer/CustomerDashboard";
-// import EmployerDashboard from './components/Users/UserEdit';
+
 import InventoryAdd from "./components/Inventory/InventoryAdd";
 import InventoryView from "./components/Inventory/InventoryView";
 import Header from "./components/ReusableComponents/Header";
@@ -27,7 +29,6 @@ import CustomerCreate from "./components/Customer/CustomerCreate";
 import CustomerView from "./components/Customer/CustomerView";
 import ProjectCreate from "./components/Project/ProjectCreate";
 import ProjectSearch from "./components/Project/ProjectSearch";
-// ✅ use relative import unless you configured absolute aliases
 import PrivateRoute from "./components/routes/PrivateRoute";
 import ProjectDetails from "./components/Project/ProjectDetails";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
@@ -39,18 +40,24 @@ import SupplierCreate from "./components/Supplier/SupplierPage";
 import ProductCreate from "./components/Inventory/ProductPage";
 import SupplierView from "./components/Supplier/SupplierView";
 import SupplierDashboard from "./components/Supplier/SupplierDashboard";
+import PurchaseRequestPage from "./components/Inventory/PurchaseRequestPage";
+import StoresPlanningPage from "./components/Stores/StoresPlanningPage";
+import PendingToPOPage from "./components/Stores/PendingToPOPage";
+import TransfersInbox from "./components/Transfers/TransferInbox";
+import POListView from "./components/PO/POListView";
+import GRNReceivePage from "./components/GRN/GRNRecievePage";
+import ItemRequestForm from "./components/Requests/ItemRequestForm";
+import DepartmentList from "./components/Departments/DepartmentList";
+import DepartmentForm from "./components/Departments/DepartmentForm";
+import POCreateManual from "./components/PO/POCreateManual";
+import IRFulfilmentPage from "./components/Requests/IRFulfilmentPage";
+import ProjectEstimationPage from "./components/estimates/ProjectEstimationPage";
 
-
-// import InventoryAdd from "./components/Supplier/SupplierCreate";
-
-
-// import Sidebar from './components/Sidebar';
-
+/* ---------------- Layout ---------------- */
 function Layout({ children }) {
-    const location = useLocation();
+    const location = useLocation(); // ✅ use hook, not global
     const isLoginRoute = location.pathname === "/login";
 
-    // Hide chrome on login
     if (isLoginRoute) return <>{children}</>;
 
     return (
@@ -64,19 +71,56 @@ function Layout({ children }) {
     );
 }
 
-function App() {
+/* --------------- Route Wrappers --------------- */
+function DepartmentFormRouteWrapper() {
+    const params = useParams();
+    const navigate = useNavigate();
+    return <DepartmentForm id={params.id} onDone={(id) => navigate(`/departments/${id}`)} />;
+}
 
-    const { isAuthenticated } = useAuth();
+function DepartmentListRouteWrapper() {
+    const navigate = useNavigate();
+    return (
+        <DepartmentList
+            onOpenForm={(id) => navigate(id ? `/departments/${id}` : "/departments/new")}
+        />
+    );
+}
+
+function DepartmentFormNewRouteWrapper() {
+    const navigate = useNavigate();
+    return <DepartmentForm onDone={(id) => navigate(`/departments/${id}`)} />;
+}
+
+function POListRouteWrapper() {
+    const navigate = useNavigate();
+    return <POListView onOpenGRN={(poId) => navigate(`/grn?poId=${poId}`)} />;
+}
+
+function GRNRouteWrapper() {
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    return <GRNReceivePage poId={params.get("poId")} />;
+}
+
+function POCreateManualRouteWrapper() {
+    const navigate = useNavigate();
+    return <POCreateManual onCreated={() => navigate(`/pos`)} />;
+}
+
+/* ------------------- App ------------------- */
+function App() {
+    const { isAuthenticated } = useAuth(); // keep if you use it elsewhere
 
     return (
         <Router>
             <Layout>
                 <Routes>
-                    {/* Login is main/initial UI */}
+                    {/* Public */}
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={<Navigate to="/login" replace />} />
 
-                    {/* Protected area */}
+                    {/* Protected */}
                     <Route element={<PrivateRoute />}>
                         {/* <Route path="/dashboard" element={<Dashboard />} /> */}
                         <Route path="/admin" element={<AdminDashboard />} />
@@ -93,6 +137,7 @@ function App() {
                         <Route path="/item/add" element={<ItemAdd />} />
                         <Route path="/inventory/search" element={<InventoryView />} />
                         <Route path="/inventory/return" element={<InventoryReturn />} />
+                        <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
 
                         {/* Projects */}
                         <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
@@ -102,17 +147,34 @@ function App() {
                         <Route path="/projects/view/:id" element={<ProjectCreate mode="view" />} />
                         <Route path="/projects/manage/:id" element={<ProjectDetails />} />
                         <Route path="/projects/workflow" element={<WorkflowBuilder />} />
+                        <Route path="/projects/estimation" element={<ProjectEstimationPage />} />
 
                         {/* Customer */}
                         <Route path="/customer/create" element={<CustomerCreate />} />
                         <Route path="/customer/view" element={<CustomerView />} />
 
-                        {/* Misc */}
-                        <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
-                        {/*Supplier*/}
+                        {/* Supplier / Product */}
                         <Route path="/supplier/create" element={<SupplierCreate />} />
-                        {/*Inventory*/}
                         <Route path="/product/create" element={<ProductCreate />} />
+
+                        {/* Requests / Stores / PO / GRN */}
+                        <Route path="/inventory/pr" element={<PurchaseRequestPage />} />
+                        <Route path="/stores/planning" element={<StoresPlanningPage />} />
+                        <Route path="/stores/pending-to-po" element={<PendingToPOPage />} />
+                        <Route path="/transfers/inbox" element={<TransfersInbox />} />
+                        <Route path="/item/requests" element={<ItemRequestForm />} />
+                        {/*<Route path="/item/list-requests" element={<ItemRequests />} />*/}
+
+                        <Route path="/pos" element={<POListRouteWrapper />} />
+                        <Route path="/pos/new" element={<POCreateManualRouteWrapper />} />
+                        <Route path="/grn" element={<GRNRouteWrapper />} />
+
+                        {/* Departments */}
+                        <Route path="/departments" element={<DepartmentListRouteWrapper />} />
+                        <Route path="/departments/new" element={<DepartmentFormNewRouteWrapper />} />
+                        <Route path="/departments/:id" element={<DepartmentFormRouteWrapper />} />
+
+                        <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
                     </Route>
 
                     {/* Fallback */}
@@ -121,54 +183,6 @@ function App() {
             </Layout>
         </Router>
     );
-
-    // return (
-    //     <Router>
-    //         {/* {isAuthenticated} */}
-    //         <Layout>
-    //             <Routes>
-    //                 {/* Login is main/initial UI */}
-    //                 {/* <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} /> */}
-    //                 <Route path="/login" element={<Login />} />
-    //                 <Route path="/" element={<Navigate to="/login" replace />} />
-
-    //                 {/* Protected area */}
-    //                 <Route element={<PrivateRoute />}>
-    //                     <Route path="/dashboard" element={<Dashboard />} />
-    //                     <Route path="/admin" element={<AdminDashboard />} />
-    //                     <Route path="/customerDashboard" element={<CustomerDashboard />} />
-
-    //                     {/* Users */}
-    //                     <Route path="/user/create" element={<UserCreate mode="create" />} />
-    //                     <Route path="/user/search" element={<UserSearch />} />
-    //                     <Route path="/user/edit/:id" element={<UserCreate mode="edit" />} />
-    //                     <Route path="/user/view/:id" element={<UserCreate mode="view" />} />
-
-    //                     {/* Inventory */}
-    //                     <Route path="/inventory/add" element={<InventoryAdd />} />
-    //                     <Route path="/item/add" element={<ItemAdd />} />
-    //                     <Route path="/inventory/search" element={<InventoryView />} />
-    //                     <Route path="/inventory/return" element={<InventoryReturn />} />
-
-    //                     {/* Projects */}
-    //                     <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
-    //                     <Route path="/projects/search" element={<ProjectSearch />} />
-    //                     <Route path="/projects/:id" element={<ProjectCreate mode="edit" />} />
-    //                     <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit" />} />
-    //                     <Route path="/projects/view/:id" element={<ProjectCreate mode="view" />} />
-    //                     <Route path="/projects/manage/:id" element={<ProjectDetails />} />
-    //                     <Route path="/projects/workflow" element={<WorkflowBuilder />} />
-
-    //                     {/* Misc */}
-    //                     <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
-    //                 </Route>
-
-    //                 {/* Fallback */}
-    //                 <Route path="*" element={<Navigate to="/login" replace />} />
-    //             </Routes>
-    //         </Layout>
-    //     </Router>
-    // );
 }
 
 export default App;

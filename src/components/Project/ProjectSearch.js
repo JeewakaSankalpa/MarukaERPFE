@@ -38,6 +38,7 @@ function ProjectSearch() {
             if (status) params.status = status;
 
             const res = await api.get('/projects/search', { params });
+            console.log(res.data);
             setRows(res.data || []);
         } catch (e) {
             console.error(e);

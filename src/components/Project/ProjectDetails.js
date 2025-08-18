@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Row, Col, Card, Button, Badge, Table, Spinner, ProgressBar, Form,
+    Row, Col, Card, Button, Badge, Table, Spinner, ProgressBar, Form, Modal, InputGroup
 } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
@@ -22,6 +22,20 @@ const extractFileName = (urlOrName) => {
 
 // Normalize labels like "file1 (need 2)" -> "file1"
 const normalizeLabel = (s) => (String(s || '').split(' (need')[0].trim());
+
+// helper: convert ISO to local datetime-local input value
+function isoLocal(iso) {
+    try {
+        const d = new Date(iso);
+        const pad = (n) => String(n).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        const mm = pad(d.getMonth() + 1);
+        const dd = pad(d.getDate());
+        const hh = pad(d.getHours());
+        const mi = pad(d.getMinutes());
+        return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    } catch { return ''; }
+}
 
 /* ---------- Upload overlay ---------- */
 function UploadOverlay({ text }) {
@@ -46,28 +60,20 @@ function UploadOverlay({ text }) {
     );
 }
 
-/* ---------- Files block (current-stage scoped from backend) ---------- */
-function FilesSection({
-                          id,
-                          actions,
-                          stageObj,
-                          roleHeader,
-                          onAfterChange,
-                      }) {
+/* ---------- Files block (stage-scoped + payments merged) ---------- */
+function FilesSection({ id, actions, stageObj, roleHeader, onAfterChange, reloadKey }) {
     const fileInputRef = useRef(null);
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(false);
 
-    const [docType, setDocType] = useState(''); // will be RULE label (or missingFiles label)
+    const [docType, setDocType] = useState('');
     const [uploading, setUploading] = useState(false);
     const [uploadPct, setUploadPct] = useState(0);
 
     const stageType = stageObj?.stageType;
 
-    // Build dropdown options from fileRequirements[stage] if present; else from actions.missingFiles
     const ruleOptions = useMemo(() => {
         const reqs = stageType ? (actions?.fileRequirements?.[stageType] || []) : [];
-
         if (Array.isArray(reqs) && reqs.length > 0) {
             return reqs
                 .map(r => {
@@ -78,14 +84,11 @@ function FilesSection({
                 })
                 .filter(Boolean);
         }
-
-        // Fallback: build from missingFiles if no rules are provided
         const missing = Array.isArray(actions?.missingFiles) ? actions.missingFiles : [];
         const uniq = [...new Set(missing.map(normalizeLabel).filter(Boolean))];
         return uniq.map(label => ({ value: label, label, min: 1 }));
     }, [actions?.fileRequirements, actions?.missingFiles, stageType]);
 
-    // Load files from backend (assumed to return current-stage files already)
     const loadFiles = async () => {
         if (!id) {
             toast.info('No project id to load files.');
@@ -94,18 +97,38 @@ function FilesSection({
         try {
             setFilesLoading(true);
 
+            // Stage-scoped project files
             const res = await api.get(`/projects/${id}/files`, { headers: roleHeader });
             const rawList = Array.isArray(res.data) ? res.data : [];
-
-            const list = rawList.map(x => {
+            const projectFiles = rawList.map(x => {
                 const name = extractFileName(x.url || x.storedName || x.originalName);
                 return {
                     displayName: name,
                     url: x.url,
                     docType: x.docType || '',
+                    _kind: 'file'
                 };
             });
 
+            // Payments (no stage)
+            let paymentFiles = [];
+            try {
+                const pres = await api.get(`/project-accounts/${id}/payments`);
+                const payments = Array.isArray(pres.data) ? pres.data : [];
+                paymentFiles = payments
+                    .filter(p => p.fileUrl)
+                    .map(p => ({
+                        displayName: extractFileName(p.fileName || p.fileUrl) || 'Payment.pdf',
+                        url: p.fileUrl,
+                        docType: 'Payment',
+                        _kind: 'payment',
+                        _paidAt: p.paidAt
+                    }));
+            } catch {
+                // ignore if not ready
+            }
+
+            const list = [...projectFiles, ...paymentFiles];
             list.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
             setFiles(list);
             toast.success('Files loaded');
@@ -117,41 +140,25 @@ function FilesSection({
         }
     };
 
-    // Load files on project or stage change
     useEffect(() => {
         if (id) loadFiles();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, stageType]);
+    }, [id, stageType, reloadKey]);
 
-    // Default the docType:
-    // 1) first missing from actions.missingFiles
-    // 2) first option from ruleOptions
     useEffect(() => {
         if (!stageType || !actions) return;
-        if (docType) return; // don't clobber user choice
-
+        if (docType) return;
         const firstMissing = Array.isArray(actions.missingFiles) && actions.missingFiles.length
             ? normalizeLabel(actions.missingFiles[0])
             : null;
-
-        if (firstMissing) {
-            setDocType(firstMissing);
-            return;
-        }
-
-        if (ruleOptions.length > 0) {
-            setDocType(ruleOptions[0].value);
-        } else {
-            toast.info('No file rules for this stage.');
-        }
+        if (firstMissing) { setDocType(firstMissing); return; }
+        if (ruleOptions.length > 0) setDocType(ruleOptions[0].value);
+        else toast.info('No file rules for this stage.');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stageType, actions, ruleOptions]);
 
     const chooseFiles = () => {
-        if (!docType) {
-            toast.warn('Select a file type before uploading.');
-            return;
-        }
+        if (!docType) { toast.warn('Select a file type before uploading.'); return; }
         fileInputRef.current?.click();
     };
 
@@ -162,20 +169,19 @@ function FilesSection({
 
         if (!stage) {
             toast.warn('No current stage available for upload.');
-            fileInputRef.current && (fileInputRef.current.value = '');
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
         if (!docType) {
             toast.warn('Select a file type before uploading.');
-            fileInputRef.current && (fileInputRef.current.value = '');
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
         try {
-            // 1) Preview names using RULE label (or missing label) as docType
             const previewPayload = {
                 stage,
-                docType, // label string
+                docType,
                 files: picked.map(f => ({ originalName: f.name })),
             };
             const previewRes = await api.post(`/projects/${id}/files/preview-names`, previewPayload, {
@@ -190,12 +196,8 @@ function FilesSection({
             const ok = window.confirm(
                 `File Type (docType): ${docType}\nStage: ${stage}\n\nThese files will be renamed as:\n\n${previewText}\n\nContinue?`
             );
-            if (!ok) {
-                toast.info('Upload cancelled');
-                return;
-            }
+            if (!ok) { toast.info('Upload cancelled'); return; }
 
-            // 2) Upload with overlay + progress
             setUploading(true);
             setUploadPct(0);
             const form = new FormData();
@@ -203,8 +205,8 @@ function FilesSection({
 
             const url = `/projects/${id}/files/upload?stage=${encodeURIComponent(stage)}&docType=${encodeURIComponent(docType)}`;
             await api.post(url, form, {
-                headers: roleHeader,          // axios sets Content-Type boundary automatically
-                transformRequest: v => v,     // bypass axios JSON transform
+                headers: roleHeader,
+                transformRequest: v => v,
                 onUploadProgress: (evt) => {
                     if (!evt || !evt.total) return;
                     const pct = Math.min(100, Math.round((evt.loaded / evt.total) * 100));
@@ -293,9 +295,13 @@ function FilesSection({
                     </tr>
                     </thead>
                     <tbody>
-                    {files.map((f) => (
-                        <tr key={(f.url || '') + (f.displayName || '')}>
-                            <td className="text-break">{f.displayName}</td>
+                    {files.map((f, idx) => (
+                        <tr key={(f.url || '') + (f.displayName || '') + idx}>
+                            <td className="text-break">
+                                {f._kind === 'payment' ? <Badge bg="success" className="me-2">Payment</Badge> : null}
+                                {f.displayName}
+                                {f._paidAt ? <span className="text-muted ms-2 small">({new Date(f._paidAt).toLocaleString()})</span> : null}
+                            </td>
                             <td className="d-flex gap-2 justify-content-center">
                                 <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">
                                     View
@@ -313,12 +319,306 @@ function FilesSection({
     );
 }
 
+/* ---------- Estimation Card ---------- */
+function EstimationCard({ projectId, onOpen }) {
+    const navigate = useNavigate();
+    const [est, setEst] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    const load = async () => {
+        if (!projectId) return;
+        try {
+            setLoading(true);
+            const res = await api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null }));
+            setEst(res?.data || null);
+        } catch {
+            setEst(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { load(); }, [projectId]);
+
+    const openEditor = () => {
+        navigate(`/projects/estimation/${projectId}`);
+        onOpen?.();
+    };
+
+    const createNew = () => {
+        navigate(`/projects/estimation/${projectId}?new=1`);
+        onOpen?.();
+    };
+
+    const componentsCount = (est?.components || []).length;
+    const totalLines = (est?.components || []).reduce((acc, c) => acc + (c.items?.length || 0), 0);
+    const subtotal = (() => {
+        let sum = 0;
+        (est?.components || []).forEach(c => {
+            (c.items || []).forEach(it => {
+                const unit = Number(it.estUnitCost || 0);
+                const qty = Number(it.quantity || 0);
+                sum += unit * qty;
+            });
+        });
+        return sum;
+    })();
+    const delivery = Number(est?.deliveryCost || 0);
+    const taxPct = Number(est?.taxPercent || 0);
+    const taxAmount = (subtotal + delivery) * (isNaN(taxPct) ? 0 : taxPct / 100);
+    const grandTotal = subtotal + delivery + taxAmount;
+
+    return (
+        <Card className="h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center">
+                <span>Estimation</span>
+                <div className="d-flex gap-2">
+                    {est ? (
+                        <>
+                            <Button size="sm" variant="outline-secondary" onClick={load} disabled={loading}>
+                                {loading ? 'Loading…' : 'Reload'}
+                            </Button>
+                            <Button size="sm" variant="primary" onClick={openEditor}>View / Edit</Button>
+                        </>
+                    ) : (
+                        <Button size="sm" variant="primary" onClick={createNew} disabled={!projectId}>
+                            Create Estimation
+                        </Button>
+                    )}
+                </div>
+            </Card.Header>
+            <Card.Body style={{ overflowY: 'auto' }}>
+                {!projectId && <div className="text-muted">No project id provided.</div>}
+                {projectId && loading && (
+                    <div className="small text-muted"><Spinner size="sm" className="me-2" /> Loading estimation…</div>
+                )}
+                {projectId && !loading && !est && (
+                    <div className="text-muted">No estimation yet for this project.</div>
+                )}
+                {est && !loading && (
+                    <>
+                        <div className="mb-2">
+                            <strong>Components:</strong> {componentsCount} &nbsp;|&nbsp; <strong>Lines:</strong> {totalLines}
+                        </div>
+                        <Table size="sm" bordered responsive className="mb-3">
+                            <tbody>
+                            <tr>
+                                <td>Subtotal</td>
+                                <td className="text-end">{subtotal.toLocaleString()}</td>
+                            </tr>
+                            <tr>
+                                <td>Delivery</td>
+                                <td className="text-end">{delivery.toLocaleString()}</td>
+                            </tr>
+                            <tr>
+                                <td>Tax</td>
+                                <td className="text-end">
+                                    {isNaN(taxPct) ? 0 : taxPct}% = {taxAmount.toLocaleString()}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Grand Total</strong></td>
+                                <td className="text-end"><strong>{grandTotal.toLocaleString()}</strong></td>
+                            </tr>
+                            </tbody>
+                        </Table>
+
+                        <div className="small text-muted">
+                            Last updated: {est.updatedAt ? new Date(est.updatedAt).toLocaleString() : '-'}
+                        </div>
+                    </>
+                )}
+            </Card.Body>
+        </Card>
+    );
+}
+
+/* ---------- Project Accounts Card (payments only) ---------- */
+function ProjectAccountsCard({ projectId, onPaymentPosted }) {
+    const { user } = useAuth() || {};
+    const actor = user?.name || user?.email || 'web';
+
+    const [acct, setAcct] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    const [showPay, setShowPay] = useState(false);
+    const [payAmount, setPayAmount] = useState('');
+    const [payDate, setPayDate] = useState(''); // yyyy-MM-dd from <input type="date">
+    const [payNote, setPayNote] = useState('');
+    const [payFile, setPayFile] = useState(null);
+    const [posting, setPosting] = useState(false);
+
+    const load = async () => {
+        if (!projectId) return;
+        try {
+            setLoading(true);
+            const res = await api.get(`/project-accounts/${projectId}`).catch(() => ({ data: null }));
+            setAcct(res?.data || null);
+        } catch {
+            setAcct(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => { load(); }, [projectId]);
+
+    const total = Number(acct?.totalAmount || 0);
+    const paid = Number(acct?.paidAmount || 0);
+    const remaining = Math.max(0, total - paid);
+
+    const openPayModal = () => {
+        setPayAmount('');
+        setPayDate('');
+        setPayNote('');
+        setPayFile(null);
+        setShowPay(true);
+    };
+
+    const submitPayment = async () => {
+        if (!payAmount || !payFile) {
+            toast.warn('Amount and PDF are required');
+            return;
+        }
+        try {
+            setPosting(true);
+            const form = new FormData();
+            form.append('amount', String(payAmount));
+
+            // Convert date-only to ISO Instant at 00:00:00Z
+            if (payDate) {
+                const iso = new Date(`${payDate}T00:00:00Z`).toISOString();
+                form.append('paidAt', iso);
+            }
+            if (payNote) form.append('note', payNote);
+            form.append('file', payFile, payFile.name); // MUST be 'file' to match controller
+
+            await api.post(`/project-accounts/${projectId}/payments/upload`, form, {
+                headers: { 'X-User': actor },      // let Axios set multipart boundary
+                transformRequest: v => v
+            });
+            toast.success('Payment posted');
+            setShowPay(false);
+            await load();
+            onPaymentPosted?.();
+        } catch (e) {
+            toast.error(e?.response?.data?.message || 'Failed to post payment');
+        } finally {
+            setPosting(false);
+        }
+    };
+
+    return (
+        <Card className="h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center">
+                <span>Project Accounts</span>
+                <div className="d-flex gap-2">
+                    <Button size="sm" variant="outline-secondary" onClick={load} disabled={loading}>
+                        {loading ? 'Loading…' : 'Reload'}
+                    </Button>
+                    <Button size="sm" variant="primary" onClick={openPayModal} disabled={!projectId}>
+                        Post Payment (PDF)
+                    </Button>
+                </div>
+            </Card.Header>
+            <Card.Body style={{ overflowY: 'auto' }}>
+                {!projectId && <div className="text-muted">No project id provided.</div>}
+                {projectId && loading && (
+                    <div className="small text-muted"><Spinner size="sm" className="me-2" /> Loading…</div>
+                )}
+                {projectId && !loading && !acct && (
+                    <div className="text-muted">No account record yet.</div>
+                )}
+
+                {acct && !loading && (
+                    <Table size="sm" bordered responsive className="mb-2">
+                        <tbody>
+                        <tr>
+                            <td>Total Project Amount</td>
+                            <td className="text-end">{Number(acct.totalAmount || 0).toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td>Paid Amount</td>
+                            <td className="text-end">{Number(acct.paidAmount || 0).toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Remaining Payable</strong></td>
+                            <td className="text-end"><strong>{remaining.toLocaleString()}</strong></td>
+                        </tr>
+                        </tbody>
+                    </Table>
+                )}
+
+                {acct?.updatedAt && (
+                    <div className="small text-muted">
+                        Last update: {new Date(acct.updatedAt).toLocaleString()} {acct.updatedBy ? `by ${acct.updatedBy}` : ''}
+                    </div>
+                )}
+            </Card.Body>
+
+            {/* Post Payment Modal */}
+            <Modal show={showPay} onHide={() => setShowPay(false)} centered>
+                <Modal.Header closeButton><Modal.Title>Post Payment</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <Form.Group className="mb-2">
+                        <Form.Label>Amount</Form.Label>
+                        <InputGroup>
+                            <InputGroup.Text>₹</InputGroup.Text>
+                            <Form.Control
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={payAmount}
+                                onChange={(e)=>setPayAmount(e.target.value)}
+                            />
+                        </InputGroup>
+                    </Form.Group>
+
+                    <Form.Group className="mb-2">
+                        <Form.Label>Paid Date</Form.Label>
+                        <Form.Control
+                            type="date"
+                            value={payDate}
+                            onChange={(e)=>setPayDate(e.target.value)}
+                        />
+                    </Form.Group>
+
+                    <Form.Group className="mb-2">
+                        <Form.Label>Payment Note</Form.Label>
+                        <Form.Control
+                            placeholder="Reference / narration"
+                            value={payNote}
+                            onChange={(e)=>setPayNote(e.target.value)}
+                        />
+                    </Form.Group>
+
+                    <Form.Group>
+                        <Form.Label>Confirmation (PDF)</Form.Label>
+                        <Form.Control
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e)=>setPayFile(e.target.files?.[0] || null)}
+                        />
+                        <div className="small text-muted mt-1">Stored under <code>projects/{projectId}/payments/</code> in GCS.</div>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={()=>setShowPay(false)} disabled={posting}>Cancel</Button>
+                    <Button variant="primary" onClick={submitPayment} disabled={posting}>
+                        {posting ? 'Posting…' : 'Post Payment'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        </Card>
+    );
+}
+
 export default function ProjectDetails({ id: propId }) {
     const { id: routeId } = useParams();
     const navigate = useNavigate();
     const id = propId || routeId;
 
-    const { role } = useAuth();
+    const { role, user } = useAuth();
+    const actor = user?.name || user?.email || 'web';
 
     const [project, setProject] = useState(null);
     const [actions, setActions] = useState(null);
@@ -328,7 +628,13 @@ export default function ProjectDetails({ id: propId }) {
     const [approving, setApproving] = useState(false);
     const [moving, setMoving] = useState(false);
 
-    // ---------- Initial load ----------
+    const [filesReloadKey, setFilesReloadKey] = useState(0);
+
+    const [showDates, setShowDates] = useState(false);
+    const [estimatedStart, setEstimatedStart] = useState('');
+    const [estimatedEnd, setEstimatedEnd] = useState('');
+    const [dueDate, setDueDate] = useState('');
+
     useEffect(() => {
         let alive = true;
         (async () => {
@@ -337,9 +643,7 @@ export default function ProjectDetails({ id: propId }) {
                 setLoading(true);
                 const [p, a] = await Promise.all([
                     api.get(`/projects/details/${id}`),
-                    api.get(`/projects/${id}/actions`, {
-                        headers: { 'X-Roles': role ?? '' },
-                    }),
+                    api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': role ?? '' } }),
                 ]);
                 if (!alive) return;
                 setProject(p.data || null);
@@ -363,9 +667,7 @@ export default function ProjectDetails({ id: propId }) {
         try {
             const [p, a] = await Promise.all([
                 api.get(`/projects/details/${id}`),
-                api.get(`/projects/${id}/actions`, {
-                    headers: { 'X-Roles': role ?? '' },
-                }),
+                api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': role ?? '' } }),
             ]);
             setProject(p.data || null);
             setActions(a.data || null);
@@ -376,13 +678,9 @@ export default function ProjectDetails({ id: propId }) {
         }
     };
 
-    // ---------- Approvals / Moves ----------
     const approve = async (status) => {
         const stageId = project?.currentStage?.id;
-        if (!id || !stageId) {
-            toast.warn('No current stage to approve/reject.');
-            return;
-        }
+        if (!id || !stageId) { toast.warn('No current stage to approve/reject.'); return; }
         setApproving(true);
         try {
             await api.post(
@@ -402,10 +700,7 @@ export default function ProjectDetails({ id: propId }) {
     };
 
     const move = async (to) => {
-        if (!id) {
-            toast.warn('No project id to move.');
-            return;
-        }
+        if (!id) { toast.warn('No project id to move.'); return; }
         setMoving(true);
         try {
             await api.post(
@@ -423,7 +718,6 @@ export default function ProjectDetails({ id: propId }) {
         }
     };
 
-    // ---------- Due progress ----------
     const dueMeta = useMemo(() => {
         if (!project?.dueDate) return null;
         const now = new Date();
@@ -439,10 +733,33 @@ export default function ProjectDetails({ id: propId }) {
         return { pct, label: `${days}d ${hours}h ${mins}m` };
     }, [project]);
 
-    // ---------- Derived ----------
     const p = project || {};
     const stageObj = p.currentStage || {};
     const stageList = Array.isArray(p.stages) ? p.stages : [];
+
+    const openDatesModal = () => {
+        setEstimatedStart(project?.estimatedStart ? isoLocal(project.estimatedStart) : '');
+        setEstimatedEnd(project?.estimatedEnd ? isoLocal(project.estimatedEnd) : '');
+        setDueDate(project?.dueDate ? isoLocal(project.dueDate) : '');
+        setShowDates(true);
+    };
+    const saveDates = async () => {
+        try {
+            const payload = {
+                estimatedStart: estimatedStart ? new Date(estimatedStart).toISOString() : null,
+                estimatedEnd:   estimatedEnd   ? new Date(estimatedEnd).toISOString()   : null,
+                dueDate:        dueDate        ? new Date(dueDate).toISOString()        : null,
+            };
+            await api.patch(`/projects/${id}/dates`, payload, {
+                headers: { 'X-User': actor }
+            });
+            toast.success('Project dates updated');
+            setShowDates(false);
+            await refresh();
+        } catch (e) {
+            toast.error(e?.response?.data?.message || 'Failed to update dates');
+        }
+    };
 
     return (
         <div
@@ -587,10 +904,15 @@ export default function ProjectDetails({ id: propId }) {
                     </Card>
                 </Col>
 
-                {/* Timeline */}
+                {/* Timeline (with Edit Dates button) */}
                 <Col md={12} lg={4}>
                     <Card className="h-100">
-                        <Card.Header>Timeline</Card.Header>
+                        <Card.Header className="d-flex justify-content-between align-items-center">
+                            <span>Timeline</span>
+                            <Button size="sm" variant="outline-primary" onClick={openDatesModal} disabled={!id}>
+                                Edit Dates
+                            </Button>
+                        </Card.Header>
                         <Card.Body style={{ overflowY: 'auto' }}>
                             <div><strong>Est. Start:</strong> {p.estimatedStart ? new Date(p.estimatedStart).toLocaleDateString() : '-'}</div>
                             <div><strong>Est. End:</strong> {p.estimatedEnd ? new Date(p.estimatedEnd).toLocaleDateString() : '-'}</div>
@@ -613,7 +935,7 @@ export default function ProjectDetails({ id: propId }) {
                 </Col>
             </Row>
 
-            {/* Files */}
+            {/* Files & Estimation row */}
             <Row className="g-3 mt-1">
                 <Col lg={6}>
                     <Card className="h-100">
@@ -628,13 +950,31 @@ export default function ProjectDetails({ id: propId }) {
                                 stageObj={stageObj}
                                 roleHeader={{ 'X-Roles': role ?? '' }}
                                 onAfterChange={refresh}
+                                reloadKey={filesReloadKey}
                             />
                         </Card.Body>
                     </Card>
                 </Col>
 
-                {/* Approvals history */}
+                {/* Estimation summary / actions */}
                 <Col lg={6}>
+                    <EstimationCard projectId={id} onOpen={() => { /* optional hook */ }} />
+                </Col>
+            </Row>
+
+            {/* Project Accounts (payments) */}
+            <Row className="g-3 mt-1">
+                <Col lg={12}>
+                    <ProjectAccountsCard
+                        projectId={id}
+                        onPaymentPosted={() => setFilesReloadKey(k => k + 1)}
+                    />
+                </Col>
+            </Row>
+
+            {/* Approvals history */}
+            <Row className="g-3 mt-1">
+                <Col lg={12}>
                     <Card className="h-100">
                         <Card.Header>Approval Stages</Card.Header>
                         <Card.Body style={{ overflowY: 'auto' }}>
@@ -674,6 +1014,29 @@ export default function ProjectDetails({ id: propId }) {
                     </Card>
                 </Col>
             </Row>
+
+            {/* Edit Dates Modal (in Timeline) */}
+            <Modal show={showDates} onHide={() => setShowDates(false)} centered>
+                <Modal.Header closeButton><Modal.Title>Edit Project Dates</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <Form.Group className="mb-2">
+                        <Form.Label>Estimated Start</Form.Label>
+                        <Form.Control type="datetime-local" value={estimatedStart} onChange={(e)=>setEstimatedStart(e.target.value)} />
+                    </Form.Group>
+                    <Form.Group className="mb-2">
+                        <Form.Label>Estimated End</Form.Label>
+                        <Form.Control type="datetime-local" value={estimatedEnd} onChange={(e)=>setEstimatedEnd(e.target.value)} />
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>Due Date</Form.Label>
+                        <Form.Control type="datetime-local" value={dueDate} onChange={(e)=>setDueDate(e.target.value)} />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={()=>setShowDates(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={saveDates}>Save</Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     );
 }
