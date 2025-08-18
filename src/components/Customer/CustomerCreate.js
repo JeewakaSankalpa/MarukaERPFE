@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { Form, Button, Container, Row } from "react-bootstrap";
-import api from "../../services/api";
+import api from "../../api/api";
 import { Navigate, useNavigate } from "react-router-dom";
 
 function CustomerCreate() {
   const navigate = useNavigate();
-  const [id, setId] = useState("");
+  // const [id, setId] = useState("");
   // const [name, setName] = useState("");
   // const [mobileNumber, setMobileNumber] = useState("");
   // const [email, setEmail] = useState("");
@@ -80,6 +80,8 @@ function CustomerCreate() {
             height: "calc(100vh - 10rem)",
           }}
         >
+
+          <div className="bg-white shadow rounded p-4">
           <h2 className="text-center mb-4">Add Customer</h2>
           <Form onSubmit={handleSubmit}>
             <Form.Group controlId="comName" className="mb-3">
@@ -300,6 +302,7 @@ function CustomerCreate() {
               Cancel
             </Button>
           </Form>
+          </div>
         </Container>
       ) : (
         <p>Customer saved. You may proceed with other actions.</p>
