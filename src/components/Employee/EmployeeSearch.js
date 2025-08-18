@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Form, Button, Container } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api from '../../api/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function EmployeeSearch() {

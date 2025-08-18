@@ -1,5 +1,5 @@
 // @ts-check
-import api from "./api";
+import api from "../api/api";
 import "../types/workflow.js"; // <-- gives the typedefs to this file
 
 /**

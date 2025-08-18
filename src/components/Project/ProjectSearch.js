@@ -1,7 +1,7 @@
 // src/components/projects/ProjectSearch.js
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Container, Form, Row, Col, Modal, Spinner } from 'react-bootstrap';
-import api from '../../services/api';
+import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,6 +38,7 @@ function ProjectSearch() {
             if (status) params.status = status;
 
             const res = await api.get('/projects/search', { params });
+            console.log(res.data);
             setRows(res.data || []);
         } catch (e) {
             console.error(e);

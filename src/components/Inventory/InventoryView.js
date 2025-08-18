@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Container, Form, Button, Row, Col, Modal } from 'react-bootstrap';
 import Select from 'react-select';
-import api from '../../services/api';
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import api from '../../api/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function InventoryView() {
     const [inventoryItems, setInventoryItems] = useState([]);
@@ -24,63 +26,88 @@ function InventoryView() {
         setUserName(localStorage.getItem('userName') || '');
     }, []);
 
+    const ensureSingleStoreFallback = (stores) => {
+        // If no stores returned, fall back to a single default store
+        if (!stores || stores.length === 0) {
+            return [{ value: 'MAIN_STORE', label: 'Main Store' }];
+        }
+        // Map to Select options; assume backend returns {id,name} OR just {name}
+        return stores.map((loc) => ({
+            value: loc.id || loc.name || 'MAIN_STORE',
+            label: loc.name || 'Main Store',
+        }));
+    };
+
     const fetchInventory = async () => {
         try {
             const response = await api.get('/inventory/available-quantities');
-            setInventoryItems(response.data || []); // Use an empty array as fallback
-            setFilteredItems(response.data || []); // Use an empty array as fallback
+            console.log('Inventory API response:', response.data);
+            const items = response.data || [];
+            setInventoryItems(items);
+            setFilteredItems(items);
+            toast.success(`Fetched ${items.length} inventory item(s)`);
         } catch (error) {
             console.error('Failed to fetch inventory items:', error);
-            setInventoryItems([]); // Set to empty array on error
-            setFilteredItems([]); // Set to empty array on error
+            toast.error('Failed to load inventory items');
+            setInventoryItems([]);
+            setFilteredItems([]);
         }
     };
 
     const fetchLocations = async () => {
         try {
             const response = await api.get('/store/all');
-            setLocationOptions(
-                (response.data || []).map((location) => ({
-                    value: location.name,
-                    label: location.name,
-                }))
-            );
+            console.log('Store API response:', response.data);
+            const options = ensureSingleStoreFallback(response.data);
+            setLocationOptions(options);
+
+            // If you only ever have one store, preselect it for convenience
+            if (options.length === 1) setSelectedLocations(options);
+            toast.success(`Fetched ${response.data?.length || 0} location(s)`);
         } catch (error) {
             console.error('Failed to fetch locations:', error);
-            setLocationOptions([]); // Set to empty array on error
+            toast.warn('Using single default store (Main Store)');
+            const options = ensureSingleStoreFallback([]);
+            setLocationOptions(options);
+            setSelectedLocations(options);
         }
     };
 
     const fetchBatchDetails = async (productId) => {
         try {
             const response = await api.get(`/inventory/available-batches?productId=${productId}`);
-            setBatchDetails(response.data || []); // Use an empty array as fallback
+            console.log('Batch details response:', response.data);
+            setBatchDetails(response.data || []);
+            toast.info(`Loaded ${response.data?.length || 0} batch(es)`);
         } catch (error) {
             console.error('Failed to fetch batch details:', error);
-            setBatchDetails([]); // Set to empty array on error
+            toast.error('Failed to load batch details');
+            setBatchDetails([]);
         }
     };
 
     const applyFilters = () => {
         let filtered = (inventoryItems || []).map((item) => {
-            const totalQuantity = (item.locationQuantities || []).reduce(
-                (sum, lq) => sum + lq.quantity,
-                0
-            );
+            // item.locationQuantities expected like: [{ locationId, quantity, expiryDate }]
+            const lqs = item.locationQuantities || [];
 
-            const availableQuantity = selectedLocations.length > 0
-                ? (item.locationQuantities || [])
-                    .filter((lq) =>
-                        selectedLocations.some((location) => location.value === lq.locationId)
+            const totalQuantity = lqs.reduce((sum, lq) => sum + (Number(lq.quantity) || 0), 0);
+
+            const availableQuantity =
+                selectedLocations.length > 0
+                    ? lqs
+                        .filter((lq) =>
+                            selectedLocations.some((loc) => loc.value === (lq.locationId || 'MAIN_STORE'))
+                        )
+                        .reduce((sum, lq) => sum + (Number(lq.quantity) || 0), 0)
+                    : totalQuantity;
+
+            const availableStores =
+                selectedLocations.length > 0
+                    ? lqs.filter((lq) =>
+                        selectedLocations.some((loc) => loc.value === (lq.locationId || 'MAIN_STORE'))
                     )
-                    .reduce((sum, lq) => sum + lq.quantity, 0)
-                : totalQuantity;
-
-            const availableStores = selectedLocations.length > 0
-                ? (item.locationQuantities || []).filter((lq) =>
-                    selectedLocations.some((location) => location.value === lq.locationId)
-                )
-                : item.locationQuantities || [];
+                    : lqs;
 
             return {
                 ...item,
@@ -91,9 +118,8 @@ function InventoryView() {
         });
 
         if (genericNameFilter) {
-            filtered = filtered.filter((item) =>
-                item.productName?.toLowerCase().includes(genericNameFilter.toLowerCase())
-            );
+            const q = genericNameFilter.toLowerCase();
+            filtered = filtered.filter((item) => item.productName?.toLowerCase().includes(q));
         }
 
         if (supplierFilter) {
@@ -122,14 +148,18 @@ function InventoryView() {
             }
 
             filtered = filtered.filter((item) =>
-                (item.locationQuantities || []).some((lq) => new Date(lq.expiryDate) <= filterDate)
+                (item.locationQuantities || []).some((lq) => {
+                    const d = lq.expiryDate ? new Date(lq.expiryDate) : null;
+                    return d && d <= filterDate;
+                })
             );
         }
 
-        // Filter out items with zero available quantity in selected stores
-        filtered = filtered.filter((item) => item.availableQuantity > 0);
+        // Remove items with zero available quantity after filters
+        filtered = filtered.filter((item) => (Number(item.availableQuantity) || 0) > 0);
 
         setFilteredItems(filtered);
+        toast.success(`Applied filters. Showing ${filtered.length} item(s).`);
     };
 
     const handleProductClick = (product) => {
@@ -139,108 +169,92 @@ function InventoryView() {
     };
 
     const handleStoreClick = (product, store) => {
-        alert(`Product: ${product.productName}\nStore: ${store.locationId}\nQuantity: ${store.quantity}`);
+        const label =
+            locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
+            store.locationId ||
+            'Main Store';
+        alert(`Product: ${product.productName}\nStore: ${label}\nQuantity: ${store.quantity}`);
     };
 
     const generatePDF = () => {
         const doc = new jsPDF();
 
-        // Add Title
         doc.setFontSize(14);
         doc.text('Inventory View Report', 105, 10, { align: 'center' });
 
-        // Add Report Details
         const currentDate = new Date().toLocaleString();
         doc.setFontSize(10);
         doc.text(`Generated By: ${userName}`, 10, 20);
         doc.text(`Generated On: ${currentDate}`, 10, 25);
 
-        // Add Filters to the PDF
         doc.setFontSize(12);
         doc.text('Filters Applied:', 10, 35);
 
-        let yPosition = 40;
-
+        let y = 40;
         if (selectedLocations.length > 0) {
             const locations = selectedLocations.map((loc) => loc.label).join(', ');
-            doc.text(`Locations: ${locations}`, 10, yPosition);
-            yPosition += 5;
+            doc.text(`Locations: ${locations}`, 10, y);
+            y += 5;
         }
-
         if (genericNameFilter) {
-            doc.text(`Generic Name Filter: ${genericNameFilter}`, 10, yPosition);
-            yPosition += 5;
+            doc.text(`Generic Name Filter: ${genericNameFilter}`, 10, y);
+            y += 5;
         }
-
         if (supplierFilter) {
-            doc.text(`Supplier Filter: ${supplierFilter}`, 10, yPosition);
-            yPosition += 5;
+            doc.text(`Supplier Filter: ${supplierFilter}`, 10, y);
+            y += 5;
         }
-
         if (expiryFilter) {
-            let expiryText = '';
-            switch (expiryFilter) {
-                case '1week':
-                    expiryText = 'Within 1 Week';
-                    break;
-                case '2weeks':
-                    expiryText = 'Within 2 Weeks';
-                    break;
-                case '1month':
-                    expiryText = 'Within 1 Month';
-                    break;
-                case '3months':
-                    expiryText = 'Within 3 Months';
-                    break;
-                default: 
-                    expiryText = 'Not Applied';
-            }
-            doc.text(`Expiry Filter: ${expiryText}`, 10, yPosition);
-            yPosition += 5;
+            const map = {
+                '1week': 'Within 1 Week',
+                '2weeks': 'Within 2 Weeks',
+                '1month': 'Within 1 Month',
+                '3months': 'Within 3 Months',
+            };
+            doc.text(`Expiry Filter: ${map[expiryFilter] || 'Not Applied'}`, 10, y);
+            y += 5;
         }
+        if (y > 40) y += 5;
 
-        if (yPosition > 40) yPosition += 5;
-
-        // Add Table with Data
-        const tableColumnHeaders = ['Product Name', 'Total Quantity', 'Quantity in Selected Stores', 'Available Stores'];
-        const tableRows = filteredItems.map((item) => [
+        const tableHead = [['Product Name', 'Total Qty', 'Qty in Selected Stores', 'Available Stores']];
+        const tableRows = (filteredItems || []).map((item) => [
             item.productName,
             item.totalQuantity,
             item.availableQuantity,
-            item.availableStores
-                .map(
-                    (store) =>
-                        `${locationOptions.find((loc) => loc.value === store.locationId)?.label || store.locationId}: ${
-                            store.quantity
-                        }`
-                )
+            (item.availableStores || [])
+                .map((store) => {
+                    const label =
+                        locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
+                        store.locationId ||
+                        'Main Store';
+                    return `${label}: ${store.quantity}`;
+                })
                 .join('\n'),
         ]);
 
         doc.autoTable({
-            head: [tableColumnHeaders],
+            head: tableHead,
             body: tableRows,
-            startY: yPosition,
+            startY: y,
             styles: { fontSize: 9 },
             headStyles: { fillColor: [135, 206, 235] },
         });
 
-        // Save PDF
-        // doc.save('Inventory_Report.pdf');
-        const pdfData = doc.output("blob");
+        const pdfData = doc.output('blob');
         const pdfURL = URL.createObjectURL(pdfData);
-        const printWindow = window.open(pdfURL, "_blank");
+        const printWindow = window.open(pdfURL, '_blank');
         if (printWindow) {
-            printWindow.onload = () => {
-                printWindow.print();
-            };
+            printWindow.onload = () => printWindow.print();
         } else {
-            console.error("Failed to open print window. Please check your browser's pop-up settings.");
+            console.error("Couldn't open print window. Check popup settings.");
+            toast.error('Popup blocked. Allow popups to print.');
         }
     };
+
     return (
         <Container className="my-5">
             <h2 className="text-center mb-4">Inventory View</h2>
+
             <Form className="mb-4">
                 <Row>
                     <Col>
@@ -280,22 +294,29 @@ function InventoryView() {
                     <Col>
                         <Form.Group controlId="expiryFilter">
                             <Form.Label>Expiration Date</Form.Label>
-                            <Form.Control as="select" value={expiryFilter}
-                                          onChange={(e) => setExpiryFilter(e.target.value)}>
+                            <Form.Select
+                                value={expiryFilter}
+                                onChange={(e) => setExpiryFilter(e.target.value)}
+                            >
                                 <option value="">Select expiration filter</option>
                                 <option value="1week">Within 1 Week</option>
                                 <option value="2weeks">Within 2 Weeks</option>
                                 <option value="1month">Within 1 Month</option>
                                 <option value="3months">Within 3 Months</option>
-                            </Form.Control>
+                            </Form.Select>
                         </Form.Group>
                     </Col>
                 </Row>
                 <div className="d-flex justify-content-between mt-3">
-                    <Button variant="primary" onClick={applyFilters}>Apply Filters</Button>
-                    <Button variant="secondary" onClick={generatePDF} >Print View</Button>
+                    <Button variant="primary" onClick={applyFilters}>
+                        Apply Filters
+                    </Button>
+                    <Button variant="secondary" onClick={generatePDF}>
+                        Print View
+                    </Button>
                 </div>
             </Form>
+
             <Table bordered hover responsive className="text-center">
                 <thead className="table-primary">
                 <tr>
@@ -307,22 +328,28 @@ function InventoryView() {
                 </thead>
                 <tbody>
                 {(filteredItems || []).map((item) => (
-                    <tr key={item.productId} onClick={() => handleProductClick(item)} style={{ cursor: "pointer" }}>
+                    <tr
+                        key={item.productId}
+                        onClick={() => handleProductClick(item)}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <td>{item.productName}</td>
                         <td>{item.totalQuantity}</td>
                         <td>{item.availableQuantity}</td>
                         <td>
-                            {(item.availableStores || []).map((store) => (
+                            {(item.availableStores || []).map((store, idx) => (
                                 <div
-                                    key={store.locationId}
+                                    key={`${store.locationId || 'MAIN_STORE'}-${idx}`}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleStoreClick(item, store);
                                     }}
-                                    style={{ cursor: "pointer", textDecoration: "underline" }}
+                                    style={{ cursor: 'pointer', textDecoration: 'underline' }}
                                 >
-                                    {locationOptions.find((loc) => loc.value === store.locationId)?.label || store.locationId}:{" "}
-                                    {store.quantity}
+                                    {(locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label) ||
+                                        store.locationId ||
+                                        'Main Store'}
+                                    : {store.quantity}
                                 </div>
                             ))}
                         </td>
@@ -330,6 +357,7 @@ function InventoryView() {
                 ))}
                 </tbody>
             </Table>
+
             <Modal show={showModal} onHide={() => setShowModal(false)}>
                 <Modal.Header closeButton>
                     <Modal.Title>Batch Details for {selectedProduct?.productName}</Modal.Title>
@@ -349,23 +377,34 @@ function InventoryView() {
                         </thead>
                         <tbody>
                         {(batchDetails || []).map((batch) => (
-                            <tr key={batch.id}>
-                                <td>{batch.batchNumber}</td>
-                                <td>{batch.quantity}</td>
-                                <td>{new Date(batch.expiryDate).toLocaleDateString()}</td>
-                                <td>{batch.costPrice}</td>
-                                <td>{batch.wholesalePrice}</td>
-                                <td>{batch.retailPrice}</td>
-                                <td>{locationOptions.find((loc) => loc.value === batch.locationId)?.label}</td>
+                            <tr key={batch.id || `${batch.batchNumber}-${batch.locationId}`}>
+                                <td>{batch.batchNumber || batch.batchNo || '-'}</td>
+                                <td>{batch.quantity ?? batch.qty ?? 0}</td>
+                                <td>
+                                    {batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : '-'}
+                                </td>
+                                <td>{batch.costPrice ?? '-'}</td>
+                                <td>{batch.wholesalePrice ?? '-'}</td>
+                                <td>{batch.retailPrice ?? '-'}</td>
+                                <td>
+                                    {locationOptions.find((loc) => loc.value === (batch.locationId || 'MAIN_STORE'))?.label ||
+                                        batch.locationId ||
+                                        'Main Store'}
+                                </td>
                             </tr>
                         ))}
                         </tbody>
                     </Table>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+                    <Button variant="secondary" onClick={() => setShowModal(false)}>
+                        Close
+                    </Button>
                 </Modal.Footer>
             </Modal>
+
+            {/* Toast container goes once per app (safe to keep here) */}
+            <ToastContainer position="top-right" autoClose={2500} newestOnTop />
         </Container>
     );
 }

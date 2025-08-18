@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Row, Col, Card, Button, Form, Table, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
-import api from "../../services/api";
+import api from "../../api/api";
 
 /**
  * Backend endpoints expected:
