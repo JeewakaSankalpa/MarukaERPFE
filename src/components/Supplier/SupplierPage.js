@@ -158,7 +158,7 @@ function SupplierForm({ id, onClose, onSaved }) {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 900, paddingTop: 24 }}>
+        <Container className="my-5" style={{ width: "80vw", maxWidth: 900, paddingTop: 24, overflow: "auto", height: "calc(100vh - 10rem)" }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center">
                     <h2 style={{ fontSize: "1.5rem" }}>
