@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("token", token);
 
         let decoded = {};
-        try { decoded = jwtDecode(token); } catch {}
+        try { decoded = jwtDecode(token); } catch { }
 
         const finalRole = role || decoded.role || null;
         const finalUserType = userType || decoded.userType || null;

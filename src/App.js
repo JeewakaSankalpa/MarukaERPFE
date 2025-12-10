@@ -108,6 +108,11 @@ function POCreateManualRouteWrapper() {
     return <POCreateManual onCreated={() => navigate(`/pos`)} />;
 }
 
+function CustomerViewRouteWrapper() {
+    const navigate = useNavigate();
+    return <CustomerView onEditCustomer={(customer) => navigate(`/customer/edit/${customer.id}`)} />;
+}
+
 /* ------------------- App ------------------- */
 function App() {
     const { isAuthenticated } = useAuth(); // keep if you use it elsewhere
@@ -151,7 +156,9 @@ function App() {
 
                         {/* Customer */}
                         <Route path="/customer/create" element={<CustomerCreate />} />
-                        <Route path="/customer/view" element={<CustomerView />} />
+                        <Route path="/customer/create" element={<CustomerCreate />} />
+                        <Route path="/customer/view" element={<CustomerViewRouteWrapper />} />
+                        <Route path="/customer/edit/:id" element={<CustomerCreate />} />
 
                         {/* Supplier / Product */}
                         <Route path="/supplier/create" element={<SupplierCreate />} />

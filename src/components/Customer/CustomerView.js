@@ -14,6 +14,7 @@ function CustomerView({ onEditCustomer }) {
     const fetchCustomers = async () => {
         try {
             const response = await api.get('/customer/all');
+            console.log("Customer Data:", response.data);
             setCustomers(response.data);
         } catch (error) {
             console.error('Failed to fetch customers:', error);
@@ -68,36 +69,36 @@ function CustomerView({ onEditCustomer }) {
                 <Button variant="primary" onClick={handleSearch}>Search</Button>
             </Form>
             <div
-                style={{  height: `${0.6*windowSize.height}px`,dispay: "flex", flexDirection: "column", overflowY: "scroll"}}
+                style={{ height: `${0.6 * windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll" }}
             >
-            <Table bordered hover responsive className="text-center">
-                <thead className="table-primary">
-                <tr>
-                    <th>Customer ID</th>
-                    <th>Name</th>
-                    <th>Mobile Number</th>
-                    <th>Address</th>
-                    <th>Email</th>
-                    <th>Date of Birth</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {customers.map((customer) => (
-                    <tr key={customer.customerId}>
-                        <td>{customer.customerId}</td>
-                        <td>{customer.name}</td>
-                        <td>{customer.mobileNumber}</td>
-                        <td>{customer.mobileNumber}</td>
-                        <td>{customer.email}</td>
-                        <td>{new Date(customer.dateOfBirth).toLocaleDateString()}</td>
-                        <td>
-                            <Button variant="warning" onClick={() => onEditCustomer(customer)}>Edit</Button>
-                        </td>
-                    </tr>
-                ))}
-                </tbody>
-            </Table>
+                <Table bordered hover responsive className="text-center">
+                    <thead className="table-primary">
+                        <tr>
+                            <th>Customer ID</th>
+                            <th>Company Name</th>
+                            <th>Contact Number</th>
+                            <th>Address</th>
+                            <th>Email</th>
+                            <th>BR Number</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {customers.map((customer) => (
+                            <tr key={customer.id}>
+                                <td>{customer.id}</td>
+                                <td>{customer.comName}</td>
+                                <td>{customer.comContactNumber}</td>
+                                <td>{customer.comAddress}</td>
+                                <td>{customer.comEmail}</td>
+                                <td>{customer.businessRegNumber}</td>
+                                <td>
+                                    <Button variant="warning" onClick={() => onEditCustomer(customer)}>Edit</Button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
             </div>
         </Container>
     );
