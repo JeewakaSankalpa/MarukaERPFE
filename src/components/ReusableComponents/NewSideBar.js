@@ -18,35 +18,32 @@ function NewSideBar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // const menus = [
-  //   {
-  //     title: "Project",
-  //     submenus: ["New Project", "View Projects"],
-  //   },
-  //   {
-  //     title: "Inventory",
-  //     submenus: ["Add Inventory", "Return Inventory", "Inventory Summary"],
-  //   },
-  //   {
-  //     title: "Employee",
-  //     submenus: ["Add Employee", "View Employees", "Attendance"],
-  //   },
-  // ];
+  // Determine Role & Modules
+  const userRole = localStorage.getItem("role") || "EMPLOYEE";
+  const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
 
-  const menus = [
+  const hasAccess = (item) => {
+    const roleMatch = item.roles && item.roles.includes(userRole);
+    const moduleMatch = item.modules && item.modules.some(m => userModules.includes(m));
+    return roleMatch || moduleMatch;
+  };
+
+  const allMenus = [
     {
       title: "Home",
       icon: <FaHome />,
+      roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"],
       submenus: [{ name: "Home", path: "/admin" }],
     },
     {
       title: "Project",
       icon: <FaProjectDiagram />,
+      roles: ["ADMIN", "MANAGER"],
+      modules: ["PROJECTS"],
       submenus: [
         { name: "New Project", path: "/projects/create" },
         { name: "Workflow Management", path: "/projects/workflow" },
         { name: "Manage Projects", path: "/projects/search" },
-        // { name: "View Projects", path: "/projects/edit/:id" },
         { name: "Return Goods", path: "/projects/edit/:id" },
         { name: "Project Estimation", path: "/projects/estimation" },
       ],
@@ -54,31 +51,49 @@ function NewSideBar() {
     {
       title: "Inventory",
       icon: <FaBoxes />,
+      roles: ["ADMIN", "MANAGER", "STORE_KEEPER"],
+      modules: ["INVENTORY"],
       submenus: [
-        // { name: "Add Inventory", path: "/inventory/dashboard" },
         { name: "Manage Products", path: "/product/create" },
         { name: "Purchase Requests", path: "/inventory/pr" },
         { name: "Search Inventory", path: "/inventory/search" },
         { name: "Return Inventory", path: "/inventory/return" },
+        { name: "Reports", path: "/reports" },
       ],
     },
     {
       title: "Stores",
       icon: <FaBoxes />,
+      roles: ["ADMIN", "STORE_KEEPER"],
+      modules: ["INVENTORY"], // Stores often part of Inventory module
       submenus: [
-        // { name: "Add Inventory", path: "/inventory/dashboard" },
         { name: "Stores Planning", path: "/stores/planning" },
         { name: "Pending POs", path: "/stores/pending-to-po" },
         { name: "Transfers", path: "/transfers/inbox" },
         { name: "PO", path: "/pos" },
-        { name: "GRN", path: "/grn" },
+        { name: "Receive (GRN)", path: "/grn" },
+        { name: "View GRNs", path: "/grns" },
         { name: "Create ItemRequests", path: "/item/requests" },
         { name: "View Item Requests", path: "/stores/fulfil-requests" },
       ],
     },
     {
+      title: "HR & Payroll",
+      icon: <FaUsers />,
+      roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+      modules: ["HR", "PAYROLL", "ATTENDANCE", "LEAVE_MANAGEMENT", "EMPLOYEES"],
+      submenus: [
+        { name: "Attendance", path: "/attendance", modules: ["ATTENDANCE", "HR"] },
+        { name: "Leave Requests", path: "/leave", modules: ["LEAVE_MANAGEMENT", "HR"] },
+        { name: "Employee Directory", path: "/employee/list", roles: ["ADMIN", "HR", "MANAGER"], modules: ["EMPLOYEES", "HR"] },
+        { name: "Add Employee", path: "/employee/create", roles: ["ADMIN", "HR"], modules: ["HR"] },
+        { name: "Salary Management", path: "/salary", roles: ["ADMIN", "HR"], modules: ["PAYROLL", "HR"] },
+      ].filter(sub => hasAccess(sub)),
+    },
+    {
       title: "Users",
       icon: <FaUsers />,
+      roles: ["ADMIN"],
       submenus: [
         { name: "Create Users", path: "/user/create" },
         { name: "Search Users", path: "/user/search" },
@@ -87,6 +102,8 @@ function NewSideBar() {
     {
       title: "Department",
       icon: <FaUsers />,
+      roles: ["ADMIN", "HR"],
+      modules: ["HR"],
       submenus: [
         { name: "Department Management", path: "/departments" },
         { name: "Create new Department", path: "/departments/new" },
@@ -95,6 +112,8 @@ function NewSideBar() {
     {
       title: "Supplier",
       icon: <FaUsers />,
+      roles: ["ADMIN", "MANAGER"],
+      modules: ["INVENTORY"], // Suppliers often linked to Inventory/PO
       submenus: [
         { name: "Create Supplier", path: "/supplier/create" },
         { name: "Search Supplier", path: "/supplier/search" },
@@ -103,6 +122,8 @@ function NewSideBar() {
     {
       title: "Customer",
       icon: <FaBriefcase />,
+      roles: ["ADMIN", "SALES", "MANAGER"],
+      modules: ["CUSTOMERS", "SALES"],
       submenus: [
         { name: "Add Customers", path: "/customer/create" },
         { name: "Search Customers", path: "/customer/view" },
@@ -110,31 +131,25 @@ function NewSideBar() {
     },
   ];
 
+  const menus = allMenus.filter(m => hasAccess(m));
+
   const sideBarStyle = {
     transition: "width 0.3s ease",
-    backgroundColor: `${Colors.sideBar}`, // blue-900
+    backgroundColor: `${Colors.sideBar}`,
     color: "white",
-    // height: "100vh",
     height: "calc(100vh - 4rem)",
-    // position: "fixed",
-    // height: "100%",
     width: collapsed ? "50px" : "200px",
-    // overflow: "hidden",
     position: "relative",
-    display: "flex",           // Enables flexbox
-  flexDirection: "column",   // Arrange items vertically
+    display: "flex",
+    flexDirection: "column",
   };
 
   const buttonStyle = {
     display: "block",
     width: "100%",
     textAlign: "left",
-    // padding: "10px",
-    // marginLeft: "10px",
-    // marginRight: "10px",
     marginTop: "2px",
     marginBottom: "1px",
-    // backgroundColor: "transparent",
     backgroundColor: `${Colors.mainBlue}`,
     border: "none",
     color: "white",
@@ -145,14 +160,12 @@ function NewSideBar() {
     paddingLeft: "20px",
     fontSize: "14px",
     marginBottom: "5px",
-    // color: "#d1d5db", // gray-300
     color: `${Colors.black}`,
   };
 
   const hoveredSubmenuStyle = {
     position: "absolute",
     left: "60px",
-    // backgroundColor: "#1e40af", // blue-800
     backgroundColor: `${Colors.white}`,
     borderRadius: "4px",
     padding: "4px 0",
@@ -161,7 +174,7 @@ function NewSideBar() {
   };
 
   return (
-    <div style={{ display: "flex",height: "100%"}}>
+    <div style={{ display: "flex", height: "100%" }}>
       {/* Sidebar */}
       <div style={sideBarStyle}>
         {/* Collapse/Expand Button */}
@@ -187,8 +200,6 @@ function NewSideBar() {
               onMouseLeave={() => setHoveredMenu(null)}
               style={{ position: "relative" }}
             >
-              {/* <Button style={buttonStyle}>{menu.title}</Button> */}
-
               <Button
                 style={buttonStyle}
                 onClick={() => !collapsed && navigate(menu.submenus[0].path)}
@@ -201,9 +212,9 @@ function NewSideBar() {
 
               {/* Submenus (collapsed & hovered) */}
               {hoveredMenu === menu.title && collapsed && (
-                <button style={hoveredSubmenuStyle}>
+                <div style={hoveredSubmenuStyle}>
                   {menu.submenus.map((sub, subIdx) => (
-                    <button
+                    <div
                       key={subIdx}
                       style={{
                         padding: "6px 12px",
@@ -211,27 +222,15 @@ function NewSideBar() {
                         cursor: "pointer",
                         color: "black",
                       }}
-                    >
-                      {sub.name}
-                    </button>
-                  ))}
-                </button>
-              )}
-
-              {/* Submenus (expanded) */}
-              {/* {!collapsed && (
-                <div>
-                  {menu.submenus.map((sub, subIdx) => (
-                    <Button
-                      key={subIdx}
-                      style={subMenuStyle}
                       onClick={() => navigate(sub.path)}
                     >
                       {sub.name}
-                    </Button>
+                    </div>
                   ))}
                 </div>
-              )} */}
+              )}
+
+              {/* Submenus (expanded) */}
               {!collapsed && (
                 <div>
                   {menu.submenus.map((sub, subIdx) => {
@@ -242,7 +241,6 @@ function NewSideBar() {
                         key={subIdx}
                         style={{
                           ...subMenuStyle,
-                          // backgroundColor: isActive ? "#f0f0f0" : Colors.mainBlue,
                           backgroundColor: isActive
                             ? Colors.white
                             : "transparent",
@@ -263,90 +261,6 @@ function NewSideBar() {
       </div>
     </div>
   );
-
-  // return React.createElement(
-  //   "div",
-  //   { style: { display: "flex" } },
-  //   // Sidebar
-  //   React.createElement(
-  //     "div",
-  //     { style: sideBarStyle },
-  //     // Collapse/Expand Button
-  //     React.createElement(
-  //       "div",
-  //       {
-  //         style: {
-  //           display: "flex",
-  //           justifyContent: "flex-end",
-  //           padding: "8px",
-  //           cursor: "pointer",
-  //         },
-  //         onClick: () => setCollapsed(!collapsed),
-  //       },
-  //       collapsed
-  //         ? React.createElement(ChevronRight, { size: 20 })
-  //         : React.createElement(ChevronLeft, { size: 20 })
-  //     ),
-
-  //     // Menu Items
-  //     React.createElement(
-  //       "div",
-  //       null,
-  //       menus.map((menu, idx) =>
-  //         React.createElement(
-  //           "div",
-  //           {
-  //             key: idx,
-  //             onMouseEnter: () => setHoveredMenu(menu.title),
-  //             onMouseLeave: () => setHoveredMenu(null),
-  //             style: { position: "relative" },
-  //           },
-  //           React.createElement("button", { style: buttonStyle }, menu.title),
-
-  //           // Submenus (collapsed & hovered)
-  //           hoveredMenu === menu.title && collapsed
-  //             ? React.createElement(
-  //                 "button",
-  //                 { style: hoveredSubmenuStyle },
-  //                 menu.submenus.map((sub, subIdx) =>
-  //                   React.createElement(
-  //                     "button",
-  //                     {
-  //                       key: subIdx,
-  //                       style: {
-  //                         padding: "6px 12px",
-  //                         cursor: "pointer",
-  //                         color: "white",
-  //                       },
-  //                     },
-  //                     sub
-  //                   )
-  //                 )
-  //               )
-  //             : null,
-
-  //           // Submenus (expanded)
-  //           !collapsed
-  //             ? React.createElement(
-  //                 "div",
-  //                 null,
-  //                 menu.submenus.map((sub, subIdx) =>
-  //                   React.createElement(
-  //                     "div",
-  //                     {
-  //                       key: subIdx,
-  //                       style: subMenuStyle,
-  //                     },
-  //                     sub
-  //                   )
-  //                 )
-  //               )
-  //             : null
-  //         )
-  //       )
-  //     )
-  //   )
-  // );
 }
 
 export default NewSideBar;

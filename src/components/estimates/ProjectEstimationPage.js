@@ -1,35 +1,35 @@
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Row, Col, Button, Form, Table, Badge } from "react-bootstrap";
+import { Container, Row, Col, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import Select from "react-select";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 
 /* ------------ API helpers ------------ */
-const getEstimation     = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
+const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
 const saveEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}`, payload)).data;
-const listTemplates     = async () => (await api.get(`/component-templates`)).data;
-const listProductsAPI   = async () => (await api.get(`/products`, { params: { page: 0, size: 1000, sort: "name,asc" } })).data?.content ?? [];
-const listAvailableAPI  = async () => (await api.get(`/inventory/available-quantities`)).data;
-const listProjectsAPI   = async () => (await api.get(`/projects`, { params: { page: 0, size: 1000, sort: "projectName,asc" } })).data?.content ?? [];
-const getAvailOneAPI    = async (productId) => (await api.get(`/inventory/available-quantities/${productId}`)).data; // optional
+const listTemplates = async () => (await api.get(`/component-templates`)).data;
+const listProductsAPI = async () => (await api.get(`/products`, { params: { page: 0, size: 1000, sort: "name,asc" } })).data?.content ?? [];
+const listAvailableAPI = async () => (await api.get(`/inventory/available-quantities`)).data;
+const listProjectsAPI = async () => (await api.get(`/projects`, { params: { page: 0, size: 1000, sort: "projectName,asc" } })).data?.content ?? [];
+const getAvailOneAPI = async (productId) => (await api.get(`/inventory/available-quantities/${productId}`)).data; // optional
 // OPTIONAL fallback for cost if your product doesn’t carry it:
-const getLastCostAPI    = async (productId) => (await api.get(`/products/${productId}/last-cost`)).data; // {unitCost:number}
+const getLastCostAPI = async (productId) => (await api.get(`/products/${productId}/last-cost`)).data; // {unitCost:number}
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     /* ------------ reference data ------------ */
-    const [projects, setProjects]   = useState([]);
-    const [products, setProducts]   = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [products, setProducts] = useState([]);
     const [available, setAvailable] = useState([]); // [{productId, availableQty}]
 
     /* ------------ quick indexes ------------ */
     const productById = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
-    const availMap    = useMemo(() => Object.fromEntries((available || []).map(a => [a.productId, a.availableQty || 0])), [available]);
+    const availMap = useMemo(() => Object.fromEntries((available || []).map(a => [a.productId, a.availableQty || 0])), [available]);
 
     /* ------------ page/model state ------------ */
     const [projectOpt, setProjectOpt] = useState(null); // {value:id,label:name}
-    const [templates, setTemplates]   = useState([]);
+    const [templates, setTemplates] = useState([]);
 
     const [components, setComponents] = useState(["Component A"]);
     // rows: { productId, productOption, estUnitCost:"", suggestedCost:number|undefined, storeAvail:number|undefined, quantities:{[comp]: number} }
@@ -37,15 +37,24 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     // Global include toggles / rates for printing & totals
     const [includeDelivery, setIncludeDelivery] = useState(true);
-    const [includeVat, setIncludeVat]           = useState(true);
-    const [includeTax, setIncludeTax]           = useState(false);
-    const [vatPercent, setVatPercent]           = useState("");   // number-as-string
-    const [taxPercent, setTaxPercent]           = useState("");   // number-as-string
+    const [includeVat, setIncludeVat] = useState(true);
+    const [includeTax, setIncludeTax] = useState(false);
+    const [vatPercent, setVatPercent] = useState("");   // number-as-string
+    const [taxPercent, setTaxPercent] = useState("");   // number-as-string
 
     // Per-component controls (keyed by component name)
-    const [compMargin, setCompMargin]                 = useState({}); // { [compName]: number|string }
-    const [compDelivery, setCompDelivery]             = useState({}); // { [compName]: number|string }
+    const [compMargin, setCompMargin] = useState({}); // { [compName]: number|string }
+    const [compDelivery, setCompDelivery] = useState({}); // { [compName]: number|string }
     const [compDeliveryTaxable, setCompDeliveryTaxable] = useState({}); // { [compName]: boolean }
+
+    // Print Settings
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [printOpts, setPrintOpts] = useState({
+        showQuantity: true,
+        showUnitCost: true,
+        showComponentTotals: true,
+        showGrandTotal: true,
+    });
 
     /* ------------ load reference data ------------ */
     useEffect(() => {
@@ -113,13 +122,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setComponents(cols);
 
                 // per-component persisted options (if backend stores them)
-                const initialMargin   = {};
+                const initialMargin = {};
                 const initialDelivery = {};
-                const initialDelTax   = {};
+                const initialDelTax = {};
                 (est.components || []).forEach(c => {
                     const name = c.name?.trim() || "Component";
                     if (c.marginPercent != null) initialMargin[name] = String(c.marginPercent);
-                    if (c.deliveryCost  != null) initialDelivery[name] = String(c.deliveryCost);
+                    if (c.deliveryCost != null) initialDelivery[name] = String(c.deliveryCost);
                     if (typeof c.deliveryTaxable === "boolean") initialDelTax[name] = !!c.deliveryTaxable;
                 });
                 setCompMargin(initialMargin);
@@ -304,7 +313,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return;
         }
         const pid = option.value;
-        const p   = productById[pid];
+        const p = productById[pid];
         const suggested = deriveSuggestedCost(p);
 
         // optimistic set with cached availability & suggested cost
@@ -386,7 +395,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const del = Number(compDelivery[cname] || 0);
             const delTaxable = !!compDeliveryTaxable[cname];
 
-            const taxableAdd    = includeDelivery && delTaxable ? del : 0;
+            const taxableAdd = includeDelivery && delTaxable ? del : 0;
             const nonTaxableAdd = includeDelivery && !delTaxable ? del : 0;
 
             return {
@@ -405,18 +414,18 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     }, [components, rows, compMargin, compDelivery, compDeliveryTaxable, includeDelivery]);
 
     const totals = useMemo(() => {
-        const taxableBase  = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
-        const nonTaxable   = compCalcs.reduce((a, c) => a + c.nonTaxablePortion, 0);
-        const vatPctNum    = Number(vatPercent || 0);
-        const taxPctNum    = Number(taxPercent || 0);
+        const taxableBase = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
+        const nonTaxable = compCalcs.reduce((a, c) => a + c.nonTaxablePortion, 0);
+        const vatPctNum = Number(vatPercent || 0);
+        const taxPctNum = Number(taxPercent || 0);
 
-        const vatAmount    = includeVat ? taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100) : 0;
-        const taxAmount    = includeTax ? taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100) : 0;
+        const vatAmount = includeVat ? taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100) : 0;
+        const taxAmount = includeTax ? taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100) : 0;
 
-        const grand        = taxableBase + nonTaxable + vatAmount + taxAmount;
+        const grand = taxableBase + nonTaxable + vatAmount + taxAmount;
 
-        const rawSubtotal  = compCalcs.reduce((a,c) => a + c.subtotal, 0);
-        const withMargin   = compCalcs.reduce((a,c) => a + c.afterMargin, 0);
+        const rawSubtotal = compCalcs.reduce((a, c) => a + c.subtotal, 0);
+        const withMargin = compCalcs.reduce((a, c) => a + c.afterMargin, 0);
 
         return {
             rawSubtotal,
@@ -430,30 +439,38 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent]);
 
     /* ------------ save ------------ */
+    const toBigDec = (val) => {
+        if (val === "" || val == null) return null;
+        const n = Number(val);
+        return isNaN(n) ? null : String(val);
+    };
+
     const buildPayload = () => {
         const comps = components.map(cname => {
             const items = [];
             rows.forEach(r => {
-                const qty = Number((r.quantities || {})[cname] || 0);
+                const qtyVal = (r.quantities || {})[cname];
+                const qty = Number(qtyVal || 0);
+
                 if (r.productId && qty > 0) {
                     items.push({
                         productId: r.productId,
                         productNameSnapshot: productById[r.productId]?.name || r.productOption?.label || r.productId,
-                        quantity: qty,
-                        estUnitCost: r.estUnitCost !== "" && r.estUnitCost != null ? String(r.estUnitCost) : null,
+                        quantity: qty, // if NaN, becomes null in JSON
+                        estUnitCost: toBigDec(r.estUnitCost),
                     });
                 }
             });
 
-            const m  = compMargin[cname];
+            const m = compMargin[cname];
             const dc = compDelivery[cname];
             const dt = !!compDeliveryTaxable[cname];
 
             return {
                 name: cname,
                 note: "",
-                marginPercent: (m !== "" && m != null) ? String(m) : null,
-                deliveryCost:  (dc !== "" && dc != null) ? String(dc) : null,
+                marginPercent: toBigDec(m),
+                deliveryCost: toBigDec(dc),
                 deliveryTaxable: dt,
                 items
             };
@@ -464,20 +481,38 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             includeDelivery,
             includeVat,
             includeTax,
-            vatPercent:   vatPercent !== "" && vatPercent != null ? String(vatPercent) : null,
-            taxPercent:   taxPercent !== "" && taxPercent != null ? String(taxPercent) : null,
+            vatPercent: toBigDec(vatPercent),
+            taxPercent: toBigDec(taxPercent),
         };
     };
 
-    const saveEstimation = async () => {
+    const saveEstimation = async (silent = false) => {
         const pid = projectOpt?.value;
-        if (!pid) { toast.warn("Select a project"); return; }
+        if (!pid) { toast.warn("Select a project"); return false; }
         try {
             const payload = buildPayload();
             await saveEstimationAPI(pid, payload);
-            toast.success("Estimation saved");
+            if (!silent) toast.success("Estimation saved");
+            return true;
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to save estimation");
+            return false;
+        }
+    };
 
-            // Generate & download PDF using your toggles and rates
+    const handlePrint = () => {
+        if (!projectOpt?.value) { toast.warn("Select a project first"); return; }
+        setShowPrintModal(true);
+    };
+
+    const confirmPrint = async () => {
+        // 1. Save first
+        const saved = await saveEstimation(true);
+        if (!saved) return;
+
+        // 2. Generate PDF
+        const pid = projectOpt.value;
+        try {
             const pdfResp = await api.post(
                 `/estimations/by-project/${pid}/pdf`,
                 {
@@ -486,6 +521,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     includeTax,
                     vatPercentOverride: (vatPercent ?? "") === "" ? null : Number(vatPercent),
                     taxPercentOverride: (taxPercent ?? "") === "" ? null : Number(taxPercent),
+                    // New granular options
+                    showQuantity: printOpts.showQuantity,
+                    showUnitCost: printOpts.showUnitCost,
+                    showComponentTotals: printOpts.showComponentTotals,
+                    showGrandTotal: printOpts.showGrandTotal,
                 },
                 { responseType: "blob" }
             );
@@ -496,8 +536,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             a.download = `${pid}-Estimation.pdf`;
             a.click();
             window.URL.revokeObjectURL(url);
+            setShowPrintModal(false);
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to save estimation / generate PDF");
+            toast.error("Failed to generate PDF");
         }
     };
 
@@ -538,110 +579,110 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                         <Table hover responsive>
                             <thead>
-                            <tr>
-                                <th style={{ minWidth: 360 }}>Product</th>
-                                <th className="text-end" style={{ width: 160 }}>Est. Unit Cost</th>
-                                {components.map((c, idx) => (
-                                    <th key={c} style={{ width: 140 }}>
-                                        <div className="d-flex gap-1 align-items-center">
-                                            <Form.Control
-                                                value={c}
-                                                onChange={(e) => renameComponent(idx, e.target.value)}
-                                            />
-                                            <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>
-                                        </div>
-                                    </th>
-                                ))}
-                                <th className="text-end" style={{ width: 120 }}>Needed</th>
-                                <th className="text-end" style={{ width: 120 }}>Avail</th>
-                                <th className="text-end" style={{ width: 140 }}>Row Total</th>
-                                <th style={{ width: 60 }}></th>
-                            </tr>
+                                <tr>
+                                    <th style={{ minWidth: 360 }}>Product</th>
+                                    <th className="text-end" style={{ width: 160 }}>Est. Unit Cost</th>
+                                    {components.map((c, idx) => (
+                                        <th key={idx} style={{ width: 140 }}>
+                                            <div className="d-flex gap-1 align-items-center">
+                                                <Form.Control
+                                                    value={c}
+                                                    onChange={(e) => renameComponent(idx, e.target.value)}
+                                                />
+                                                <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>
+                                            </div>
+                                        </th>
+                                    ))}
+                                    <th className="text-end" style={{ width: 120 }}>Needed</th>
+                                    <th className="text-end" style={{ width: 120 }}>Avail</th>
+                                    <th className="text-end" style={{ width: 140 }}>Row Total</th>
+                                    <th style={{ width: 60 }}></th>
+                                </tr>
                             </thead>
                             <tbody>
-                            {rows.length === 0 ? (
-                                <tr><td colSpan={components.length + 7} className="text-center text-muted">No rows</td></tr>
-                            ) : rows.map((r, i) => {
-                                const need = neededMap.get(r.productId) || 0;
-                                const avail = typeof r.storeAvail === "number" ? r.storeAvail : (r.productId ? (availMap[r.productId] ?? 0) : 0);
-                                const low = need > avail;
-                                const unit = Number(r.estUnitCost || 0);
-                                const rowTotal = unit * need;
+                                {rows.length === 0 ? (
+                                    <tr><td colSpan={components.length + 7} className="text-center text-muted">No rows</td></tr>
+                                ) : rows.map((r, i) => {
+                                    const need = neededMap.get(r.productId) || 0;
+                                    const avail = typeof r.storeAvail === "number" ? r.storeAvail : (r.productId ? (availMap[r.productId] ?? 0) : 0);
+                                    const low = need > avail;
+                                    const unit = Number(r.estUnitCost || 0);
+                                    const rowTotal = unit * need;
 
-                                return (
-                                    <tr key={`${r.productId || "row"}-${i}`}>
-                                        <td>
-                                            <Select
-                                                options={productOptions}
-                                                value={r.productOption || null}
-                                                onChange={(opt) => onPickProduct(i, opt)}
-                                                placeholder="Search product by name…"
-                                                isClearable
-                                                filterOption={(option, input) =>
-                                                    option.label.toLowerCase().includes(input.toLowerCase())
-                                                }
-                                            />
-                                            <div className="small text-muted mt-1">
-                                                {r.productId ? <>ID: {r.productId}</> : <>Not selected</>}
-                                                {productById[r.productId]?.sku ? <> &nbsp;•&nbsp; SKU: {productById[r.productId].sku}</> : null}
-                                            </div>
-                                        </td>
-
-                                        <td>
-                                            <Form.Control
-                                                className="text-end"
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={r.estUnitCost ?? ""}
-                                                onChange={(e) => setRowField(i, "estUnitCost", e.target.value)}
-                                            />
-                                            {typeof r.suggestedCost === "number" && (
-                                                <div className="small text-muted d-flex justify-content-between">
-                                                    <span>Suggested: {r.suggestedCost.toLocaleString()}</span>
-                                                    <Button
-                                                        variant="link"
-                                                        size="sm"
-                                                        className="p-0"
-                                                        onClick={() => setRowField(i, "estUnitCost", String(r.suggestedCost))}
-                                                    >
-                                                        Use
-                                                    </Button>
+                                    return (
+                                        <tr key={`${r.productId || "row"}-${i}`}>
+                                            <td>
+                                                <Select
+                                                    options={productOptions}
+                                                    value={r.productOption || null}
+                                                    onChange={(opt) => onPickProduct(i, opt)}
+                                                    placeholder="Search product by name…"
+                                                    isClearable
+                                                    filterOption={(option, input) =>
+                                                        option.label.toLowerCase().includes(input.toLowerCase())
+                                                    }
+                                                />
+                                                <div className="small text-muted mt-1">
+                                                    {r.productId ? <>ID: {r.productId}</> : <>Not selected</>}
+                                                    {productById[r.productId]?.sku ? <> &nbsp;•&nbsp; SKU: {productById[r.productId].sku}</> : null}
                                                 </div>
-                                            )}
-                                        </td>
+                                            </td>
 
-                                        {components.map((c) => (
-                                            <td key={`${i}-${c}`}>
+                                            <td>
                                                 <Form.Control
                                                     className="text-end"
                                                     type="number"
                                                     min="0"
-                                                    value={(r.quantities || {})[c] ?? 0}
-                                                    onChange={(e) => setQty(i, c, e.target.value)}
+                                                    step="0.01"
+                                                    value={r.estUnitCost ?? ""}
+                                                    onChange={(e) => setRowField(i, "estUnitCost", e.target.value)}
                                                 />
+                                                {typeof r.suggestedCost === "number" && (
+                                                    <div className="small text-muted d-flex justify-content-between">
+                                                        <span>Suggested: {r.suggestedCost.toLocaleString()}</span>
+                                                        <Button
+                                                            variant="link"
+                                                            size="sm"
+                                                            className="p-0"
+                                                            onClick={() => setRowField(i, "estUnitCost", String(r.suggestedCost))}
+                                                        >
+                                                            Use
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </td>
-                                        ))}
 
-                                        <td className="text-end">{need}</td>
-                                        <td className="text-end">
-                                            {low ? <Badge bg="danger">{avail}</Badge> : <span>{avail}</span>}
-                                        </td>
-                                        <td className="text-end">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</td>
-                                        <td className="text-end">
-                                            <Button size="sm" variant="outline-danger" onClick={() => removeRow(i)}>✕</Button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                            {components.map((c) => (
+                                                <td key={`${i}-${c}`}>
+                                                    <Form.Control
+                                                        className="text-end"
+                                                        type="number"
+                                                        min="0"
+                                                        value={(r.quantities || {})[c] ?? 0}
+                                                        onChange={(e) => setQty(i, c, e.target.value)}
+                                                    />
+                                                </td>
+                                            ))}
+
+                                            <td className="text-end">{need}</td>
+                                            <td className="text-end">
+                                                {low ? <Badge bg="danger">{avail}</Badge> : <span>{avail}</span>}
+                                            </td>
+                                            <td className="text-end">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</td>
+                                            <td className="text-end">
+                                                <Button size="sm" variant="outline-danger" onClick={() => removeRow(i)}>✕</Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
 
                             <tfoot>
-                            <tr>
-                                <td colSpan={components.length + 7}>
-                                    <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>
-                                </td>
-                            </tr>
+                                <tr>
+                                    <td colSpan={components.length + 7}>
+                                        <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>
+                                    </td>
+                                </tr>
                             </tfoot>
                         </Table>
 
@@ -650,54 +691,54 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             <h6 className="mb-3">Component Options & Totals</h6>
                             <Table size="sm" responsive bordered>
                                 <thead>
-                                <tr>
-                                    <th>Component</th>
-                                    <th className="text-end" style={{width:120}}>Subtotal</th>
-                                    <th style={{width:160}}>Margin %</th>
-                                    <th className="text-end" style={{width:140}}>After Margin</th>
-                                    <th style={{width:180}}>Delivery</th>
-                                    <th style={{width:150}}>Delivery Taxable?</th>
-                                    <th className="text-end" style={{width:160}}>Line Total (pre-tax)</th>
-                                </tr>
+                                    <tr>
+                                        <th>Component</th>
+                                        <th className="text-end" style={{ width: 120 }}>Subtotal</th>
+                                        <th style={{ width: 160 }}>Margin %</th>
+                                        <th className="text-end" style={{ width: 140 }}>After Margin</th>
+                                        <th style={{ width: 180 }}>Delivery</th>
+                                        <th style={{ width: 150 }}>Delivery Taxable?</th>
+                                        <th className="text-end" style={{ width: 160 }}>Line Total (pre-tax)</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {compCalcs.map(cc => (
-                                    <tr key={cc.name}>
-                                        <td className="align-middle">{cc.name}</td>
-                                        <td className="text-end align-middle">{cc.subtotal.toLocaleString()}</td>
-                                        <td>
-                                            <Form.Control
-                                                className="text-end"
-                                                type="number"
-                                                min="0" step="0.01"
-                                                value={compMargin[cc.name] ?? ""}
-                                                onChange={(e) => setCompMargin(s => ({...s, [cc.name]: e.target.value}))}
-                                                placeholder="0"
-                                            />
-                                        </td>
-                                        <td className="text-end align-middle">{cc.afterMargin.toLocaleString()}</td>
-                                        <td>
-                                            <Form.Control
-                                                className="text-end"
-                                                type="number"
-                                                min="0" step="0.01"
-                                                value={compDelivery[cc.name] ?? ""}
-                                                onChange={(e) => setCompDelivery(s => ({...s, [cc.name]: e.target.value}))}
-                                                placeholder="0"
-                                            />
-                                        </td>
-                                        <td className="text-center">
-                                            <Form.Check
-                                                type="switch"
-                                                checked={!!compDeliveryTaxable[cc.name]}
-                                                onChange={(e) => setCompDeliveryTaxable(s => ({...s, [cc.name]: e.target.checked}))}
-                                                disabled={!includeDelivery}
-                                                label=""
-                                            />
-                                        </td>
-                                        <td className="text-end align-middle">{cc.lineTotalBeforeTax.toLocaleString()}</td>
-                                    </tr>
-                                ))}
+                                    {compCalcs.map(cc => (
+                                        <tr key={cc.name}>
+                                            <td className="align-middle">{cc.name}</td>
+                                            <td className="text-end align-middle">{cc.subtotal.toLocaleString()}</td>
+                                            <td>
+                                                <Form.Control
+                                                    className="text-end"
+                                                    type="number"
+                                                    min="0" step="0.01"
+                                                    value={compMargin[cc.name] ?? ""}
+                                                    onChange={(e) => setCompMargin(s => ({ ...s, [cc.name]: e.target.value }))}
+                                                    placeholder="0"
+                                                />
+                                            </td>
+                                            <td className="text-end align-middle">{cc.afterMargin.toLocaleString()}</td>
+                                            <td>
+                                                <Form.Control
+                                                    className="text-end"
+                                                    type="number"
+                                                    min="0" step="0.01"
+                                                    value={compDelivery[cc.name] ?? ""}
+                                                    onChange={(e) => setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }))}
+                                                    placeholder="0"
+                                                />
+                                            </td>
+                                            <td className="text-center">
+                                                <Form.Check
+                                                    type="switch"
+                                                    checked={!!compDeliveryTaxable[cc.name]}
+                                                    onChange={(e) => setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }))}
+                                                    disabled={!includeDelivery}
+                                                    label=""
+                                                />
+                                            </td>
+                                            <td className="text-end align-middle">{cc.lineTotalBeforeTax.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </Table>
 
@@ -708,7 +749,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         type="switch"
                                         label="Include Delivery"
                                         checked={includeDelivery}
-                                        onChange={(e)=>setIncludeDelivery(e.target.checked)}
+                                        onChange={(e) => setIncludeDelivery(e.target.checked)}
                                     />
                                 </Col>
                                 <Col md={3}>
@@ -716,7 +757,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         type="switch"
                                         label="Include VAT"
                                         checked={includeVat}
-                                        onChange={(e)=>setIncludeVat(e.target.checked)}
+                                        onChange={(e) => setIncludeVat(e.target.checked)}
                                     />
                                 </Col>
                                 <Col md={3}>
@@ -724,7 +765,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         type="switch"
                                         label="Include Tax"
                                         checked={includeTax}
-                                        onChange={(e)=>setIncludeTax(e.target.checked)}
+                                        onChange={(e) => setIncludeTax(e.target.checked)}
                                     />
                                 </Col>
                                 <Col md={3} />
@@ -737,7 +778,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         <Form.Control
                                             type="number" min="0" step="0.01"
                                             value={vatPercent}
-                                            onChange={(e)=>setVatPercent(e.target.value)}
+                                            onChange={(e) => setVatPercent(e.target.value)}
                                             disabled={!includeVat}
                                         />
                                     </Form.Group>
@@ -748,7 +789,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         <Form.Control
                                             type="number" min="0" step="0.01"
                                             value={taxPercent}
-                                            onChange={(e)=>setTaxPercent(e.target.value)}
+                                            onChange={(e) => setTaxPercent(e.target.value)}
                                             disabled={!includeTax}
                                         />
                                     </Form.Group>
@@ -777,13 +818,63 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             </Col>
                         </Row>
 
-                        <div className="mt-3 d-flex justify-content-between">
+                        <div className="mt-3 d-flex justify-content-between align-items-center">
                             <div className="small text-muted">Tip: Columns are components; rename or add more as needed.</div>
-                            <div>
-                                <Button variant="primary" onClick={saveEstimation}>Save</Button>
+                            <div className="d-flex gap-2">
+                                <Button variant="outline-dark" onClick={handlePrint}>Print / Download PDF</Button>
+                                <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>
                             </div>
                         </div>
                     </div>
+
+                    {/* Print Settings Modal */}
+                    <Modal show={showPrintModal} onHide={() => setShowPrintModal(false)}>
+                        <Modal.Header closeButton>
+                            <Modal.Title>Print Settings</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            <p className="text-muted small mb-3">
+                                Select which columns and totals to include in the generated PDF.
+                                The global "Include Delivery/VAT/Tax" settings from the main page will also apply.
+                            </p>
+                            <Form.Check
+                                type="switch"
+                                id="show-qty"
+                                label="Show Quantity"
+                                checked={printOpts.showQuantity}
+                                onChange={(e) => setPrintOpts(s => ({ ...s, showQuantity: e.target.checked }))}
+                                className="mb-2"
+                            />
+                            <Form.Check
+                                type="switch"
+                                id="show-unit"
+                                label="Show Unit Cost"
+                                checked={printOpts.showUnitCost}
+                                onChange={(e) => setPrintOpts(s => ({ ...s, showUnitCost: e.target.checked }))}
+                                className="mb-2"
+                            />
+                            <Form.Check
+                                type="switch"
+                                id="show-comp-total"
+                                label="Show Component Totals"
+                                checked={printOpts.showComponentTotals}
+                                onChange={(e) => setPrintOpts(s => ({ ...s, showComponentTotals: e.target.checked }))}
+                                className="mb-2"
+                            />
+                            <Form.Check
+                                type="switch"
+                                id="show-grand-total"
+                                label="Show Grand Total"
+                                checked={printOpts.showGrandTotal}
+                                onChange={(e) => setPrintOpts(s => ({ ...s, showGrandTotal: e.target.checked }))}
+                                className="mb-2"
+                            />
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={() => setShowPrintModal(false)}>Cancel</Button>
+                            <Button variant="primary" onClick={confirmPrint}>Download PDF</Button>
+                        </Modal.Footer>
+                    </Modal>
 
                     <div className="bg-white shadow rounded p-3 mt-3">
                         <h6 className="mb-2">Templates</h6>
@@ -792,12 +883,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         ) : (
                             <Table size="sm" hover responsive>
                                 <tbody>
-                                {templates.map(t => (
-                                    <tr key={t.id}>
-                                        <td>{t.name}</td>
-                                        <td className="text-end text-muted">{(t.items || []).length} items</td>
-                                    </tr>
-                                ))}
+                                    {templates.map(t => (
+                                        <tr key={t.id}>
+                                            <td>{t.name}</td>
+                                            <td className="text-end text-muted">{(t.items || []).length} items</td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </Table>
                         )}

@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import api from "../api/api";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -38,8 +38,10 @@ export const AuthProvider = ({ children }) => {
         // Otherwise use "/api/auth/login"
         const { data } = await api.post("/auth/login", { username, password });
 
-        const { token, role, userType } = data;
+        const { token, role, userType, moduleAccess } = data;
         localStorage.setItem("token", token);
+        localStorage.setItem("role", role); // Ensure role is stored as Sidebar reads it from LS
+        localStorage.setItem("moduleAccess", JSON.stringify(moduleAccess || []));
 
         let decoded = {};
         try { decoded = jwtDecode(token); } catch { }
@@ -52,6 +54,7 @@ export const AuthProvider = ({ children }) => {
             username: decoded.sub || username,
             role: finalRole,
             userType: finalUserType,
+            moduleAccess: moduleAccess || []
         });
 
         // IMPORTANT: return so callers can route immediately
@@ -60,7 +63,9 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         localStorage.removeItem("token");
-        setAuth({ token: null, username: null, role: null, userType: null });
+        localStorage.removeItem("role");
+        localStorage.removeItem("moduleAccess");
+        setAuth({ token: null, username: null, role: null, userType: null, moduleAccess: [] });
     };
 
     const isAuthenticated = !!auth.token;

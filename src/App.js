@@ -46,12 +46,22 @@ import PendingToPOPage from "./components/Stores/PendingToPOPage";
 import TransfersInbox from "./components/Transfers/TransferInbox";
 import POListView from "./components/PO/POListView";
 import GRNReceivePage from "./components/GRN/GRNRecievePage";
+import GRNListView from "./components/GRN/GRNListView";
 import ItemRequestForm from "./components/Requests/ItemRequestForm";
 import DepartmentList from "./components/Departments/DepartmentList";
 import DepartmentForm from "./components/Departments/DepartmentForm";
 import POCreateManual from "./components/PO/POCreateManual";
 import IRFulfilmentPage from "./components/Requests/IRFulfilmentPage";
 import ProjectEstimationPage from "./components/estimates/ProjectEstimationPage";
+import ReportsPage from "./components/Reports/ReportsPage";
+import EmployeeCreate from "./components/Employee/EmployeeCreate";
+import EmployeeList from "./components/Employee/EmployeeList";
+import SalaryManagement from "./components/Employee/SalaryManagement";
+import SalaryReport from "./components/Employee/Reports/SalaryReport";
+import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
+import StockValuationReport from "./components/Inventory/Reports/StockValuationReport";
+import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
+import AttendancePage from "./components/Employee/AttendancePage";
 
 /* ---------------- Layout ---------------- */
 function Layout({ children }) {
@@ -113,6 +123,11 @@ function CustomerViewRouteWrapper() {
     return <CustomerView onEditCustomer={(customer) => navigate(`/customer/edit/${customer.id}`)} />;
 }
 
+function ProjectEstimationRouteWrapper() {
+    const { id } = useParams();
+    return <ProjectEstimationPage projectId={id} />;
+}
+
 /* ------------------- App ------------------- */
 function App() {
     const { isAuthenticated } = useAuth(); // keep if you use it elsewhere
@@ -130,6 +145,15 @@ function App() {
                         {/* <Route path="/dashboard" element={<Dashboard />} /> */}
                         <Route path="/admin" element={<AdminDashboard />} />
                         {/* <Route path="/customerDashboard" element={<CustomerDashboard />} /> */}
+
+                        {/* HR / Employees */}
+                        <Route path="/employee/create" element={<EmployeeCreate mode="create" />} />
+                        <Route path="/employee/edit/:id" element={<EmployeeCreate mode="edit" />} />
+                        <Route path="/employee/list" element={<EmployeeList />} />
+                        <Route path="/salary" element={<SalaryManagement />} />
+                        <Route path="/salary/report" element={<SalaryReport />} />
+                        <Route path="/leave" element={<LeaveRequestPage />} />
+                        <Route path="/attendance" element={<AttendancePage />} />
 
                         {/* Users */}
                         <Route path="/user/create" element={<UserCreate mode="create" />} />
@@ -153,6 +177,7 @@ function App() {
                         <Route path="/projects/manage/:id" element={<ProjectDetails />} />
                         <Route path="/projects/workflow" element={<WorkflowBuilder />} />
                         <Route path="/projects/estimation" element={<ProjectEstimationPage />} />
+                        <Route path="/projects/estimation/:id" element={<ProjectEstimationRouteWrapper />} />
 
                         {/* Customer */}
                         <Route path="/customer/create" element={<CustomerCreate />} />
@@ -175,6 +200,7 @@ function App() {
                         <Route path="/pos" element={<POListRouteWrapper />} />
                         <Route path="/pos/new" element={<POCreateManualRouteWrapper />} />
                         <Route path="/grn" element={<GRNRouteWrapper />} />
+                        <Route path="/grns" element={<GRNListView />} />
 
                         {/* Departments */}
                         <Route path="/departments" element={<DepartmentListRouteWrapper />} />
@@ -182,6 +208,9 @@ function App() {
                         <Route path="/departments/:id" element={<DepartmentFormRouteWrapper />} />
 
                         <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
+                        <Route path="/reports" element={<ReportsPage />} />
+                        <Route path="/reports/leave" element={<LeaveUtilizationReport />} />
+                        <Route path="/reports/stock" element={<StockValuationReport />} />
                     </Route>
 
                     {/* Fallback */}

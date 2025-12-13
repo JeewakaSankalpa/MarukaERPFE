@@ -1,0 +1,311 @@
+
+> mruak-fe@0.1.0 test
+> react-scripts test src/components/Customer/CustomerCreate.test.js --watchAll=false
+
+  console.warn
+    ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+
+    [0m [90m 16 |[39m
+     [90m 17 |[39m [36mconst[39m renderComponent [33m=[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 18 |[39m     [36mreturn[39m render(
+     [90m    |[39m                  [31m[1m^[22m[39m
+     [90m 19 |[39m         [33m<[39m[33mBrowserRouter[39m[33m>[39m
+     [90m 20 |[39m             [33m<[39m[33mCustomerCreate[39m [33m/[39m[33m>[39m
+     [90m 21 |[39m         [33m<[39m[33m/[39m[33mBrowserRouter[39m[33m>[39m[0m
+
+      at warnOnce (node_modules/react-router/lib/deprecations.ts:9:13)
+      at logDeprecation (node_modules/react-router/lib/deprecations.ts:14:3)
+      at Object.logV6DeprecationWarnings [as UNSAFE_logV6DeprecationWarnings] (node_modules/react-router/lib/deprecations.ts:26:5)
+      at node_modules/react-router-dom/index.tsx:816:25
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22509:20)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at commitHookEffectListMount (node_modules/react-dom/cjs/react-dom-client.development.js:10758:29)
+      at commitHookPassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:10880:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12653:13)
+      at recursivelyTraversePassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:12627:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12657:11)
+      at flushPassiveEffects (node_modules/react-dom/cjs/react-dom-client.development.js:15460:13)
+      at node_modules/react-dom/cjs/react-dom-client.development.js:15324:11
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:18:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:31:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  console.warn
+    ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+    [0m [90m 16 |[39m
+     [90m 17 |[39m [36mconst[39m renderComponent [33m=[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 18 |[39m     [36mreturn[39m render(
+     [90m    |[39m                  [31m[1m^[22m[39m
+     [90m 19 |[39m         [33m<[39m[33mBrowserRouter[39m[33m>[39m
+     [90m 20 |[39m             [33m<[39m[33mCustomerCreate[39m [33m/[39m[33m>[39m
+     [90m 21 |[39m         [33m<[39m[33m/[39m[33mBrowserRouter[39m[33m>[39m[0m
+
+      at warnOnce (node_modules/react-router/lib/deprecations.ts:9:13)
+      at logDeprecation (node_modules/react-router/lib/deprecations.ts:14:3)
+      at Object.logV6DeprecationWarnings [as UNSAFE_logV6DeprecationWarnings] (node_modules/react-router/lib/deprecations.ts:37:5)
+      at node_modules/react-router-dom/index.tsx:816:25
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22509:20)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at commitHookEffectListMount (node_modules/react-dom/cjs/react-dom-client.development.js:10758:29)
+      at commitHookPassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:10880:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12653:13)
+      at recursivelyTraversePassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:12627:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12657:11)
+      at flushPassiveEffects (node_modules/react-dom/cjs/react-dom-client.development.js:15460:13)
+      at node_modules/react-dom/cjs/react-dom-client.development.js:15324:11
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:18:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:31:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  console.log
+    Sending Customer Payload: {
+      comName: 'Test Corp',
+      comAddress: '123 Test St',
+      comEmail: 'test@example.com',
+      comContactNumber: '0771234567',
+      businessRegNumber: 'BR12345',
+      currency: 'VAT',
+      creditPeriod: '30',
+      vatType: 'VAT',
+      vatNumber: 'VAT123',
+      contactPersonData: {
+        name: 'John Doe',
+        contactNumber: '0777654321',
+        email: 'john@example.com'
+      },
+      vatDocument: null,
+      businessRegDocument: null,
+      documentURL: '',
+      fileList: null,
+      password: 'password123'
+    }
+
+      at handleSubmit (src/components/Customer/CustomerCreate.js:156:13)
+
+FAIL src/components/Customer/CustomerCreate.test.js
+  CustomerCreate Component
+    √ renders customer creation form (303 ms)
+    × submits form with files successfully (1303 ms)
+
+  ● CustomerCreate Component › submits form with files successfully
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "/customers"
+
+    Number of calls: 0
+
+    Ignored nodes: comments, script, style
+    [36m<html>[39m
+      [36m<head />[39m
+      [36m<body>[39m
+        [36m<div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"my-5 container"[39m
+            [33mstyle[39m=[32m"width: 100%; overflow: auto; height: calc(100vh - 10rem);"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"bg-white shadow rounded p-4"[39m
+            [36m>[39m
+              [36m<h2[39m
+                [33mclass[39m=[32m"text-center mb-4"[39m
+              [36m>[39m
+                [0mAdd Customer[0m
+              [36m</h2>[39m
+              [36m<form[39m
+                [33mclass[39m=[32m""[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mclass[39m=[32m"form-label"[39m
+                    [33mfor[39m=[32m"comName"[39m
+                  [36m>[39m
+                    [0mCompany Name[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"form-control is-valid"[39m
+                    [33mid[39m=[32m"comName"[39m
+                    [33mname[39m=[32m"comName"[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m"Test Corp"[39m
+                  [36m/>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"invalid-feedback"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mclass[39m=[32m"form-label"[39m
+                    [33mfor[39m=[32m"name"[39m
+                  [36m>[39m
+                    [0mCompany Address[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"form-control is-valid"[39m
+                    [33mid[39m=[32m"name"[39m
+                    [33mname[39m=[32m"comAddress"[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m"123 Test St"[39m
+                  [36m/>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"invalid-feedback"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mclass[39m=[32m"form-label"[39m
+                    [33mfor[39m=[32m"comEmail"[39m
+                  [36m>[39m
+                    [0mCompany Email[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"form-control is-valid"[39m
+                    [33mid[39m=[32m"comEmail"[39m
+                    [33mname[39m=[32m"comEmail"[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mtype[39m=[32m"email"[39m
+                    [33mvalue[39m=[32m"test@example.com"[39m
+                  [36m/>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"invalid-feedback"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mclass[39m=[32m"form-label"[39m
+                    [33mfor[39m=[32m"comContactNumber"[39m
+                  [36m>[39m
+                    [0mCompany Contact Number[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"form-control is-valid"[39m
+                    [33mid[39m=[32m"comContactNumber"[39m
+                    [33mname[39m=[32m"comContactNumber"[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m"0771234567"[39m
+                  [36m/>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"invalid-feedback"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mclass[39m=[32m"form-label"[39m
+                    [33mfor[39m=[32m"businessRegNumber"[39m
+                  [36m>[39m
+                    [0mCompany Business Register Number[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"form-control is-valid"[39m
+                    [33mid[39m=[32m"businessRegNumber"[39m
+                    [33mname[39m=[32m"businessRegNumber"[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mtype[39m=[32m"text"[39m
+                    [33mvalue[39m=[32m"BR12345"[39m
+                  [36m/>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"invalid-feedback"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mclass[39m=[32m"form-label"[39m
+                    [33mfor[39m=[32m"currency"[39m
+                  [36m>[39m
+                    [0mCurrency[0m
+                  [36m</label>[39m
+                  [36m<select[39m
+                    [33mclass[39m=[32m"form-select is-valid"[39m
+                    [33mid[39m=[32m"currency"[39m
+                    [33mname[39m=[32m"currency"[39m
+                    [33mrequired[39m=[32m""[39m
+                  [36m>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m""[39m
+                    [36m>[39m
+                      [0m-- Select --[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"VAT"[39m
+                    [36m>[39m
+                      [0mRupees[0m
+                    [36m</option>[39m
+                    [36m<option[39m
+                      [33mvalue[39m=[32m"SVAT"[39m
+                    [36m>[39m
+                      [0mUSD[0m
+                    [36m</option>[39m
+                  [36m</select>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mb-3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    [33mclass[39m=[32m"form-label"[39m
+                    [33mfor[39m=[32m"creditPeriod"[39m
+                  [36m>[39m
+                    [0mCredit Period (days)[0m
+                  [36m</label>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"form-control is-valid"[39m
+                    [33mid[39m=[32m"creditPeriod"[39m
+                    [33mname[39m=[32m"creditPeriod"[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mtype[39m=[32m"number"[39m
+                    [33mvalue[39m=[32m"30"[39m
+                  [36m/>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"invalid-feedback"[39m
+              ...
+
+    [0m [90m 88 |[39m             expect(formData[33m.[39m[36mget[39m([32m'businessRegDocument'[39m))[33m.[39mtoBe(file)[33m;[39m
+     [90m 89 |[39m
+    [31m[1m>[22m[39m[90m 90 |[39m             expect(mockedNavigate)[33m.[39mtoHaveBeenCalledWith([32m'/customers'[39m)[33m;[39m
+     [90m    |[39m                                    [31m[1m^[22m[39m
+     [90m 91 |[39m         })[33m;[39m
+     [90m 92 |[39m     })[33m;[39m
+     [90m 93 |[39m })[33m;[39m[0m
+
+      at src/components/Customer/CustomerCreate.test.js:90:36
+      at runWithExpensiveErrorDiagnosticsDisabled (node_modules/@testing-library/dom/dist/config.js:47:12)
+      at checkCallback (node_modules/@testing-library/dom/dist/wait-for.js:124:77)
+      at checkRealTimersCallback (node_modules/@testing-library/dom/dist/wait-for.js:118:16)
+      at Timeout.task [as _onTimeout] (node_modules/jsdom/lib/jsdom/browser/Window.js:516:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        6.151 s, estimated 32 s
+Ran all test suites matching /src\\components\\Customer\\CustomerCreate.test.js/i.

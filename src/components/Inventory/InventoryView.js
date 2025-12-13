@@ -20,6 +20,12 @@ function InventoryView() {
     const [batchDetails, setBatchDetails] = useState([]);
     const [userName, setUserName] = useState('');
 
+    // Return to Supplier State
+    const [showReturnModal, setShowReturnModal] = useState(false);
+    const [returnBatch, setReturnBatch] = useState(null);
+    const [returnData, setReturnData] = useState({ quantity: '', reason: '' });
+    const [submitting, setSubmitting] = useState(false);
+
     useEffect(() => {
         fetchInventory();
         fetchLocations();
@@ -169,11 +175,46 @@ function InventoryView() {
     };
 
     const handleStoreClick = (product, store) => {
-        const label =
-            locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
-            store.locationId ||
-            'Main Store';
-        alert(`Product: ${product.productName}\nStore: ${label}\nQuantity: ${store.quantity}`);
+        const label = store.ownerType === 'PROJECT' ? `Project: ${store.ownerId}` :
+            store.ownerType === 'DEPARTMENT' ? `Department: ${store.ownerId}` :
+                locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
+                store.locationId ||
+                'Main Store';
+        alert(`Product: ${product.productName}\nLocation: ${label}\nQuantity: ${store.quantity}`);
+    };
+
+    const handleReturnClick = (batch) => {
+        setReturnBatch(batch);
+        setReturnData({ quantity: '', reason: '' });
+        setShowReturnModal(true);
+    };
+
+    const submitReturn = async () => {
+        if (!returnData.quantity || !returnBatch) {
+            toast.warn('Quantity is required');
+            return;
+        }
+        try {
+            setSubmitting(true);
+            await api.post('/inventory/returns/supplier', {
+                supplierId: selectedProduct?.product?.supplierId || 'UNKNOWN',
+                supplierName: selectedProduct?.product?.supplierName || 'Unknown',
+                productId: selectedProduct?.productId,
+                productName: selectedProduct?.productName,
+                batchId: returnBatch.id,
+                batchNo: returnBatch.batchNumber || returnBatch.batchNo,
+                quantity: Number(returnData.quantity),
+                reason: returnData.reason
+            });
+            toast.success('Return request created');
+            setShowReturnModal(false);
+            // Refresh batches
+            fetchBatchDetails(selectedProduct.productId);
+        } catch (e) {
+            toast.error(e?.response?.data?.message || 'Failed to create return request');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const generatePDF = () => {
@@ -319,86 +360,136 @@ function InventoryView() {
 
             <Table bordered hover responsive className="text-center">
                 <thead className="table-primary">
-                <tr>
-                    <th>Product Name</th>
-                    <th>Total Quantity (All Locations)</th>
-                    <th>Quantity in Selected Stores</th>
-                    <th>Available Stores</th>
-                </tr>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Total Quantity (All Locations)</th>
+                        <th>Quantity in Selected Stores</th>
+                        <th>Available Stores</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {(filteredItems || []).map((item) => (
-                    <tr
-                        key={item.productId}
-                        onClick={() => handleProductClick(item)}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <td>{item.productName}</td>
-                        <td>{item.totalQuantity}</td>
-                        <td>{item.availableQuantity}</td>
-                        <td>
-                            {(item.availableStores || []).map((store, idx) => (
-                                <div
-                                    key={`${store.locationId || 'MAIN_STORE'}-${idx}`}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStoreClick(item, store);
-                                    }}
-                                    style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                                >
-                                    {(locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label) ||
-                                        store.locationId ||
-                                        'Main Store'}
-                                    : {store.quantity}
-                                </div>
-                            ))}
-                        </td>
-                    </tr>
-                ))}
+                    {(filteredItems || []).map((item) => (
+                        <tr
+                            key={item.productId}
+                            onClick={() => handleProductClick(item)}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            <td>{item.productName}</td>
+                            <td>{item.totalQuantity}</td>
+                            <td>{item.availableQuantity}</td>
+                            <td>
+                                {(item.availableStores || []).map((store, idx) => (
+                                    <div
+                                        key={`${store.locationId || 'MAIN_STORE'}-${idx}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleStoreClick(item, store);
+                                        }}
+                                        style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                    >
+                                        {store.ownerType === 'PROJECT' ? `Project: ${store.ownerId}` :
+                                            store.ownerType === 'DEPARTMENT' ? `Department: ${store.ownerId}` :
+                                                (locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label) ||
+                                                store.locationId ||
+                                                'Main Store'}
+                                        : {store.quantity}
+                                    </div>
+                                ))}
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </Table>
 
-            <Modal show={showModal} onHide={() => setShowModal(false)}>
+            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
                 <Modal.Header closeButton>
                     <Modal.Title>Batch Details for {selectedProduct?.productName}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Table bordered hover responsive className="text-center">
                         <thead className="table-primary">
-                        <tr>
-                            <th>Batch Number</th>
-                            <th>Quantity</th>
-                            <th>Expiry Date</th>
-                            <th>Cost Price</th>
-                            <th>Wholesale Price</th>
-                            <th>Retail Price</th>
-                            <th>Location</th>
-                        </tr>
+                            <tr>
+                                <th>Batch Number</th>
+                                <th>Quantity</th>
+                                <th>Expiry Date</th>
+                                <th>Cost Price</th>
+                                <th>Location</th>
+                                <th>Action</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        {(batchDetails || []).map((batch) => (
-                            <tr key={batch.id || `${batch.batchNumber}-${batch.locationId}`}>
-                                <td>{batch.batchNumber || batch.batchNo || '-'}</td>
-                                <td>{batch.quantity ?? batch.qty ?? 0}</td>
-                                <td>
-                                    {batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : '-'}
-                                </td>
-                                <td>{batch.costPrice ?? '-'}</td>
-                                <td>{batch.wholesalePrice ?? '-'}</td>
-                                <td>{batch.retailPrice ?? '-'}</td>
-                                <td>
-                                    {locationOptions.find((loc) => loc.value === (batch.locationId || 'MAIN_STORE'))?.label ||
-                                        batch.locationId ||
-                                        'Main Store'}
-                                </td>
-                            </tr>
-                        ))}
+                            {(batchDetails || []).map((batch) => (
+                                <tr key={batch.id || `${batch.batchNumber}-${batch.locationId}`}>
+                                    <td>{batch.batchNumber || batch.batchNo || '-'}</td>
+                                    <td>{batch.quantity ?? batch.qty ?? 0}</td>
+                                    <td>
+                                        {batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : '-'}
+                                    </td>
+                                    <td>{batch.costPrice ?? '-'}</td>
+                                    <td>
+                                        {batch.ownerType === 'PROJECT' ? `Project: ${batch.ownerId}` :
+                                            batch.ownerType === 'DEPARTMENT' ? `Department: ${batch.ownerId}` :
+                                                locationOptions.find((loc) => loc.value === (batch.locationId || 'MAIN_STORE'))?.label ||
+                                                batch.locationId ||
+                                                'Main Store'}
+                                    </td>
+                                    <td>
+                                        <Button
+                                            size="sm"
+                                            variant="outline-danger"
+                                            onClick={() => handleReturnClick(batch)}
+                                        >
+                                            Return
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </Table>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowModal(false)}>
                         Close
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Supplier Return Modal */}
+            <Modal show={showReturnModal} onHide={() => setShowReturnModal(false)} centered>
+                <Modal.Header closeButton><Modal.Title>Return to Supplier</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <div className="mb-3">
+                        <strong>Product:</strong> {selectedProduct?.productName}<br />
+                        <strong>Batch:</strong> {returnBatch?.batchNumber || returnBatch?.batchNo}<br />
+                        <strong>Supplier:</strong> {selectedProduct?.product?.supplierName || 'Unknown'}
+                    </div>
+                    <Form.Group className="mb-2">
+                        <Form.Label>Quantity</Form.Label>
+                        <Form.Control
+                            type="number"
+                            min="1"
+                            max={returnBatch?.quantity ?? returnBatch?.qty ?? 0}
+                            value={returnData.quantity}
+                            onChange={e => setReturnData({ ...returnData, quantity: e.target.value })}
+                        />
+                        <Form.Text className="text-muted">
+                            Max: {returnBatch?.quantity ?? returnBatch?.qty ?? 0}
+                        </Form.Text>
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>Reason</Form.Label>
+                        <Form.Control
+                            as="textarea"
+                            rows={2}
+                            value={returnData.reason}
+                            onChange={e => setReturnData({ ...returnData, reason: e.target.value })}
+                        />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowReturnModal(false)}>Cancel</Button>
+                    <Button variant="danger" onClick={submitReturn} disabled={submitting}>
+                        {submitting ? 'Submitting...' : 'Confirm Return'}
                     </Button>
                 </Modal.Footer>
             </Modal>

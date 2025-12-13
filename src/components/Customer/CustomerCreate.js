@@ -238,7 +238,7 @@ function CustomerCreate() {
                 />
                 <Form.Control.Feedback type="invalid">{errors.comAddress}</Form.Control.Feedback>
               </Form.Group>
-              <Form.Group controlId="address" className="mb-3">
+              <Form.Group controlId="comEmail" className="mb-3">
                 <Form.Label>Company Email</Form.Label>
                 <Form.Control
                   type="email"
@@ -251,7 +251,7 @@ function CustomerCreate() {
                 />
                 <Form.Control.Feedback type="invalid">{errors.comEmail}</Form.Control.Feedback>
               </Form.Group>
-              <Form.Group controlId="mobileNumber" className="mb-3">
+              <Form.Group controlId="comContactNumber" className="mb-3">
                 <Form.Label>Company Contact Number</Form.Label>
                 <Form.Control
                   type="text"
@@ -264,7 +264,7 @@ function CustomerCreate() {
                 />
                 <Form.Control.Feedback type="invalid">{errors.comContactNumber}</Form.Control.Feedback>
               </Form.Group>
-              <Form.Group controlId="email" className="mb-3">
+              <Form.Group controlId="businessRegNumber" className="mb-3">
                 <Form.Label>Company Business Register Number</Form.Label>
                 <Form.Control
                   type="text"
@@ -278,7 +278,7 @@ function CustomerCreate() {
                 <Form.Control.Feedback type="invalid">{errors.businessRegNumber}</Form.Control.Feedback>
               </Form.Group>
 
-              <Form.Group controlId="taxType" className="mb-3">
+              <Form.Group controlId="currency" className="mb-3">
                 <Form.Label>Currency</Form.Label>
                 <Form.Select
                   name="currency"
@@ -294,7 +294,7 @@ function CustomerCreate() {
                 </Form.Select>
               </Form.Group>
 
-              <Form.Group controlId="taxId" className="mb-3">
+              <Form.Group controlId="creditPeriod" className="mb-3">
                 <Form.Label>Credit Period (days)</Form.Label>
                 <Form.Control
                   type="number"
@@ -307,7 +307,7 @@ function CustomerCreate() {
                 />
                 <Form.Control.Feedback type="invalid">{errors.creditPeriod}</Form.Control.Feedback>
               </Form.Group>
-              <Form.Group controlId="taxId" className="mb-3">
+              <Form.Group controlId="contactName" className="mb-3">
                 <Form.Label>Contact Person Name</Form.Label>
                 <Form.Control
                   type="text"
@@ -320,7 +320,7 @@ function CustomerCreate() {
                 />
                 <Form.Control.Feedback type="invalid">{errors.contactPersonData_name}</Form.Control.Feedback>
               </Form.Group>
-              <Form.Group controlId="taxId" className="mb-3">
+              <Form.Group controlId="contactMobile" className="mb-3">
                 <Form.Label>Contact Person Mobile Number</Form.Label>
                 <Form.Control
                   type="text"
@@ -333,7 +333,7 @@ function CustomerCreate() {
                 />
                 <Form.Control.Feedback type="invalid">{errors.contactPersonData_contactNumber}</Form.Control.Feedback>
               </Form.Group>
-              <Form.Group controlId="taxId" className="mb-3">
+              <Form.Group controlId="contactEmail" className="mb-3">
                 <Form.Label>Contact Person Email</Form.Label>
                 <Form.Control
                   type="text"
@@ -361,7 +361,7 @@ function CustomerCreate() {
               )}
 
               <Row>
-                <Form.Group controlId="taxType" className="mb-3">
+                <Form.Group controlId="vatType" className="mb-3">
                   <Form.Label>VAT Type</Form.Label>
                   <Form.Select
                     name="vatType"
@@ -377,7 +377,7 @@ function CustomerCreate() {
                 </Form.Group>
 
                 {companyData.vatType && (
-                  <Form.Group controlId="taxId" className="mb-3">
+                  <Form.Group controlId="vatNumber" className="mb-3">
                     <Form.Label>{companyData.vatType} Number</Form.Label>
                     <Form.Control
                       type="text"
@@ -415,9 +415,9 @@ function CustomerCreate() {
               />
             </Form.Group> */}
               {/* VAT Document (Required) */}
-              <Form.Group controlId="document" className="mb-2">
-                <label>VAT Registration Document *</label>
-                <input
+              <Form.Group controlId="vatDoc" className="mb-2">
+                <Form.Label>VAT Registration Document *</Form.Label>
+                <Form.Control
                   type="file"
                   accept=".pdf,.jpg,.png"
                   onChange={(e) =>
@@ -429,22 +429,11 @@ function CustomerCreate() {
                   required
                 />
               </Form.Group>
-              {/* <label>VAT Registration Document *</label>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.png"
-              onChange={(e) =>
-                setCompanyData((prev) => ({
-                  ...prev,
-                  vatDocument: e.target.files[0],
-                }))
-              }
-              required
-            /> */}
+
               {/* Business Registration Document (Optional) */}
-              <Form.Group controlId="document" className="mb-2">
-                <label>Business Registration Document (Optional)</label>
-                <input
+              <Form.Group controlId="brDoc" className="mb-2">
+                <Form.Label>Business Registration Document (Optional)</Form.Label>
+                <Form.Control
                   type="file"
                   accept=".pdf,.jpg,.png"
                   onChange={(e) =>

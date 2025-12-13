@@ -1,0 +1,325 @@
+
+> mruak-fe@0.1.0 test
+> react-scripts test src/components/Project/ProjectCreate.test.js --watchAll=false
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.warn
+    ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+
+    [0m [90m 17 |[39m
+     [90m 18 |[39m [36mconst[39m renderComponent [33m=[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 19 |[39m     [36mreturn[39m render(
+     [90m    |[39m                  [31m[1m^[22m[39m
+     [90m 20 |[39m         [33m<[39m[33mBrowserRouter[39m[33m>[39m
+     [90m 21 |[39m             [33m<[39m[33mProjectForm[39m [33m/[39m[33m>[39m
+     [90m 22 |[39m         [33m<[39m[33m/[39m[33mBrowserRouter[39m[33m>[39m[0m
+
+      at warnOnce (node_modules/react-router/lib/deprecations.ts:9:13)
+      at logDeprecation (node_modules/react-router/lib/deprecations.ts:14:3)
+      at Object.logV6DeprecationWarnings [as UNSAFE_logV6DeprecationWarnings] (node_modules/react-router/lib/deprecations.ts:26:5)
+      at node_modules/react-router-dom/index.tsx:816:25
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22509:20)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at commitHookEffectListMount (node_modules/react-dom/cjs/react-dom-client.development.js:10758:29)
+      at commitHookPassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:10880:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12653:13)
+      at recursivelyTraversePassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:12627:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12657:11)
+      at flushPassiveEffects (node_modules/react-dom/cjs/react-dom-client.development.js:15460:13)
+      at node_modules/react-dom/cjs/react-dom-client.development.js:15324:11
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Project/ProjectCreate.test.js:19:18)
+      at Object.<anonymous> (src/components/Project/ProjectCreate.test.js:42:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  console.warn
+    ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+    [0m [90m 17 |[39m
+     [90m 18 |[39m [36mconst[39m renderComponent [33m=[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 19 |[39m     [36mreturn[39m render(
+     [90m    |[39m                  [31m[1m^[22m[39m
+     [90m 20 |[39m         [33m<[39m[33mBrowserRouter[39m[33m>[39m
+     [90m 21 |[39m             [33m<[39m[33mProjectForm[39m [33m/[39m[33m>[39m
+     [90m 22 |[39m         [33m<[39m[33m/[39m[33mBrowserRouter[39m[33m>[39m[0m
+
+      at warnOnce (node_modules/react-router/lib/deprecations.ts:9:13)
+      at logDeprecation (node_modules/react-router/lib/deprecations.ts:14:3)
+      at Object.logV6DeprecationWarnings [as UNSAFE_logV6DeprecationWarnings] (node_modules/react-router/lib/deprecations.ts:37:5)
+      at node_modules/react-router-dom/index.tsx:816:25
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22509:20)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at commitHookEffectListMount (node_modules/react-dom/cjs/react-dom-client.development.js:10758:29)
+      at commitHookPassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:10880:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12653:13)
+      at recursivelyTraversePassiveMountEffects (node_modules/react-dom/cjs/react-dom-client.development.js:12627:11)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom-client.development.js:12657:11)
+      at flushPassiveEffects (node_modules/react-dom/cjs/react-dom-client.development.js:15460:13)
+      at node_modules/react-dom/cjs/react-dom-client.development.js:15324:11
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Project/ProjectCreate.test.js:19:18)
+      at Object.<anonymous> (src/components/Project/ProjectCreate.test.js:42:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+  console.log
+    DEBUG: routeId= undefined
+
+      at ProjectForm (src/components/Project/ProjectCreate.js:20:11)
+
+FAIL src/components/Project/ProjectCreate.test.js
+  ProjectCreate Component
+    √ renders project creation form (322 ms)
+    × submits form successfully (1139 ms)
+
+  ● ProjectCreate Component › submits form successfully
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "/projects/manage/p1"
+
+    Number of calls: 0
+
+    Ignored nodes: comments, script, style
+    [36m<html>[39m
+      [36m<head />[39m
+      [36m<body>[39m
+        [36m<div>[39m
+          [36m<div[39m
+            [33mstyle[39m=[32m"min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2vh 2vw; box-sizing: border-box;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"container"[39m
+              [33mstyle[39m=[32m"width: 80vw; max-width: 900px;"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"bg-white shadow rounded p-4"[39m
+                [33mstyle[39m=[32m"font-size: 1rem;"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"d-flex justify-content-between align-items-center"[39m
+                [36m>[39m
+                  [36m<h2[39m
+                    [33mclass[39m=[32m"mb-4"[39m
+                    [33mstyle[39m=[32m"font-size: 1.5rem;"[39m
+                  [36m>[39m
+                    [0mCreate New Project[0m
+                  [36m</h2>[39m
+                [36m</div>[39m
+                [36m<form[39m
+                  [33mclass[39m=[32m"was-validated"[39m
+                  [33mnovalidate[39m=[32m""[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"mb-3"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"form-label"[39m
+                      [33mfor[39m=[32m"projectId"[39m
+                    [36m>[39m
+                      [0mProject ID[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mclass[39m=[32m"form-control"[39m
+                      [33mid[39m=[32m"projectId"[39m
+                      [33mreadonly[39m=[32m""[39m
+                      [33mtype[39m=[32m"text"[39m
+                      [33mvalue[39m=[32m"p1"[39m
+                    [36m/>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"mb-3"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"form-label"[39m
+                      [33mfor[39m=[32m"projectName"[39m
+                    [36m>[39m
+                      [0mProject Name[0m
+                    [36m</label>[39m
+                    [36m<input[39m
+                      [33mclass[39m=[32m"form-control"[39m
+                      [33mdisabled[39m=[32m""[39m
+                      [33mid[39m=[32m"projectName"[39m
+                      [33mname[39m=[32m"projectName"[39m
+                      [33mrequired[39m=[32m""[39m
+                      [33mtype[39m=[32m"text"[39m
+                      [33mvalue[39m=[32m"New Project"[39m
+                    [36m/>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"invalid-feedback"[39m
+                    [36m>[39m
+                      [0mProject name is required.[0m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"g-3 row"[39m
+                  [36m>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"col-md-6 col-12"[39m
+                    [36m>[39m
+                      [36m<div>[39m
+                        [36m<label[39m
+                          [33mclass[39m=[32m"form-label"[39m
+                          [33mfor[39m=[32m"customerId"[39m
+                        [36m>[39m
+                          [0mCustomer[0m
+                        [36m</label>[39m
+                        [36m<select[39m
+                          [33mclass[39m=[32m"form-select"[39m
+                          [33mdisabled[39m=[32m""[39m
+                          [33mid[39m=[32m"customerId"[39m
+                          [33mname[39m=[32m"customerId"[39m
+                          [33mrequired[39m=[32m""[39m
+                        [36m>[39m
+                          [36m<option[39m
+                            [33mvalue[39m=[32m""[39m
+                          [36m>[39m
+                            [0mSelect Customer[0m
+                          [36m</option>[39m
+                          [36m<option[39m
+                            [33mvalue[39m=[32m"c1"[39m
+                          [36m>[39m
+                            [0mCustomer A[0m
+                          [36m</option>[39m
+                        [36m</select>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"invalid-feedback"[39m
+                        [36m>[39m
+                          [0mPlease select a customer.[0m
+                        [36m</div>[39m
+                      [36m</div>[39m
+                    [36m</div>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"col-md-6 col-12"[39m
+                    [36m>[39m
+                      [36m<div>[39m
+                        [36m<label[39m
+                          [33mclass[39m=[32m"form-label"[39m
+                          [33mfor[39m=[32m"salesRep"[39m
+                        [36m>[39m
+                          [0mSales Representative[0m
+                        [36m</label>[39m
+                        [36m<select[39m
+                          [33mclass[39m=[32m"form-select"[39m
+                          [33mdisabled[39m=[32m""[39m
+                          [33mid[39m=[32m"salesRep"[39m
+                          [33mname[39m=[32m"salesRep"[39m
+                          [33mrequired[39m=[32m""[39m
+                        [36m>[39m
+                          [36m<option[39m
+                            [33mvalue[39m=[32m""[39m
+                          [36m>[39m
+                            [0mSelect Employee[0m
+                          [36m</option>[39m
+                          [36m<option[39m
+                            [33mvalue[39m=[32m"e1"[39m
+                          [36m>[39m
+                            [0mJohn[0m
+                            [0m [0m
+                            [0mDoe[0m
+                          [36m</option>[39m
+                        [36m</select>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"invalid-feedback"[39m
+                        [36m>[39m
+                          [0mPlease select a sales representative.[0m
+                        [36m</div>[39m
+                      [36m</div>[39m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"mb-3 mt-3"[39m
+                  [36m>[39m
+                    [36m<label[39m
+                      [33mclass[39m=[32m"form-label"[39m
+                      [33mfor[39m=[32m"comment"[39m
+                    [36m>[39m
+                      [0mComment[0m
+                    [36m</label>[39m
+                    [36m<textarea[39m
+                      [33mclass[39m=[32m"form-control"[39m
+                      [33mdisabled[39m=[32m""[39m
+                      [33mid[39m=[32m"comment"[39m
+                      [33mname[39m=[32m"comment"[39m
+                      [33mrequired[39m=[32m""[39m
+                      [33mrows[39m=[32m"3"[39m
+                    [36m>[39m
+                      [0mTest Comment[0m
+                    [36m...
+
+    [0m [90m 74 |[39m         [36mawait[39m waitFor(() [33m=>[39m {
+     [90m 75 |[39m             expect(api[33m.[39mpost)[33m.[39mtoHaveBeenCalledWith([32m'/projects/create'[39m[33m,[39m expect[33m.[39many([33mFormData[39m)[33m,[39m expect[33m.[39many([33mObject[39m))[33m;[39m
+    [31m[1m>[22m[39m[90m 76 |[39m             expect(mockedNavigate)[33m.[39mtoHaveBeenCalledWith([32m'/projects/manage/p1'[39m)[33m;[39m
+     [90m    |[39m                                    [31m[1m^[22m[39m
+     [90m 77 |[39m         })[33m;[39m
+     [90m 78 |[39m     })[33m;[39m
+     [90m 79 |[39m })[33m;[39m[0m
+
+      at src/components/Project/ProjectCreate.test.js:76:36
+      at runWithExpensiveErrorDiagnosticsDisabled (node_modules/@testing-library/dom/dist/config.js:47:12)
+      at checkCallback (node_modules/@testing-library/dom/dist/wait-for.js:124:77)
+      at checkRealTimersCallback (node_modules/@testing-library/dom/dist/wait-for.js:118:16)
+      at Timeout.task [as _onTimeout] (node_modules/jsdom/lib/jsdom/browser/Window.js:516:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        7.513 s, estimated 18 s
+Ran all test suites matching /src\\components\\Project\\ProjectCreate.test.js/i.

@@ -1,19 +1,25 @@
 // src/components/Stores/IRFulfilmentPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Table, Button, Form, Row, Col, Badge, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Spinner, Button, Form, Table, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
-import "react-toastify/dist/ReactToastify.css";
 
-/* ---------- API helpers ---------- */
-const listIRs = async (page = 0, size = 20) =>
-    (await api.get(`/item-requests`, { params: { page, size, status: ["SUBMITTED","PENDING_PURCHASE", "PARTIALLY_FULFILLED"] } })).data;
+// expects [{productId, productName?, availableQty}]
+const fetchMainAvail = async () => {
+    const res = await api.get("/reports/stock");
+    return (res.data || []).map(r => ({ ...r, availableQty: r.quantity }));
+};
+
+const listIRs = async (page, size, status) => {
+    const params = { page, size, sort: "createdAt,desc" };
+    if (status) params.status = status.join(",");
+    return (await api.get("/item-requests", { params })).data;
+};
 
 const getIR = async (id) => (await api.get(`/item-requests/${id}`)).data;
-const fulfilIR = async (id, body) => (await api.post(`/item-requests/${id}/fulfil`, body)).data;
 
-const fetchMainAvail = async () => (await api.get(`/inventory/available-quantities-main`)).data;
-// expects [{productId, productName?, availableQty}]
+const fulfilIR = async (id, productIdToQty) =>
+    (await api.post(`/item-requests/${id}/fulfil`, productIdToQty)).data;
 
 const listDepartments = async () =>
     (await api.get(`/departments`, { params: { page: 0, size: 1000 } })).data?.content || [];
@@ -66,12 +72,18 @@ export default function IRFulfilmentPage() {
         })();
     }, []);
 
+    // status filter
+    const [statusFilter, setStatusFilter] = useState('PENDING');
+
     // load IR page
     useEffect(() => {
         (async () => {
             setLoadingList(true);
             try {
-                const p = await listIRs(page, 20);
+                const statuses = statusFilter === 'PENDING'
+                    ? ["SUBMITTED", "PENDING_PURCHASE", "PARTIALLY_FULFILLED"]
+                    : ["FULFILLED"];
+                const p = await listIRs(page, 20, statuses);
                 setIrs(p);
             } catch {
                 toast.error("Failed to load item requests");
@@ -79,7 +91,7 @@ export default function IRFulfilmentPage() {
                 setLoadingList(false);
             }
         })();
-    }, [page]);
+    }, [page, statusFilter]);
 
     const openIR = async (id) => {
         setLoadingDetail(true);
@@ -157,8 +169,17 @@ export default function IRFulfilmentPage() {
                 <Col md={5}>
                     <div className="bg-white shadow rounded p-3">
                         <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h5 className="mb-0">Pending Item Requests</h5>
+                            <h5 className="mb-0">Item Requests</h5>
                             {loadingList && <Spinner animation="border" size="sm" />}
+                        </div>
+
+                        <div className="mb-3">
+                            <Button size="sm" variant={statusFilter === 'PENDING' ? 'primary' : 'outline-primary'} className="me-2" onClick={() => setStatusFilter('PENDING')}>
+                                Pending
+                            </Button>
+                            <Button size="sm" variant={statusFilter === 'COMPLETED' ? 'success' : 'outline-success'} onClick={() => setStatusFilter('COMPLETED')}>
+                                Completed
+                            </Button>
                         </div>
 
                         {/* Filters */}
@@ -203,45 +224,45 @@ export default function IRFulfilmentPage() {
 
                         <Table hover size="sm" responsive className="mb-2">
                             <thead>
-                            <tr>
-                                <th>IR #</th>
-                                <th>Status</th>
-                                <th>Department</th>
-                                <th>Project</th>
-                                <th>Requester</th>
-                                <th>Created</th>
-                            </tr>
+                                <tr>
+                                    <th>IR #</th>
+                                    <th>Status</th>
+                                    <th>Department</th>
+                                    <th>Project</th>
+                                    <th>Requester</th>
+                                    <th>Created</th>
+                                </tr>
                             </thead>
                             <tbody>
-                            {filteredIRs.map((ir) => (
-                                <tr key={ir.id} onClick={() => openIR(ir.id)} style={{ cursor: "pointer" }}>
-                                    <td>{ir.irNumber}</td>
-                                    <td>
-                                        <Badge
-                                            bg={
-                                                ir.status === "SUBMITTED"
-                                                    ? "secondary"
-                                                    : ir.status === "PARTIALLY_FULFILLED"
-                                                        ? "info"
-                                                        : "success"
-                                            }
-                                        >
-                                            {ir.status}
-                                        </Badge>
-                                    </td>
-                                    <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>
-                                    <td>{projMap[ir.projectId] || ir.projectId || "-"}</td>
-                                    <td>{ir.createdBy || "-"}</td>
-                                    <td>{ir.createdAt ? new Date(ir.createdAt).toLocaleString() : "-"}</td>
-                                </tr>
-                            ))}
-                            {filteredIRs.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="text-center text-muted">
-                                        No item requests found.
-                                    </td>
-                                </tr>
-                            )}
+                                {filteredIRs.map((ir) => (
+                                    <tr key={ir.id} onClick={() => openIR(ir.id)} style={{ cursor: "pointer" }}>
+                                        <td>{ir.irNumber}</td>
+                                        <td>
+                                            <Badge
+                                                bg={
+                                                    ir.status === "SUBMITTED"
+                                                        ? "secondary"
+                                                        : ir.status === "PARTIALLY_FULFILLED"
+                                                            ? "info"
+                                                            : "success"
+                                                }
+                                            >
+                                                {ir.status}
+                                            </Badge>
+                                        </td>
+                                        <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>
+                                        <td>{projMap[ir.projectId] || ir.projectId || "-"}</td>
+                                        <td>{ir.createdBy || "-"}</td>
+                                        <td>{ir.createdAt ? new Date(ir.createdAt).toLocaleString() : "-"}</td>
+                                    </tr>
+                                ))}
+                                {filteredIRs.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="text-center text-muted">
+                                            No item requests found.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </Table>
 
@@ -250,8 +271,8 @@ export default function IRFulfilmentPage() {
                                 Prev
                             </Button>
                             <span>
-                Page {page + 1} / {irs.totalPages || 1}
-              </span>
+                                Page {page + 1} / {irs.totalPages || 1}
+                            </span>
                             <Button size="sm" disabled={page + 1 >= (irs.totalPages || 1)} onClick={() => setPage((p) => p + 1)}>
                                 Next
                             </Button>
@@ -293,48 +314,48 @@ export default function IRFulfilmentPage() {
 
                                 <Table hover size="sm" responsive>
                                     <thead>
-                                    <tr>
-                                        <th>Product</th>
-                                        <th className="text-end">Requested</th>
-                                        <th className="text-end">Fulfilled</th>
-                                        <th className="text-end">Avail @ Main</th>
-                                        <th style={{ width: 140 }}>Issue Now</th>
-                                    </tr>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th className="text-end">Requested</th>
+                                            <th className="text-end">Fulfilled</th>
+                                            <th className="text-end">Avail @ Main</th>
+                                            <th style={{ width: 140 }}>Issue Now</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
-                                    {(selected.items || []).map((it) => {
-                                        const remaining = Math.max(0, (it.requestedQty || 0) - (it.fulfilledQty || 0));
-                                        const avail = Number(onHand[it.productId] || 0);
-                                        const maxIssuable = Math.min(remaining, avail);
-                                        const low = avail < remaining;
-                                        return (
-                                            <tr key={it.productId}>
-                                                <td>{it.productNameSnapshot || it.productId}</td>
-                                                <td className="text-end">{it.requestedQty}</td>
-                                                <td className="text-end">{it.fulfilledQty}</td>
-                                                <td className={low ? "text-danger fw-bold text-end" : "text-end"}>{avail}</td>
-                                                <td>
-                                                    <Form.Control
-                                                        type="number"
-                                                        min="0"
-                                                        max={maxIssuable}
-                                                        value={issue[it.productId] ?? 0}
-                                                        onChange={(e) => {
-                                                            const v = Math.max(0, Math.min(maxIssuable, Number(e.target.value || 0)));
-                                                            setIssue((s) => ({ ...s, [it.productId]: v }));
-                                                        }}
-                                                    />
+                                        {(selected.items || []).map((it) => {
+                                            const remaining = Math.max(0, (it.requestedQty || 0) - (it.fulfilledQty || 0));
+                                            const avail = Number(onHand[it.productId] || 0);
+                                            const maxIssuable = Math.min(remaining, avail);
+                                            const low = avail < remaining;
+                                            return (
+                                                <tr key={it.productId}>
+                                                    <td>{it.productNameSnapshot || it.productId}</td>
+                                                    <td className="text-end">{it.requestedQty}</td>
+                                                    <td className="text-end">{it.fulfilledQty}</td>
+                                                    <td className={low ? "text-danger fw-bold text-end" : "text-end"}>{avail}</td>
+                                                    <td>
+                                                        <Form.Control
+                                                            type="number"
+                                                            min="0"
+                                                            max={maxIssuable}
+                                                            value={issue[it.productId] ?? 0}
+                                                            onChange={(e) => {
+                                                                const v = Math.max(0, Math.min(maxIssuable, Number(e.target.value || 0)));
+                                                                setIssue((s) => ({ ...s, [it.productId]: v }));
+                                                            }}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {(!selected.items || selected.items.length === 0) && (
+                                            <tr>
+                                                <td colSpan={5} className="text-center text-muted">
+                                                    No lines
                                                 </td>
                                             </tr>
-                                        );
-                                    })}
-                                    {(!selected.items || selected.items.length === 0) && (
-                                        <tr>
-                                            <td colSpan={5} className="text-center text-muted">
-                                                No lines
-                                            </td>
-                                        </tr>
-                                    )}
+                                        )}
                                     </tbody>
                                 </Table>
 

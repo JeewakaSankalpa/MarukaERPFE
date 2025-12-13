@@ -69,7 +69,7 @@ function CustomerView({ onEditCustomer }) {
                 <Button variant="primary" onClick={handleSearch}>Search</Button>
             </Form>
             <div
-                style={{ height: `${0.6 * windowSize.height}px`, dispay: "flex", flexDirection: "column", overflowY: "scroll" }}
+                style={{ height: `${0.6 * windowSize.height}px`, display: "flex", flexDirection: "column", overflowY: "scroll" }}
             >
                 <Table bordered hover responsive className="text-center">
                     <thead className="table-primary">

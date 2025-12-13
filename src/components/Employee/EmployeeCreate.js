@@ -1,194 +1,338 @@
 import React, { useEffect, useState } from "react";
-import { Form, Button, Container } from "react-bootstrap";
+import { Form, Button, Container, Row, Col, Alert } from "react-bootstrap";
 import api from "../../api/api";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
-function EmployerForm({ mode }) {
+function EmployeeCreate({ mode }) {
   const navigate = useNavigate();
-  //   const [firstName, setFirstName] = useState("");
-  //   const [lastName, setLastName] = useState("");
-  //   const [userName, setUserName] = useState("");
-  //   const [password, setPassword] = useState("");
-  //   const [address, setAddress] = useState("");
-  //   const [nic, setNic] = useState("");
-  //   const [email, setEmail] = useState("");
-  //   const [role, setRole] = useState("");
-  // const [active, setActive] = useState(true);
-  const [showForm, setShowForm] = useState(true);
-
   const { id } = useParams();
-  const [isEditMode, setIsEditMode] = useState(mode === "create");
-  const [EmployerData, setEmployerData] = useState({
+  const isEditMode = mode === "edit";
+
+  // State
+  const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    email: "",
     contactNumber: "",
+    address: "",
+    nicNumber: "",
+    role: "EMPLOYEE",
+    moduleAccess: [],
     userName: "",
     password: "",
-    address: "",
-    nic: "",
-    role: "",
-    active: "",
+    departmentId: "",
+    reportsToEmployeeId: "",
+    designation: "",
+    epfNo: "",
+    basicSalary: "",
+    joinDate: new Date().toISOString().split('T')[0]
   });
 
+  const [departments, setDepartments] = useState([]);
+  const [managers, setManagers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [autoPassword, setAutoPassword] = useState("");
+
+  // Fetch Dropdowns
   useEffect(() => {
-    if (mode === "edit" || mode === "view") {
-      const fetchStore = async () => {
+    const fetchDropdowns = async () => {
+      try {
+        const deptRes = await api.get("/departments");
+        setDepartments(deptRes.data?.content || []); // Assuming Page response
+
+        const empRes = await api.get("/employee/all");
+        // Filter only Managers/Admins/HR for reporting
+        const allEmps = empRes.data || [];
+        const mgrs = allEmps.filter(e => ["MANAGER", "ADMIN", "HR"].includes(e.role));
+        setManagers(mgrs);
+      } catch (e) {
+        console.error("Failed to load dropdowns", e);
+      }
+    };
+    fetchDropdowns();
+  }, []);
+
+  // Fetch Data if Edit
+  useEffect(() => {
+    if (isEditMode && id) {
+      const fetchData = async () => {
         try {
-          const response = await api.get(`/store/${id}`);
-          setEmployerData(response.data);
-          if (mode === "view") {
-            setIsEditMode(false);
+          const res = await api.get(`/employee/${id}`);
+          if (res.data) {
+            const d = res.data;
+            // Flat map for form
+            setFormData({
+              firstName: d.firstName || "",
+              lastName: d.lastName || "",
+              email: d.email || "",
+              contactNumber: d.contactNumber || "",
+              address: d.address || "",
+              nicNumber: d.nicNumber || "",
+              role: d.role || "EMPLOYEE",
+              moduleAccess: d.moduleAccess || [],
+              userName: d.username || "",
+              password: "", // Don't show password on edit
+              departmentId: d.departmentId || d.Department?.id || "",
+              reportsToEmployeeId: d.reportsToEmployeeId || "",
+              designation: d.designation || "",
+              epfNo: d.epfNo || "",
+              basicSalary: d.basicSalary || "",
+              joinDate: d.joinDate || ""
+            });
           }
         } catch (error) {
-          console.error("Failed to fetch Employer Details:", error);
+          toast.error("Failed to load employee data");
         }
       };
-      fetchStore();
+      fetchData();
     }
-  }, [mode, id]);
+  }, [isEditMode, id]);
+
+  // Auto-generate password logic
+  const generatePassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+    let pass = "";
+    for (let i = 0; i < 10; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setAutoPassword(pass);
+    setFormData(prev => ({ ...prev, password: pass }));
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEmployerData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      if (mode === "create") {
-        await api.post("/store/add", EmployerData);
-        alert("Employee created successfully");
-      } else if (isEditMode) {
-        await api.put(`/store/update/${id}`, EmployerData);
-        alert("Employee updated successfully");
-      }
-      navigate("/store/search");
-    } catch (error) {
-      console.error("Failed to save Employee:", error);
-      alert("Employee save failed. Please try again.");
-    }
-  };
+    setLoading(true);
 
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
+    try {
+      const payload = { ...formData };
+      if (!payload.password && !isEditMode) {
+        toast.error("Password is required for new employees");
+        setLoading(false);
+        return;
+      }
+
+      // 1. Auth Registration (Only for Create)
+      if (!isEditMode) {
+        const authPayload = {
+          username: payload.userName, // Note: backend expects 'username'
+          password: payload.password,
+          role: payload.role,
+          userType: "STAFF" // Assuming enum
+        };
+        try {
+          await api.post("/auth/register", authPayload);
+        } catch (authErr) {
+          // If auth fails (e.g. username exists), stop here
+          toast.error(authErr.response?.data || "Authentication registration failed");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 2. Employee Profile Creation/Update
+      // Map frontend keys to backend expected DTO if needed.
+      // Backend expects: username, password (again, will be encoded again), etc.
+      const employeePayload = {
+        ...payload,
+        username: payload.userName // Map 'userName' to 'username'
+      };
+
+      const creatorRole = localStorage.getItem("role") || "ADMIN"; // Current user's role
+
+      if (!isEditMode) {
+        await api.post(`/employee/register?creatorRole=${creatorRole}`, employeePayload);
+        toast.success("Employee created and credentials emailed!");
+        navigate("/employee/list"); // We will build this next
+      } else {
+        await api.post(`/employee/${id}`, employeePayload); // Using POST/PUT mapped endpoint
+        toast.success("Employee updated successfully");
+        navigate("/employee/list");
+      }
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data || "Operation failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Container className="my-5">
-      <h2 className="text-center mb-4">{mode === 'create' ? 'Add New Employee' : isEditMode ? 'Edit EMployee' : 'View Employee'}</h2>
-      <Form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm" style={{ backgroundColor: '#e0f7fa', maxHeight: '80vh', overflowY: 'auto' }}>
-        <Form.Group controlId="firstName" className="mb-3">
-          <Form.Label>First Name</Form.Label>
-          <Form.Control
-            type="text"
-            value={EmployerData.firstName}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          />
-        </Form.Group>
-        <Form.Group controlId="lastName" className="mb-3">
-          <Form.Label>Last Name</Form.Label>
-          <Form.Control
-            type="text"
-            value={EmployerData.lastName}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          />
-        </Form.Group>
-        <Form.Group controlId="email" className="mb-3">
-          <Form.Label>Email</Form.Label>
-          <Form.Control
-            type="email"
-            value={EmployerData.email}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          />
-        </Form.Group>
-        <Form.Group controlId="address" className="mb-3">
+      <h2 className="text-center mb-4">{isEditMode ? 'Edit Employee' : 'Add New Employee'}</h2>
+      <Form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm bg-light">
+        <Row>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>First Name</Form.Label>
+              <Form.Control name="firstName" value={formData.firstName} onChange={handleChange} required />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Last Name</Form.Label>
+              <Form.Control name="lastName" value={formData.lastName} onChange={handleChange} />
+            </Form.Group>
+          </Col>
+        </Row>
+
+        <Row>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Email (Credentials will be sent here)</Form.Label>
+              <Form.Control type="email" name="email" value={formData.email} onChange={handleChange} required />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Contact Number</Form.Label>
+              <Form.Control name="contactNumber" value={formData.contactNumber} onChange={handleChange} required />
+            </Form.Group>
+          </Col>
+        </Row>
+
+        <Form.Group className="mb-3">
           <Form.Label>Address</Form.Label>
-          <Form.Control
-            type="text"
-            value={EmployerData.address}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          />
-        </Form.Group>
-        <Form.Group controlId="nic" className="mb-3">
-          <Form.Label>NIC</Form.Label>
-          <Form.Control
-            type="text"
-            value={EmployerData.nic}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          />
-        </Form.Group>
-        <Form.Group controlId="role" className="mb-3">
-          <Form.Label>Role</Form.Label>
-          <Form.Control
-            as="select"
-            value={EmployerData.role}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          >
-            <option value="">Select a role</option>
-            <option value="a1">Admin</option>
-            <option value="s1">HR</option>
-            <option value="c1">Manager</option>
-            <option value="s1">Employee</option>
-            {/* Add more roles as needed */}
-          </Form.Control>
+          <Form.Control name="address" value={formData.address} onChange={handleChange} />
         </Form.Group>
 
-        <Form.Group controlId="userName" className="mb-3">
+        <Row>
+          <Col md={4}>
+            <Form.Group className="mb-3">
+              <Form.Label>NIC Number</Form.Label>
+              <Form.Control name="nicNumber" value={formData.nicNumber} onChange={handleChange} />
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group className="mb-3">
+              <Form.Label>Designation</Form.Label>
+              <Form.Control name="designation" value={formData.designation} onChange={handleChange} />
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group className="mb-3">
+              <Form.Label>Join Date</Form.Label>
+              <Form.Control type="date" name="joinDate" value={formData.joinDate} onChange={handleChange} />
+            </Form.Group>
+          </Col>
+        </Row>
+
+        <hr />
+        <h5>Organizational</h5>
+        <Row>
+          <Col md={4}>
+            <Form.Group className="mb-3">
+              <Form.Label>Department</Form.Label>
+              <Form.Select name="departmentId" value={formData.departmentId} onChange={handleChange}>
+                <option value="">-- Select --</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group className="mb-3">
+              <Form.Label>Reports To</Form.Label>
+              <Form.Select name="reportsToEmployeeId" value={formData.reportsToEmployeeId} onChange={handleChange}>
+                <option value="">-- Select Manager --</option>
+                {managers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName} ({m.designation})</option>)}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group className="mb-3">
+              <Form.Label>Role</Form.Label>
+              <Form.Select name="role" value={formData.role} onChange={handleChange}>
+                <option value="EMPLOYEE">Employee</option>
+                <option value="MANAGER">Manager</option>
+                <option value="HR">HR</option>
+                <option value="ADMIN">Admin</option>
+              </Form.Select>
+            </Form.Group>
+          </Col>
+        </Row>
+
+        {/* Module Access */}
+        <div className="mb-3">
+          <Form.Label>Module Access (For finer granular control)</Form.Label>
+          <div className="d-flex flex-wrap gap-3">
+            {["ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "HR", "INVENTORY", "SALES", "PROJECTS", "CUSTOMERS", "DASHBOARD", "EMPLOYEES"].map(mod => (
+              <Form.Check
+                key={mod}
+                type="checkbox"
+                label={mod}
+                checked={formData.moduleAccess && formData.moduleAccess.includes(mod)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setFormData(prev => {
+                    const current = prev.moduleAccess || [];
+                    return {
+                      ...prev,
+                      moduleAccess: checked
+                        ? [...current, mod]
+                        : current.filter(m => m !== mod)
+                    };
+                  });
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <hr />
+        <h5>Payroll</h5>
+        <Row>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Basic Salary</Form.Label>
+              <Form.Control type="number" name="basicSalary" value={formData.basicSalary} onChange={handleChange} />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>EPF Number</Form.Label>
+              <Form.Control name="epfNo" value={formData.epfNo} onChange={handleChange} />
+            </Form.Group>
+          </Col>
+        </Row>
+
+        <hr />
+        <h5>Login Credentials</h5>
+        <Form.Group className="mb-3">
           <Form.Label>Username</Form.Label>
-          <Form.Control
-            type="text"
-            value={EmployerData.userName}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          />
+          <Form.Control name="userName" value={formData.userName} onChange={handleChange} required disabled={isEditMode} />
         </Form.Group>
-        <Form.Group controlId="password" className="mb-3">
-          <Form.Label>Password</Form.Label>
-          <Form.Control
-            type="text"
-            value={EmployerData.password}
-            onChange={handleChange}
-            disabled={!isEditMode}
-            required
-          />
-        </Form.Group>
-        {/* <Button variant="primary" type="submit" className="me-2">
-              Save
-            </Button> */}
-        {/* <Button variant="secondary" type="cancel" onClick={handleCancel}>
-              Cancel
-            </Button> */}
+
         {!isEditMode && (
-          <Button
-            type="button"
-            variant="primary"
-            className="w-100 mb-3"
-            onClick={toggleEditMode}
-          >
-            Edit Store
-          </Button>
+          <Form.Group className="mb-3">
+            <Form.Label>Password</Form.Label>
+            <div className="d-flex gap-2">
+              <Form.Control
+                type="text"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter or Generate"
+              />
+              <Button variant="outline-secondary" onClick={generatePassword}>Generate</Button>
+            </div>
+            {autoPassword && <Form.Text className="text-success">Generated: {autoPassword}</Form.Text>}
+          </Form.Group>
         )}
-        {isEditMode && (
-          <Button type="submit" variant="success" className="w-100">
-            Save Changes
-          </Button>
-        )}
+
+        <div className="d-flex gap-2 justify-content-end mt-4">
+          <Button variant="secondary" onClick={() => navigate("/employee/list")}>Cancel</Button>
+          <Button variant="primary" type="submit" disabled={loading}>{loading ? "Saving..." : "Save Employee"}</Button>
+        </div>
       </Form>
     </Container>
   );
 }
 
-export default EmployerForm;
+export default EmployeeCreate;

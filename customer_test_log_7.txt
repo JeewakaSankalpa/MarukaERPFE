@@ -1,0 +1,240 @@
+
+> mruak-fe@0.1.0 test
+> react-scripts test src/components/Customer/CustomerCreate.test.js --watchAll=false
+
+  console.error
+    React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+    [0m [90m 468 |[39m         [33m<[39m[33mp[39m[33m>[39m[33mCustomer[39m saved[33m.[39m [33mYou[39m may proceed [36mwith[39m other actions[33m.[39m[33m<[39m[33m/[39m[33mp[39m[33m>[39m
+     [90m 469 |[39m       )}
+    [31m[1m>[22m[39m[90m 470 |[39m       [33m<[39m[33mToastContainer[39m position[33m=[39m[32m"top-right"[39m autoClose[33m=[39m{[35m3000[39m} hideProgressBar[33m=[39m{[36mfalse[39m} newestOnTop[33m=[39m{[36mfalse[39m} closeOnClick rtl[33m=[39m{[36mfalse[39m} pauseOnFocusLoss draggable pauseOnHover [33m/[39m[33m>[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 471 |[39m     [33m<[39m[33m/[39m[33m>[39m
+     [90m 472 |[39m   )[33m;[39m
+     [90m 473 |[39m }[0m
+
+      at jsxDEVImpl (node_modules/react/cjs/react-jsx-dev-runtime.development.js:479:17)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.jsxDEV (node_modules/react/cjs/react-jsx-dev-runtime.development.js:658:14)
+      at CustomerCreate (src/components/Customer/CustomerCreate.js:470:7)
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22428:20)
+      at renderWithHooks (node_modules/react-dom/cjs/react-dom-client.development.js:5757:22)
+      at updateFunctionComponent (node_modules/react-dom/cjs/react-dom-client.development.js:8018:19)
+      at beginWork (node_modules/react-dom/cjs/react-dom-client.development.js:9683:18)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at performUnitOfWork (node_modules/react-dom/cjs/react-dom-client.development.js:15052:22)
+      at workLoopSync (node_modules/react-dom/cjs/react-dom-client.development.js:14870:41)
+      at renderRootSync (node_modules/react-dom/cjs/react-dom-client.development.js:14850:11)
+      at performWorkOnRoot (node_modules/react-dom/cjs/react-dom-client.development.js:14334:13)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-dom/cjs/react-dom-client.development.js:15931:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:26:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:39:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  console.error
+    React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+    [0m [90m 468 |[39m         [33m<[39m[33mp[39m[33m>[39m[33mCustomer[39m saved[33m.[39m [33mYou[39m may proceed [36mwith[39m other actions[33m.[39m[33m<[39m[33m/[39m[33mp[39m[33m>[39m
+     [90m 469 |[39m       )}
+    [31m[1m>[22m[39m[90m 470 |[39m       [33m<[39m[33mToastContainer[39m position[33m=[39m[32m"top-right"[39m autoClose[33m=[39m{[35m3000[39m} hideProgressBar[33m=[39m{[36mfalse[39m} newestOnTop[33m=[39m{[36mfalse[39m} closeOnClick rtl[33m=[39m{[36mfalse[39m} pauseOnFocusLoss draggable pauseOnHover [33m/[39m[33m>[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 471 |[39m     [33m<[39m[33m/[39m[33m>[39m
+     [90m 472 |[39m   )[33m;[39m
+     [90m 473 |[39m }[0m
+
+      at jsxDEVImpl (node_modules/react/cjs/react-jsx-dev-runtime.development.js:479:17)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.jsxDEV (node_modules/react/cjs/react-jsx-dev-runtime.development.js:658:14)
+      at CustomerCreate (src/components/Customer/CustomerCreate.js:470:7)
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22428:20)
+      at renderWithHooks (node_modules/react-dom/cjs/react-dom-client.development.js:5757:22)
+      at updateFunctionComponent (node_modules/react-dom/cjs/react-dom-client.development.js:8018:19)
+      at beginWork (node_modules/react-dom/cjs/react-dom-client.development.js:9683:18)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at performUnitOfWork (node_modules/react-dom/cjs/react-dom-client.development.js:15052:22)
+      at workLoopSync (node_modules/react-dom/cjs/react-dom-client.development.js:14870:41)
+      at renderRootSync (node_modules/react-dom/cjs/react-dom-client.development.js:14850:11)
+      at performWorkOnRoot (node_modules/react-dom/cjs/react-dom-client.development.js:14384:44)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-dom/cjs/react-dom-client.development.js:15931:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:26:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:39:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  console.error
+    React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+    [0m [90m 468 |[39m         [33m<[39m[33mp[39m[33m>[39m[33mCustomer[39m saved[33m.[39m [33mYou[39m may proceed [36mwith[39m other actions[33m.[39m[33m<[39m[33m/[39m[33mp[39m[33m>[39m
+     [90m 469 |[39m       )}
+    [31m[1m>[22m[39m[90m 470 |[39m       [33m<[39m[33mToastContainer[39m position[33m=[39m[32m"top-right"[39m autoClose[33m=[39m{[35m3000[39m} hideProgressBar[33m=[39m{[36mfalse[39m} newestOnTop[33m=[39m{[36mfalse[39m} closeOnClick rtl[33m=[39m{[36mfalse[39m} pauseOnFocusLoss draggable pauseOnHover [33m/[39m[33m>[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 471 |[39m     [33m<[39m[33m/[39m[33m>[39m
+     [90m 472 |[39m   )[33m;[39m
+     [90m 473 |[39m }[0m
+
+      at jsxDEVImpl (node_modules/react/cjs/react-jsx-dev-runtime.development.js:479:17)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.jsxDEV (node_modules/react/cjs/react-jsx-dev-runtime.development.js:658:14)
+      at CustomerCreate (src/components/Customer/CustomerCreate.js:470:7)
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22428:20)
+      at renderWithHooks (node_modules/react-dom/cjs/react-dom-client.development.js:5757:22)
+      at updateFunctionComponent (node_modules/react-dom/cjs/react-dom-client.development.js:8018:19)
+      at beginWork (node_modules/react-dom/cjs/react-dom-client.development.js:9683:18)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at performUnitOfWork (node_modules/react-dom/cjs/react-dom-client.development.js:15052:22)
+      at workLoopSync (node_modules/react-dom/cjs/react-dom-client.development.js:14870:41)
+      at renderRootSync (node_modules/react-dom/cjs/react-dom-client.development.js:14850:11)
+      at performWorkOnRoot (node_modules/react-dom/cjs/react-dom-client.development.js:14334:13)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-dom/cjs/react-dom-client.development.js:15931:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:26:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:49:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  console.error
+    React.jsx: type is invalid -- expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+    [0m [90m 468 |[39m         [33m<[39m[33mp[39m[33m>[39m[33mCustomer[39m saved[33m.[39m [33mYou[39m may proceed [36mwith[39m other actions[33m.[39m[33m<[39m[33m/[39m[33mp[39m[33m>[39m
+     [90m 469 |[39m       )}
+    [31m[1m>[22m[39m[90m 470 |[39m       [33m<[39m[33mToastContainer[39m position[33m=[39m[32m"top-right"[39m autoClose[33m=[39m{[35m3000[39m} hideProgressBar[33m=[39m{[36mfalse[39m} newestOnTop[33m=[39m{[36mfalse[39m} closeOnClick rtl[33m=[39m{[36mfalse[39m} pauseOnFocusLoss draggable pauseOnHover [33m/[39m[33m>[39m
+     [90m     |[39m       [31m[1m^[22m[39m
+     [90m 471 |[39m     [33m<[39m[33m/[39m[33m>[39m
+     [90m 472 |[39m   )[33m;[39m
+     [90m 473 |[39m }[0m
+
+      at jsxDEVImpl (node_modules/react/cjs/react-jsx-dev-runtime.development.js:479:17)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.jsxDEV (node_modules/react/cjs/react-jsx-dev-runtime.development.js:658:14)
+      at CustomerCreate (src/components/Customer/CustomerCreate.js:470:7)
+      at Object.react-stack-bottom-frame (node_modules/react-dom/cjs/react-dom-client.development.js:22428:20)
+      at renderWithHooks (node_modules/react-dom/cjs/react-dom-client.development.js:5757:22)
+      at updateFunctionComponent (node_modules/react-dom/cjs/react-dom-client.development.js:8018:19)
+      at beginWork (node_modules/react-dom/cjs/react-dom-client.development.js:9683:18)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at performUnitOfWork (node_modules/react-dom/cjs/react-dom-client.development.js:15052:22)
+      at workLoopSync (node_modules/react-dom/cjs/react-dom-client.development.js:14870:41)
+      at renderRootSync (node_modules/react-dom/cjs/react-dom-client.development.js:14850:11)
+      at performWorkOnRoot (node_modules/react-dom/cjs/react-dom-client.development.js:14384:44)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-dom/cjs/react-dom-client.development.js:15931:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:26:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:49:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+FAIL src/components/Customer/CustomerCreate.test.js
+  CustomerCreate Component
+    × renders customer creation form (210 ms)
+    × submits form with files successfully (101 ms)
+
+  ● CustomerCreate Component › renders customer creation form
+
+    Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+    Check the render method of `CustomerCreate`.
+
+    [0m [90m 24 |[39m
+     [90m 25 |[39m [36mconst[39m renderComponent [33m=[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 26 |[39m     [36mreturn[39m render(
+     [90m    |[39m                  [31m[1m^[22m[39m
+     [90m 27 |[39m         [33m<[39m[33mBrowserRouter[39m[33m>[39m
+     [90m 28 |[39m             [33m<[39m[33mCustomerCreate[39m [33m/[39m[33m>[39m
+     [90m 29 |[39m         [33m<[39m[33m/[39m[33mBrowserRouter[39m[33m>[39m[0m
+
+      at createFiberFromTypeAndProps (node_modules/react-dom/cjs/react-dom-client.development.js:13350:28)
+      at createFiberFromElement (node_modules/react-dom/cjs/react-dom-client.development.js:13364:14)
+      at createChild (node_modules/react-dom/cjs/react-dom-client.development.js:4658:26)
+      at reconcileChildrenArray (node_modules/react-dom/cjs/react-dom-client.development.js:4989:25)
+      at reconcileChildFibersImpl (node_modules/react-dom/cjs/react-dom-client.development.js:5311:30)
+      at node_modules/react-dom/cjs/react-dom-client.development.js:5415:33
+      at reconcileChildren (node_modules/react-dom/cjs/react-dom-client.development.js:7738:13)
+      at updateFunctionComponent (node_modules/react-dom/cjs/react-dom-client.development.js:8035:7)
+      at beginWork (node_modules/react-dom/cjs/react-dom-client.development.js:9683:18)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at performUnitOfWork (node_modules/react-dom/cjs/react-dom-client.development.js:15052:22)
+      at workLoopSync (node_modules/react-dom/cjs/react-dom-client.development.js:14870:41)
+      at renderRootSync (node_modules/react-dom/cjs/react-dom-client.development.js:14850:11)
+      at performWorkOnRoot (node_modules/react-dom/cjs/react-dom-client.development.js:14384:44)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-dom/cjs/react-dom-client.development.js:15931:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:26:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:39:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+  ● CustomerCreate Component › submits form with files successfully
+
+    Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+    Check the render method of `CustomerCreate`.
+
+    [0m [90m 24 |[39m
+     [90m 25 |[39m [36mconst[39m renderComponent [33m=[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 26 |[39m     [36mreturn[39m render(
+     [90m    |[39m                  [31m[1m^[22m[39m
+     [90m 27 |[39m         [33m<[39m[33mBrowserRouter[39m[33m>[39m
+     [90m 28 |[39m             [33m<[39m[33mCustomerCreate[39m [33m/[39m[33m>[39m
+     [90m 29 |[39m         [33m<[39m[33m/[39m[33mBrowserRouter[39m[33m>[39m[0m
+
+      at createFiberFromTypeAndProps (node_modules/react-dom/cjs/react-dom-client.development.js:13350:28)
+      at createFiberFromElement (node_modules/react-dom/cjs/react-dom-client.development.js:13364:14)
+      at createChild (node_modules/react-dom/cjs/react-dom-client.development.js:4658:26)
+      at reconcileChildrenArray (node_modules/react-dom/cjs/react-dom-client.development.js:4989:25)
+      at reconcileChildFibersImpl (node_modules/react-dom/cjs/react-dom-client.development.js:5311:30)
+      at node_modules/react-dom/cjs/react-dom-client.development.js:5415:33
+      at reconcileChildren (node_modules/react-dom/cjs/react-dom-client.development.js:7738:13)
+      at updateFunctionComponent (node_modules/react-dom/cjs/react-dom-client.development.js:8035:7)
+      at beginWork (node_modules/react-dom/cjs/react-dom-client.development.js:9683:18)
+      at runWithFiberInDEV (node_modules/react-dom/cjs/react-dom-client.development.js:543:16)
+      at performUnitOfWork (node_modules/react-dom/cjs/react-dom-client.development.js:15052:22)
+      at workLoopSync (node_modules/react-dom/cjs/react-dom-client.development.js:14870:41)
+      at renderRootSync (node_modules/react-dom/cjs/react-dom-client.development.js:14850:11)
+      at performWorkOnRoot (node_modules/react-dom/cjs/react-dom-client.development.js:14384:44)
+      at performWorkOnRootViaSchedulerTask (node_modules/react-dom/cjs/react-dom-client.development.js:15931:7)
+      at flushActQueue (node_modules/react/cjs/react.development.js:862:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:1151:10)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:190:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:292:10)
+      at renderComponent (src/components/Customer/CustomerCreate.test.js:26:18)
+      at Object.<anonymous> (src/components/Customer/CustomerCreate.test.js:49:9)
+      at TestScheduler.scheduleTests (node_modules/@jest/core/build/TestScheduler.js:333:13)
+      at runJest (node_modules/@jest/core/build/runJest.js:404:19)
+      at _run10000 (node_modules/@jest/core/build/cli/index.js:320:7)
+      at runCLI (node_modules/@jest/core/build/cli/index.js:173:3)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Snapshots:   0 total
+Time:        4.231 s, estimated 11 s
+Ran all test suites matching /src\\components\\Customer\\CustomerCreate.test.js/i.
