@@ -40,7 +40,8 @@ export const AuthProvider = ({ children }) => {
 
         const { token, role, userType, moduleAccess } = data;
         localStorage.setItem("token", token);
-        localStorage.setItem("role", role); // Ensure role is stored as Sidebar reads it from LS
+        localStorage.setItem("role", role);
+        localStorage.setItem("username", username);
         localStorage.setItem("moduleAccess", JSON.stringify(moduleAccess || []));
 
         let decoded = {};
@@ -64,6 +65,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
+        localStorage.removeItem("username");
         localStorage.removeItem("moduleAccess");
         setAuth({ token: null, username: null, role: null, userType: null, moduleAccess: [] });
     };

@@ -123,7 +123,7 @@ function EmployeeCreate({ mode }) {
           username: payload.userName, // Note: backend expects 'username'
           password: payload.password,
           role: payload.role,
-          userType: "STAFF" // Assuming enum
+          userType: "EMPLOYEE" // Mapped to backend UserType enum
         };
         try {
           await api.post("/auth/register", authPayload);

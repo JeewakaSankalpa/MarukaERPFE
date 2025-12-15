@@ -73,16 +73,26 @@ export default function IRFulfilmentPage() {
     }, []);
 
     // status filter
-    const [statusFilter, setStatusFilter] = useState('PENDING');
+    const [statusFilter, setStatusFilter] = useState('ALL');
 
     // load IR page
     useEffect(() => {
         (async () => {
             setLoadingList(true);
             try {
-                const statuses = statusFilter === 'PENDING'
-                    ? ["SUBMITTED", "PENDING_PURCHASE", "PARTIALLY_FULFILLED"]
-                    : ["FULFILLED"];
+                // If ALL, pass null/undefined to listIRs to fetch everything (or handle inside listIRs)
+                // listIRs helper: if status is null/empty, API usually returns all.
+                // The API call `listIRs` puts `status: status.join(',')`. 
+                // We should pass null if we want all.
+                let statuses = null;
+                if (statusFilter !== 'ALL') {
+                    statuses = [statusFilter];
+                }
+
+                // If previous logic for "PENDING" was specific, we lose that "group" unless we add a "PENDING_GROUP" option.
+                // User asked for "all possible states". 
+                // Let's assume they pick one by one or ALL.
+
                 const p = await listIRs(page, 20, statuses);
                 setIrs(p);
             } catch {
@@ -174,12 +184,23 @@ export default function IRFulfilmentPage() {
                         </div>
 
                         <div className="mb-3">
-                            <Button size="sm" variant={statusFilter === 'PENDING' ? 'primary' : 'outline-primary'} className="me-2" onClick={() => setStatusFilter('PENDING')}>
-                                Pending
-                            </Button>
-                            <Button size="sm" variant={statusFilter === 'COMPLETED' ? 'success' : 'outline-success'} onClick={() => setStatusFilter('COMPLETED')}>
-                                Completed
-                            </Button>
+                            <Form.Group>
+                                <Form.Label className="small fw-bold">Filter by Status</Form.Label>
+                                <Form.Select
+                                    size="sm"
+                                    value={statusFilter}
+                                    onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                                >
+                                    <option value="ALL">All Statuses</option>
+                                    <option value="SUBMITTED">Submitted</option>
+                                    <option value="PENDING_PURCHASE">Pending Purchase</option>
+                                    <option value="PARTIALLY_FULFILLED">Partially Fulfilled</option>
+                                    <option value="FULFILLED">Fulfilled</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                    <option value="CLOSED">Closed</option>
+                                    <option value="DRAFT">Draft</option>
+                                </Form.Select>
+                            </Form.Group>
                         </div>
 
                         {/* Filters */}

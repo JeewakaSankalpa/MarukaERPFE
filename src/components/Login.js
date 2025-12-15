@@ -26,7 +26,7 @@ const Login = () => {
 
       toast.success("Welcome back! 🎉", { autoClose: 1200 });
 
-      // Navigate after a short delay so the toast is visible
+      // Navigate after a delay to ensure context updates
       setTimeout(() => {
         if (userType === "CUSTOMER") {
           navigate("/customer/home");
@@ -35,7 +35,7 @@ const Login = () => {
         } else {
           navigate("/dashboard");
         }
-      }, 300);
+      }, 1000); // Increased to 1000ms for robustness
     } catch (err) {
       console.error(err);
       setShake(true);
@@ -48,9 +48,9 @@ const Login = () => {
   };
 
   return (
-      <>
-        {/* local CSS so it’s copy‑pasteable */}
-        <style>{`
+    <>
+      {/* local CSS so it’s copy‑pasteable */}
+      <style>{`
         @keyframes popIn {
           0% { transform: scale(0.94); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
@@ -85,66 +85,66 @@ const Login = () => {
         }
       `}</style>
 
-        <div style={styles.body}>
-          <div
-              className={`login-card ${shake ? "shake" : ""}`}
-              style={styles.loginContainer}
-          >
-            <h2 className="title-gradient" style={styles.titleStyle}>Maruka</h2>
+      <div style={styles.body}>
+        <div
+          className={`login-card ${shake ? "shake" : ""}`}
+          style={styles.loginContainer}
+        >
+          <h2 className="title-gradient" style={styles.titleStyle}>Maruka</h2>
 
-            <h5 style={{ marginBottom: 12, color: "#334" }}>Welcome!</h5>
-            <p style={{ marginTop: -4, marginBottom: 18, color: "#667" }}>
-              Please sign in to continue.
-            </p>
+          <h5 style={{ marginBottom: 12, color: "#334" }}>Welcome!</h5>
+          <p style={{ marginTop: -4, marginBottom: 18, color: "#667" }}>
+            Please sign in to continue.
+          </p>
 
-            <Form onSubmit={handleLogin} style={{ width: "80%" }}>
-              <Form.Group controlId="formUsername" className="mb-3">
-                <Form.Label>Username</Form.Label>
-                <Form.Control
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter username"
-                    required
-                    autoFocus
-                    disabled={loading}
-                />
-              </Form.Group>
+          <Form onSubmit={handleLogin} style={{ width: "80%" }}>
+            <Form.Group controlId="formUsername" className="mb-3">
+              <Form.Label>Username</Form.Label>
+              <Form.Control
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+                required
+                autoFocus
+                disabled={loading}
+              />
+            </Form.Group>
 
-              <Form.Group controlId="formPassword" className="mb-3">
-                <Form.Label>Password</Form.Label>
-                <Form.Control
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    required
-                    disabled={loading}
-                />
-              </Form.Group>
+            <Form.Group controlId="formPassword" className="mb-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                required
+                disabled={loading}
+              />
+            </Form.Group>
 
-              <Button
-                  variant="primary"
-                  type="submit"
-                  disabled={loading}
-                  className="w-100 mt-2"
-              >
-                {loading ? (
-                    <>
-                      <Spinner animation="border" size="sm" className="me-2" />
-                      Logging in...
-                    </>
-                ) : (
-                    "Login"
-                )}
-              </Button>
-            </Form>
-          </div>
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={loading}
+              className="w-100 mt-2"
+            >
+              {loading ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  Logging in...
+                </>
+              ) : (
+                "Login"
+              )}
+            </Button>
+          </Form>
         </div>
+      </div>
 
-        {/* If you already have a global ToastContainer in App, you can remove this */}
-        <ToastContainer position="top-right" newestOnTop />
-      </>
+      {/* If you already have a global ToastContainer in App, you can remove this */}
+      <ToastContainer position="top-right" newestOnTop />
+    </>
   );
 };
 

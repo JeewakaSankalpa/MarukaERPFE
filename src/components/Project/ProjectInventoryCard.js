@@ -32,13 +32,23 @@ export default function ProjectInventoryCard({ projectId }) {
         if (!projectId) return;
         try {
             setLoading(true);
+            console.log('Loading transfers for project:', projectId);
+
             const [invRes, trRes] = await Promise.all([
                 api.get(`/inventory/project/${projectId}`),
                 api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`)
             ]);
+
+            console.log('Inventory response:', invRes.data);
+            console.log('Transfers response:', trRes.data);
+            console.log('Transfers is array?', Array.isArray(trRes.data));
+            console.log('Transfers length:', trRes.data?.length);
+
             setInventory(invRes.data || []);
             setPendingTransfers(trRes.data || []);
         } catch (e) {
+            console.error('Failed to load inventory or transfers:', e);
+            console.error('Error response:', e?.response?.data);
             toast.error('Failed to load inventory or transfers');
         } finally {
             setLoading(false);
@@ -179,9 +189,19 @@ export default function ProjectInventoryCard({ projectId }) {
                         <tbody>
                             {pendingTransfers.map(t => (
                                 <tr key={t.id}>
-                                    <td>{t.transferNumber}</td>
+                                    <td>{t.trNumber}</td>
                                     <td>{t.fromLocationId}</td>
-                                    <td>{t.items?.length || 0} items</td>
+                                    <td>
+                                        {t.items?.map((item, idx) => {
+                                            const qty = item.qty || (item.reservations || []).reduce((s, r) => s + r.reservedQty, 0);
+                                            const name = item.productNameSnapshot || item.productId;
+                                            return (
+                                                <div key={idx} className="small">
+                                                    <strong>{name}</strong>: {qty} {item.unit || ''}
+                                                </div>
+                                            );
+                                        })}
+                                    </td>
                                     <td>
                                         <Button size="sm" variant="success" className="me-1" onClick={() => handleAcceptTransfer(t.id)}>Accept</Button>
                                         <Button size="sm" variant="danger" onClick={() => handleRejectTransfer(t.id)}>Reject</Button>

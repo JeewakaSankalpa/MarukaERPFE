@@ -54,3 +54,44 @@ html, body, #root {
     height: 100vh;
     /* background-color: #e0f7fa; */
 }
+
+@media print {
+    /* Hide non-printable elements */
+    .sidebar,
+    .header,
+    .no-print,
+    button,
+    .btn {
+        display: none !important;
+    }
+
+    /* Reset Layout for Print */
+    html, body, #root, .app-container, .main-content {
+        height: auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+
+    .content-container, .fixed-size-container {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background-color: white !important;
+        display: block !important;
+    }
+
+    /* Ensure tables print nicely */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    
+    /* Avoid page breaks inside rows if possible */
+    tr {
+        page-break-inside: avoid;
+    }
+}

@@ -9,6 +9,7 @@ import {
   FaHome,
   FaProjectDiagram,
   FaUsers,
+  FaCogs,
 } from "react-icons/fa";
 
 function NewSideBar() {
@@ -88,6 +89,7 @@ function NewSideBar() {
         { name: "Employee Directory", path: "/employee/list", roles: ["ADMIN", "HR", "MANAGER"], modules: ["EMPLOYEES", "HR"] },
         { name: "Add Employee", path: "/employee/create", roles: ["ADMIN", "HR"], modules: ["HR"] },
         { name: "Salary Management", path: "/salary", roles: ["ADMIN", "HR"], modules: ["PAYROLL", "HR"] },
+        { name: "Global HR Configs", path: "/hr/config", roles: ["ADMIN", "HR"], modules: ["HR"] },
       ].filter(sub => hasAccess(sub)),
     },
     {
@@ -127,6 +129,23 @@ function NewSideBar() {
       submenus: [
         { name: "Add Customers", path: "/customer/create" },
         { name: "Search Customers", path: "/customer/view" },
+      ],
+    },
+    {
+      title: "Finance & Assets",
+      icon: <FaBriefcase />,
+      roles: ["ADMIN", "MANAGER"],
+      modules: ["INVENTORY", "PROJECTS"],
+      submenus: [
+        { name: "Asset Register", path: "/assets" },
+      ],
+    },
+    {
+      title: "Settings",
+      icon: <FaCogs />,
+      roles: ["ADMIN"],
+      submenus: [
+        { name: "System Configuration", path: "/admin/config" },
       ],
     },
   ];

@@ -51,6 +51,35 @@ function InventoryView() {
             const items = response.data || [];
             setInventoryItems(items);
             setFilteredItems(items);
+
+            // Extract all unique locations from the fetched inventory
+            const uniqueLocs = new Map(); // key -> option
+
+            items.forEach(item => {
+                if (!item.locationQuantities) return;
+                item.locationQuantities.forEach(lq => {
+                    let value, label;
+                    if (lq.ownerType === 'PROJECT') {
+                        value = 'PROJ:' + lq.ownerId; // Use a prefix to ensure uniqueness if needed, or just ID if robust
+                        label = `Project: ${lq.ownerId}`;
+                    } else if (lq.ownerType === 'DEPARTMENT') {
+                        value = 'DEPT:' + lq.ownerId;
+                        label = `Department: ${lq.ownerId}`;
+                    } else {
+                        value = lq.locationId || 'MAIN_STORE';
+                        label = lq.locationId === 'LOC_STORES_MAIN' ? 'Main Store' : (lq.locationId || 'Main Store');
+                    }
+
+                    if (!uniqueLocs.has(value)) {
+                        uniqueLocs.set(value, { value, label, ownerType: lq.ownerType, ownerId: lq.ownerId });
+                    }
+                });
+            });
+
+            // Convert to array and sort
+            const locationOptions = Array.from(uniqueLocs.values()).sort((a, b) => a.label.localeCompare(b.label));
+            setLocationOptions(locationOptions);
+
             toast.success(`Fetched ${items.length} inventory item(s)`);
         } catch (error) {
             console.error('Failed to fetch inventory items:', error);
@@ -99,11 +128,17 @@ function InventoryView() {
 
             const totalQuantity = lqs.reduce((sum, lq) => sum + (Number(lq.quantity) || 0), 0);
 
+            const getLocValue = (lq) => {
+                if (lq.ownerType === 'PROJECT') return 'PROJ:' + lq.ownerId;
+                if (lq.ownerType === 'DEPARTMENT') return 'DEPT:' + lq.ownerId;
+                return lq.locationId || 'MAIN_STORE';
+            };
+
             const availableQuantity =
                 selectedLocations.length > 0
                     ? lqs
                         .filter((lq) =>
-                            selectedLocations.some((loc) => loc.value === (lq.locationId || 'MAIN_STORE'))
+                            selectedLocations.some((loc) => loc.value === getLocValue(lq))
                         )
                         .reduce((sum, lq) => sum + (Number(lq.quantity) || 0), 0)
                     : totalQuantity;
@@ -111,7 +146,7 @@ function InventoryView() {
             const availableStores =
                 selectedLocations.length > 0
                     ? lqs.filter((lq) =>
-                        selectedLocations.some((loc) => loc.value === (lq.locationId || 'MAIN_STORE'))
+                        selectedLocations.some((loc) => loc.value === getLocValue(lq))
                     )
                     : lqs;
 

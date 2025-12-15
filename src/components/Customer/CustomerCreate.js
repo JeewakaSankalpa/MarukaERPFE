@@ -185,7 +185,7 @@ function CustomerCreate() {
       toast.success(isEditMode ? "Customer updated!" : "Customer saved!");
       setTimeout(() => {
         setShowForm(false);
-        navigate("/customer/search");
+        navigate("/customer/view");
       }, 1500);
     } catch (error) {
       console.error("Failed to save customer:", error);
@@ -194,7 +194,7 @@ function CustomerCreate() {
   };
 
   const handleCancel = async () => {
-    navigate("/customer/search");
+    navigate("/customer/view");
   };
 
   return (

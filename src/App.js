@@ -2,6 +2,7 @@ import logo from "./logo.svg";
 import "./components/Styles/App.css";
 
 import React from "react";
+
 import {
     HashRouter as Router,
     Routes,
@@ -16,6 +17,7 @@ import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import CustomerDashboard from "./components/Customer/CustomerDashboard";
+import SystemConfiguration from "./components/SystemConfiguration";
 
 import InventoryAdd from "./components/Inventory/InventoryAdd";
 import InventoryView from "./components/Inventory/InventoryView";
@@ -57,11 +59,15 @@ import ReportsPage from "./components/Reports/ReportsPage";
 import EmployeeCreate from "./components/Employee/EmployeeCreate";
 import EmployeeList from "./components/Employee/EmployeeList";
 import SalaryManagement from "./components/Employee/SalaryManagement";
+import HRConfiguration from "./components/HumanResources/HRConfiguration";
 import SalaryReport from "./components/Employee/Reports/SalaryReport";
 import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
 import StockValuationReport from "./components/Inventory/Reports/StockValuationReport";
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
+import AssetRegister from "./components/Assets/AssetRegister";
+import QuotationPrint from "./components/Projects/QuotationPrint";
+import InvoiceView from "./components/Projects/InvoiceView";
 
 /* ---------------- Layout ---------------- */
 function Layout({ children }) {
@@ -142,8 +148,9 @@ function App() {
 
                     {/* Protected */}
                     <Route element={<PrivateRoute />}>
-                        {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+                        <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/admin" element={<AdminDashboard />} />
+                        <Route path="/admin/config" element={<SystemConfiguration />} />
                         {/* <Route path="/customerDashboard" element={<CustomerDashboard />} /> */}
 
                         {/* HR / Employees */}
@@ -151,6 +158,7 @@ function App() {
                         <Route path="/employee/edit/:id" element={<EmployeeCreate mode="edit" />} />
                         <Route path="/employee/list" element={<EmployeeList />} />
                         <Route path="/salary" element={<SalaryManagement />} />
+                        <Route path="/hr/config" element={<HRConfiguration />} />
                         <Route path="/salary/report" element={<SalaryReport />} />
                         <Route path="/leave" element={<LeaveRequestPage />} />
                         <Route path="/attendance" element={<AttendancePage />} />
@@ -178,6 +186,8 @@ function App() {
                         <Route path="/projects/workflow" element={<WorkflowBuilder />} />
                         <Route path="/projects/estimation" element={<ProjectEstimationPage />} />
                         <Route path="/projects/estimation/:id" element={<ProjectEstimationRouteWrapper />} />
+                        <Route path="/projects/:projectId/quotation" element={<QuotationPrint />} />
+                        <Route path="/invoices/:id" element={<InvoiceView />} />
 
                         {/* Customer */}
                         <Route path="/customer/create" element={<CustomerCreate />} />
@@ -211,6 +221,7 @@ function App() {
                         <Route path="/reports" element={<ReportsPage />} />
                         <Route path="/reports/leave" element={<LeaveUtilizationReport />} />
                         <Route path="/reports/stock" element={<StockValuationReport />} />
+                        <Route path="/assets" element={<AssetRegister />} />
                     </Route>
 
                     {/* Fallback */}

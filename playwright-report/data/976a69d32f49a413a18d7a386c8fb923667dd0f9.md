@@ -1,0 +1,196 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - img "Maruka Logo" [ref=e6]
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - img "User" [ref=e9]
+        - generic [ref=e10]:
+          - heading "jeewaka" [level=3] [ref=e11]
+          - paragraph [ref=e12]: ADMIN
+      - generic [ref=e13]: 10:16:39 PM 12/14/2025
+    - generic [ref=e14]:
+      - generic [ref=e15] [cursor=pointer]:
+        - img [ref=e16]
+        - generic [ref=e19]: "1"
+      - button "Logout" [ref=e20] [cursor=pointer]:
+        - img [ref=e21]
+        - text: Logout
+  - generic [ref=e23]:
+    - generic [ref=e25]:
+      - img [ref=e27] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - button "Home" [ref=e31] [cursor=pointer]:
+            - img [ref=e32]
+            - text: Home
+          - button "Home" [ref=e35] [cursor=pointer]
+        - generic [ref=e36]:
+          - button "Project" [ref=e37] [cursor=pointer]:
+            - img [ref=e38]
+            - text: Project
+          - generic [ref=e40]:
+            - button "New Project" [ref=e41] [cursor=pointer]
+            - button "Workflow Management" [ref=e42] [cursor=pointer]
+            - button "Manage Projects" [ref=e43] [cursor=pointer]
+            - button "Return Goods" [ref=e44] [cursor=pointer]
+            - button "Project Estimation" [ref=e45] [cursor=pointer]
+        - generic [ref=e46]:
+          - button "Inventory" [ref=e47] [cursor=pointer]:
+            - img [ref=e48]
+            - text: Inventory
+          - generic [ref=e50]:
+            - button "Manage Products" [ref=e51] [cursor=pointer]
+            - button "Purchase Requests" [ref=e52] [cursor=pointer]
+            - button "Search Inventory" [ref=e53] [cursor=pointer]
+            - button "Return Inventory" [ref=e54] [cursor=pointer]
+            - button "Reports" [ref=e55] [cursor=pointer]
+        - generic [ref=e56]:
+          - button "Stores" [ref=e57] [cursor=pointer]:
+            - img [ref=e58]
+            - text: Stores
+          - generic [ref=e60]:
+            - button "Stores Planning" [ref=e61] [cursor=pointer]
+            - button "Pending POs" [ref=e62] [cursor=pointer]
+            - button "Transfers" [ref=e63] [cursor=pointer]
+            - button "PO" [ref=e64] [cursor=pointer]
+            - button "Receive (GRN)" [ref=e65] [cursor=pointer]
+            - button "View GRNs" [ref=e66] [cursor=pointer]
+            - button "Create ItemRequests" [ref=e67] [cursor=pointer]
+            - button "View Item Requests" [ref=e68] [cursor=pointer]
+        - generic [ref=e69]:
+          - button "HR & Payroll" [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - text: HR & Payroll
+          - generic [ref=e73]:
+            - button "Attendance" [ref=e74] [cursor=pointer]
+            - button "Leave Requests" [ref=e75] [cursor=pointer]
+            - button "Employee Directory" [ref=e76] [cursor=pointer]
+            - button "Add Employee" [ref=e77] [cursor=pointer]
+            - button "Salary Management" [ref=e78] [cursor=pointer]
+        - generic [ref=e79]:
+          - button "Users" [ref=e80] [cursor=pointer]:
+            - img [ref=e81]
+            - text: Users
+          - generic [ref=e83]:
+            - button "Create Users" [ref=e84] [cursor=pointer]
+            - button "Search Users" [ref=e85] [cursor=pointer]
+        - generic [ref=e86]:
+          - button "Department" [ref=e87] [cursor=pointer]:
+            - img [ref=e88]
+            - text: Department
+          - generic [ref=e90]:
+            - button "Department Management" [ref=e91] [cursor=pointer]
+            - button "Create new Department" [ref=e92] [cursor=pointer]
+        - generic [ref=e93]:
+          - button "Supplier" [ref=e94] [cursor=pointer]:
+            - img [ref=e95]
+            - text: Supplier
+          - generic [ref=e97]:
+            - button "Create Supplier" [ref=e98] [cursor=pointer]
+            - button "Search Supplier" [ref=e99] [cursor=pointer]
+        - generic [ref=e100]:
+          - button "Customer" [ref=e101] [cursor=pointer]:
+            - img [ref=e102]
+            - text: Customer
+          - generic [ref=e104]:
+            - button "Add Customers" [ref=e105] [cursor=pointer]
+            - button "Search Customers" [ref=e106] [cursor=pointer]
+        - generic [ref=e107]:
+          - button "Finance & Assets" [ref=e108] [cursor=pointer]:
+            - img [ref=e109]
+            - text: Finance & Assets
+          - button "Asset Register" [ref=e112] [cursor=pointer]
+    - generic [ref=e114]:
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - generic [ref=e118]: Project Stats
+          - button "Reload" [ref=e119] [cursor=pointer]
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - generic [ref=e122]: Total Ongoing
+            - strong [ref=e124]: "9"
+          - generic [ref=e125]:
+            - generic [ref=e126]: Total Completed
+            - strong [ref=e128]: "0"
+          - separator [ref=e129]
+          - generic [ref=e130]: By Status
+          - table [ref=e132]:
+            - rowgroup [ref=e133]:
+              - row "ESTIMATION 1" [ref=e134]:
+                - cell "ESTIMATION" [ref=e135]
+                - cell "1" [ref=e136]
+              - row "INQUIRY 4" [ref=e137]:
+                - cell "INQUIRY" [ref=e138]
+                - cell "4" [ref=e139]
+              - row "QUOTATION 3" [ref=e140]:
+                - cell "QUOTATION" [ref=e141]
+                - cell "3" [ref=e142]
+              - row "DELIVERY 1" [ref=e143]:
+                - cell "DELIVERY" [ref=e144]
+                - cell "1" [ref=e145]
+      - generic [ref=e147]:
+        - generic [ref=e148]: Project Due Dates (click to flip)
+        - generic [ref=e149]:
+          - generic:
+            - generic:
+              - generic [ref=e150] [cursor=pointer]:
+                - generic [ref=e151]:
+                  - generic [ref=e152]: Due Today
+                  - strong [ref=e154]: "0"
+                - generic [ref=e155]:
+                  - generic [ref=e156]: Due This Week
+                  - strong [ref=e158]: "0"
+                - generic [ref=e159]:
+                  - generic [ref=e160]: Due This Month
+                  - strong [ref=e162]: "1"
+                - generic [ref=e163]: Flip to view project IDs & names
+              - generic [ref=e164] [cursor=pointer]:
+                - generic [ref=e165]: Due Today
+                - table [ref=e167]:
+                  - rowgroup [ref=e168]:
+                    - row "ID Name Due" [ref=e169]:
+                      - columnheader "ID" [ref=e170]
+                      - columnheader "Name" [ref=e171]
+                      - columnheader "Due" [ref=e172]
+                  - rowgroup [ref=e173]:
+                    - row "None" [ref=e174]:
+                      - cell "None" [ref=e175]
+                - generic [ref=e176]: Due This Week
+                - table [ref=e178]:
+                  - rowgroup [ref=e179]:
+                    - row "ID Name Due" [ref=e180]:
+                      - columnheader "ID" [ref=e181]
+                      - columnheader "Name" [ref=e182]
+                      - columnheader "Due" [ref=e183]
+                  - rowgroup [ref=e184]:
+                    - row "None" [ref=e185]:
+                      - cell "None" [ref=e186]
+                - generic [ref=e187]: Due This Month
+                - table [ref=e189]:
+                  - rowgroup [ref=e190]:
+                    - row "ID Name Due" [ref=e191]:
+                      - columnheader "ID" [ref=e192]
+                      - columnheader "Name" [ref=e193]
+                      - columnheader "Due" [ref=e194]
+                  - rowgroup [ref=e195]:
+                    - row "PRJ-25-12-0004 Main Project 12/22/2025, 3:27:00 PM" [ref=e196]:
+                      - cell "PRJ-25-12-0004" [ref=e197]:
+                        - generic [ref=e198]: PRJ-25-12-0004
+                      - cell "Main Project" [ref=e199]
+                      - cell "12/22/2025, 3:27:00 PM" [ref=e200]
+      - generic [ref=e202]:
+        - generic [ref=e203]: Accounts
+        - generic [ref=e204]:
+          - generic [ref=e205]:
+            - generic [ref=e206]: Outstanding (to collect)
+            - strong [ref=e208]: ₹ 64,423
+          - generic [ref=e209]:
+            - generic [ref=e210]: Payments Received This Week
+            - strong [ref=e212]: ₹ 5,000
+          - generic [ref=e213]:
+            - generic [ref=e214]: Payments Received This Month
+            - strong [ref=e216]: ₹ 5,000
+```

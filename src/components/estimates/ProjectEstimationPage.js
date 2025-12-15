@@ -1,6 +1,7 @@
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Button, Form, Table, Badge, Modal } from "react-bootstrap";
+import { Link, useNavigate } from "react-router-dom";
 import Select from "react-select";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
@@ -18,6 +19,7 @@ const getAvailOneAPI = async (productId) => (await api.get(`/inventory/available
 const getLastCostAPI = async (productId) => (await api.get(`/products/${productId}/last-cost`)).data; // {unitCost:number}
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
+    const navigate = useNavigate();
     /* ------------ reference data ------------ */
     const [projects, setProjects] = useState([]);
     const [products, setProducts] = useState([]);
@@ -55,6 +57,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         showComponentTotals: true,
         showGrandTotal: true,
     });
+
+    /* ------------ file upload state ------------ */
+    const [quotationFile, setQuotationFile] = useState(null);
+    const [existingFileUrl, setExistingFileUrl] = useState(null);
 
     /* ------------ load reference data ------------ */
     useEffect(() => {
@@ -96,6 +102,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setCompMargin({});
             setCompDelivery({});
             setCompDeliveryTaxable({});
+            setExistingFileUrl(null);
             return;
         }
         (async () => {
@@ -113,8 +120,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setCompMargin({});
                     setCompDelivery({});
                     setCompDeliveryTaxable({});
+                    setExistingFileUrl(null);
                     return;
                 }
+
+                // Existing file?
+                setExistingFileUrl(est.quotationFileUrl || null);
 
                 // components
                 const compNames = (est.components || []).map(c => c.name?.trim() || "Component");
@@ -491,7 +502,20 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         if (!pid) { toast.warn("Select a project"); return false; }
         try {
             const payload = buildPayload();
-            await saveEstimationAPI(pid, payload);
+
+            const formData = new FormData();
+            formData.append("estimation", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+            if (quotationFile) {
+                formData.append("file", quotationFile);
+            }
+
+            const res = await api.post(`/estimations/by-project/${pid}`, formData);
+
+            // Update existing file URL if response has it
+            if (res.data?.quotationFileUrl) {
+                setExistingFileUrl(res.data.quotationFileUrl);
+            }
+
             if (!silent) toast.success("Estimation saved");
             return true;
         } catch (e) {
@@ -571,9 +595,37 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     />
                                 </div>
                             </div>
-                            <div className="d-flex gap-2">
+
+                            <div className="d-flex gap-2 align-items-center">
+                                {/* File Upload */}
+                                <div className="d-flex flex-column align-items-end me-2">
+                                    <Form.Control
+                                        type="file"
+                                        size="sm"
+                                        style={{ width: 250 }}
+                                        onChange={(e) => setQuotationFile(e.target.files[0])}
+                                    />
+                                    {existingFileUrl && (
+                                        <a href={existingFileUrl} target="_blank" rel="noopener noreferrer" className="small">
+                                            View Saved Quote
+                                        </a>
+                                    )}
+                                </div>
+
                                 <Button variant="outline-success" onClick={addComponent}>+ Column</Button>
-                                <Button variant="primary" onClick={saveEstimation}>Save</Button>
+                                <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>
+                                <Button
+                                    variant="info"
+                                    onClick={() => {
+                                        if (projectOpt?.value) {
+                                            navigate(`/projects/${projectOpt.value}/quotation`);
+                                        } else {
+                                            toast.warn("Select a project first");
+                                        }
+                                    }}
+                                >
+                                    View Quote
+                                </Button>
                             </div>
                         </div>
 
@@ -900,6 +952,6 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             </Row>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
-        </Container>
+        </Container >
     );
 }

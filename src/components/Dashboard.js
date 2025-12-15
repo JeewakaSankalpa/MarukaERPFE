@@ -28,6 +28,8 @@ import Header from "./ReusableComponents/Header";
 import NewSideBar from "./ReusableComponents/NewSideBar";
 import Colors from "../resources/Colors";
 import PayablesWidget from "./Dashboard/PayablesWidget";
+import MyTasksWidget from "./Projects/Tasks/MyTasksWidget";
+import EmployeeHRWidget from "./Dashboard/EmployeeHRWidget";
 
 function Dashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -452,8 +454,16 @@ function Dashboard({ onLogout }) {
                 ))}
               </div>
 
-              <div className="mt-4" style={{ maxWidth: "500px" }}>
-                <PayablesWidget />
+              <div className="mt-4 d-flex gap-4 flex-wrap">
+                <div style={{ flex: 1, minWidth: '300px' }}>
+                  <PayablesWidget />
+                </div>
+                <div style={{ flex: 1, minWidth: '300px' }}>
+                  <MyTasksWidget />
+                </div>
+                <div style={{ flex: 1, minWidth: '300px' }}>
+                  <EmployeeHRWidget />
+                </div>
               </div>
 
             </div>

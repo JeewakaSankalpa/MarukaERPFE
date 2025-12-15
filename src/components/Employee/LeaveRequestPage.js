@@ -74,7 +74,10 @@ function LeaveRequestPage() {
     };
 
     const handleApply = async () => {
-        if (!currentEmployee) return;
+        if (!currentEmployee) {
+            toast.error("Could not identify current employee. Please relogin.");
+            return;
+        }
         try {
             const payload = {
                 ...leaveForm,

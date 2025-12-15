@@ -1,0 +1,166 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - img "Maruka Logo" [ref=e6]
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - img "User" [ref=e9]
+        - generic [ref=e10]:
+          - heading "jeewaka" [level=3] [ref=e11]
+          - paragraph [ref=e12]: ADMIN
+      - generic [ref=e13]: 10:13:30 PM 12/14/2025
+    - generic [ref=e14]:
+      - generic [ref=e15] [cursor=pointer]:
+        - img [ref=e16]
+        - generic [ref=e19]: "1"
+      - button "Logout" [ref=e20] [cursor=pointer]:
+        - img [ref=e21]
+        - text: Logout
+  - generic [ref=e23]:
+    - generic [ref=e25]:
+      - img [ref=e27] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - button "Home" [ref=e31] [cursor=pointer]:
+            - img [ref=e32]
+            - text: Home
+          - button "Home" [ref=e35] [cursor=pointer]
+        - generic [ref=e36]:
+          - button "Project" [ref=e37] [cursor=pointer]:
+            - img [ref=e38]
+            - text: Project
+          - generic [ref=e40]:
+            - button "New Project" [ref=e41] [cursor=pointer]
+            - button "Workflow Management" [ref=e42] [cursor=pointer]
+            - button "Manage Projects" [ref=e43] [cursor=pointer]
+            - button "Return Goods" [ref=e44] [cursor=pointer]
+            - button "Project Estimation" [ref=e45] [cursor=pointer]
+        - generic [ref=e46]:
+          - button "Inventory" [ref=e47] [cursor=pointer]:
+            - img [ref=e48]
+            - text: Inventory
+          - generic [ref=e50]:
+            - button "Manage Products" [ref=e51] [cursor=pointer]
+            - button "Purchase Requests" [ref=e52] [cursor=pointer]
+            - button "Search Inventory" [ref=e53] [cursor=pointer]
+            - button "Return Inventory" [ref=e54] [cursor=pointer]
+            - button "Reports" [ref=e55] [cursor=pointer]
+        - generic [ref=e56]:
+          - button "Stores" [ref=e57] [cursor=pointer]:
+            - img [ref=e58]
+            - text: Stores
+          - generic [ref=e60]:
+            - button "Stores Planning" [ref=e61] [cursor=pointer]
+            - button "Pending POs" [ref=e62] [cursor=pointer]
+            - button "Transfers" [ref=e63] [cursor=pointer]
+            - button "PO" [ref=e64] [cursor=pointer]
+            - button "Receive (GRN)" [ref=e65] [cursor=pointer]
+            - button "View GRNs" [ref=e66] [cursor=pointer]
+            - button "Create ItemRequests" [ref=e67] [cursor=pointer]
+            - button "View Item Requests" [ref=e68] [cursor=pointer]
+        - generic [ref=e69]:
+          - button "HR & Payroll" [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - text: HR & Payroll
+          - generic [ref=e73]:
+            - button "Attendance" [ref=e74] [cursor=pointer]
+            - button "Leave Requests" [ref=e75] [cursor=pointer]
+            - button "Employee Directory" [ref=e76] [cursor=pointer]
+            - button "Add Employee" [ref=e77] [cursor=pointer]
+            - button "Salary Management" [ref=e78] [cursor=pointer]
+        - generic [ref=e79]:
+          - button "Users" [ref=e80] [cursor=pointer]:
+            - img [ref=e81]
+            - text: Users
+          - generic [ref=e83]:
+            - button "Create Users" [ref=e84] [cursor=pointer]
+            - button "Search Users" [ref=e85] [cursor=pointer]
+        - generic [ref=e86]:
+          - button "Department" [ref=e87] [cursor=pointer]:
+            - img [ref=e88]
+            - text: Department
+          - generic [ref=e90]:
+            - button "Department Management" [ref=e91] [cursor=pointer]
+            - button "Create new Department" [ref=e92] [cursor=pointer]
+        - generic [ref=e93]:
+          - button "Supplier" [ref=e94] [cursor=pointer]:
+            - img [ref=e95]
+            - text: Supplier
+          - generic [ref=e97]:
+            - button "Create Supplier" [ref=e98] [cursor=pointer]
+            - button "Search Supplier" [ref=e99] [cursor=pointer]
+        - generic [ref=e100]:
+          - button "Customer" [ref=e101] [cursor=pointer]:
+            - img [ref=e102]
+            - text: Customer
+          - generic [ref=e104]:
+            - button "Add Customers" [ref=e105] [cursor=pointer]
+            - button "Search Customers" [ref=e106] [cursor=pointer]
+        - generic [ref=e107]:
+          - button "Finance & Assets" [ref=e108] [cursor=pointer]:
+            - img [ref=e109]
+            - text: Finance & Assets
+          - button "Asset Register" [ref=e112] [cursor=pointer]
+    - generic [ref=e114]:
+      - heading "Add Customer" [level=2] [ref=e115]
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - generic [ref=e118]: Company Name
+          - textbox "Company Name" [ref=e119]: Mall Builders Inc
+        - generic [ref=e120]:
+          - generic [ref=e121]: Company Address
+          - textbox "Company Address" [ref=e122]: 456 Construction Rd
+        - generic [ref=e123]:
+          - generic [ref=e124]: Company Email
+          - textbox "Company Email" [ref=e125]: info@mallbuilders.com
+        - generic [ref=e126]:
+          - generic [ref=e127]: Company Contact Number
+          - textbox "Company Contact Number" [ref=e128]: "0771234567"
+        - generic [ref=e129]:
+          - generic [ref=e130]: Company Business Register Number
+          - textbox "Company Business Register Number" [ref=e131]: BR-9988
+        - generic [ref=e132]:
+          - generic [ref=e133]: Currency
+          - combobox "Currency" [ref=e134]:
+            - option "-- Select --"
+            - option "Rupees" [selected]
+            - option "USD"
+        - generic [ref=e135]:
+          - generic [ref=e136]: Credit Period (days)
+          - spinbutton "Credit Period (days)" [ref=e137]: "30"
+        - generic [ref=e138]:
+          - generic [ref=e139]: Contact Person Name
+          - textbox "Contact Person Name" [ref=e140]: Bob Builder
+        - generic [ref=e141]:
+          - generic [ref=e142]: Contact Person Mobile Number
+          - textbox "Contact Person Mobile Number" [ref=e143]: "0777654321"
+        - generic [ref=e144]:
+          - generic [ref=e145]: Contact Person Email
+          - textbox "Contact Person Email" [ref=e146]: bob@mallbuilders.com
+        - generic [ref=e147]:
+          - generic [ref=e148]: Password
+          - textbox "Password" [ref=e149]: password123
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - generic [ref=e152]: VAT Type
+            - combobox "VAT Type" [ref=e153]:
+              - option "-- Select --"
+              - option "VAT" [selected]
+              - option "SVAT"
+          - generic [ref=e154]:
+            - generic [ref=e155]: VAT Number
+            - textbox "VAT Number" [ref=e156]:
+              - /placeholder: Enter your VAT number
+              - text: 123456789-V
+        - generic [ref=e157]:
+          - generic [ref=e158]: VAT Registration Document *
+          - button "VAT Registration Document *" [ref=e159] [cursor=pointer]
+        - generic [ref=e160]:
+          - generic [ref=e161]: Business Registration Document (Optional)
+          - button "Business Registration Document (Optional)" [ref=e162] [cursor=pointer]
+        - button "Save" [active] [ref=e163] [cursor=pointer]
+        - button "Cancel" [ref=e164] [cursor=pointer]
+    - region "Notifications Alt+T"
+```

@@ -13,6 +13,7 @@ const ProjectFiles = React.lazy(() => import('./ProjectFiles'));
 const ProjectEstimationCard = React.lazy(() => import('./ProjectEstimationCard'));
 const ProjectPaymentsCard = React.lazy(() => import('./ProjectPaymentsCard'));
 const ProjectInventoryCard = React.lazy(() => import('./ProjectInventoryCard'));
+const ProjectTasks = React.lazy(() => import('../Projects/Tasks/ProjectTasks'));
 
 /**
  * Main Project Details Page.
@@ -37,6 +38,58 @@ export default function ProjectDetails() {
     const [estimatedStart, setEstimatedStart] = useState('');
     const [estimatedEnd, setEstimatedEnd] = useState('');
     const [dueDate, setDueDate] = useState('');
+
+    // Email state
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailTo, setEmailTo] = useState('');
+    const [emailSubject, setEmailSubject] = useState('');
+    const [emailBody, setEmailBody] = useState('');
+    const [projectFiles, setProjectFiles] = useState([]);
+    const [selectedAttachments, setSelectedAttachments] = useState(new Set());
+    const [sendingEmail, setSendingEmail] = useState(false);
+
+    const openEmailModal = async () => {
+        if (!id) return;
+        setSendingEmail(false);
+        setProjectFiles([]);
+        setSelectedAttachments(new Set());
+        setEmailTo('');
+        setEmailSubject(`Update regarding Project ${project?.projectName || id}`);
+        setEmailBody('');
+        try {
+            const res = await api.get(`/projects/${id}/files`);
+            setProjectFiles(res.data || []);
+            setShowEmailModal(true);
+        } catch (e) {
+            toast.error("Failed to load project files");
+        }
+    };
+
+    const sendEmail = async () => {
+        if (!emailTo) { toast.warn("Recipient is required"); return; }
+        setSendingEmail(true);
+        try {
+            await api.post(`/projects/${id}/email`, {
+                to: emailTo,
+                subject: emailSubject,
+                body: emailBody,
+                attachmentUrls: Array.from(selectedAttachments)
+            });
+            toast.success("Email sent successfully");
+            setShowEmailModal(false);
+        } catch (e) {
+            toast.error("Failed to send email");
+        } finally {
+            setSendingEmail(false);
+        }
+    };
+
+    const toggleAttachment = (url) => {
+        const next = new Set(selectedAttachments);
+        if (next.has(url)) next.delete(url);
+        else next.add(url);
+        setSelectedAttachments(next);
+    };
 
     // Tabs state
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -209,6 +262,11 @@ export default function ProjectDetails() {
                             Payments
                         </button>
                     </li>
+                    <li className="nav-item">
+                        <button className={`nav-link ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+                            Tasks
+                        </button>
+                    </li>
                 </ul>
             </div>
 
@@ -221,14 +279,17 @@ export default function ProjectDetails() {
                                 <Card className="h-100">
                                     <Card.Header className="d-flex justify-content-between align-items-center">
                                         <span>Project Overview</span>
-                                        <Button
-                                            size="sm"
-                                            variant="outline-primary"
-                                            disabled={!id}
-                                            onClick={() => navigate(`/projects/edit/${id}`)}
-                                        >
-                                            Edit
-                                        </Button>
+                                        <div className="d-flex gap-2">
+                                            <Button size="sm" variant="outline-dark" onClick={openEmailModal} disabled={!id}>Email</Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline-primary"
+                                                disabled={!id}
+                                                onClick={() => navigate(`/projects/edit/${id}`)}
+                                            >
+                                                Edit
+                                            </Button>
+                                        </div>
                                     </Card.Header>
                                     <Card.Body style={{ overflowY: 'auto' }}>
                                         <div><strong>ID:</strong> {id || '-'}</div>
@@ -463,7 +524,66 @@ export default function ProjectDetails() {
                         />
                     </div>
                 )}
+
+                {activeTab === 'tasks' && (
+                    <div className="mt-3 bg-white shadow-sm rounded">
+                        <ProjectTasks projectId={id} />
+                    </div>
+                )}
             </Suspense>
+
+            {/* Email Modal */}
+            <Modal show={showEmailModal} onHide={() => setShowEmailModal(false)} size="lg" centered>
+                <Modal.Header closeButton><Modal.Title>Send Project Email</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <Form.Group className="mb-3">
+                        <Form.Label>To</Form.Label>
+                        <Form.Control
+                            type="email"
+                            placeholder="recipient@example.com"
+                            value={emailTo}
+                            onChange={e => setEmailTo(e.target.value)}
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Subject</Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={emailSubject}
+                            onChange={e => setEmailSubject(e.target.value)}
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Body</Form.Label>
+                        <Form.Control
+                            as="textarea"
+                            rows={5}
+                            value={emailBody}
+                            onChange={e => setEmailBody(e.target.value)}
+                        />
+                    </Form.Group>
+
+                    <Form.Label>Attachments ({selectedAttachments.size} selected)</Form.Label>
+                    <div style={{ maxHeight: 200, overflowY: 'auto' }} className="border rounded p-2">
+                        {projectFiles.length === 0 && <div className="text-muted small">No files available.</div>}
+                        {projectFiles.map((f, i) => (
+                            <Form.Check
+                                key={f.url + i}
+                                type="checkbox"
+                                label={f.originalName || f.storedName}
+                                checked={selectedAttachments.has(f.url)}
+                                onChange={() => toggleAttachment(f.url)}
+                            />
+                        ))}
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowEmailModal(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={sendEmail} disabled={sendingEmail}>
+                        {sendingEmail ? <Spinner size="sm" /> : "Send Email"}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             {/* Edit Dates Modal (in Timeline) */}
             <Modal show={showDates} onHide={() => setShowDates(false)} centered>

@@ -47,24 +47,24 @@ export default function AdminDashboard() {
     }
 
     const proj = data?.project;
-    const due  = data?.due;
-    const acc  = data?.accounts;
+    const due = data?.due;
+    const acc = data?.accounts;
 
     const DueList = ({ list }) => (
         <Table size="sm" bordered responsive className="mb-0">
             <thead>
-            <tr><th style={{width:140}}>ID</th><th>Name</th><th style={{width:180}}>Due</th></tr>
+                <tr><th style={{ width: 140 }}>ID</th><th>Name</th><th style={{ width: 180 }}>Due</th></tr>
             </thead>
             <tbody>
-            {(!list || list.length === 0) ? (
-                <tr><td colSpan={3} className="text-muted text-center">None</td></tr>
-            ) : list.map(x => (
-                <tr key={x.id}>
-                    <td><Badge bg="secondary">{x.id}</Badge></td>
-                    <td className="text-truncate">{x.name || "-"}</td>
-                    <td>{x.dueAt ? new Date(x.dueAt).toLocaleString() : "-"}</td>
-                </tr>
-            ))}
+                {(!list || list.length === 0) ? (
+                    <tr><td colSpan={3} className="text-muted text-center">None</td></tr>
+                ) : list.map(x => (
+                    <tr key={x.id}>
+                        <td><Badge bg="secondary">{x.id}</Badge></td>
+                        <td className="text-truncate">{x.name || "-"}</td>
+                        <td>{x.dueAt ? new Date(x.dueAt).toLocaleString() : "-"}</td>
+                    </tr>
+                ))}
             </tbody>
         </Table>
     );
@@ -76,8 +76,12 @@ export default function AdminDashboard() {
                 <Col lg={4} md={6}>
                     <Card className="h-100">
                         <Card.Header className="d-flex justify-content-between align-items-center">
-                            <span>Project Stats</span>
-                            <span role="button" className="text-muted small" onClick={load}>{loading ? "…" : "Reload"}</span>
+                            <div className="d-flex align-items-center gap-3">
+                                <a href="#/admin/config" className="text-decoration-none small">
+                                    ⚙ Config
+                                </a>
+                                <span role="button" className="text-muted small" onClick={load}>{loading ? "…" : "Reload"}</span>
+                            </div>
                         </Card.Header>
                         <Card.Body>
                             {!proj ? (
@@ -96,9 +100,9 @@ export default function AdminDashboard() {
                                     <div className="fw-semibold mb-2">By Status</div>
                                     <Table size="sm" bordered responsive className="mb-0">
                                         <tbody>
-                                        {Object.entries(proj.byStatus || {}).map(([k,v]) => (
-                                            <tr key={k}><td>{k}</td><td className="text-end">{v}</td></tr>
-                                        ))}
+                                            {Object.entries(proj.byStatus || {}).map(([k, v]) => (
+                                                <tr key={k}><td>{k}</td><td className="text-end">{v}</td></tr>
+                                            ))}
                                         </tbody>
                                     </Table>
                                 </>
