@@ -77,8 +77,16 @@ export default function SystemConfiguration() {
 
             // Encrypt password if present
             if (payload["spring.mail.password"]) {
-                // Encrypting using AES
-                const encrypted = CryptoJS.AES.encrypt(payload["spring.mail.password"], SECRET_KEY).toString();
+                // Encrypting using AES (ECB mode to match Backend CryptoUtil)
+                const key = CryptoJS.enc.Utf8.parse(SECRET_KEY);
+                const encrypted = CryptoJS.AES.encrypt(
+                    payload["spring.mail.password"],
+                    key,
+                    {
+                        mode: CryptoJS.mode.ECB,
+                        padding: CryptoJS.pad.Pkcs7
+                    }
+                ).toString();
                 payload["spring.mail.password"] = encrypted;
             }
 
