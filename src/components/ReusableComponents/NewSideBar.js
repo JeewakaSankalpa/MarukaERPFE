@@ -11,6 +11,7 @@ import {
   FaUsers,
   FaCogs,
 } from "react-icons/fa";
+import NotificationBell from "./NotificationBell";
 
 function NewSideBar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -209,6 +210,16 @@ function NewSideBar() {
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </div>
+
+        {/* Notification Bell (Visible when expanded or handled via overlay) */}
+        {!collapsed && (
+          <div className="px-3 mb-2">
+            <div className="d-flex align-items-center text-white">
+              <NotificationBell />
+              <span className="ms-2 small">Notifications</span>
+            </div>
+          </div>
+        )}
 
         {/* Menu Items */}
         <div style={{ flex: 1, overflowY: "auto", paddingRight: "6px" }}>
