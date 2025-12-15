@@ -1,97 +1,107 @@
 /* App.css */
 
-html, body, #root {
+html,
+body,
+#root {
     height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
+    overflow: hidden;
+    /* Prevent body scroll */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .app-container {
-    /* display: flex; */
-    /* flex-direction: column; */
-    /* height: 100vh; */
-    width: 100vw;
-    overflow: hidden;
-}
-
-.sidebar {
-    width: 20vw; /* Sidebar takes 20% of the viewport width */
-    background-color: #0056b3;
-    color: white;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-}
-
-.content-container {
-    width: 100vw; /* Main content area takes 80% of the viewport width */
-    padding: 20px;
-    overflow-y: auto;
-    background-color: #f0f2f5;
+    height: 100vh;
+    width: 100vw;
+    background-color: #f8f9fa;
 }
 
 .header {
-    width: 100vw;
-    padding: 15px;
-    background-color: #007bff;
-    color: #fff;
-    text-align: center;
     flex-shrink: 0;
+    width: 100%;
+    z-index: 1001;
+    /* Ensure header stays on top */
 }
 
-.fixed-size-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    height: calc(100vh - 50px); /* Leaves room for the header */
-    overflow-y: auto;
-}
+/* Flex container for Sidebar + Content */
 .main-content {
     display: flex;
-    /* width: 100vw; */
-    height: 100vh;
-    /* background-color: #e0f7fa; */
+    flex: 1;
+    /* Take remaining height below Header */
+    overflow: hidden;
+    /* Prevent container scroll */
+    position: relative;
+    height: calc(100vh - 60px);
+    /* Fallback/Constraint */
 }
 
+/* The scrollable area for page content */
+.page-content {
+    flex: 1;
+    /* Fill remaining width next to sidebar */
+    height: 100%;
+    overflow-y: auto;
+    /* Scroll ONLY the content */
+    overflow-x: hidden;
+    padding: 1.5rem;
+    position: relative;
+    background-color: #f3f4f6;
+    /* Light gray background */
+}
+
+/* Utility to ensure contents don't overflow horizontally */
+.fixed-size-container {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+/* Custom Scrollbar for Webkit */
+.page-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.page-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.page-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.page-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Print Styles */
 @media print {
-    /* Hide non-printable elements */
+
     .sidebar,
     .header,
     .no-print,
     button,
-    .btn {
+    .btn,
+    .app-container> :not(.main-content) {
         display: none !important;
     }
 
-    /* Reset Layout for Print */
-    html, body, #root, .app-container, .main-content {
+    html,
+    body,
+    #root,
+    .app-container,
+    .main-content,
+    .page-content {
         height: auto !important;
         width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
         overflow: visible !important;
         display: block !important;
-    }
-
-    .content-container, .fixed-size-container {
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
         background-color: white !important;
-        display: block !important;
-    }
-
-    /* Ensure tables print nicely */
-    table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-    }
-    
-    /* Avoid page breaks inside rows if possible */
-    tr {
-        page-break-inside: avoid;
     }
 }

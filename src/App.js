@@ -40,7 +40,6 @@ import { useAuth } from "./context/AuthContext";
 
 import SupplierCreate from "./components/Supplier/SupplierPage";
 import ProductCreate from "./components/Inventory/ProductPage";
-import SupplierView from "./components/Supplier/SupplierView";
 import SupplierDashboard from "./components/Supplier/SupplierDashboard";
 import PurchaseRequestPage from "./components/Inventory/PurchaseRequestPage";
 import StoresPlanningPage from "./components/Stores/StoresPlanningPage";
@@ -81,7 +80,9 @@ function Layout({ children }) {
             <Header />
             <div className="main-content">
                 <NewSideBar />
-                {children}
+                <div className="page-content">
+                    {children}
+                </div>
             </div>
         </div>
     );
@@ -197,7 +198,7 @@ function App() {
 
                         {/* Supplier / Product */}
                         <Route path="/supplier/create" element={<SupplierCreate />} />
-                        <Route path="/supplier/search" element={<SupplierView />} />
+                        <Route path="/supplier/search" element={<SupplierCreate />} />
                         <Route path="/product/create" element={<ProductCreate />} />
 
                         {/* Requests / Stores / PO / GRN */}

@@ -128,15 +128,15 @@ function NewSideBar() {
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
+        height: "100%", // Fit parent (main-content), not viewport
         background: `linear-gradient(180deg, ${Colors.sideBar} 0%, #0f172a 100%)`,
         width: collapsed ? "64px" : "240px",
         transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         color: "#fff",
         boxShadow: "4px 0 10px rgba(0,0,0,0.1)",
         zIndex: 1000,
-        position: 'sticky',
-        top: 0
+        // position: 'sticky', // Not needed in flex layout
+        // top: 0
       }}
     >
       {/* Header / Brand */}
