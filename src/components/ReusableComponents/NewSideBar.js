@@ -13,6 +13,8 @@ import {
 } from "react-icons/fa";
 import NotificationBell from "./NotificationBell";
 
+import { MenuConfig } from "../../resources/MenuConfig";
+
 function NewSideBar() {
   const [collapsed, setCollapsed] = useState(false);
   const [hoveredMenu, setHoveredMenu] = useState(null);
@@ -25,103 +27,74 @@ function NewSideBar() {
   const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
 
   const hasAccess = (item) => {
-    if (!item.roles && !item.modules) return true;
-    const roleMatch = item.roles && item.roles.includes(userRole);
-    const moduleMatch = item.modules && item.modules.some(m => userModules.includes(m));
-    return roleMatch || moduleMatch;
+    // If no restrictions, accessible
+    if (!item.roles) return true;
+
+    // 1. Role Check (Must match one of the allowed roles)
+    const roleMatch = item.roles.includes(userRole);
+    if (!roleMatch) return false;
+
+    // 2. Module/ID Check
+    // If Admin/Manager, do we skip module check? 
+    // User said: "Admin manager and employee all. Acces to modules should be managed based on allowed criterial."
+    // So we apply STRICT check for everyone?
+    // "Admin should have system config access. and access to any other modules he/she is allowed"
+    // THIS IMPLIES: Admin isn't omnipotent, but has specific grants? 
+    // OR Admin implicitly has everything? Usually Admin has everything.
+    // Let's assume ADMIN has everything for now to avoid locking them out.
+    // ADMIN Access Note: User requested strict module checks for Admin too.
+    // So we do NOT return true for ADMIN automatically anymore.
+    // if (userRole === "ADMIN") return true;
+
+    // For others, if the item has an ID, we check if it's in their list.
+    // If it's a top-level menu (e.g. Projects), we simply check if they have ANY child OR the parent ID?
+    // Implementation Plan said: "user.moduleAccess.includes(menuItem.id)"
+    // If undefined ID (like Home?), pass.
+    if (!item.id) return true;
+
+    // Check if ID is in access list
+    // Also, legacy support: if they have "PROJECTS" (old style), maybe map it? 
+    // For now, strict new ID check.
+    // Check if ID is in access list
+    const hasPermission = userModules.includes(item.id);
+
+    // DEBUG LOG
+    if (item.id === "inventory") {
+      console.log(`Checking Access: ${item.title} (${item.id}) - Role: ${userRole}, HasPerm: ${hasPermission}, Modules:`, userModules);
+    }
+
+    return hasPermission;
   };
 
-  const allMenus = [
-    {
-      title: "Home",
-      icon: <FaHome size={18} />,
-      roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"],
-      submenus: [{ name: "Dashboard", path: "/admin" }],
-    },
-    {
-      title: "Projects",
-      icon: <FaProjectDiagram size={18} />,
-      roles: ["ADMIN", "MANAGER"],
-      modules: ["PROJECTS"],
-      submenus: [
-        { name: "My Projects", path: "/projects/search" },
-        { name: "New Project", path: "/projects/create" },
-        { name: "Estimation", path: "/projects/estimation" },
-        { name: "Workflow", path: "/projects/workflow" },
-      ],
-    },
-    {
-      title: "Inventory",
-      icon: <FaBoxes size={18} />,
-      roles: ["ADMIN", "MANAGER", "STORE_KEEPER"],
-      modules: ["INVENTORY"],
-      submenus: [
-        { name: "Stock Search", path: "/inventory/search" },
-        { name: "Products", path: "/product/create" },
-        { name: "Purchase Requests", path: "/inventory/pr" },
-        { name: "Internal Requests", path: "/item/requests" },
-        { name: "Fulfil Requests", path: "/stores/fulfil-requests" },
-        { name: "Returns", path: "/inventory/return" },
-        { name: "Reports", path: "/reports" },
-      ],
-    },
-    {
-      title: "Procurement",
-      icon: <FaChartLine size={18} />,
-      roles: ["ADMIN", "STORE_KEEPER"],
-      modules: ["INVENTORY"],
-      submenus: [
-        { name: "Stores Planning", path: "/stores/planning" },
-        { name: "Purchase Orders", path: "/pos" },
-        { name: "Pending Items", path: "/stores/pending-to-po" },
-        { name: "Receive (GRN)", path: "/grn" },
-        { name: "GRN History", path: "/grns" },
-        { name: "Transfers", path: "/transfers/inbox" },
-      ],
-    },
-    {
-      title: "HR & Team",
-      icon: <FaUsers size={18} />,
-      roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
-      modules: ["HR", "PAYROLL"],
-      submenus: [
-        { name: "Directory", path: "/employee/list", roles: ["ADMIN", "HR"] },
-        { name: "Attendance", path: "/attendance" },
-        { name: "Leave", path: "/leave" },
-        { name: "Payroll", path: "/salary", roles: ["ADMIN", "HR"] },
-        { name: "Configuration", path: "/hr/config", roles: ["ADMIN", "HR"] },
-      ].filter(sub => hasAccess(sub)),
-    },
-    {
-      title: "Partners",
-      icon: <FaBriefcase size={18} />,
-      roles: ["ADMIN", "SALES", "MANAGER"],
-      submenus: [
-        { name: "Customers", path: "/customer/view" },
-        { name: "Suppliers", path: "/supplier/search" },
-      ],
-    },
-    {
-      title: "Finance",
-      icon: <FaBriefcase size={18} />,
-      roles: ["ADMIN", "MANAGER"],
-      submenus: [
-        { name: "Asset Register", path: "/assets" },
-      ],
-    },
-    {
-      title: "Settings",
-      icon: <FaCogs size={18} />,
-      roles: ["ADMIN"],
-      submenus: [
-        { name: "System Config", path: "/admin/config" },
-        { name: "Departments", path: "/departments" },
-        { name: "New Department", path: "/departments/new" },
-      ],
-    },
-  ];
+  const iconMap = {
+    "FaHome": <FaHome size={18} />,
+    "FaProjectDiagram": <FaProjectDiagram size={18} />,
+    "FaBoxes": <FaBoxes size={18} />,
+    "FaChartLine": <FaChartLine size={18} />,
+    "FaUsers": <FaUsers size={18} />,
+    "FaBriefcase": <FaBriefcase size={18} />,
+    "FaCogs": <FaCogs size={18} />,
+  };
 
-  const menus = allMenus.filter(m => hasAccess(m));
+  const menus = MenuConfig.map(menu => ({
+    ...menu,
+    icon: iconMap[menu.icon] || <FaHome size={18} />, // Fallback
+    icon: iconMap[menu.icon] || <FaHome size={18} />, // Fallback
+    submenus: menu.subItems.map(item => ({ ...item, name: item.title })) // Map 'title' to 'name' to fix display issue
+  })).map(menu => {
+    // Filter submenus first
+    const visibleSubmenus = menu.submenus.filter(sub => hasAccess(sub) && !sub.hidden);
+
+    // If no filtered submenus, do we show parent? 
+    // Only if parent itself is accessible AND (has submenus OR is a leaf?)
+    // Actually, usually if all children are hidden, hide parent.
+    // Let's check parent access first
+    if (!hasAccess(menu)) return null;
+    if (menu.hidden) return null; // Hide parent if marked hidden
+
+    // If parent has access, show it. 
+    return { ...menu, submenus: visibleSubmenus };
+  }).filter(Boolean); // Remove nulls
 
   return (
     <div

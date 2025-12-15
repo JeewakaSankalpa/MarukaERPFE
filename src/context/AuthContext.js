@@ -38,11 +38,14 @@ export const AuthProvider = ({ children }) => {
         // Otherwise use "/api/auth/login"
         const { data } = await api.post("/auth/login", { username, password });
 
-        const { token, role, userType, moduleAccess } = data;
+        const { token, role, userType, moduleAccess, userId, employeeId, projectRoles } = data;
         localStorage.setItem("token", token);
         localStorage.setItem("role", role);
         localStorage.setItem("username", username);
         localStorage.setItem("moduleAccess", JSON.stringify(moduleAccess || []));
+        localStorage.setItem("projectRoles", JSON.stringify(projectRoles || []));
+        if (userId) localStorage.setItem("userId", userId);
+        if (employeeId) localStorage.setItem("employeeId", employeeId);
 
         let decoded = {};
         try { decoded = jwtDecode(token); } catch { }
@@ -55,7 +58,10 @@ export const AuthProvider = ({ children }) => {
             username: decoded.sub || username,
             role: finalRole,
             userType: finalUserType,
-            moduleAccess: moduleAccess || []
+            moduleAccess: moduleAccess || [],
+            projectRoles: projectRoles || [],
+            userId,
+            employeeId
         });
 
         // IMPORTANT: return so callers can route immediately

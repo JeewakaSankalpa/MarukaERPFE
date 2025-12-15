@@ -3,6 +3,8 @@ import { Form, Button, Container, Row, Col, Alert } from "react-bootstrap";
 import api from "../../api/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { ModuleList } from "../../resources/ModuleConstants";
+import { MenuConfig } from "../../resources/MenuConfig";
 
 function EmployeeCreate({ mode }) {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ function EmployeeCreate({ mode }) {
     nicNumber: "",
     role: "EMPLOYEE",
     moduleAccess: [],
+    projectRoles: [],
     userName: "",
     password: "",
     departmentId: "",
@@ -31,6 +34,7 @@ function EmployeeCreate({ mode }) {
 
   const [departments, setDepartments] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [projectWorkflowRoles, setProjectWorkflowRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [autoPassword, setAutoPassword] = useState("");
 
@@ -46,6 +50,15 @@ function EmployeeCreate({ mode }) {
         const allEmps = empRes.data || [];
         const mgrs = allEmps.filter(e => ["MANAGER", "ADMIN", "HR"].includes(e.role));
         setManagers(mgrs);
+
+        // Fetch Workflow Roles
+        try {
+          const wfRes = await api.get("/projects/workflow/roles");
+          setProjectWorkflowRoles(wfRes.data || []);
+        } catch (e) {
+          console.error("Failed to fetch workflow roles", e);
+        }
+
       } catch (e) {
         console.error("Failed to load dropdowns", e);
       }
@@ -69,8 +82,10 @@ function EmployeeCreate({ mode }) {
               contactNumber: d.contactNumber || "",
               address: d.address || "",
               nicNumber: d.nicNumber || "",
+              nicNumber: d.nicNumber || "",
               role: d.role || "EMPLOYEE",
               moduleAccess: d.moduleAccess || [],
+              projectRoles: d.projectRoles || [],
               userName: d.username || "",
               password: "", // Don't show password on edit
               departmentId: d.departmentId || d.Department?.id || "",
@@ -257,30 +272,104 @@ function EmployeeCreate({ mode }) {
           </Col>
         </Row>
 
-        {/* Module Access */}
+        {/* Module Access - Granular */}
         <div className="mb-3">
-          <Form.Label>Module Access (For finer granular control)</Form.Label>
-          <div className="d-flex flex-wrap gap-3">
-            {["ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "HR", "INVENTORY", "SALES", "PROJECTS", "CUSTOMERS", "DASHBOARD", "EMPLOYEES"].map(mod => (
-              <Form.Check
-                key={mod}
-                type="checkbox"
-                label={mod}
-                checked={formData.moduleAccess && formData.moduleAccess.includes(mod)}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setFormData(prev => {
-                    const current = prev.moduleAccess || [];
-                    return {
-                      ...prev,
-                      moduleAccess: checked
-                        ? [...current, mod]
-                        : current.filter(m => m !== mod)
-                    };
-                  });
-                }}
-              />
+          <Form.Label>System Access Control</Form.Label>
+          <div className="border rounded p-3 bg-white" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <div className="small text-muted mb-2">
+              Select the menus this user should have access to. Admin users have full access by default.
+            </div>
+
+            {/* Import MenuConfig at top, assumed done */}
+            {MenuConfig.filter(m => m.id !== 'home').map(menu => ( /* Skip Home as it's default? Or allow hiding it? Usually Home is basic. */
+              <div key={menu.id} className="mb-3">
+                {/* Main Menu Checkbox */}
+                <Form.Check
+                  type="checkbox"
+                  id={`check-${menu.id}`}
+                  label={<span className="fw-bold">{menu.title}</span>}
+                  checked={formData.moduleAccess && formData.moduleAccess.includes(menu.id)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData(prev => {
+                      const current = new Set(prev.moduleAccess || []);
+
+                      if (checked) {
+                        current.add(menu.id);
+                        // Optional: Select all children too? 
+                        // User might want to just enable the group and then pick specific children.
+                        // Let's Auto-Select children for convenience, but allow unchecking.
+                        menu.subItems.forEach(sub => current.add(sub.id));
+                      } else {
+                        current.delete(menu.id);
+                        // Auto-Deselect children
+                        menu.subItems.forEach(sub => current.delete(sub.id));
+                      }
+
+                      return { ...prev, moduleAccess: Array.from(current) };
+                    });
+                  }}
+                />
+
+                {/* Sub Menu Checkboxes */}
+                <div className="ms-4 mt-1 border-start ps-2">
+                  {menu.subItems.map(sub => (
+                    <Form.Check
+                      key={sub.id}
+                      type="checkbox"
+                      id={`check-${sub.id}`}
+                      label={sub.title || sub.name} // Handle both title keys just in case
+                      checked={formData.moduleAccess && formData.moduleAccess.includes(sub.id)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData(prev => {
+                          const current = new Set(prev.moduleAccess || []);
+                          if (checked) {
+                            current.add(sub.id);
+                            // Auto-select parent if child is selected?
+                            current.add(menu.id);
+                          } else {
+                            current.delete(sub.id);
+                          }
+                          return { ...prev, moduleAccess: Array.from(current) };
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
+          </div>
+        </div>
+
+        {/* Project Roles Access */}
+        <div className="mb-3">
+          <Form.Label>Project Workflow Roles</Form.Label>
+          <div className="border rounded p-3 bg-white">
+            <div className="small text-muted mb-2">
+              Assign roles for Project Workflow Approvals (fetched from current workflow).
+            </div>
+            <div className="d-flex flex-wrap gap-3">
+              {projectWorkflowRoles.length === 0 && <span className="text-muted">Loading roles...</span>}
+              {projectWorkflowRoles.map(role => (
+                <Form.Check
+                  key={role}
+                  type="checkbox"
+                  id={`role-${role}`}
+                  label={role}
+                  checked={formData.projectRoles && formData.projectRoles.includes(role)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData(prev => {
+                      const current = new Set(prev.projectRoles || []);
+                      if (checked) current.add(role);
+                      else current.delete(role);
+                      return { ...prev, projectRoles: Array.from(current) };
+                    });
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
@@ -331,7 +420,7 @@ function EmployeeCreate({ mode }) {
           <Button variant="primary" type="submit" disabled={loading}>{loading ? "Saving..." : "Save Employee"}</Button>
         </div>
       </Form>
-    </Container>
+    </Container >
   );
 }
 

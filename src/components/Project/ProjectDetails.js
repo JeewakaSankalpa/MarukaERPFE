@@ -21,8 +21,23 @@ const ProjectTasks = React.lazy(() => import('../Projects/Tasks/ProjectTasks'));
 export default function ProjectDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { role, user } = useAuth();
+    const { role, user, projectRoles } = useAuth();
     const actor = user?.name || user?.email || 'web';
+
+    // Combine system role and project roles for workflow checks
+    const rolesHeader = useMemo(() => {
+        const roles = [role];
+        if (projectRoles && Array.isArray(projectRoles)) {
+            roles.push(...projectRoles);
+        }
+        return roles.filter(Boolean).join(',');
+    }, [role, projectRoles]);
+
+    // Access Check Helper
+    const userModules = useMemo(() => JSON.parse(localStorage.getItem("moduleAccess") || "[]"), []);
+    const hasAccess = (id) => {
+        return userModules.includes(id);
+    };
 
     const [project, setProject] = useState(null);
     const [actions, setActions] = useState(null);
@@ -102,7 +117,7 @@ export default function ProjectDetails() {
                 setLoading(true);
                 const [p, a] = await Promise.all([
                     api.get(`/projects/details/${id}`),
-                    api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': role ?? '' } }),
+                    api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': rolesHeader } }),
                 ]);
                 if (!alive) return;
                 setProject(p.data || null);
@@ -126,7 +141,7 @@ export default function ProjectDetails() {
         try {
             const [p, a] = await Promise.all([
                 api.get(`/projects/details/${id}`),
-                api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': role ?? '' } }),
+                api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': rolesHeader } }),
             ]);
             setProject(p.data || null);
             setActions(a.data || null);
@@ -145,7 +160,7 @@ export default function ProjectDetails() {
             await api.post(
                 `/projects/${id}/stages/${stageId}/approve`,
                 { status, comment },
-                { headers: { 'X-Roles': role ?? '' } }
+                { headers: { 'X-Roles': rolesHeader } }
             );
             toast.success(status === 'APPROVED' ? 'Approved' : 'Rejected');
             setComment('');
@@ -165,7 +180,7 @@ export default function ProjectDetails() {
             await api.post(
                 `/projects/${id}/move`,
                 to ? { to } : {},
-                { headers: { 'X-Roles': role ?? '' } }
+                { headers: { 'X-Roles': rolesHeader } }
             );
             toast.success(to ? `Moved to ${to}` : 'Moved to next stage');
             await refresh();
@@ -257,11 +272,13 @@ export default function ProjectDetails() {
                             Inventory
                         </button>
                     </li>
-                    <li className="nav-item">
-                        <button className={`nav-link ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
-                            Payments
-                        </button>
-                    </li>
+                    {hasAccess('projects.payments') && (
+                        <li className="nav-item">
+                            <button className={`nav-link ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
+                                Payments
+                            </button>
+                        </li>
+                    )}
                     <li className="nav-item">
                         <button className={`nav-link ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
                             Tasks
@@ -441,29 +458,33 @@ export default function ProjectDetails() {
 
                         {/* Files & Estimation row */}
                         <Row className="g-3 mt-1">
-                            <Col lg={6}>
-                                <Card className="h-100">
-                                    <Card.Header className="d-flex justify-content-between align-items-center">
-                                        <span>Files</span>
-                                        <Badge bg="secondary">{stageObj?.stageType || '—'}</Badge>
-                                    </Card.Header>
-                                    <Card.Body style={{ overflowY: 'auto' }}>
-                                        <ProjectFiles
-                                            id={id}
-                                            actions={actions}
-                                            stageObj={stageObj}
-                                            roleHeader={{ 'X-Roles': role ?? '' }}
-                                            onAfterChange={refresh}
-                                            reloadKey={filesReloadKey}
-                                        />
-                                    </Card.Body>
-                                </Card>
-                            </Col>
+                            {hasAccess('projects.files') && (
+                                <Col lg={6}>
+                                    <Card className="h-100">
+                                        <Card.Header className="d-flex justify-content-between align-items-center">
+                                            <span>Files</span>
+                                            <Badge bg="secondary">{stageObj?.stageType || '—'}</Badge>
+                                        </Card.Header>
+                                        <Card.Body style={{ overflowY: 'auto' }}>
+                                            <ProjectFiles
+                                                id={id}
+                                                actions={actions}
+                                                stageObj={stageObj}
+                                                roleHeader={{ 'X-Roles': rolesHeader }}
+                                                onAfterChange={refresh}
+                                                reloadKey={filesReloadKey}
+                                            />
+                                        </Card.Body>
+                                    </Card>
+                                </Col>
+                            )}
 
                             {/* Estimation summary / actions */}
-                            <Col lg={6}>
-                                <ProjectEstimationCard projectId={id} onOpen={() => { /* optional hook */ }} />
-                            </Col>
+                            {hasAccess('projects.estimation') && (
+                                <Col lg={6}>
+                                    <ProjectEstimationCard projectId={id} onOpen={() => { /* optional hook */ }} />
+                                </Col>
+                            )}
                         </Row>
 
                         {/* Approvals history */}
