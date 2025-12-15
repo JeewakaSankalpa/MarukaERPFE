@@ -1,11 +1,13 @@
 // src/components/customer/CustomerList.js
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Container, Form } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 
 function CustomerView({ onEditCustomer }) {
     const [customers, setCustomers] = useState([]);
     const [searchMobile, setSearchMobile] = useState('');
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchCustomers();
@@ -66,7 +68,8 @@ function CustomerView({ onEditCustomer }) {
                     value={searchMobile}
                     onChange={(e) => setSearchMobile(e.target.value)}
                 />
-                <Button variant="primary" onClick={handleSearch}>Search</Button>
+                <Button variant="primary" onClick={handleSearch} className="me-2">Search</Button>
+                <Button variant="success" onClick={() => navigate('/customer/create')}>+ Create Customer</Button>
             </Form>
             <div
                 style={{ height: `${0.6 * windowSize.height}px`, display: "flex", flexDirection: "column", overflowY: "scroll" }}

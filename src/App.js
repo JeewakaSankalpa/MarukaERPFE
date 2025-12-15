@@ -197,6 +197,7 @@ function App() {
 
                         {/* Supplier / Product */}
                         <Route path="/supplier/create" element={<SupplierCreate />} />
+                        <Route path="/supplier/search" element={<SupplierView />} />
                         <Route path="/product/create" element={<ProductCreate />} />
 
                         {/* Requests / Stores / PO / GRN */}
