@@ -125,6 +125,7 @@ function NewSideBar() {
 
   return (
     <div
+      className="sidebar-container no-print"
       style={{
         display: "flex",
         flexDirection: "column",

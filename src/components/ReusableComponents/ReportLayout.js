@@ -50,7 +50,7 @@ const ReportLayout = ({ title, children, orientation = "portrait" }) => {
                 <div className="d-flex align-items-center gap-3">
                     <img src={logo} alt="Company Logo" style={{ height: "60px", width: "auto" }} />
                     <div className="company-info">
-                        <h2>Maruka ERP</h2>
+                        <h2>Maruka Technologies</h2>
                         <p>123 Business Rd, Colombo, Sri Lanka</p>
                         <p>Reg No: PV12345 | Tel: +94 11 234 5678</p>
                     </div>

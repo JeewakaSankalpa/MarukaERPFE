@@ -82,11 +82,11 @@ body,
 @media print {
 
     .sidebar,
+    .sidebar-container,
     .header,
     .no-print,
     button,
-    .btn,
-    .app-container> :not(.main-content) {
+    .btn {
         display: none !important;
     }
 

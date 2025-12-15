@@ -16,44 +16,44 @@ const Header = () => {
   }, []);
 
   return (
-      <header style={styles.main}>
-        {/* Left Section - Logo */}
-        <div style={styles.leftSection}>
-          <img src={logo} alt="Maruka Logo" style={styles.logoImage} />
+    <header style={styles.main} className="no-print">
+      {/* Left Section - Logo */}
+      <div style={styles.leftSection}>
+        <img src={logo} alt="Maruka Logo" style={styles.logoImage} />
+      </div>
+
+      {/* Center Section - Profile Info */}
+      <div style={styles.centerSection}>
+        <div style={styles.profile}>
+          <img
+            src={`https://ui-avatars.com/api/?name=${username || "User"}&background=3b82f6&color=fff`}
+            alt="User"
+            style={styles.profilePicture}
+          />
+          <div>
+            <h3 style={styles.profileName}>{username || "User"}</h3>
+            <p style={styles.profileDetails}>
+              {role || userType || ""}
+            </p>
+          </div>
         </div>
 
-        {/* Center Section - Profile Info */}
-        <div style={styles.centerSection}>
-          <div style={styles.profile}>
-            <img
-                src={`https://ui-avatars.com/api/?name=${username || "User"}&background=3b82f6&color=fff`}
-                alt="User"
-                style={styles.profilePicture}
-            />
-            <div>
-              <h3 style={styles.profileName}>{username || "User"}</h3>
-              <p style={styles.profileDetails}>
-                {role || userType || ""}
-              </p>
-            </div>
-          </div>
-
-          <span style={styles.dateTime}>
+        <span style={styles.dateTime}>
           {currentTime.toLocaleTimeString()} &nbsp; {new Date().toLocaleDateString()}
         </span>
-        </div>
+      </div>
 
-        {/* Right Section - Notifications & Logout */}
-        <div style={styles.rightSection}>
-          <div style={styles.notification}>
-            <Bell size={20} color={Colors.white} />
-            <span style={styles.notificationCount}>1</span>
-          </div>
-          <Button variant="danger" onClick={logout}>
-            <FaSignOutAlt /> Logout
-          </Button>
+      {/* Right Section - Notifications & Logout */}
+      <div style={styles.rightSection}>
+        <div style={styles.notification}>
+          <Bell size={20} color={Colors.white} />
+          <span style={styles.notificationCount}>1</span>
         </div>
-      </header>
+        <Button variant="danger" onClick={logout}>
+          <FaSignOutAlt /> Logout
+        </Button>
+      </div>
+    </header>
   );
 };
 
