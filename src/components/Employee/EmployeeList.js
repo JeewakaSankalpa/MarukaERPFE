@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 function EmployeeList() {
     const navigate = useNavigate();
     const [employees, setEmployees] = useState([]);
+    const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -15,12 +16,16 @@ function EmployeeList() {
 
     const fetchEmployees = async () => {
         try {
-            const response = await api.get("/employee/all");
-            setEmployees(response.data || []);
+            const [empRes, depRes] = await Promise.all([
+                api.get("/employee/all"),
+                api.get("/departments?size=1000") // Fetch all for lookup
+            ]);
+            setEmployees(empRes.data || []);
+            setDepartments(depRes.data?.content || []);
             setLoading(false);
         } catch (error) {
-            console.error("Failed to fetch employees", error);
-            toast.error("Failed to fetch employees");
+            console.error("Failed to fetch data", error);
+            toast.error("Failed to fetch employees/departments");
             setLoading(false);
         }
     };
@@ -68,7 +73,7 @@ function EmployeeList() {
                                 <small className="text-muted">{emp.designation}</small>
                             </td>
                             <td>{emp.role}</td>
-                            <td>{emp.department?.name || emp.departmentId || "-"}</td>
+                            <td>{departments.find(d => d.id === emp.departmentId)?.name || emp.departmentId || "-"}</td>
                             <td>{emp.reportsToEmployeeId ? "Yes" : "-"}</td>
                             <td>
                                 {emp.active ? <Badge bg="success">Active</Badge> : <Badge bg="danger">Inactive</Badge>}

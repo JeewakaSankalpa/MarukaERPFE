@@ -65,27 +65,27 @@ function SupplierList({ onOpen }) {
 
                 <Table hover responsive>
                     <thead>
-                    <tr>
-                        <th>Name</th><th>Code</th><th>Phone</th><th>Email</th><th>Status</th><th></th>
-                    </tr>
+                        <tr>
+                            <th>Name</th><th>Code</th><th>Phone</th><th>Email</th><th>Status</th><th></th>
+                        </tr>
                     </thead>
                     <tbody>
-                    {(data.content || []).map(row => (
-                        <tr key={row.id}>
-                            <td><Button variant="link" onClick={() => onOpen(row.id)}>{row.name}</Button></td>
-                            <td>{row.supplierCode || "-"}</td>
-                            <td>{row.phone || "-"}</td>
-                            <td>{row.email || "-"}</td>
-                            <td>
-                                <Badge bg={row.status === "ACTIVE" ? "success" : "danger"}>{row.status}</Badge>
-                            </td>
-                            <td>
-                                <Button size="sm" variant="link" onClick={() => toggleStatus(row)}>
-                                    {row.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                                </Button>
-                            </td>
-                        </tr>
-                    ))}
+                        {(data.content || []).map(row => (
+                            <tr key={row.id}>
+                                <td><Button variant="link" onClick={() => onOpen(row.id)}>{row.name}</Button></td>
+                                <td>{row.supplierCode || "-"}</td>
+                                <td>{row.phone || "-"}</td>
+                                <td>{row.email || "-"}</td>
+                                <td>
+                                    <Badge bg={row.status === "ACTIVE" ? "success" : "danger"}>{row.status}</Badge>
+                                </td>
+                                <td>
+                                    <Button size="sm" variant="link" onClick={() => toggleStatus(row)}>
+                                        {row.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                                    </Button>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </Table>
 
@@ -129,7 +129,7 @@ function SupplierForm({ id, onClose, onSaved }) {
 
     const bind = (k, sub) => e => {
         const v = e.target.value;
-        if (sub) setForm(f => ({ ...f, [k]: { ...(f[k] || {}), [sub]: v }}));
+        if (sub) setForm(f => ({ ...f, [k]: { ...(f[k] || {}), [sub]: v } }));
         else setForm(f => ({ ...f, [k]: v }));
     };
 
@@ -137,6 +137,23 @@ function SupplierForm({ id, onClose, onSaved }) {
         e.preventDefault();
         setValidated(true);
         if (!form.name) return;
+
+        // Validation Logic
+        const emailRegex = /[^@\s]+@[^@\s]+\.[^@\s]+/;
+        if (!form.email || !emailRegex.test(form.email)) {
+            toast.error("Invalid Email");
+            return;
+        }
+        if (!form.phone || form.phone.length < 10) {
+            toast.error("Phone must be at least 10 digits");
+            return;
+        }
+        const addr = form.address || {};
+        if (!addr.city || !addr.country) {
+            toast.error("City and Country are required");
+            return;
+        }
+
         try {
             const payload = {
                 name: form.name,
@@ -180,9 +197,9 @@ function SupplierForm({ id, onClose, onSaved }) {
                     )}
 
                     <Form.Group className="mb-3">
-                        <Form.Label>Name</Form.Label>
+                        <Form.Label>Name <span className="text-danger">*</span></Form.Label>
                         <Form.Control required isInvalid={validated && !form.name}
-                                      value={form.name} onChange={bind("name")} disabled={!isEditMode} />
+                            value={form.name} onChange={bind("name")} disabled={!isEditMode} />
                         <Form.Control.Feedback type="invalid">Name is required.</Form.Control.Feedback>
                     </Form.Group>
 
@@ -207,24 +224,51 @@ function SupplierForm({ id, onClose, onSaved }) {
                     <Row className="g-3 mt-1">
                         <Col md={6}>
                             <Form.Group>
-                                <Form.Label>Email</Form.Label>
-                                <Form.Control value={form.email} onChange={bind("email")} disabled={!isEditMode} />
+                                <Form.Label>Email <span className="text-danger">*</span></Form.Label>
+                                <Form.Control
+                                    required
+                                    type="email"
+                                    pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                                    isInvalid={validated && (!form.email || !/[^@\s]+@[^@\s]+\.[^@\s]+/.test(form.email))}
+                                    value={form.email}
+                                    onChange={bind("email")}
+                                    disabled={!isEditMode}
+                                />
+                                <Form.Control.Feedback type="invalid">Valid email is required.</Form.Control.Feedback>
                             </Form.Group>
                         </Col>
                         <Col md={6}>
                             <Form.Group>
-                                <Form.Label>Phone</Form.Label>
-                                <Form.Control value={form.phone} onChange={bind("phone")} disabled={!isEditMode} />
+                                <Form.Label>Phone <span className="text-danger">*</span></Form.Label>
+                                <Form.Control
+                                    required
+                                    pattern="\d{10,}"
+                                    isInvalid={validated && (!form.phone || form.phone.length < 10)}
+                                    value={form.phone}
+                                    onChange={bind("phone")}
+                                    disabled={!isEditMode}
+                                />
+                                <Form.Control.Feedback type="invalid">Phone must be at least 10 digits.</Form.Control.Feedback>
                             </Form.Group>
                         </Col>
                     </Row>
 
                     <Row className="g-3 mt-1">
-                        {["line1","line2","city","state","postalCode","country"].map(k => (
+                        {["line1", "line2", "city", "state", "postalCode", "country"].map(k => (
                             <Col md={k === "line1" || k === "line2" ? 12 : 4} key={k}>
                                 <Form.Group>
-                                    <Form.Label>{k}</Form.Label>
-                                    <Form.Control value={(form.address||{})[k] || ""} onChange={bind("address", k)} disabled={!isEditMode} />
+                                    <Form.Label>
+                                        {k.charAt(0).toUpperCase() + k.slice(1)}
+                                        {(k === "city" || k === "country") && <span className="text-danger">*</span>}
+                                    </Form.Label>
+                                    <Form.Control
+                                        required={k === "city" || k === "country"}
+                                        isInvalid={validated && (k === "city" || k === "country") && !(form.address || {})[k]}
+                                        value={(form.address || {})[k] || ""}
+                                        onChange={bind("address", k)}
+                                        disabled={!isEditMode}
+                                    />
+                                    <Form.Control.Feedback type="invalid">{k} is required.</Form.Control.Feedback>
                                 </Form.Group>
                             </Col>
                         ))}

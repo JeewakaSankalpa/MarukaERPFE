@@ -5,7 +5,7 @@ export const MenuConfig = [
         icon: "FaHome",
         roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"],
         subItems: [
-            { id: "home.dashboard", title: "Dashboard", path: "/admin", roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"] },
+            { id: "home.dashboard", title: "Main Dashboard", path: "/admin", roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"] },
             // Dashboard Tiles (Hidden from Sidebar, used for Permissions)
             { id: "dashboard.pending_approvals", title: "Widget: Pending Approvals", path: "#", hidden: true, roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] },
             { id: "dashboard.my_attendance", title: "Widget: My Attendance", path: "#", hidden: true, roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] },
@@ -40,8 +40,7 @@ export const MenuConfig = [
             { id: "inventory.fulfil", title: "Fulfil Requests", path: "/stores/fulfil-requests" },
             { id: "inventory.return", title: "Returns", path: "/inventory/return" },
             { id: "inventory.reports", title: "Reports", path: "/reports" },
-            { id: "inventory.manufacturer", title: "Manufacturers", path: "/manufacturer/search", roles: ["ADMIN", "STORE_KEEPER"] },
-            { id: "inventory.store", title: "Stores", path: "/store/search", roles: ["ADMIN", "STORE_KEEPER"] },
+
         ]
     },
     {
@@ -88,8 +87,7 @@ export const MenuConfig = [
         roles: ["ADMIN", "MANAGER"],
         subItems: [
             { id: "finance.assets", title: "Asset Register", path: "/assets" },
-            { id: "finance.invoice", title: "Invoices", path: "/invoice/create", roles: ["ADMIN", "MANAGER"] },
-            { id: "finance.sales_reports", title: "Sales Reports", path: "/sales-report", roles: ["ADMIN", "MANAGER"] },
+
         ]
     },
     {
