@@ -24,6 +24,7 @@ export const MenuConfig = [
             // Component-Level Permissions (Hidden from Sidebar)
             { id: "projects.payments", title: "Access Payments", path: "#", hidden: true },
             { id: "projects.files", title: "Access Files", path: "#", hidden: true },
+            { id: "projects.delivery", title: "Access Delivery Schedule", path: "#", hidden: true },
         ]
     },
     {

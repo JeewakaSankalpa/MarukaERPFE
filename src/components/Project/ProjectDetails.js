@@ -14,6 +14,7 @@ const ProjectEstimationCard = React.lazy(() => import('./ProjectEstimationCard')
 const ProjectPaymentsCard = React.lazy(() => import('./ProjectPaymentsCard'));
 const ProjectInventoryCard = React.lazy(() => import('./ProjectInventoryCard'));
 const ProjectTasks = React.lazy(() => import('../Projects/Tasks/ProjectTasks'));
+const DeliveryScheduleCard = React.lazy(() => import('./DeliveryScheduleCard'));
 
 /**
  * Main Project Details Page.
@@ -458,6 +459,11 @@ export default function ProjectDetails() {
 
                         {/* Files & Estimation row */}
                         <Row className="g-3 mt-1">
+                            {/* Delivery Schedule - Visible to all with project access for now */}
+                            <Col lg={12}>
+                                <DeliveryScheduleCard projectId={id} />
+                            </Col>
+
                             {hasAccess('projects.files') && (
                                 <Col lg={6}>
                                     <Card className="h-100">

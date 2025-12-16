@@ -94,7 +94,7 @@ export default function DeliveryScheduleCard({ projectId }) {
                         <FaFilePdf /> Gate Pass
                     </Button>
                     <Button variant="outline-success" size="sm" onClick={() => downloadPdf('confirmation')} disabled={!data.id}>
-                        <FaFilePdf /> Confirmation
+                        <FaFilePdf /> Delivery Note
                     </Button>
                 </div>
             </Card.Header>
