@@ -151,7 +151,7 @@ const ProjectTasks = ({ projectId }) => {
                             <Form.Label>Assign To</Form.Label>
                             <Form.Select value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })}>
                                 <option value="">Unassigned</option>
-                                {employees.map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
+                                {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
                             </Form.Select>
                         </Form.Group>
                         <Form.Group className="mb-2">

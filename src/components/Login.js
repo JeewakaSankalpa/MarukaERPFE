@@ -30,8 +30,6 @@ const Login = () => {
       setTimeout(() => {
         if (userType === "CUSTOMER") {
           navigate("/customer/home");
-        } else if (role === "ADMIN") {
-          navigate("/admin");
         } else {
           navigate("/dashboard");
         }

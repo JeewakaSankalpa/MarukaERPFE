@@ -50,7 +50,7 @@ function NewSideBar() {
     // If it's a top-level menu (e.g. Projects), we simply check if they have ANY child OR the parent ID?
     // Implementation Plan said: "user.moduleAccess.includes(menuItem.id)"
     // If undefined ID (like Home?), pass.
-    if (!item.id) return true;
+    if (!item.id || item.id === "home") return true;
 
     // Check if ID is in access list
     // Also, legacy support: if they have "PROJECTS" (old style), maybe map it? 
@@ -79,7 +79,7 @@ function NewSideBar() {
   const menus = MenuConfig.map(menu => ({
     ...menu,
     icon: iconMap[menu.icon] || <FaHome size={18} />, // Fallback
-    icon: iconMap[menu.icon] || <FaHome size={18} />, // Fallback
+
     submenus: menu.subItems.map(item => ({ ...item, name: item.title })) // Map 'title' to 'name' to fix display issue
   })).map(menu => {
     // Filter submenus first
@@ -168,7 +168,7 @@ function NewSideBar() {
                   backgroundColor: isActiveGroup ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                   cursor: 'pointer'
                 }}
-                onClick={() => !collapsed && navigate(menu.submenus[0].path)}
+                onClick={() => !collapsed && navigate(menu.submenus[0]?.path || menu.path)}
               >
                 <span className={isActiveGroup ? 'text-info' : ''}>{menu.icon}</span>
                 {!collapsed && (

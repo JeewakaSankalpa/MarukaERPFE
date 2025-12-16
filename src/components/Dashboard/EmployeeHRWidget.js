@@ -24,7 +24,7 @@ export default function EmployeeHRWidget({ user }) {
             }
 
             // Load Leave Quota
-            const leaveRes = await api.get(`/api/leave/quota/${employeeId}`);
+            const leaveRes = await api.get(`/leave/quota/${employeeId}`);
             setLeave(leaveRes.data);
 
         } catch (e) {

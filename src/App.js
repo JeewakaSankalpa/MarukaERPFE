@@ -150,7 +150,6 @@ function App() {
                     {/* Protected */}
                     <Route element={<PrivateRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/admin" element={<AdminDashboard />} />
                         <Route path="/admin/config" element={<SystemConfiguration />} />
                         {/* <Route path="/customerDashboard" element={<CustomerDashboard />} /> */}
 

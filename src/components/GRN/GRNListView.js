@@ -12,6 +12,7 @@ export default function GRNListView() {
     const [page, setPage] = useState(0);
     const [data, setData] = useState({ content: [], totalPages: 0 });
     const [selectedGRN, setSelectedGRN] = useState(null); // For payment modal
+    const [selectedGRNItems, setSelectedGRNItems] = useState(null); // For items modal
 
     const load = async () => {
         try { setData(await listGRNs({ q, page })); }
@@ -83,7 +84,8 @@ export default function GRNListView() {
                                 <td>{g.dueDate}</td>
                                 <td>
                                     <Button size="sm" variant="outline-primary" className="me-2" onClick={() => handleEdit(g)}>Edit</Button>
-                                    <Button size="sm" variant="outline-success" onClick={() => setSelectedGRN(g)}>Payments</Button>
+                                    <Button size="sm" variant="outline-success" className="me-2" onClick={() => setSelectedGRN(g)}>Payments</Button>
+                                    <Button size="sm" variant="outline-dark" onClick={() => setSelectedGRNItems(g)}>Items</Button>
                                 </td>
                             </tr>
                         ))}
@@ -144,8 +146,50 @@ export default function GRNListView() {
             </Modal>
 
             {selectedGRN && <PaymentModal grn={selectedGRN} onClose={() => { setSelectedGRN(null); load(); }} />}
+            {selectedGRNItems && <ItemsModal grn={selectedGRNItems} onClose={() => setSelectedGRNItems(null)} />}
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
+    );
+}
+
+function ItemsModal({ grn, onClose }) {
+    return (
+        <Modal show={true} onHide={onClose} size="lg">
+            <Modal.Header closeButton><Modal.Title>Items in GRN: {grn.grnNumber}</Modal.Title></Modal.Header>
+            <Modal.Body>
+                <div className="table-responsive">
+                    <Table size="sm" bordered hover>
+                        <thead className="bg-light">
+                            <tr>
+                                <th>Product Name</th>
+                                <th>SKU</th>
+                                <th className="text-end">Received Qty</th>
+                                <th className="text-end">Unit Cost</th>
+                                <th className="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(!grn.items || grn.items.length === 0) ? (
+                                <tr><td colSpan="5" className="text-center text-muted">No items found</td></tr>
+                            ) : (
+                                grn.items.map((item, idx) => (
+                                    <tr key={idx}>
+                                        <td>{item.productNameSnapshot || "-"}</td>
+                                        <td>{item.sku || "-"}</td>
+                                        <td className="text-end">{item.receivedQty} {item.unit}</td>
+                                        <td className="text-end">{item.unitCost?.toFixed(2)}</td>
+                                        <td className="text-end">{(item.receivedQty * (item.unitCost || 0)).toFixed(2)}</td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </Table>
+                </div>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="secondary" onClick={onClose}>Close</Button>
+            </Modal.Footer>
+        </Modal>
     );
 }
 

@@ -63,7 +63,7 @@
 // ----------------------------------------------------------------------------------------------------
 
 import React from "react";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const ProjectCard = ({ title, team, timeLeft, progress, icon, path }) => {
   const navigate = useNavigate();
@@ -113,26 +113,7 @@ const ProjectCard = ({ title, team, timeLeft, progress, icon, path }) => {
       <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "8px" }}>
         {timeLeft} Left
       </p>
-      <div
-        style={{
-          width: "100%",
-          height: "8px",
-          backgroundColor: "#e5e7eb", // gray-200
-          borderRadius: "6px",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            height: "100%",
-            backgroundColor: "#3b82f6", // blue-500
-            width: `${safeProgress}%`,
-          }}
-        ></div>
-      </div>
-      <p style={{ fontSize: "14px", color: "#4b5563", marginTop: "6px" }}>
-        Progress: {safeProgress}%
-      </p>
+
     </div>
   );
 };

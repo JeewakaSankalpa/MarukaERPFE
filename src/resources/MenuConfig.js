@@ -1,12 +1,12 @@
 export const MenuConfig = [
     {
         id: "home",
-        title: "Home",
+        title: "Dashboard",
         icon: "FaHome",
+        path: "/dashboard", // Direct Link
         roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"],
         subItems: [
-            { id: "home.dashboard", title: "Main Dashboard", path: "/admin", roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"] },
-            // Dashboard Tiles (Hidden from Sidebar, used for Permissions)
+            // Hidden logical items
             { id: "dashboard.pending_approvals", title: "Widget: Pending Approvals", path: "#", hidden: true, roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] },
             { id: "dashboard.my_attendance", title: "Widget: My Attendance", path: "#", hidden: true, roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] },
         ]
