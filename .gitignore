@@ -13,6 +13,7 @@
 
 # misc
 .DS_Store
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -34,4 +35,10 @@ installers/
 *.rpm
 *.zip
 *.tar.gz
+
+# Excessive Logging
+*_test_log*.txt
+debug_log*.txt
+all_tests.txt
+test_logs.txt
 
