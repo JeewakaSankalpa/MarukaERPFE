@@ -15,6 +15,9 @@ const ProjectPaymentsCard = React.lazy(() => import('./ProjectPaymentsCard'));
 const ProjectInventoryCard = React.lazy(() => import('./ProjectInventoryCard'));
 const ProjectTasks = React.lazy(() => import('../Projects/Tasks/ProjectTasks'));
 const DeliveryScheduleCard = React.lazy(() => import('./DeliveryScheduleCard'));
+// New Components
+const ProjectLifecycle = React.lazy(() => import('./ProjectLifecycle'));
+const ProjectRevisions = React.lazy(() => import('./ProjectRevisions'));
 
 /**
  * Main Project Details Page.
@@ -261,11 +264,21 @@ export default function ProjectDetails() {
                 </div>
             )}
 
+            {/* Lifecycle Widget */}
+            <Suspense fallback={<div>Loading...</div>}>
+                <ProjectLifecycle stages={project?.stages || []} currentStage={project?.currentStageId} status={project?.status} />
+            </Suspense>
+
             <div className="mb-3">
                 <ul className="nav nav-tabs">
                     <li className="nav-item">
                         <button className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
                             Dashboard
+                        </button>
+                    </li>
+                    <li className="nav-item">
+                        <button className={`nav-link ${activeTab === 'revisions' ? 'active' : ''}`} onClick={() => setActiveTab('revisions')}>
+                            Revisions {project?.revisionCount > 0 && <Badge bg="secondary" pill>{project.revisionCount}</Badge>}
                         </button>
                     </li>
                     <li className="nav-item">
@@ -536,6 +549,16 @@ export default function ProjectDetails() {
                             </Col>
                         </Row>
                     </>
+                )}
+
+                {activeTab === 'revisions' && (
+                    <ProjectRevisions
+                        projectId={id}
+                        versions={project?.versions}
+                        roleHeader={{ 'X-Roles': rolesHeader }} // or however your API expects roles, likely just implicit or in useAuth
+                        onRevise={refresh}
+                        activeStage={project?.currentStageId}
+                    />
                 )}
 
                 {activeTab === 'inventory' && (

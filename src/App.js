@@ -67,6 +67,8 @@ import AttendancePage from "./components/Employee/AttendancePage";
 import AssetRegister from "./components/Assets/AssetRegister";
 import QuotationPrint from "./components/Projects/QuotationPrint";
 import InvoiceView from "./components/Projects/InvoiceView";
+import QuotationList from "./components/Sales/QuotationList";
+import QuotationPage from "./components/Sales/QuotationPage";
 
 /* ---------------- Layout ---------------- */
 function Layout({ children }) {
@@ -223,6 +225,11 @@ function App() {
                         <Route path="/reports/leave" element={<LeaveUtilizationReport />} />
                         <Route path="/reports/stock" element={<StockValuationReport />} />
                         <Route path="/assets" element={<AssetRegister />} />
+
+                        {/* Sales & Quotations */}
+                        <Route path="/sales/quotations" element={<QuotationList />} />
+                        <Route path="/sales/quotations/new" element={<QuotationPage />} />
+                        <Route path="/sales/quotations/:id" element={<QuotationPage />} />
                     </Route>
 
                     {/* Fallback */}

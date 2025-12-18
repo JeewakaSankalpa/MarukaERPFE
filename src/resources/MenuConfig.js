@@ -82,12 +82,12 @@ export const MenuConfig = [
     },
     {
         id: "finance",
-        title: "Finance",
+        title: "Sales & Finance",
         icon: "FaBriefcase",
         roles: ["ADMIN", "MANAGER"],
         subItems: [
+            { id: "finance.quotations", title: "Quotations", path: "/sales/quotations" },
             { id: "finance.assets", title: "Asset Register", path: "/assets" },
-
         ]
     },
     {

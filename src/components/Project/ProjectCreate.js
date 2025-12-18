@@ -148,9 +148,7 @@ const ProjectForm = () => {
         formData.append("project", projectBlob);
         files.forEach((file) => formData.append("files", file));
 
-        const response = await api.post("/projects/create", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        const response = await api.post("/projects/create", formData);
 
         setProjectData((prev) => ({ ...prev, ...response.data }));
         setIsEditMode(false);
@@ -184,8 +182,7 @@ const ProjectForm = () => {
             files.forEach((f) => fd.append("files", f));
             const upRes = await api.post(
               `/projects/${routeId}/files`,
-              fd,
-              { headers: { "Content-Type": "multipart/form-data" } }
+              fd
             );
             // merge new URLs with existing
             const newUrls = (upRes.data || []).map((x) =>
@@ -233,9 +230,9 @@ const ProjectForm = () => {
             <h2 className="mb-4" style={{ fontSize: "1.5rem" }}>
               {routeId
                 ? isEditMode
-                  ? "Edit Project"
-                  : "View Project"
-                : "Create New Project"}
+                  ? "Edit Inquiry"
+                  : "View Inquiry"
+                : "Create New Inquiry"}
             </h2>
 
             {routeId && (
@@ -258,7 +255,7 @@ const ProjectForm = () => {
             )}
 
             <Form.Group controlId="projectName" className="mb-3">
-              <Form.Label>Project Name</Form.Label>
+              <Form.Label>Inquiry Name</Form.Label>
               <Form.Control
                 type="text"
                 name="projectName"
@@ -422,7 +419,7 @@ const ProjectForm = () => {
 
             {(!routeId || isEditMode) && (
               <Button variant="success" type="submit" className="w-100 mt-3">
-                {routeId ? "Update Project" : "Save Project"}
+                {routeId ? "Update Inquiry" : "Create New Inquiry"}
               </Button>
             )}
           </Form>

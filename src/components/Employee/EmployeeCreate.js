@@ -53,14 +53,14 @@ function EmployeeCreate({ mode }) {
 
         // Fetch Workflow Roles
         try {
-          const wfRes = await api.get("/projects/workflow/roles");
+          const wfRes = await api.get("/workflow/roles");
           setProjectWorkflowRoles(wfRes.data || []);
         } catch (e) {
           console.error("Failed to fetch workflow roles", e);
         }
-
-      } catch (e) {
-        console.error("Failed to load dropdowns", e);
+      } catch (error) {
+        console.error("Failed to fetch dropdown data", error);
+        toast.error("Failed to load dropdown data.");
       }
     };
     fetchDropdowns();

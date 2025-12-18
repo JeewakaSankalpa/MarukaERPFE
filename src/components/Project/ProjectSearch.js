@@ -82,7 +82,12 @@ function ProjectSearch() {
 
     return (
         <Container className="my-5">
-            <h2 className="text-center mb-4">Projects</h2>
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2 className="mb-0">Projects</h2>
+                <Button variant="primary" onClick={() => navigate('/projects/create')}>
+                    Create New Inquiry
+                </Button>
+            </div>
 
             <Form className="mb-3">
                 <Row className="g-2">
@@ -131,36 +136,35 @@ function ProjectSearch() {
             <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                 <Table bordered hover responsive className="text-center">
                     <thead className="table-primary">
-                    <tr>
-                        <th>Project ID</th>
-                        <th>Client</th>
-                        <th>Sales Rep</th>
-                        <th>Status</th>
-                        <th style={{ width: 120 }}>Actions</th>
-                    </tr>
+                        <tr>
+                            <th>Project ID</th>
+                            <th>Project Name</th>
+                            <th>Client</th>
+                            <th>Sales Rep</th>
+                            <th>Status</th>
+                            <th style={{ width: 120 }}>Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    {loading ? (
-                        <tr><td colSpan={5}><Spinner animation="border" size="sm" /> Loading...</td></tr>
-                    ) : rows.length === 0 ? (
-                        <tr><td colSpan={5}>No projects found</td></tr>
-                    ) : rows.map(r => (
-                        <tr key={r.id}>
-                            <td>{r.id}</td>
-                            <td>{r.customerName || '-'}</td>
-                            <td>{r.salesRepName || '-'}</td>
-                            <td>{r.status || '-'}</td>
+                        {loading ? (
+                            <tr><td colSpan={5}><Spinner animation="border" size="sm" /> Loading...</td></tr>
+                        ) : rows.length === 0 ? (
+                            <tr><td colSpan={5}>No projects found</td></tr>
+                        ) : rows.map(r => (
+                            <tr key={r.id}>
+                                <td>{r.id}</td>
+                                <td>{r.projectName || '-'}</td>
+                                <td>{r.customerName || '-'}</td>
+                                <td>{r.salesRepName || '-'}</td>
+                                <td>{r.status || '-'}</td>
 
-                            <td className="d-flex gap-2 justify-content-center">
-                                <Button size="sm" variant="warning" onClick={() => openDetails(r.id)}>
-                                    Edit
-                                </Button>
-                                <Button size="sm" variant="info" onClick={() => navigate(`/projects/manage/${r.id}`)}>
-                                    Manage
-                                </Button>
-                            </td>
-                        </tr>
-                    ))}
+                                <td className="d-flex gap-2 justify-content-center">
+                                    <Button size="sm" variant="info" onClick={() => navigate(`/projects/manage/${r.id}`)}>
+                                        Manage
+                                    </Button>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </Table>
             </div>
@@ -180,8 +184,8 @@ function ProjectSearch() {
                     ) : (
                         <>
                             <div className="mb-3">
-                                <strong>Name:</strong> {project.projectName}<br/>
-                                <strong>Status:</strong> {project.status}<br/>
+                                <strong>Name:</strong> {project.projectName}<br />
+                                <strong>Status:</strong> {project.status}<br />
                                 <strong>Comment:</strong> {project.comment || '-'}
                             </div>
 
@@ -191,27 +195,27 @@ function ProjectSearch() {
                             ) : (
                                 <Table size="sm" bordered>
                                     <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th style={{ width: 140 }}>Actions</th>
-                                    </tr>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th style={{ width: 140 }}>Actions</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
-                                    {files.map(f => (
-                                        <tr key={f.url}>
-                                            <td className="text-break">{f.name}</td>
-                                            <td className="d-flex gap-2 justify-content-center">
-                                                {/* View in new tab */}
-                                                <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">
-                                                    View
-                                                </a>
-                                                {/* Download (works with signed URLs too) */}
-                                                <a className="btn btn-sm btn-success" href={f.url} download>
-                                                    Download
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                        {files.map(f => (
+                                            <tr key={f.url}>
+                                                <td className="text-break">{f.name}</td>
+                                                <td className="d-flex gap-2 justify-content-center">
+                                                    {/* View in new tab */}
+                                                    <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">
+                                                        View
+                                                    </a>
+                                                    {/* Download (works with signed URLs too) */}
+                                                    <a className="btn btn-sm btn-success" href={f.url} download>
+                                                        Download
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </Table>
                             )}

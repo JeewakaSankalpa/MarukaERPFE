@@ -1,7 +1,8 @@
 // src/components/admin/WorkflowBuilder.js
 import React, { useEffect, useMemo, useState } from "react";
 import { Row, Col, Card, Button, Form, Table, Badge } from "react-bootstrap";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import api from "../../api/api";
 
 /**
@@ -26,6 +27,7 @@ const emptyFlow = {
     transitions: {},           // { INQUIRY: [{to:"ESTIMATION", roles:["SALES"], notifyRoles:["MANAGER"]}], ... }
     initialStage: "",
     version: 0,
+    stageRevisions: {},        // { INQUIRY: true, ESTIMATION: false ... }
 };
 
 export default function WorkflowBuilder() {
@@ -43,15 +45,15 @@ export default function WorkflowBuilder() {
 
     useEffect(() => {
         (async () => {
-                let toastId;
-                try {
-                    setLoading(true);
-                    toastId = toast.loading("Loading workflow…");
-                    const [wfRes, stagesRes, rolesRes] = await Promise.all([
-                        api.get("/workflow").catch(() => ({ data: null })),
-                        api.get("/workflow/stages").catch(() => ({ data: [] })),
-                        api.get("/roles").catch(() => ({ data: ["ADMIN","APPROVER","SALES","MANAGER"] })),
-                    ]);
+            let toastId;
+            try {
+                setLoading(true);
+                toastId = toast.loading("Loading workflow…");
+                const [wfRes, stagesRes, rolesRes] = await Promise.all([
+                    api.get("/workflow").catch(() => ({ data: null })),
+                    api.get("/workflow/stages").catch(() => ({ data: [] })),
+                    api.get("/roles").catch(() => ({ data: ["ADMIN", "APPROVER", "SALES", "MANAGER"] })),
+                ]);
 
                 const wf = wfRes.data || emptyFlow;
                 const base = {
@@ -62,21 +64,22 @@ export default function WorkflowBuilder() {
                     transitions: wf.transitions || {},
                     initialStage: wf.initialStage || (wf.stages?.[0] || ""),
                     version: wf.version ?? 0,
+                    stageRevisions: wf.stageRevisions || {},
                 };
 
                 setFlow(base);
                 setAllStages(stagesRes.data || []);
                 setRoles(rolesRes.data || []);
-                    toast.update(toastId, { render: "Workflow loaded", type: "success", isLoading: false, autoClose: 1200 });
-                } catch (e) {
-                    console.error(e);
-                    if (toastId) toast.update(toastId, { render: "Failed to load workflow", type: "error", isLoading: false, autoClose: 2500 });
-                    setFlow(emptyFlow);
-                } finally {
-                    setLoading(false);
-                }
-            })();
-        }, []);
+                toast.update(toastId, { render: "Workflow loaded", type: "success", isLoading: false, autoClose: 1200 });
+            } catch (e) {
+                console.error(e);
+                if (toastId) toast.update(toastId, { render: "Failed to load workflow", type: "error", isLoading: false, autoClose: 2500 });
+                setFlow(emptyFlow);
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, []);
 
     // --- Stage management (within the flow) ---
     const addStage = () => {
@@ -89,11 +92,13 @@ export default function WorkflowBuilder() {
         const stages = [...flow.stages, key];
         const requiredApprovals = { ...flow.requiredApprovals, [key]: [] };
         const transitions = { ...flow.transitions, [key]: [] };
+        const stageRevisions = { ...flow.stageRevisions, [key]: false }; // default: false?
         setFlow((f) => ({
             ...f,
             stages,
             requiredApprovals,
             transitions,
+            stageRevisions,
             initialStage: f.initialStage || key,
         }));
         setNewStageName("");
@@ -106,6 +111,7 @@ export default function WorkflowBuilder() {
         const stages = flow.stages.filter((s) => s !== key);
         const { [key]: _a, ...restApprovals } = flow.requiredApprovals;
         const { [key]: _b, ...restTransitions } = flow.transitions;
+        const { [key]: _c, ...restRevisions } = flow.stageRevisions || {};
 
         // Remove transitions TO this stage as well
         const cleanedTransitions = Object.fromEntries(
@@ -120,6 +126,7 @@ export default function WorkflowBuilder() {
             stages,
             requiredApprovals: restApprovals,
             transitions: cleanedTransitions,
+            stageRevisions: restRevisions,
             initialStage: f.initialStage === key ? (stages[0] || "") : f.initialStage,
         }));
     };
@@ -193,20 +200,20 @@ export default function WorkflowBuilder() {
     const emptyRule = { key: "", label: "", required: true, accept: "", minCount: 1, maxCount: undefined, pattern: "" };
 
     const addFileRule = (stage) => {
-        const rules = (flow.fileRequirements?.[stage] || []).concat([ { ...emptyRule } ]);
-        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements||{}), [stage]: rules } }));
+        const rules = (flow.fileRequirements?.[stage] || []).concat([{ ...emptyRule }]);
+        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements || {}), [stage]: rules } }));
     };
 
     const updateFileRule = (stage, idx, patch) => {
         const rules = [...(flow.fileRequirements?.[stage] || [])];
         rules[idx] = { ...rules[idx], ...patch };
-        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements||{}), [stage]: rules } }));
+        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements || {}), [stage]: rules } }));
     };
 
     const removeFileRule = (stage, idx) => {
         const rules = [...(flow.fileRequirements?.[stage] || [])];
         rules.splice(idx, 1);
-        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements||{}), [stage]: rules } }));
+        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements || {}), [stage]: rules } }));
     };
 
     const removeRole = async (name) => {
@@ -324,48 +331,48 @@ export default function WorkflowBuilder() {
                             ) : (
                                 <Table size="sm" bordered>
                                     <tbody>
-                                    {flow.stages.map((s, i) => (
-                                        <tr key={s}>
-                                            <td className="align-middle">
-                                                <Badge bg={s === flow.initialStage ? "primary" : "secondary"}>
-                                                    {s}
-                                                </Badge>
-                                            </td>
-                                            <td className="align-middle">
-                                                <Form.Check
-                                                    type="radio"
-                                                    label="Initial"
-                                                    checked={flow.initialStage === s}
-                                                    onChange={() => setFlow((f) => ({ ...f, initialStage: s }))}
-                                                />
-                                            </td>
-                                            <td className="text-nowrap">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline-secondary"
-                                                    onClick={() => moveStageUp(i)}
-                                                    disabled={i === 0}
-                                                >
-                                                    ↑
-                                                </Button>{" "}
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline-secondary"
-                                                    onClick={() => moveStageDown(i)}
-                                                    disabled={i === flow.stages.length - 1}
-                                                >
-                                                    ↓
-                                                </Button>{" "}
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline-danger"
-                                                    onClick={() => removeStage(s)}
-                                                >
-                                                    Remove
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                        {flow.stages.map((s, i) => (
+                                            <tr key={s}>
+                                                <td className="align-middle">
+                                                    <Badge bg={s === flow.initialStage ? "primary" : "secondary"}>
+                                                        {s}
+                                                    </Badge>
+                                                </td>
+                                                <td className="align-middle">
+                                                    <Form.Check
+                                                        type="radio"
+                                                        label="Initial"
+                                                        checked={flow.initialStage === s}
+                                                        onChange={() => setFlow((f) => ({ ...f, initialStage: s }))}
+                                                    />
+                                                </td>
+                                                <td className="text-nowrap">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline-secondary"
+                                                        onClick={() => moveStageUp(i)}
+                                                        disabled={i === 0}
+                                                    >
+                                                        ↑
+                                                    </Button>{" "}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline-secondary"
+                                                        onClick={() => moveStageDown(i)}
+                                                        disabled={i === flow.stages.length - 1}
+                                                    >
+                                                        ↓
+                                                    </Button>{" "}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline-danger"
+                                                        onClick={() => removeStage(s)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </Table>
                             )}
@@ -456,30 +463,30 @@ export default function WorkflowBuilder() {
                                 <>
                                     <Table bordered size="sm" responsive>
                                         <thead>
-                                        <tr>
-                                            <th>From \ To</th>
-                                            {flow.stages.map((to) => <th key={to}>{to}</th>)}
-                                        </tr>
+                                            <tr>
+                                                <th>From \ To</th>
+                                                {flow.stages.map((to) => <th key={to}>{to}</th>)}
+                                            </tr>
                                         </thead>
                                         <tbody>
-                                        {flow.stages.map((from) => (
-                                            <tr key={from}>
-                                                <td className="fw-semibold">{from}</td>
-                                                {flow.stages.map((to) => {
-                                                    const active = (flow.transitions[from] || []).some(r => r.to === to);
-                                                    return (
-                                                        <td key={`${from}-${to}`} className="text-center">
-                                                            <Form.Check
-                                                                type="checkbox"
-                                                                disabled={from === to}
-                                                                checked={from === to ? false : active}
-                                                                onChange={() => toggleTransition(from, to)}
-                                                            />
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
+                                            {flow.stages.map((from) => (
+                                                <tr key={from}>
+                                                    <td className="fw-semibold">{from}</td>
+                                                    {flow.stages.map((to) => {
+                                                        const active = (flow.transitions[from] || []).some(r => r.to === to);
+                                                        return (
+                                                            <td key={`${from}-${to}`} className="text-center">
+                                                                <Form.Check
+                                                                    type="checkbox"
+                                                                    disabled={from === to}
+                                                                    checked={from === to ? false : active}
+                                                                    onChange={() => toggleTransition(from, to)}
+                                                                />
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </Table>
 
@@ -565,46 +572,48 @@ export default function WorkflowBuilder() {
                                     ) : (
                                         <Table size="sm" bordered responsive className="mb-0">
                                             <thead>
-                                            <tr>
-                                                <th style={{width:140}}>Key</th>
-                                                <th>Label</th>
-                                                <th style={{width:100}}>Required</th>
-                                                <th>Accept</th>
-                                                <th style={{width:110}}>Min</th>
-                                                <th style={{width:110}}>Max</th>
-                                                <th>Pattern (regex)</th>
-                                                <th style={{width:90}}></th>
-                                            </tr>
+                                                <tr>
+                                                    <th style={{ width: 140 }}>Key</th>
+                                                    <th>Label</th>
+                                                    <th style={{ width: 100 }}>Required</th>
+                                                    <th>Accept</th>
+                                                    <th>Notify Roles</th>
+                                                    <th style={{ width: '10%' }}>Allow Revisions</th>
+                                                    <th style={{ width: 110 }}>Min</th>
+                                                    <th style={{ width: 110 }}>Max</th>
+                                                    <th>Pattern (regex)</th>
+                                                    <th style={{ width: 90 }}></th>
+                                                </tr>
                                             </thead>
                                             <tbody>
-                                            {(flow.fileRequirements?.[s] || []).map((r, idx) => (
-                                                <tr key={idx}>
-                                                    <td>
-                                                        <Form.Control value={r.key||""} onChange={e => updateFileRule(s, idx, { key: normalizeKey(e.target.value) })} />
-                                                    </td>
-                                                    <td>
-                                                        <Form.Control value={r.label||""} onChange={e => updateFileRule(s, idx, { label: e.target.value })} />
-                                                    </td>
-                                                    <td className="text-center">
-                                                        <Form.Check type="checkbox" checked={!!r.required} onChange={e => updateFileRule(s, idx, { required: e.target.checked })} />
-                                                    </td>
-                                                    <td>
-                                                        <Form.Control placeholder=".pdf,.png" value={r.accept||""} onChange={e => updateFileRule(s, idx, { accept: e.target.value })} />
-                                                    </td>
-                                                    <td>
-                                                        <Form.Control type="number" min={0} value={r.minCount ?? ""} onChange={e => updateFileRule(s, idx, { minCount: e.target.value === "" ? null : Number(e.target.value) })} />
-                                                    </td>
-                                                    <td>
-                                                        <Form.Control type="number" min={0} value={r.maxCount ?? ""} onChange={e => updateFileRule(s, idx, { maxCount: e.target.value === "" ? null : Number(e.target.value) })} />
-                                                    </td>
-                                                    <td>
-                                                        <Form.Control placeholder="optional regex" value={r.pattern||""} onChange={e => updateFileRule(s, idx, { pattern: e.target.value })} />
-                                                    </td>
-                                                    <td className="text-center">
-                                                        <Button size="sm" variant="outline-danger" onClick={() => removeFileRule(s, idx)}>Remove</Button>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                {(flow.fileRequirements?.[s] || []).map((r, idx) => (
+                                                    <tr key={idx}>
+                                                        <td>
+                                                            <Form.Control value={r.key || ""} onChange={e => updateFileRule(s, idx, { key: normalizeKey(e.target.value) })} />
+                                                        </td>
+                                                        <td>
+                                                            <Form.Control value={r.label || ""} onChange={e => updateFileRule(s, idx, { label: e.target.value })} />
+                                                        </td>
+                                                        <td className="text-center">
+                                                            <Form.Check type="checkbox" checked={!!r.required} onChange={e => updateFileRule(s, idx, { required: e.target.checked })} />
+                                                        </td>
+                                                        <td>
+                                                            <Form.Control placeholder=".pdf,.png" value={r.accept || ""} onChange={e => updateFileRule(s, idx, { accept: e.target.value })} />
+                                                        </td>
+                                                        <td>
+                                                            <Form.Control type="number" min={0} value={r.minCount ?? ""} onChange={e => updateFileRule(s, idx, { minCount: e.target.value === "" ? null : Number(e.target.value) })} />
+                                                        </td>
+                                                        <td>
+                                                            <Form.Control type="number" min={0} value={r.maxCount ?? ""} onChange={e => updateFileRule(s, idx, { maxCount: e.target.value === "" ? null : Number(e.target.value) })} />
+                                                        </td>
+                                                        <td>
+                                                            <Form.Control placeholder="optional regex" value={r.pattern || ""} onChange={e => updateFileRule(s, idx, { pattern: e.target.value })} />
+                                                        </td>
+                                                        <td className="text-center">
+                                                            <Button size="sm" variant="outline-danger" onClick={() => removeFileRule(s, idx)}>Remove</Button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </Table>
                                     )}
@@ -621,13 +630,14 @@ export default function WorkflowBuilder() {
                     <Card>
                         <Card.Header>JSON Preview</Card.Header>
                         <Card.Body>
-              <pre className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
-                {JSON.stringify(flow, null, 2)}
-              </pre>
+                            <pre className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
+                                {JSON.stringify(flow, null, 2)}
+                            </pre>
                         </Card.Body>
                     </Card>
                 </Col>
             </Row>
-        </div>
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop />
+        </div >
     );
 }
