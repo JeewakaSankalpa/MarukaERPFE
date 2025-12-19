@@ -136,14 +136,14 @@ const SideBarForDashboard = () => {
           />
           <NavItem
             icon={<Settings size={20} />}
-            label="Setting"
-            path="/"
+            label="Settings"
+            path="/admin/config"
             activePath={location.pathname}
             navigate={navigate}
           />
 
 
-{/* <NavItem
+          {/* <NavItem
             icon={<FaHome size={20} />}
             label="Home"
           />
@@ -191,7 +191,7 @@ const SideBarForDashboard = () => {
             width: "100%",
             cursor: "pointer",
           }}
-          
+
           onMouseOver={(e) =>
             (e.currentTarget.style.backgroundColor = "#fef2f2")
           }
@@ -219,7 +219,7 @@ const NavItem = ({ icon, label, active, activePath, navigate, path }) => {
     backgroundColor: active ? "#dbeafe" : "transparent",
     color: active ? "#2563eb" : "#374151",
     fontWeight: active ? "900" : "normal",
-    cursor: "pointer", 
+    cursor: "pointer",
   };
 
   return (

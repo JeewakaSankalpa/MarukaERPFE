@@ -1,7 +1,7 @@
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Row, Col, Button, Form, Table, Badge, Modal } from "react-bootstrap";
-import { Link, useNavigate } from "react-router-dom";
+import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card } from "react-bootstrap";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import Select from "react-select";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
@@ -20,6 +20,10 @@ const getLastCostAPI = async (productId) => (await api.get(`/products/${productI
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const navigate = useNavigate();
+    const location = useLocation(); // Hook for URL query params
+    const searchParams = new URLSearchParams(location.search);
+    const isReadOnly = searchParams.get("readOnly") === "true";
+
     /* ------------ reference data ------------ */
     const [projects, setProjects] = useState([]);
     const [products, setProducts] = useState([]);
@@ -62,20 +66,43 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [quotationFile, setQuotationFile] = useState(null);
     const [existingFileUrl, setExistingFileUrl] = useState(null);
 
+    /* ------------ new features state ------------ */
+    const [globalSettings, setGlobalSettings] = useState({});
+    const [libraryItems, setLibraryItems] = useState([]);
+
+    // Per-component
+    const [compOverhead, setCompOverhead] = useState({}); // { [compName]: string }
+
+    // Global
+    const [discountPercent, setDiscountPercent] = useState("");
+    const [customNote, setCustomNote] = useState("");
+    const [terms, setTerms] = useState([]); // [{ label, value }]
+
+    const libraryTerms = useMemo(() => libraryItems.filter(i => i.type === 'TERM'), [libraryItems]);
+    const libraryNotes = useMemo(() => libraryItems.filter(i => i.type === 'NOTE'), [libraryItems]);
+
     /* ------------ load reference data ------------ */
     useEffect(() => {
         (async () => {
             try {
-                const [projs, prods, avails, tpls] = await Promise.all([
+                const [projs, prods, avails, tpls, settings, libs] = await Promise.all([
                     listProjectsAPI().catch(() => []),
                     listProductsAPI().catch(() => []),
                     listAvailableAPI().catch(() => []),
                     listTemplates().catch(() => []),
+                    api.get('/settings').then(r => r.data).catch(() => []),
+                    api.get('/quote-library').then(r => r.data).catch(() => []),
                 ]);
                 setProjects(projs || []);
                 setProducts(prods || []);
                 setAvailable(avails || []);
                 setTemplates(tpls || []);
+
+                // Process Settings
+                const sets = {};
+                (settings || []).forEach(s => sets[s.key] = s.value);
+                setGlobalSettings(sets);
+                setLibraryItems(libs || []);
 
                 if (propProjectId && projs.length) {
                     const found = projs.find(p => p.id === propProjectId);
@@ -102,6 +129,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setCompMargin({});
             setCompDelivery({});
             setCompDeliveryTaxable({});
+            setCompOverhead({});
+            setDiscountPercent("");
+            setCustomNote("");
+            setTerms([]);
             setExistingFileUrl(null);
             return;
         }
@@ -136,15 +167,22 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 const initialMargin = {};
                 const initialDelivery = {};
                 const initialDelTax = {};
+                const initialOverhead = {};
                 (est.components || []).forEach(c => {
                     const name = c.name?.trim() || "Component";
                     if (c.marginPercent != null) initialMargin[name] = String(c.marginPercent);
+                    if (c.overheadPercent != null) initialOverhead[name] = String(c.overheadPercent);
                     if (c.deliveryCost != null) initialDelivery[name] = String(c.deliveryCost);
                     if (typeof c.deliveryTaxable === "boolean") initialDelTax[name] = !!c.deliveryTaxable;
                 });
                 setCompMargin(initialMargin);
+                setCompOverhead(initialOverhead);
                 setCompDelivery(initialDelivery);
                 setCompDeliveryTaxable(initialDelTax);
+
+                setDiscountPercent(est.discountPercent != null ? String(est.discountPercent) : "");
+                setCustomNote(est.customNote || "");
+                setTerms(est.terms || []);
 
                 // rows
                 const rowMap = new Map();
@@ -273,6 +311,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return { ...r, quantities: q };
         }));
         setCompMargin(s => { const x = { ...s }; delete x[name]; return x; });
+        setCompOverhead(s => { const x = { ...s }; delete x[name]; return x; });
         setCompDelivery(s => { const x = { ...s }; delete x[name]; return x; });
         setCompDeliveryTaxable(s => { const x = { ...s }; delete x[name]; return x; });
     };
@@ -399,9 +438,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 (acc, r) => acc + Number(r.estUnitCost || 0) * Number((r.quantities || {})[cname] || 0),
                 0
             );
+
+            // 1. Overhead
+            const oPct = Number(compOverhead[cname] || 0);
+            const oAmt = subtotal * (isNaN(oPct) ? 0 : oPct / 100);
+            const baseForMargin = subtotal + oAmt;
+
+            // 2. Margin
             const mPct = Number(compMargin[cname] || 0);
-            const mAmt = subtotal * (isNaN(mPct) ? 0 : mPct / 100);
-            const afterMargin = subtotal + mAmt;
+            const mAmt = baseForMargin * (isNaN(mPct) ? 0 : mPct / 100);
+            const afterMargin = baseForMargin + mAmt;
 
             const del = Number(compDelivery[cname] || 0);
             const delTaxable = !!compDeliveryTaxable[cname];
@@ -412,26 +458,49 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return {
                 name: cname,
                 subtotal,
+                overheadPct: oPct,
+                overheadAmt: oAmt,
                 marginPct: mPct,
                 marginAmount: mAmt,
                 afterMargin,
                 delivery: del,
                 deliveryTaxable: delTaxable,
-                taxablePortion: afterMargin + taxableAdd,
+                taxablePortion: afterMargin + taxableAdd, // Gross taxable base from this component
                 nonTaxablePortion: nonTaxableAdd,
                 lineTotalBeforeTax: afterMargin + (includeDelivery ? del : 0),
             };
         });
-    }, [components, rows, compMargin, compDelivery, compDeliveryTaxable, includeDelivery]);
+    }, [components, rows, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery]);
 
     const totals = useMemo(() => {
-        const taxableBase = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
-        const nonTaxable = compCalcs.reduce((a, c) => a + c.nonTaxablePortion, 0);
-        const vatPctNum = Number(vatPercent || 0);
-        const taxPctNum = Number(taxPercent || 0);
+        const taxableBaseRaw = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
+        const nonTaxableRaw = compCalcs.reduce((a, c) => a + c.nonTaxablePortion, 0);
 
-        const vatAmount = includeVat ? taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100) : 0;
-        const taxAmount = includeTax ? taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100) : 0;
+        // 3. Discount
+        const discPct = Number(discountPercent || 0);
+        const totalBeforeDisc = taxableBaseRaw + nonTaxableRaw;
+        const discAmt = totalBeforeDisc * (isNaN(discPct) ? 0 : discPct / 100);
+
+        // Split discount proportionally
+        let taxableBase = taxableBaseRaw;
+        let nonTaxable = nonTaxableRaw;
+
+        if (totalBeforeDisc > 0) {
+            const ratio = taxableBaseRaw / totalBeforeDisc;
+            taxableBase = taxableBaseRaw - (discAmt * ratio);
+            nonTaxable = nonTaxableRaw - (discAmt * (1 - ratio));
+        }
+
+        // Use global settings if toggles on
+        const vatPctNum = includeVat
+            ? (globalSettings.GLOBAL_VAT_PERCENT ? Number(globalSettings.GLOBAL_VAT_PERCENT) : Number(vatPercent || 0))
+            : 0;
+        const taxPctNum = includeTax
+            ? (globalSettings.GLOBAL_TAX_PERCENT ? Number(globalSettings.GLOBAL_TAX_PERCENT) : Number(taxPercent || 0))
+            : 0;
+
+        const vatAmount = taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100);
+        const taxAmount = taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100);
 
         const grand = taxableBase + nonTaxable + vatAmount + taxAmount;
 
@@ -441,13 +510,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return {
             rawSubtotal,
             withMargin,
+            discountAmount: discAmt,
             taxableBase,
             nonTaxable,
             vatAmount,
             taxAmount,
             grand,
+            vatUsed: vatPctNum,
+            taxUsed: taxPctNum
         };
-    }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent]);
+    }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent, discountPercent, globalSettings]);
 
     /* ------------ save ------------ */
     const toBigDec = (val) => {
@@ -474,6 +546,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             });
 
             const m = compMargin[cname];
+            const o = compOverhead[cname];
             const dc = compDelivery[cname];
             const dt = !!compDeliveryTaxable[cname];
 
@@ -481,19 +554,28 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 name: cname,
                 note: "",
                 marginPercent: toBigDec(m),
+                overheadPercent: toBigDec(o),
                 deliveryCost: toBigDec(dc),
                 deliveryTaxable: dt,
                 items
             };
         });
 
+        // Use globals for saving if toggled? Or save specific snapshot?
+        // We'll save what was used in calculation (which respects global)
+        const vatUsed = totals.vatUsed;
+        const taxUsed = totals.taxUsed;
+
         return {
             components: comps,
             includeDelivery,
             includeVat,
             includeTax,
-            vatPercent: toBigDec(vatPercent),
-            taxPercent: toBigDec(taxPercent),
+            vatPercent: toBigDec(vatUsed),
+            taxPercent: toBigDec(taxUsed),
+            discountPercent: toBigDec(discountPercent),
+            customNote,
+            terms
         };
     };
 
@@ -603,6 +685,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         type="file"
                                         size="sm"
                                         style={{ width: 250 }}
+                                        disabled={isReadOnly}
                                         onChange={(e) => setQuotationFile(e.target.files[0])}
                                     />
                                     {existingFileUrl && (
@@ -612,8 +695,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     )}
                                 </div>
 
-                                <Button variant="outline-success" onClick={addComponent}>+ Column</Button>
-                                <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>
+                                {!isReadOnly && <Button variant="outline-success" onClick={addComponent}>+ Column</Button>}
+                                {!isReadOnly && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
                                 <Button
                                     variant="info"
                                     onClick={() => {
@@ -640,8 +723,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <Form.Control
                                                     value={c}
                                                     onChange={(e) => renameComponent(idx, e.target.value)}
+                                                    disabled={isReadOnly}
                                                 />
-                                                <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>
+                                                {!isReadOnly && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>}
                                             </div>
                                         </th>
                                     ))}
@@ -667,6 +751,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <Select
                                                     options={productOptions}
                                                     value={r.productOption || null}
+                                                    isDisabled={isReadOnly}
                                                     onChange={(opt) => onPickProduct(i, opt)}
                                                     placeholder="Search product by name…"
                                                     isClearable
@@ -688,6 +773,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     step="0.01"
                                                     value={r.estUnitCost ?? ""}
                                                     onChange={(e) => setRowField(i, "estUnitCost", e.target.value)}
+                                                    disabled={isReadOnly}
                                                 />
                                                 {typeof r.suggestedCost === "number" && (
                                                     <div className="small text-muted d-flex justify-content-between">
@@ -696,7 +782,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                             variant="link"
                                                             size="sm"
                                                             className="p-0"
-                                                            onClick={() => setRowField(i, "estUnitCost", String(r.suggestedCost))}
+                                                            onClick={() => !isReadOnly && setRowField(i, "estUnitCost", String(r.suggestedCost))}
+                                                            disabled={isReadOnly}
                                                         >
                                                             Use
                                                         </Button>
@@ -712,6 +799,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         min="0"
                                                         value={(r.quantities || {})[c] ?? 0}
                                                         onChange={(e) => setQty(i, c, e.target.value)}
+                                                        disabled={isReadOnly}
                                                     />
                                                 </td>
                                             ))}
@@ -732,7 +820,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             <tfoot>
                                 <tr>
                                     <td colSpan={components.length + 7}>
-                                        <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>
+                                        {!isReadOnly && <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>}
                                     </td>
                                 </tr>
                             </tfoot>
@@ -746,7 +834,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     <tr>
                                         <th>Component</th>
                                         <th className="text-end" style={{ width: 120 }}>Subtotal</th>
-                                        <th style={{ width: 160 }}>Margin %</th>
+                                        <th style={{ width: 120 }}>Overhead %</th>
+                                        <th style={{ width: 120 }}>Margin %</th>
                                         <th className="text-end" style={{ width: 140 }}>After Margin</th>
                                         <th style={{ width: 180 }}>Delivery</th>
                                         <th style={{ width: 150 }}>Delivery Taxable?</th>
@@ -763,7 +852,19 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     className="text-end"
                                                     type="number"
                                                     min="0" step="0.01"
+                                                    value={compOverhead[cc.name] ?? ""}
+                                                    disabled={isReadOnly}
+                                                    onChange={(e) => setCompOverhead(s => ({ ...s, [cc.name]: e.target.value }))}
+                                                    placeholder="0"
+                                                />
+                                            </td>
+                                            <td>
+                                                <Form.Control
+                                                    className="text-end"
+                                                    type="number"
+                                                    min="0" step="0.01"
                                                     value={compMargin[cc.name] ?? ""}
+                                                    disabled={isReadOnly}
                                                     onChange={(e) => setCompMargin(s => ({ ...s, [cc.name]: e.target.value }))}
                                                     placeholder="0"
                                                 />
@@ -775,6 +876,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     type="number"
                                                     min="0" step="0.01"
                                                     value={compDelivery[cc.name] ?? ""}
+                                                    disabled={isReadOnly}
                                                     onChange={(e) => setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }))}
                                                     placeholder="0"
                                                 />
@@ -784,7 +886,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     type="switch"
                                                     checked={!!compDeliveryTaxable[cc.name]}
                                                     onChange={(e) => setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }))}
-                                                    disabled={!includeDelivery}
+                                                    disabled={!includeDelivery || isReadOnly}
                                                     label=""
                                                 />
                                             </td>
@@ -795,86 +897,189 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             </Table>
 
                             {/* Global toggles/rates */}
-                            <Row className="g-3 mt-2">
-                                <Col md={3}>
-                                    <Form.Check
-                                        type="switch"
-                                        label="Include Delivery"
-                                        checked={includeDelivery}
-                                        onChange={(e) => setIncludeDelivery(e.target.checked)}
-                                    />
-                                </Col>
-                                <Col md={3}>
-                                    <Form.Check
-                                        type="switch"
-                                        label="Include VAT"
-                                        checked={includeVat}
-                                        onChange={(e) => setIncludeVat(e.target.checked)}
-                                    />
-                                </Col>
-                                <Col md={3}>
-                                    <Form.Check
-                                        type="switch"
-                                        label="Include Tax"
-                                        checked={includeTax}
-                                        onChange={(e) => setIncludeTax(e.target.checked)}
-                                    />
-                                </Col>
-                                <Col md={3} />
-                            </Row>
+                            <div className="bg-light rounded p-3 mt-3">
+                                <h6 className="mb-3">Summary & Settings</h6>
+                                <Row className="g-3">
+                                    <Col md={3}>
+                                        <Form.Check
+                                            type="switch"
+                                            label="Include Delivery in Total"
+                                            checked={includeDelivery}
+                                            disabled={isReadOnly}
+                                            onChange={e => setIncludeDelivery(e.target.checked)}
+                                        />
+                                    </Col>
+                                    <Col md={3}>
+                                        <Form.Group>
+                                            <Form.Label className="small mb-1">Discount %</Form.Label>
+                                            <Form.Control
+                                                size="sm"
+                                                type="number"
+                                                value={discountPercent}
+                                                disabled={isReadOnly}
+                                                onChange={e => setDiscountPercent(e.target.value)}
+                                                placeholder="0"
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                    <Col md={3}>
+                                        <Form.Check
+                                            type="switch"
+                                            label={`VAT (${globalSettings.GLOBAL_VAT_PERCENT || 0}%)`}
+                                            checked={includeVat}
+                                            disabled={isReadOnly}
+                                            onChange={e => {
+                                                setIncludeVat(e.target.checked);
+                                                // Reset custom override if toggled? or keep it simple
+                                            }}
+                                        />
+                                        <div className="small text-muted">Global Rate Applied</div>
+                                    </Col>
+                                    <Col md={3}>
+                                        <Form.Check
+                                            type="switch"
+                                            label={`Other Tax (${globalSettings.GLOBAL_TAX_PERCENT || 0}%)`}
+                                            checked={includeTax}
+                                            disabled={isReadOnly}
+                                            onChange={e => setIncludeTax(e.target.checked)}
+                                        />
+                                    </Col>
+                                </Row>
 
-                            <Row className="g-3 mt-2">
-                                <Col md={3}>
-                                    <Form.Group>
-                                        <Form.Label>VAT %</Form.Label>
-                                        <Form.Control
-                                            type="number" min="0" step="0.01"
-                                            value={vatPercent}
-                                            onChange={(e) => setVatPercent(e.target.value)}
-                                            disabled={!includeVat}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={3}>
-                                    <Form.Group>
-                                        <Form.Label>Tax %</Form.Label>
-                                        <Form.Control
-                                            type="number" min="0" step="0.01"
-                                            value={taxPercent}
-                                            onChange={(e) => setTaxPercent(e.target.value)}
-                                            disabled={!includeTax}
-                                        />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                                <hr />
+
+                                <Row>
+                                    <Col md={8}>
+                                        {/* Terms & Conditions */}
+                                        <div className="mb-4">
+                                            <strong>Terms & Conditions</strong>
+                                            <div className="d-flex gap-2 my-2">
+                                                <Select
+                                                    options={libraryTerms.map(t => ({ value: t, label: t.title }))}
+                                                    isDisabled={isReadOnly}
+                                                    onChange={(opt) => {
+                                                        if (opt) setTerms([...terms, { label: opt.value.title, value: opt.value.content }]);
+                                                    }}
+                                                    placeholder="Load a Term..."
+                                                    className="flex-grow-1"
+                                                />
+                                                {!isReadOnly && <Button size="sm" variant="outline-primary" onClick={() => setTerms([...terms, { label: "", value: "" }])}>
+                                                    + Custom
+                                                </Button>}
+                                            </div>
+                                            <Table bordered size="sm">
+                                                <tbody>
+                                                    {terms.map((t, i) => (
+                                                        <tr key={i}>
+                                                            <td style={{ width: '30%' }}>
+                                                                <Form.Control
+                                                                    size="sm"
+                                                                    value={t.label}
+                                                                    disabled={isReadOnly}
+                                                                    onChange={e => {
+                                                                        const copy = [...terms];
+                                                                        copy[i].label = e.target.value;
+                                                                        setTerms(copy);
+                                                                    }}
+                                                                    placeholder="Label (e.g. Validity)"
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <Form.Control
+                                                                    size="sm"
+                                                                    value={t.value}
+                                                                    disabled={isReadOnly}
+                                                                    onChange={e => {
+                                                                        const copy = [...terms];
+                                                                        copy[i].value = e.target.value;
+                                                                        setTerms(copy);
+                                                                    }}
+                                                                    placeholder="Value (e.g. 30 Days)"
+                                                                />
+                                                            </td>
+                                                            <td style={{ width: 40 }}>
+                                                                {!isReadOnly && <Button size="sm" variant="link" className="text-danger p-0" onClick={() => setTerms(terms.filter((_, idx) => idx !== i))}>✕</Button>}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </Table>
+                                        </div>
+
+                                        {/* Custom Notes */}
+                                        <div>
+                                            <strong>Custom Notes</strong>
+                                            <div className="d-flex gap-2 my-2 align-items-center">
+                                                <Select
+                                                    options={libraryNotes.map(n => ({ value: n, label: n.title }))}
+                                                    isDisabled={isReadOnly}
+                                                    onChange={(opt) => {
+                                                        if (opt) setCustomNote(prev => (prev ? prev + "\n" : "") + opt.value.content);
+                                                    }}
+                                                    placeholder="Append Note Template..."
+                                                    className="flex-grow-1"
+                                                />
+                                            </div>
+                                            <Form.Control
+                                                as="textarea"
+                                                rows={4}
+                                                value={customNote}
+                                                disabled={isReadOnly}
+                                                onChange={e => setCustomNote(e.target.value)}
+                                                placeholder="Enter any custom notes for this estimation..."
+                                            />
+                                        </div>
+                                    </Col>
+                                    <Col md={4}>
+                                        <Card>
+                                            <Card.Body>
+                                                <h6 className="card-title">Estimated Totals</h6>
+                                                <div className="d-flex justify-content-between mb-1">
+                                                    <span>Subtotal (Comp):</span>
+                                                    <span>{totals.rawSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <div className="d-flex justify-content-between mb-1 text-muted small">
+                                                    <span>With Margin & Overhead:</span>
+                                                    <span>{totals.withMargin.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <div className="d-flex justify-content-between mb-1 text-danger">
+                                                    <span>Discount ({discountPercent || 0}%):</span>
+                                                    <span>-{totals.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <hr />
+                                                <div className="d-flex justify-content-between mb-1">
+                                                    <span>Taxable Base:</span>
+                                                    <span>{totals.taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                {includeVat && (
+                                                    <div className="d-flex justify-content-between mb-1">
+                                                        <span>VAT ({totals.vatUsed}%):</span>
+                                                        <span>{totals.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                )}
+                                                {includeTax && (
+                                                    <div className="d-flex justify-content-between mb-1">
+                                                        <span>Tax ({totals.taxUsed}%):</span>
+                                                        <span>{totals.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                )}
+                                                <hr />
+                                                <div className="d-flex justify-content-between fw-bold">
+                                                    <span>Grand Total:</span>
+                                                    <span>{totals.grand.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            </Card.Body>
+                                        </Card>
+                                    </Col>
+                                </Row>
+                            </div>
                         </div>
-
-                        {/* Totals footer */}
-                        <Row className="g-3 mt-3">
-                            <Col md={12} className="d-flex align-items-end justify-content-end">
-                                <div className="text-end">
-                                    <div>Subtotal (Σ qty × unit): <strong>{totals.rawSubtotal.toLocaleString()}</strong></div>
-                                    <div>After Margin: <strong>{totals.withMargin.toLocaleString()}</strong></div>
-                                    <div>Taxable Base (incl. taxable delivery): <strong>{totals.taxableBase.toLocaleString()}</strong></div>
-                                    {totals.nonTaxable > 0 && (
-                                        <div>Non-Taxable (delivery): <strong>{totals.nonTaxable.toLocaleString()}</strong></div>
-                                    )}
-                                    {includeTax && (
-                                        <div>+ Tax ({Number(taxPercent || 0)}%): <strong>{totals.taxAmount.toLocaleString()}</strong></div>
-                                    )}
-                                    {includeVat && (
-                                        <div>+ VAT ({Number(vatPercent || 0)}%): <strong>{totals.vatAmount.toLocaleString()}</strong></div>
-                                    )}
-                                    <div className="fs-5 mt-1">Grand Total: <strong>{totals.grand.toLocaleString()}</strong></div>
-                                </div>
-                            </Col>
-                        </Row>
 
                         <div className="mt-3 d-flex justify-content-between align-items-center">
                             <div className="small text-muted">Tip: Columns are components; rename or add more as needed.</div>
                             <div className="d-flex gap-2">
                                 <Button variant="outline-dark" onClick={handlePrint}>Print / Download PDF</Button>
-                                <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>
+                                {!isReadOnly && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
                             </div>
                         </div>
                     </div>

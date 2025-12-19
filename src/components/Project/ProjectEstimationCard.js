@@ -12,7 +12,7 @@ import api from '../../api/api';
  * @param {string} props.projectId - Project ID
  * @param {Function} props.onOpen - Callback when opening editor
  */
-export default function ProjectEstimationCard({ projectId, onOpen }) {
+export default function ProjectEstimationCard({ projectId, onOpen, readOnly }) {
     const navigate = useNavigate();
     const [est, setEst] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -33,11 +33,14 @@ export default function ProjectEstimationCard({ projectId, onOpen }) {
     useEffect(() => { load(); }, [projectId]);
 
     const openEditor = () => {
-        navigate(`/projects/estimation/${projectId}`);
+        // If readOnly, append query param
+        const url = `/projects/estimation/${projectId}${readOnly ? '?readOnly=true' : ''}`;
+        navigate(url);
         onOpen?.();
     };
 
     const createNew = () => {
+        if (readOnly) return; // Should be hidden anyway
         navigate(`/projects/estimation/${projectId}?new=1`);
         onOpen?.();
     };
@@ -98,6 +101,13 @@ export default function ProjectEstimationCard({ projectId, onOpen }) {
                     </tr>
                 )}
 
+                {val(est.computedDiscountAmount) > 0 && (
+                    <tr className="text-danger">
+                        <td>Discount</td>
+                        <td className="text-end">-{val(est.computedDiscountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                )}
+
                 {(val(est.computedVatAmount) > 0 || val(est.computedTaxAmount) > 0) && (
                     <tr>
                         <td>Taxes (VAT/Other)</td>
@@ -120,22 +130,27 @@ export default function ProjectEstimationCard({ projectId, onOpen }) {
     return (
         <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center">
-                <span>Estimation</span>
+                <span>Estimation {readOnly && <small className="text-muted">(Snapshot)</small>}</span>
                 <div className="d-flex gap-2">
                     {est ? (
                         <>
                             <Button size="sm" variant="outline-secondary" onClick={load} disabled={loading}>
                                 {loading ? 'Loading…' : 'Reload'}
                             </Button>
-                            <Button size="sm" variant="primary" onClick={openEditor}>View / Edit</Button>
+                            <Button size="sm" variant="primary" onClick={openEditor}>
+                                {readOnly ? "View Details" : "View / Edit"}
+                            </Button>
                         </>
                     ) : (
-                        <Button size="sm" variant="primary" onClick={createNew} disabled={!projectId}>
-                            Create Estimation
-                        </Button>
+                        !readOnly && (
+                            <Button size="sm" variant="primary" onClick={createNew} disabled={!projectId}>
+                                Create Estimation
+                            </Button>
+                        )
                     )}
                 </div>
             </Card.Header>
+
             <Card.Body style={{ overflowY: 'auto' }}>
                 {!projectId && <div className="text-muted">No project id provided.</div>}
                 {projectId && loading && (
