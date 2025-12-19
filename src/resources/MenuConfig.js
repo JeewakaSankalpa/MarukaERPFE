@@ -97,6 +97,7 @@ export const MenuConfig = [
         roles: ["ADMIN"],
         subItems: [
             { id: "settings.config", title: "System Config", path: "/admin/config" },
+            { id: "settings.estimation", title: "Estimation Settings", path: "/settings" },
             { id: "settings.departments", title: "Departments", path: "/departments" },
             { id: "settings.new_department", title: "New Department", path: "/departments/new" },
         ]

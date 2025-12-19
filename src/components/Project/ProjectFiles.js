@@ -53,8 +53,10 @@ function UploadOverlay({ text }) {
  * @param {Object} props.roleHeader - Auth headers
  * @param {Function} props.onAfterChange - Callback after upload
  * @param {string} props.reloadKey - Key to trigger reload
+ * @param {Array} props.filesOverride - Snapshotted files to display (optional)
+ * @param {boolean} props.readOnly - If true, disable uploads
  */
-export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfterChange, reloadKey }) {
+export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfterChange, reloadKey, filesOverride, readOnly }) {
     const fileInputRef = useRef(null);
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(false);
@@ -83,6 +85,22 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
     }, [actions?.fileRequirements, actions?.missingFiles, stageType]);
 
     const loadFiles = async () => {
+        if (filesOverride) {
+            // Use snapshot override
+            const list = (filesOverride || []).map(x => {
+                const name = extractFileName(x.storedName || x.originalName);
+                return {
+                    displayName: name,
+                    url: x.publicUrl || x.url, // Handle diverse naming in snapshot
+                    docType: x.docType || '',
+                    _kind: 'file'
+                };
+            });
+            list.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+            setFiles(list);
+            return;
+        }
+
         if (!id) {
             toast.info('No project id to load files.');
             return;
@@ -124,7 +142,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
             const list = [...projectFiles, ...paymentFiles];
             list.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
             setFiles(list);
-            toast.success('Files loaded');
+            // toast.success('Files loaded'); // Silent load better
         } catch (e) {
             console.error(e);
             toast.error('Failed to load files');
@@ -134,9 +152,9 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
     };
 
     useEffect(() => {
-        if (id) loadFiles();
+        if (id || filesOverride) loadFiles();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, stageType, reloadKey]);
+    }, [id, stageType, reloadKey, filesOverride]);
 
     useEffect(() => {
         if (!stageType || !actions) return;
@@ -146,16 +164,18 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
             : null;
         if (firstMissing) { setDocType(firstMissing); return; }
         if (ruleOptions.length > 0) setDocType(ruleOptions[0].value);
-        else toast.info('No file rules for this stage.');
+        // else toast.info('No file rules for this stage.');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stageType, actions, ruleOptions]);
 
     const chooseFiles = () => {
+        if (readOnly) return;
         if (!docType) { toast.warn('Select a file type before uploading.'); return; }
         fileInputRef.current?.click();
     };
 
     const onFilesChosen = async (e) => {
+        if (readOnly) return;
         const stage = stageObj?.stageType;
         const picked = Array.from(e.target.files || []);
         if (!id || picked.length === 0) return;
@@ -231,7 +251,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     onChange={(e) => setDocType(e.target.value)}
                     style={{ width: 320 }}
                     title="Select required file name (from rules or missing list)"
-                    disabled={!actions || !stageType}
+                    disabled={!actions || !stageType || readOnly}
                 >
                     {ruleOptions.length === 0 ? (
                         <option value="">— No file rules or missing items —</option>
@@ -258,7 +278,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                 <Button
                     size="sm"
                     variant="outline-primary"
-                    disabled={!id || !stageType || !docType || uploading}
+                    disabled={!id || !stageType || !docType || uploading || readOnly}
                     onClick={chooseFiles}
                     title={stageType ? 'Upload files for current stage' : 'No current stage'}
                 >
