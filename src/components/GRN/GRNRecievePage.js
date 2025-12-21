@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Row, Col, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
+import { QRCodeSVG as QRCode } from 'qrcode.react';
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -46,6 +47,9 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const setBatch = (i, bi, k, v) => setRows(rs => { const cp = [...rs]; const bs = [...(cp[i].batches || [])]; bs[bi] = { ...bs[bi], [k]: v }; cp[i].batches = bs; return cp; });
     const rmBatch = (i, bi) => setRows(rs => { const cp = [...rs]; cp[i].batches = (cp[i].batches || []).filter((_, idx) => idx !== bi); return cp; });
 
+    const [showQrModal, setShowQrModal] = useState(false);
+    const [createdBatches, setCreatedBatches] = useState([]);
+
     const save = async () => {
         try {
             if (!po?.id) { toast.warn("Select a PO"); return; }
@@ -76,9 +80,24 @@ export default function GRNReceivePage({ poId: initialPoId }) {
 
             const res = await createGRN(payload);
             toast.success(`GRN ${res.grnNumber} posted`);
+
+            // Success reset
             setPoId(""); setPo(null); setRows([]);
             setSupplierInvoiceNo(""); setSupplierInvoiceDate("");
             setCreditPeriodDays(""); setInitialPaymentAmount(""); setInitialPaymentRef("");
+
+            // Fetch created batches for QR display
+            try {
+                const batches = (await api.get(`/inventory/batches?grnId=${res.id}`)).data;
+                if (batches && batches.length > 0) {
+                    setCreatedBatches(batches);
+                    setShowQrModal(true);
+                }
+            } catch (e) {
+                console.error("Failed to fetch batches for QR", e);
+                toast.warn("GRN posted, but failed to load generated QR codes.");
+            }
+
         } catch (e) { toast.error(e?.response?.data?.message || "Failed to post GRN"); }
     };
 
@@ -187,6 +206,47 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                         <Button className="w-100 mt-2" onClick={save}>Post GRN</Button>
                     </>}
             </div>
+
+            {/* QR Codes Modal */}
+            {showQrModal && (
+                <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
+                    <div className="modal-dialog modal-xl">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">GRN Successful - Generated Batches</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowQrModal(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <p className="text-muted">The following batches were created. You can scan these QR codes for tracking.</p>
+                                <div className="row g-3">
+                                    {createdBatches.map(batch => (
+                                        <div key={batch.id} className="col-md-4 col-lg-3">
+                                            <div className="card h-100 p-3 text-center">
+                                                <div className="mb-2 d-flex justify-content-center">
+                                                    {/* Placeholder for QR Code - will replace with actual component */}
+                                                    <QRCode
+                                                        value={`V1|${batch.id}|${batch.batchNumber}|${batch.costPrice}|${batch.grnId || ''}`}
+                                                        size={120}
+                                                        level={"M"}
+                                                    />
+                                                </div>
+                                                <h6 className="mb-1">{batch.batchNumber}</h6>
+                                                <small className="d-block text-muted">Qty: {batch.quantity}</small>
+                                                <small className="d-block text-muted">Exp: {batch.expiryDate || "N/A"}</small>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-secondary" onClick={() => setShowQrModal(false)}>Close</button>
+                                <button className="btn btn-primary" onClick={() => window.print()}>Print</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );

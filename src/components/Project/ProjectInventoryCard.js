@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Button, Table, Spinner } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
+import { QRCodeSVG as QRCode } from 'qrcode.react';
 
 /**
  * Component to display project inventory, consumption, and transfers.
@@ -20,11 +21,34 @@ export default function ProjectInventoryCard({ projectId }) {
 
     // Return state
     const [showReturn, setShowReturn] = useState(false);
-    const [returnData, setReturnData] = useState({ productId: '', quantity: '', reason: '' });
+    const [returnData, setReturnData] = useState({ productId: '', batchId: '', quantity: '', reason: '' });
+    const [returnBatches, setReturnBatches] = useState([]); // Batches for the selected return product
 
     const [submitting, setSubmitting] = useState(false);
 
     const [pendingTransfers, setPendingTransfers] = useState([]);
+
+    // Batch View State
+    const [showBatchModal, setShowBatchModal] = useState(false);
+    const [selectedBatches, setSelectedBatches] = useState([]);
+    const [selectedProductName, setSelectedProductName] = useState("");
+
+    const handleViewBatches = async (product) => {
+        try {
+            setSelectedProductName(product.productName);
+            const res = await api.get(`/inventory/batches?productId=${product.productId}`);
+            const projectLoc = `PROJ:${projectId}`;
+            const filtered = (res.data || []).filter(b => b.locationId === projectLoc); // Or ownerType=PROJECT ownerId=projectId
+            // Note: TransferService uses ownerType/ownerId. Check API returns.
+            // If filtering locally, ensure criteria matches backend logic.
+            // Better: use filtered API if available.
+            setSelectedBatches(filtered);
+            setShowBatchModal(true);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to load batches");
+        }
+    };
 
     useEffect(() => { load(); }, [projectId]);
 
@@ -32,17 +56,10 @@ export default function ProjectInventoryCard({ projectId }) {
         if (!projectId) return;
         try {
             setLoading(true);
-            console.log('Loading transfers for project:', projectId);
-
             const [invRes, trRes] = await Promise.all([
                 api.get(`/inventory/project/${projectId}`),
                 api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`)
             ]);
-
-            console.log('Inventory response:', invRes.data);
-            console.log('Transfers response:', trRes.data);
-            console.log('Transfers is array?', Array.isArray(trRes.data));
-            console.log('Transfers length:', trRes.data?.length);
 
             setInventory(invRes.data || []);
             setPendingTransfers(trRes.data || []);
@@ -88,6 +105,7 @@ export default function ProjectInventoryCard({ projectId }) {
                 items: [{
                     productId: consumeData.productId,
                     quantity: Number(consumeData.quantity),
+                    serials: consumeData.serials ? consumeData.serials.split(',').map(s => s.trim()).filter(s => s) : [],
                     note: consumeData.note
                 }]
             });
@@ -99,6 +117,26 @@ export default function ProjectInventoryCard({ projectId }) {
             toast.error(e?.response?.data?.message || 'Failed to consume items');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleSelectReturnProduct = async (pid) => {
+        setReturnData({ ...returnData, productId: pid, batchId: '' });
+        if (!pid) {
+            setReturnBatches([]);
+            return;
+        }
+        // Fetch batches for this product in this project
+        // Note: We need to filter by current Project ownership.
+        // Re-using logic: GET /inventory/batches?productId=... then filter?
+        try {
+            const res = await api.get(`/inventory/batches?productId=${pid}`);
+            // Filter where ownerId == projectId (assuming "PROJECT" ownership)
+            // Or locationId == PROJ:{id}
+            const filtered = (res.data || []).filter(b => b.ownerId === projectId && b.remainingQty > 0);
+            setReturnBatches(filtered);
+        } catch (e) {
+            console.error("Failed to fetch batches", e);
         }
     };
 
@@ -115,12 +153,14 @@ export default function ProjectInventoryCard({ projectId }) {
                 items: [{
                     productId: returnData.productId,
                     quantity: Number(returnData.quantity),
+                    batchId: returnData.batchId, // Send optional batchId
+                    serials: returnData.serials ? returnData.serials.split(',').map(s => s.trim()).filter(s => s) : [],
                     reason: returnData.reason
                 }]
             });
             toast.success('Return request created');
             setShowReturn(false);
-            setReturnData({ productId: '', quantity: '', reason: '' });
+            setReturnData({ productId: '', batchId: '', quantity: '', reason: '' });
         } catch (e) {
             toast.error(e?.response?.data?.message || 'Failed to create return request');
         } finally {
@@ -156,6 +196,7 @@ export default function ProjectInventoryCard({ projectId }) {
                                 <th className="text-end">Received</th>
                                 <th className="text-end">Consumed</th>
                                 <th className="text-end">On Hand</th>
+                                <th className="text-center">QR</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -166,13 +207,57 @@ export default function ProjectInventoryCard({ projectId }) {
                                     <td className="text-end">{i.receivedQty}</td>
                                     <td className="text-end">{i.consumedQty}</td>
                                     <td className="text-end fw-bold">{i.onHandQty}</td>
+                                    <td className="text-center">
+                                        <Button size="sm" variant="light" onClick={() => handleViewBatches(i)}>
+                                            <i className="bi bi-qr-code"></i> View
+                                        </Button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </Table>
                 )}
 
-                {/* Pending Transfers Section */}
+                {/* Batch/QR Modal */}
+                {showBatchModal && (
+                    <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
+                        <div className="modal-dialog modal-lg">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title">Batches: {selectedProductName}</h5>
+                                    <button type="button" className="btn-close" onClick={() => setShowBatchModal(false)}></button>
+                                </div>
+                                <div className="modal-body">
+                                    {selectedBatches.length === 0 ? <p>No batches found in this location.</p> : (
+                                        <div className="row g-3">
+                                            {selectedBatches.map(b => (
+                                                <div key={b.id} className="col-md-4">
+                                                    <div className="card h-100 p-2 text-center">
+                                                        <div className="mb-2 d-flex justify-content-center">
+                                                            <QRCode
+                                                                value={`V1|${b.id}|${b.batchNumber}|${b.costPrice}|${b.grnId || ''}`}
+                                                                size={100}
+                                                                level={"M"}
+                                                            />
+                                                        </div>
+                                                        <strong>{b.batchNumber}</strong>
+                                                        <div className="small">Qty: {b.quantity}</div>
+                                                        <div className="small text-muted">Exp: {b.expiryDate || '-'}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="modal-footer">
+                                    <Button variant="secondary" onClick={() => setShowBatchModal(false)}>Close</Button>
+                                    {selectedBatches.length > 0 && <Button variant="primary" onClick={() => window.print()}>Print</Button>}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <h5 className="mt-4">Incoming Transfers (Pending Acceptance)</h5>
                 {loading && <div className="text-muted small"><Spinner size="sm" /> Loading transfers...</div>}
                 {!loading && pendingTransfers.length === 0 && <div className="text-muted small">No pending transfers.</div>}
@@ -213,8 +298,155 @@ export default function ProjectInventoryCard({ projectId }) {
                 )}
             </Card.Body>
 
-            {/* Modals for Consume and Return would go here (omitted for brevity, but logic is present) */}
-            {/* Ideally extract modals to sub-components too */}
+            {/* Consume Modal */}
+            {showConsume && (
+                <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Consume Items</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowConsume(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <form>
+                                    <div className="mb-3">
+                                        <label className="form-label">Product</label>
+                                        <select
+                                            className="form-select"
+                                            value={consumeData.productId}
+                                            onChange={(e) => {
+                                                setConsumeData({ ...consumeData, productId: e.target.value });
+                                                // TODO: Fetch available serials for this product if needed
+                                            }}
+                                        >
+                                            <option value="">Select Product</option>
+                                            {inventory.map(i => (
+                                                <option key={i.productId} value={i.productId}>{i.productName} (Avail: {i.onHandQty})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Quantity</label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            value={consumeData.quantity}
+                                            onChange={(e) => setConsumeData({ ...consumeData, quantity: e.target.value })}
+                                            min="1"
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Serial Numbers (Optional)</label>
+                                        <textarea
+                                            className="form-control"
+                                            placeholder="Enter serial numbers separated by comma"
+                                            value={consumeData.serials || ''}
+                                            onChange={(e) => setConsumeData({ ...consumeData, serials: e.target.value })}
+                                            rows={2}
+                                        />
+                                        <small className="text-muted">For serial-tracked items, enter serials here.</small>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Note</label>
+                                        <textarea
+                                            className="form-control"
+                                            value={consumeData.note}
+                                            onChange={(e) => setConsumeData({ ...consumeData, note: e.target.value })}
+                                        />
+                                    </div>
+                                </form>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowConsume(false)}>Cancel</button>
+                                <button type="button" className="btn btn-primary" onClick={handleConsume} disabled={submitting}>
+                                    {submitting ? 'Processing...' : 'Consume'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Return Modal */}
+            {showReturn && (
+                <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Return to Stores</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowReturn(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <form>
+                                    <div className="mb-3">
+                                        <label className="form-label">Product</label>
+                                        <select
+                                            className="form-select"
+                                            value={returnData.productId}
+                                            onChange={(e) => handleSelectReturnProduct(e.target.value)}
+                                        >
+                                            <option value="">Select Product</option>
+                                            {inventory.map(i => (
+                                                <option key={i.productId} value={i.productId}>{i.productName} (Avail: {i.onHandQty})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Batch (Optional)</label>
+                                        <select
+                                            className="form-select"
+                                            value={returnData.batchId}
+                                            onChange={(e) => setReturnData({ ...returnData, batchId: e.target.value })}
+                                            disabled={!returnData.productId}
+                                        >
+                                            <option value="">Any Batch / FIFO</option>
+                                            {returnBatches.map(b => (
+                                                <option key={b.id} value={b.id}>
+                                                    {b.batchNumber ? b.batchNumber : '(No Batch No)'} - Qty: {b.remainingQty}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Quantity</label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            value={returnData.quantity}
+                                            onChange={(e) => setReturnData({ ...returnData, quantity: e.target.value })}
+                                            min="1"
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Serial Numbers (Optional)</label>
+                                        <textarea
+                                            className="form-control"
+                                            placeholder="Enter serial numbers separated by comma"
+                                            value={returnData.serials || ''}
+                                            onChange={(e) => setReturnData({ ...returnData, serials: e.target.value })}
+                                            rows={2}
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">Reason</label>
+                                        <textarea
+                                            className="form-control"
+                                            value={returnData.reason}
+                                            onChange={(e) => setReturnData({ ...returnData, reason: e.target.value })}
+                                        />
+                                    </div>
+                                </form>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowReturn(false)}>Cancel</button>
+                                <button type="button" className="btn btn-primary" onClick={handleReturn} disabled={submitting}>
+                                    {submitting ? 'Submitting...' : 'Return Request'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Card>
     );
 }

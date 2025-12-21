@@ -39,6 +39,7 @@ export const MenuConfig = [
             { id: "inventory.internal", title: "Internal Requests", path: "/item/requests" },
             { id: "inventory.fulfil", title: "Fulfil Requests", path: "/stores/fulfil-requests" },
             { id: "inventory.return", title: "Returns", path: "/inventory/return" },
+            { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
             { id: "inventory.reports", title: "Reports", path: "/reports" },
 
         ]

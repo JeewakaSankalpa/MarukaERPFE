@@ -25,6 +25,7 @@ import Header from "./components/ReusableComponents/Header";
 import NewSideBar from "./components/ReusableComponents/NewSideBar";
 import InventoryReturn from "./components/Inventory/InventoryReturn";
 import ReturnToInventory from "./components/Project/ReturnToInventory";
+import InternalReturnApprovals from "./components/Inventory/InternalReturnApprovals";
 import UserCreate from "./components/Users/UserCreate";
 import UserSearch from "./components/Users/UserSearch";
 import CustomerCreate from "./components/Customer/CustomerCreate";
@@ -177,6 +178,7 @@ function App() {
                         <Route path="/inventory/search" element={<InventoryView />} />
                         <Route path="/inventory/return" element={<InventoryReturn />} />
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
+                        <Route path="/inventory/returns/approvals" element={<InternalReturnApprovals />} />
 
                         {/* Projects */}
                         <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
