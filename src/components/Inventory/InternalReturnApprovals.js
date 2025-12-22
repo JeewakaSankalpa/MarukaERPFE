@@ -27,7 +27,7 @@ export default function InternalReturnApprovals() {
         if (!window.confirm(`Approve return ${ret.returnNumber}? Stock will be moved to Store.`)) return;
         try {
             setProcessingId(ret.id);
-            await api.post(`/inventory/returns/internal/${ret.id}/approve`, {});
+            await api.post(`/inventory/returns/internal/${ret.id}/approve`, []);
             toast.success(`Return ${ret.returnNumber} approved`);
             load();
         } catch (e) {

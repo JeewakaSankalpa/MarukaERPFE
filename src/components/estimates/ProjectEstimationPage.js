@@ -63,19 +63,24 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [existingFileUrl, setExistingFileUrl] = useState(null);
 
     /* ------------ load reference data ------------ */
+    /* ------------ load reference data ------------ */
     useEffect(() => {
         (async () => {
             try {
-                const [projs, prods, avails, tpls] = await Promise.all([
+                const [projs, prods, avails, tpls, sysConfig] = await Promise.all([
                     listProjectsAPI().catch(() => []),
                     listProductsAPI().catch(() => []),
                     listAvailableAPI().catch(() => []),
                     listTemplates().catch(() => []),
+                    api.get("/admin/config").catch(() => ({ data: {} })),
                 ]);
                 setProjects(projs || []);
                 setProducts(prods || []);
                 setAvailable(avails || []);
                 setTemplates(tpls || []);
+
+                // Store config for usage when resetting/initing
+                window._sysConfig = sysConfig.data || {};
 
                 if (propProjectId && projs.length) {
                     const found = projs.find(p => p.id === propProjectId);
@@ -97,9 +102,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setIncludeDelivery(true);
             setIncludeVat(true);
             setIncludeTax(false);
-            setVatPercent("");
-            setTaxPercent("");
-            setCompMargin({});
+
+            const cfg = window._sysConfig || {};
+            setVatPercent(cfg["app.estimation.vat"] || "18");
+            setTaxPercent(cfg["app.estimation.tax"] || "0");
+            // Margin is component-level, so we can't set it globally here easily unless we default the first component
+            // We'll set it when adding components if possible, or just user enters it.
+            // Actually, let's pre-set the first component's margin if we have a default.
+            const defMargin = cfg["app.estimation.margin"] || "15";
+            setCompMargin({ "Component A": defMargin });
+
             setCompDelivery({});
             setCompDeliveryTaxable({});
             setExistingFileUrl(null);
@@ -115,9 +127,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setIncludeDelivery(true);
                     setIncludeVat(true);
                     setIncludeTax(false);
-                    setVatPercent("");
-                    setTaxPercent("");
-                    setCompMargin({});
+
+                    const cfg = window._sysConfig || {};
+                    setVatPercent(cfg["app.estimation.vat"] || "18");
+                    setTaxPercent(cfg["app.estimation.tax"] || "0");
+                    const defMargin = cfg["app.estimation.margin"] || "15";
+                    setCompMargin({ "Component A": defMargin });
+
                     setCompDelivery({});
                     setCompDeliveryTaxable({});
                     setExistingFileUrl(null);
@@ -225,6 +241,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const exists = new Set(components);
         while (exists.has(name)) { i += 1; name = `${base} ${i}`; }
         setComponents(cols => [...cols, name]);
+
+        // Auto-set margin
+        const cfg = window._sysConfig || {};
+        const defMargin = cfg["app.estimation.margin"] || "15";
+        setCompMargin(s => ({ ...s, [name]: defMargin }));
     };
 
     const renameComponent = (idx, name) => {

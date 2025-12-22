@@ -253,6 +253,13 @@ export default function ProjectDetails() {
         } catch { return ''; }
     }
 
+    const isComponentVisible = (component) => {
+        // If actions haven't loaded yet, default to hidden or wait? 
+        // Better to hide until we know for sure.
+        if (!actions || !actions.visibleComponents) return false;
+        return actions.visibleComponents.includes(component);
+    };
+
     return (
         <div
             className="p-2"
@@ -276,28 +283,40 @@ export default function ProjectDetails() {
                             Dashboard
                         </button>
                     </li>
-                    <li className="nav-item">
-                        <button className={`nav-link ${activeTab === 'revisions' ? 'active' : ''}`} onClick={() => setActiveTab('revisions')}>
-                            Revisions {project?.revisionCount > 0 && <Badge bg="secondary" pill>{project.revisionCount}</Badge>}
-                        </button>
-                    </li>
-                    <li className="nav-item">
-                        <button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
-                            Inventory
-                        </button>
-                    </li>
-                    {hasAccess('projects.payments') && (
+                    {isComponentVisible('REVISIONS') && (
+                        <li className="nav-item">
+                            <button className={`nav-link ${activeTab === 'revisions' ? 'active' : ''}`} onClick={() => setActiveTab('revisions')}>
+                                Revisions {project?.revisionCount > 0 && <Badge bg="secondary" pill>{project.revisionCount}</Badge>}
+                            </button>
+                        </li>
+                    )}
+                    {/* Inventory is usually always visible if they have module access? Or controlled by workflow? 
+                        The backend log didn't list INVENTORY, but let's assume INVENTORY is always visible for now 
+                        or check if backend provides it. The log said [TASKS, REVISIONS, FILES]. 
+                        If the user wants strict stage checks, Inventory might also be stage-gated.
+                        But usually Inventory (BoM) is needed early. I'll leave it as module-check for now unless specifically asked.
+                    */}
+                    {isComponentVisible('INVENTORY') && (
+                        <li className="nav-item">
+                            <button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
+                                Inventory
+                            </button>
+                        </li>
+                    )}
+                    {isComponentVisible('PAYMENTS') && hasAccess('projects.payments') && (
                         <li className="nav-item">
                             <button className={`nav-link ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
                                 Payments
                             </button>
                         </li>
                     )}
-                    <li className="nav-item">
-                        <button className={`nav-link ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
-                            Tasks
-                        </button>
-                    </li>
+                    {isComponentVisible('TASKS') && (
+                        <li className="nav-item">
+                            <button className={`nav-link ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+                                Tasks
+                            </button>
+                        </li>
+                    )}
                 </ul>
             </div>
 
@@ -440,44 +459,48 @@ export default function ProjectDetails() {
                             </Col>
 
                             {/* Timeline (with Edit Dates button) */}
-                            <Col md={12} lg={4}>
-                                <Card className="h-100">
-                                    <Card.Header className="d-flex justify-content-between align-items-center">
-                                        <span>Timeline</span>
-                                        <Button size="sm" variant="outline-primary" onClick={openDatesModal} disabled={!id}>
-                                            Edit Dates
-                                        </Button>
-                                    </Card.Header>
-                                    <Card.Body style={{ overflowY: 'auto' }}>
-                                        <div><strong>Est. Start:</strong> {p.estimatedStart ? new Date(p.estimatedStart).toLocaleDateString() : '-'}</div>
-                                        <div><strong>Est. End:</strong> {p.estimatedEnd ? new Date(p.estimatedEnd).toLocaleDateString() : '-'}</div>
-                                        <div><strong>Due Date:</strong> {p.dueDate ? new Date(p.dueDate).toLocaleString() : '-'}</div>
+                            {isComponentVisible('TIMELINE') && (
+                                <Col md={12} lg={4}>
+                                    <Card className="h-100">
+                                        <Card.Header className="d-flex justify-content-between align-items-center">
+                                            <span>Timeline</span>
+                                            <Button size="sm" variant="outline-primary" onClick={openDatesModal} disabled={!id}>
+                                                Edit Dates
+                                            </Button>
+                                        </Card.Header>
+                                        <Card.Body style={{ overflowY: 'auto' }}>
+                                            <div><strong>Est. Start:</strong> {p.estimatedStart ? new Date(p.estimatedStart).toLocaleDateString() : '-'}</div>
+                                            <div><strong>Est. End:</strong> {p.estimatedEnd ? new Date(p.estimatedEnd).toLocaleDateString() : '-'}</div>
+                                            <div><strong>Due Date:</strong> {p.dueDate ? new Date(p.dueDate).toLocaleString() : '-'}</div>
 
-                                        {dueMeta ? (
-                                            <div className="mt-3">
-                                                <div className="d-flex justify-content-between small mb-1">
-                                                    <span>Progress to Due</span>
-                                                    <span>{dueMeta.pct}%</span>
+                                            {dueMeta ? (
+                                                <div className="mt-3">
+                                                    <div className="d-flex justify-content-between small mb-1">
+                                                        <span>Progress to Due</span>
+                                                        <span>{dueMeta.pct}%</span>
+                                                    </div>
+                                                    <ProgressBar now={dueMeta.pct} />
+                                                    <div className="small text-muted mt-1">Time left: {dueMeta.label}</div>
                                                 </div>
-                                                <ProgressBar now={dueMeta.pct} />
-                                                <div className="small text-muted mt-1">Time left: {dueMeta.label}</div>
-                                            </div>
-                                        ) : (
-                                            <div className="small text-muted mt-3">No due date data.</div>
-                                        )}
-                                    </Card.Body>
-                                </Card>
-                            </Col>
+                                            ) : (
+                                                <div className="small text-muted mt-3">No due date data.</div>
+                                            )}
+                                        </Card.Body>
+                                    </Card>
+                                </Col>
+                            )}
                         </Row>
 
                         {/* Files & Estimation row */}
                         <Row className="g-3 mt-1">
                             {/* Delivery Schedule - Visible to all with project access for now */}
-                            <Col lg={12}>
-                                <DeliveryScheduleCard projectId={id} />
-                            </Col>
+                            {isComponentVisible('DELIVERY') && (
+                                <Col lg={12}>
+                                    <DeliveryScheduleCard projectId={id} />
+                                </Col>
+                            )}
 
-                            {hasAccess('projects.files') && (
+                            {isComponentVisible('FILES') && hasAccess('projects.files') && (
                                 <Col lg={6}>
                                     <Card className="h-100">
                                         <Card.Header className="d-flex justify-content-between align-items-center">
@@ -498,8 +521,8 @@ export default function ProjectDetails() {
                                 </Col>
                             )}
 
-                            {/* Estimation summary / actions */}
-                            {hasAccess('projects.estimation') && (
+                            {/* Estimation summary / actions - Is estimation stage controlled? Probably 'TASKS' covers estimation for now or just access */}
+                            {isComponentVisible('ESTIMATION') && hasAccess('projects.estimation') && (
                                 <Col lg={6}>
                                     <ProjectEstimationCard projectId={id} onOpen={() => { /* optional hook */ }} />
                                 </Col>
@@ -551,7 +574,7 @@ export default function ProjectDetails() {
                     </>
                 )}
 
-                {activeTab === 'revisions' && (
+                {activeTab === 'revisions' && isComponentVisible('REVISIONS') && (
                     <ProjectRevisions
                         projectId={id}
                         versions={project?.versions}
@@ -561,11 +584,11 @@ export default function ProjectDetails() {
                     />
                 )}
 
-                {activeTab === 'inventory' && (
+                {activeTab === 'inventory' && isComponentVisible('INVENTORY') && (
                     <ProjectInventoryCard projectId={id} />
                 )}
 
-                {activeTab === 'payments' && (
+                {activeTab === 'payments' && isComponentVisible('PAYMENTS') && (
                     <div className="mt-3">
                         <ProjectPaymentsCard
                             projectId={id}
@@ -575,7 +598,7 @@ export default function ProjectDetails() {
                     </div>
                 )}
 
-                {activeTab === 'tasks' && (
+                {activeTab === 'tasks' && isComponentVisible('TASKS') && (
                     <div className="mt-3 bg-white shadow-sm rounded">
                         <ProjectTasks projectId={id} />
                     </div>

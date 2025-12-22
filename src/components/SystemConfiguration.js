@@ -26,6 +26,11 @@ export default function SystemConfiguration() {
         "app.notification.enable.inventory.lowstock": "true",
         "app.notification.enable.project.task": "true",
         "app.notification.enable.project.digest": "true",
+        "app.notification.enable.project.task": "true",
+        "app.notification.enable.project.digest": "true",
+        "app.estimation.vat": "18",
+        "app.estimation.tax": "0",
+        "app.estimation.margin": "15",
     });
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);

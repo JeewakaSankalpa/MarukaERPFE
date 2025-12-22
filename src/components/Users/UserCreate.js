@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Button, Container, Row, Col, Table } from 'react-bootstrap';
+import { Form, Button, Container, Row, Col } from 'react-bootstrap';
 
 function UserCreate({ mode }) {
     const { id } = useParams();
@@ -17,28 +17,17 @@ function UserCreate({ mode }) {
         nicNumber: '',
         role: '',
         active: true,
-        // allowedStores: [] // Ensure allowedStores is initialized as an empty array
+        // allowedStores: []
     });
-    const [stores, setStores] = useState([]);
 
     useEffect(() => {
-        const fetchStores = async () => {
-            try {
-                const response = await api.get('/employee/all');
-                setStores(response.data);
-            } catch (error) {
-                console.error('Failed to fetch stores:', error);
-            }
-        };
-        fetchStores();
-
         if (mode === 'edit' || mode === 'view') {
             const fetchUser = async () => {
                 try {
                     const response = await api.get(`/employee/${id}`);
                     setUserData({
                         ...response.data,
-                        allowedStores: response.data.allowedStores || [] // Ensure allowedStores is an array
+                        allowedStores: response.data.allowedStores || []
                     });
                     if (mode === 'view') {
                         setIsEditMode(false);
@@ -54,15 +43,6 @@ function UserCreate({ mode }) {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setUserData((prevData) => ({ ...prevData, [name]: value }));
-    };
-
-    const handleStoreChange = (storeName) => {
-        setUserData((prevData) => {
-            const allowedStores = prevData.allowedStores.includes(storeName)
-                ? prevData.allowedStores.filter(store => store !== storeName)
-                : [...prevData.allowedStores, storeName];
-            return { ...prevData, allowedStores };
-        });
     };
 
     const handleSubmit = async (e) => {

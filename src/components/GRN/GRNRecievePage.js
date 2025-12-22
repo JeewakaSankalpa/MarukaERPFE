@@ -34,7 +34,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     unit: it.unit || "pcs",
                     orderedQty: it.orderedQty,
                     receivedQty: 0,
-                    unitCost: "",
+                    orderedQty: it.orderedQty,
+                    receivedQty: 0,
                     batches: [],
                     serials: []
                 })));
@@ -43,7 +44,13 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     }, [poId]);
 
     const setField = (i, k, v) => setRows(rs => { const cp = [...rs]; cp[i] = { ...cp[i], [k]: v }; return cp; });
-    const addBatch = (i) => setRows(rs => { const cp = [...rs]; (cp[i].batches ||= []).push({ batchNo: "", expiryDate: "", qty: "" }); return cp; });
+    const addBatch = (i) => setRows(rs => {
+        const cp = [...rs];
+        const row = { ...cp[i] };
+        row.batches = [...(row.batches || []), { batchNo: "", expiryDate: "", qty: "", unitCost: "" }];
+        cp[i] = row;
+        return cp;
+    });
     const setBatch = (i, bi, k, v) => setRows(rs => { const cp = [...rs]; const bs = [...(cp[i].batches || [])]; bs[bi] = { ...bs[bi], [k]: v }; cp[i].batches = bs; return cp; });
     const rmBatch = (i, bi) => setRows(rs => { const cp = [...rs]; cp[i].batches = (cp[i].batches || []).filter((_, idx) => idx !== bi); return cp; });
 
@@ -53,19 +60,27 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const save = async () => {
         try {
             if (!po?.id) { toast.warn("Select a PO"); return; }
-            const items = rows.filter(r => Number(r.receivedQty) > 0).map(r => ({
-                productId: r.productId,
-                unit: r.unit,
-                receivedQty: Number(r.receivedQty),
-                unitCost: r.unitCost ? String(r.unitCost) : undefined,
-                batches: (r.batches || []).filter(b => Number(b.qty) > 0).map(b => ({
-                    batchNo: b.batchNo || undefined,
-                    expiryDate: b.expiryDate || undefined,
-                    qty: Number(b.qty)
-                })),
-                serials: (r.serials || []).filter(s => s && s.trim())
-            }));
-            if (items.length === 0) { toast.info("Enter received quantities"); return; }
+            const items = rows.map(r => {
+                const totalQty = (r.batches || []).reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+                return {
+                    productId: r.productId,
+                    unit: r.unit,
+                    receivedQty: totalQty,
+                    unit: r.unit,
+                    receivedQty: totalQty,
+                    batches: (r.batches || []).filter(b => Number(b.qty) > 0).map(b => ({
+                        batchNo: b.batchNo || undefined,
+                        expiryDate: b.expiryDate || undefined,
+                        qty: Number(b.qty),
+                        unitCost: b.unitCost ? String(b.unitCost) : undefined,
+                        serials: (b.serials || []).filter(s => s && s.trim())
+                    })),
+                    // Item-level serials no longer used
+                    serials: []
+                };
+            }).filter(r => r.receivedQty > 0);
+
+            if (items.length === 0) { toast.info("Enter received quantities via batches"); return; }
 
             const payload = {
                 poId: po.id,
@@ -99,6 +114,41 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             }
 
         } catch (e) { toast.error(e?.response?.data?.message || "Failed to post GRN"); }
+    };
+
+    const [printBatches, setPrintBatches] = useState([]);
+
+    const handlePrintOne = (item) => {
+        setPrintBatches([item]);
+        setTimeout(() => {
+            window.print();
+            setPrintBatches([]); // clear after print dialog closes/invokes
+        }, 500);
+    };
+
+    const handlePrintAll = () => {
+        // Flatten logic
+        const allItems = createdBatches.flatMap(batch => {
+            if (batch.serials && batch.serials.length > 0) {
+                return batch.serials.map(serial => ({
+                    ...batch,
+                    isSerial: true,
+                    serialNo: serial,
+                    qrValue: `V1|${batch.grnId || ''}|${batch.productId || ''}|${batch.id}|${batch.batchNumber}|${serial}|${batch.expiryDate || ''}`
+                }));
+            }
+            return [{
+                ...batch,
+                isSerial: false,
+                serialNo: '',
+                qrValue: `V1|${batch.grnId || ''}|${batch.productId || ''}|${batch.id}|${batch.batchNumber}||${batch.expiryDate || ''}`
+            }];
+        });
+        setPrintBatches(allItems);
+        setTimeout(() => {
+            window.print();
+            setPrintBatches([]);
+        }, 500);
     };
 
     return (
@@ -166,40 +216,52 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                             <thead>
                                 <tr>
                                     <th>Product</th><th>SKU</th><th className="text-end">Ordered</th>
-                                    <th style={{ width: 140 }}>Receive Qty</th><th style={{ width: 130 }}>Unit Cost</th><th>Batches / Serials</th>
+                                    <th style={{ width: 100 }}>Receive Qty</th><th>Batches / Serials</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((r, i) => (
-                                    <tr key={r.productId}>
-                                        <td>{r.productName}</td>
-                                        <td>{r.sku}</td>
-                                        <td className="text-end">{r.orderedQty}</td>
-                                        <td>
-                                            <Form.Control type="number" min="0" value={r.receivedQty} onChange={e => setField(i, "receivedQty", e.target.value)} />
-                                        </td>
-                                        <td>
-                                            <Form.Control value={r.unitCost} onChange={e => setField(i, "unitCost", e.target.value)} />
-                                        </td>
-                                        <td>
-                                            <div className="d-flex flex-column gap-2">
-                                                {(r.batches || []).map((b, bi) => (
-                                                    <div key={bi} className="d-flex gap-2">
-                                                        <Form.Control placeholder="Batch No" value={b.batchNo} onChange={e => setBatch(i, bi, "batchNo", e.target.value)} style={{ maxWidth: 140 }} />
-                                                        <Form.Control type="date" value={b.expiryDate} onChange={e => setBatch(i, bi, "expiryDate", e.target.value)} style={{ maxWidth: 160 }} />
-                                                        <Form.Control type="number" min="0" placeholder="Qty" value={b.qty} onChange={e => setBatch(i, bi, "qty", e.target.value)} style={{ maxWidth: 100 }} />
-                                                        <Button size="sm" variant="outline-danger" onClick={() => rmBatch(i, bi)}>✕</Button>
+                                {rows.map((r, i) => {
+                                    // Calculate total qty from batches
+                                    const totalQty = (r.batches || []).reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+
+                                    return (
+                                        <tr key={r.productId}>
+                                            <td>{r.productName}</td>
+                                            <td>{r.sku}</td>
+                                            <td className="text-end">{r.orderedQty}</td>
+                                            <td>
+                                                <Form.Control type="number" readOnly value={totalQty} style={{ backgroundColor: '#e9ecef' }} />
+                                            </td>
+                                            <td>
+                                                <div className="d-flex flex-column gap-2">
+                                                    {(r.batches || []).map((b, bi) => (
+                                                        <div key={bi} className="border p-2 rounded">
+                                                            <div className="d-flex gap-2 mb-2">
+                                                                <Form.Control placeholder="Batch No" value={b.batchNo} onChange={e => setBatch(i, bi, "batchNo", e.target.value)} style={{ maxWidth: 140 }} />
+                                                                <Form.Control type="date" value={b.expiryDate} onChange={e => setBatch(i, bi, "expiryDate", e.target.value)} style={{ maxWidth: 160 }} />
+                                                                <Form.Control type="number" min="0" placeholder="Qty" value={b.qty} onChange={e => setBatch(i, bi, "qty", e.target.value)} style={{ maxWidth: 80 }} />
+                                                                <Form.Control type="number" min="0" placeholder="Cost" value={b.unitCost} onChange={e => setBatch(i, bi, "unitCost", e.target.value)} style={{ maxWidth: 100 }} />
+                                                                <Button size="sm" variant="outline-danger" onClick={() => rmBatch(i, bi)}>✕</Button>
+                                                            </div>
+                                                            <Form.Control
+                                                                size="sm"
+                                                                placeholder="Serials (comma separated)"
+                                                                value={(b.serials || []).join(",")}
+                                                                onChange={e => {
+                                                                    const val = e.target.value.split(",").map(s => s.trim());
+                                                                    setBatch(i, bi, "serials", val);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                    <div className="d-flex gap-2">
+                                                        <Button size="sm" variant="outline-secondary" onClick={() => addBatch(i)}>+ Batch</Button>
                                                     </div>
-                                                ))}
-                                                <div className="d-flex gap-2">
-                                                    <Button size="sm" variant="outline-secondary" onClick={() => addBatch(i)}>+ Batch</Button>
-                                                    <Form.Control placeholder="Serials (comma separated)" value={(r.serials || []).join(",")}
-                                                        onChange={e => setField(i, "serials", e.target.value.split(",").map(s => s.trim()))} />
                                                 </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </Table>
 
@@ -219,20 +281,38 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                             <div className="modal-body">
                                 <p className="text-muted">The following batches were created. You can scan these QR codes for tracking.</p>
                                 <div className="row g-3">
-                                    {createdBatches.map(batch => (
-                                        <div key={batch.id} className="col-md-4 col-lg-3">
+                                    {createdBatches.flatMap(batch => {
+                                        // If serials exist, create one card per serial
+                                        if (batch.serials && batch.serials.length > 0) {
+                                            return batch.serials.map(serial => ({
+                                                ...batch,
+                                                isSerial: true,
+                                                serialNo: serial,
+                                                qrValue: `V1|${batch.grnId || ''}|${batch.productId || ''}|${batch.id}|${batch.batchNumber}|${serial}|${batch.expiryDate || ''}`
+                                            }));
+                                        }
+                                        // Otherwise return single batch card
+                                        return [{
+                                            ...batch,
+                                            isSerial: false,
+                                            serialNo: '',
+                                            qrValue: `V1|${batch.grnId || ''}|${batch.productId || ''}|${batch.id}|${batch.batchNumber}||${batch.expiryDate || ''}`
+                                        }];
+                                    }).map((item, idx) => (
+                                        <div key={`${item.id}-${idx}`} className="col-md-4 col-lg-3">
                                             <div className="card h-100 p-3 text-center">
                                                 <div className="mb-2 d-flex justify-content-center">
-                                                    {/* Placeholder for QR Code - will replace with actual component */}
                                                     <QRCode
-                                                        value={`V1|${batch.id}|${batch.batchNumber}|${batch.costPrice}|${batch.grnId || ''}`}
+                                                        value={item.qrValue}
                                                         size={120}
                                                         level={"M"}
                                                     />
                                                 </div>
-                                                <h6 className="mb-1">{batch.batchNumber}</h6>
-                                                <small className="d-block text-muted">Qty: {batch.quantity}</small>
-                                                <small className="d-block text-muted">Exp: {batch.expiryDate || "N/A"}</small>
+                                                <h6 className="mb-1">{item.batchNumber}</h6>
+                                                {item.isSerial && <div className="badge bg-info text-dark mb-1">{item.serialNo}</div>}
+                                                <small className="d-block text-muted">Qty: {item.isSerial ? 1 : item.quantity}</small>
+                                                <small className="d-block text-muted">Exp: {item.expiryDate || "N/A"}</small>
+                                                <Button size="sm" variant="outline-dark" className="mt-2" onClick={() => handlePrintOne(item)}>Print Sticker</Button>
                                             </div>
                                         </div>
                                     ))}
@@ -240,12 +320,37 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                             </div>
                             <div className="modal-footer">
                                 <button className="btn btn-secondary" onClick={() => setShowQrModal(false)}>Close</button>
-                                <button className="btn btn-primary" onClick={() => window.print()}>Print</button>
+                                <button className="btn btn-primary" onClick={handlePrintAll}>Print All</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Hidden Print Section */}
+            <div className="print-only-section">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+                    {printBatches.map((item, idx) => (
+                        <div key={idx} style={{
+                            border: '1px dashed #000',
+                            padding: '10px',
+                            textAlign: 'center',
+                            width: '200px',
+                            height: '200px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            pageBreakInside: 'avoid'
+                        }}>
+                            <QRCode value={item.qrValue} size={100} level={"M"} />
+                            <div style={{ fontSize: '12px', marginTop: '5px', fontWeight: 'bold' }}>{item.batchNumber}</div>
+                            {item.isSerial && <div style={{ fontSize: '10px' }}>SN: {item.serialNo}</div>}
+                            <div style={{ fontSize: '10px' }}>Qty: {item.isSerial ? 1 : item.quantity}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>

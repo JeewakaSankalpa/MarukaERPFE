@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Button, Form, Table, Badge, Row, Col, ListGroup } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
@@ -34,7 +34,8 @@ function SupplierList({ onOpen }) {
             toast.error("Failed to load suppliers");
         }
     };
-    useEffect(() => { load(); /* eslint-disable-next-line */ }, [page, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { load(); }, [page, status]);
 
     const onSearch = () => { setPage(0); load(); };
     const toggleStatus = async (row) => {

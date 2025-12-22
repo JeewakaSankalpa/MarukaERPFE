@@ -120,7 +120,7 @@ export default function ProjectEstimationCard({ projectId, onOpen }) {
     return (
         <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center">
-                <span>Estimation</span>
+                <span>Quotations & Estimation</span>
                 <div className="d-flex gap-2">
                     {est ? (
                         <>
