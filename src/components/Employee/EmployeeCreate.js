@@ -51,12 +51,12 @@ function EmployeeCreate({ mode }) {
         const mgrs = allEmps.filter(e => ["MANAGER", "ADMIN", "HR"].includes(e.role));
         setManagers(mgrs);
 
-        // Fetch Workflow Roles
+        // Fetch Workflow Roles (All valid roles in the system)
         try {
-          const wfRes = await api.get("/workflow/roles");
+          const wfRes = await api.get("/roles");
           setProjectWorkflowRoles(wfRes.data || []);
         } catch (e) {
-          console.error("Failed to fetch workflow roles", e);
+          console.error("Failed to fetch roles", e);
         }
       } catch (error) {
         console.error("Failed to fetch dropdown data", error);

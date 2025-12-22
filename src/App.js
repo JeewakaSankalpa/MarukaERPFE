@@ -70,6 +70,7 @@ import QuotationPrint from "./components/Projects/QuotationPrint";
 import InvoiceView from "./components/Projects/InvoiceView";
 import QuotationList from "./components/Sales/QuotationList";
 import QuotationPage from "./components/Sales/QuotationPage";
+import SettingsPage from "./components/settings/SettingsPage";
 
 /* ---------------- Layout ---------------- */
 function Layout({ children }) {
@@ -154,6 +155,7 @@ function App() {
                     <Route element={<PrivateRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/admin/config" element={<SystemConfiguration />} />
+                        <Route path="/settings" element={<SettingsPage />} />
                         {/* <Route path="/customerDashboard" element={<CustomerDashboard />} /> */}
 
                         {/* HR / Employees */}

@@ -7,6 +7,7 @@ import {
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
+import ProjectQuotationCard from "./ProjectQuotationCard"; // New Component
 
 // Lazy load sub-components
 const ProjectFiles = React.lazy(() => import('./ProjectFiles'));
@@ -42,6 +43,8 @@ export default function ProjectDetails() {
     const hasAccess = (id) => {
         return userModules.includes(id);
     };
+
+
 
     const [project, setProject] = useState(null);
     const [actions, setActions] = useState(null);
@@ -120,7 +123,7 @@ export default function ProjectDetails() {
             try {
                 setLoading(true);
                 const [p, a] = await Promise.all([
-                    api.get(`/projects/details/${id}`),
+                    api.get(`/projects/details/${id}`, { headers: { 'X-Roles': rolesHeader } }),
                     api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': rolesHeader } }),
                 ]);
                 if (!alive) return;
@@ -140,11 +143,35 @@ export default function ProjectDetails() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, role]);
 
+    const openDatesModal = () => {
+        if (!project || !!viewVersion) return;
+        setEstimatedStart(project.estimatedStart ? project.estimatedStart.substring(0, 16) : '');
+        setEstimatedEnd(project.estimatedEnd ? project.estimatedEnd.substring(0, 16) : '');
+        setDueDate(project.dueDate ? project.dueDate.substring(0, 16) : '');
+        setShowDates(true);
+    };
+
+    const saveDates = async () => {
+        if (!id) return;
+        try {
+            await api.patch(`/projects/${id}/dates`, {
+                estimatedStart: estimatedStart || null,
+                estimatedEnd: estimatedEnd || null,
+                dueDate: dueDate || null
+            });
+            toast.success("Dates updated");
+            setShowDates(false);
+            refresh();
+        } catch (e) {
+            toast.error("Failed to update dates");
+        }
+    };
+
     const refresh = async () => {
         if (!id) return;
         try {
             const [p, a] = await Promise.all([
-                api.get(`/projects/details/${id}`),
+                api.get(`/projects/details/${id}`, { headers: { 'X-Roles': rolesHeader } }),
                 api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': rolesHeader } }),
             ]);
             setProject(p.data || null);
@@ -211,35 +238,63 @@ export default function ProjectDetails() {
         return { pct, label: `${days}d ${hours}h ${mins}m` };
     }, [project]);
 
-    const p = project || {};
-    const stageObj = p.currentStage || {};
-    const stageList = Array.isArray(p.stages) ? p.stages : [];
+    // Revision Viewer State
+    const [viewVersion, setViewVersion] = useState(null);
 
-    const openDatesModal = () => {
-        setEstimatedStart(project?.estimatedStart ? isoLocal(project.estimatedStart) : '');
-        setEstimatedEnd(project?.estimatedEnd ? isoLocal(project.estimatedEnd) : '');
-        setDueDate(project?.dueDate ? isoLocal(project.dueDate) : '');
-        setShowDates(true);
-    };
-    const saveDates = async () => {
+    const handleViewSnapshot = async (revNum) => {
+        if (!id) return;
         try {
-            const payload = {
-                estimatedStart: estimatedStart ? new Date(estimatedStart).toISOString() : null,
-                estimatedEnd: estimatedEnd ? new Date(estimatedEnd).toISOString() : null,
-                dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-            };
-            await api.patch(`/projects/${id}/dates`, payload, {
-                headers: { 'X-User': actor }
-            });
-            toast.success('Project dates updated');
-            setShowDates(false);
-            await refresh();
+            setLoading(true);
+            const res = await api.get(`/projects/${id}/versions/${revNum}`, { headers: { 'X-Roles': rolesHeader } });
+            const v = res.data;
+            if (v && v.snapshotJson) {
+                const snapProject = JSON.parse(v.snapshotJson);
+                setViewVersion({
+                    project: snapProject,
+                    files: v.filesSnapshot,
+                    meta: v
+                });
+                setActiveTab('dashboard');
+                toast.info(`Viewing Revision v${v.revisionNumber}`);
+            }
         } catch (e) {
-            toast.error(e?.response?.data?.message || 'Failed to update dates');
+            console.error(e);
+            toast.error("Failed to load revision snapshot");
+        } finally {
+            setLoading(false);
         }
     };
 
-    // helper: convert ISO to local datetime-local input value
+    const exitRevisionMode = () => {
+        setViewVersion(null);
+        toast.info("Returned to live project");
+    };
+
+    // Calculate effective project object
+    const p = viewVersion ? viewVersion.project : (project || {});
+    const stageObj = p.currentStage || {};
+    const stageList = Array.isArray(p.stages) ? p.stages : [];
+
+    // Effective actions (disable everything in revision mode)
+    const effectiveActions = viewVersion ? {
+        // In read-only mode, we might want to see files and timeline etc.
+        // Assuming default visibility or allowing all view-only components
+        // Use snapshot visibility if available, else default to all read-only
+        visibleComponents: viewVersion.meta?.visibleComponents || ['FILES', 'TIMELINE', 'REVISIONS', 'ESTIMATION', 'DELIVERY', 'INVENTORY', 'PAYMENTS', 'TASKS'],
+        canApprove: false,
+        canReject: false,
+        canMove: [],
+        missingFiles: []
+    } : (actions || {});
+
+    // Override isComponentVisible to use effectiveActions
+    const isComponentVisible = (compName) => {
+        if (!effectiveActions) return false;
+        if (!effectiveActions.visibleComponents) return false;
+        return effectiveActions.visibleComponents.includes(compName);
+    };
+
+    // Helper: convert ISO to local datetime-local input value
     function isoLocal(iso) {
         try {
             const d = new Date(iso);
@@ -271,6 +326,17 @@ export default function ProjectDetails() {
                 </div>
             )}
 
+            {viewVersion && (
+                <div className="alert alert-info d-flex justify-content-between align-items-center mx-2 mt-2 shadow-sm border-info">
+                    <div>
+                        <strong className="me-2">READ ONLY / REVISION MODE</strong>
+                        Viewing Revision <strong>v{viewVersion.meta.revisionNumber}</strong> from {new Date(viewVersion.meta.snapshotDate).toLocaleString()}
+                        {viewVersion.meta.reasonForRevision && <span className="ms-2 text-muted">— {viewVersion.meta.reasonForRevision}</span>}
+                    </div>
+                    <Button variant="info" size="sm" onClick={exitRevisionMode}>Exit Revision Mode</Button>
+                </div>
+            )}
+
             {/* Lifecycle Widget */}
             <Suspense fallback={<div>Loading...</div>}>
                 <ProjectLifecycle stages={project?.stages || []} currentStage={project?.currentStageId} status={project?.status} />
@@ -290,12 +356,7 @@ export default function ProjectDetails() {
                             </button>
                         </li>
                     )}
-                    {/* Inventory is usually always visible if they have module access? Or controlled by workflow? 
-                        The backend log didn't list INVENTORY, but let's assume INVENTORY is always visible for now 
-                        or check if backend provides it. The log said [TASKS, REVISIONS, FILES]. 
-                        If the user wants strict stage checks, Inventory might also be stage-gated.
-                        But usually Inventory (BoM) is needed early. I'll leave it as module-check for now unless specifically asked.
-                    */}
+                    {/* Inventory is usually always visible if they have module access? */}
                     {isComponentVisible('INVENTORY') && (
                         <li className="nav-item">
                             <button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
@@ -303,7 +364,7 @@ export default function ProjectDetails() {
                             </button>
                         </li>
                     )}
-                    {isComponentVisible('PAYMENTS') && hasAccess('projects.payments') && (
+                    {(hasAccess('projects.payments') && isComponentVisible('PAYMENTS')) && (
                         <li className="nav-item">
                             <button className={`nav-link ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
                                 Payments
@@ -330,11 +391,11 @@ export default function ProjectDetails() {
                                     <Card.Header className="d-flex justify-content-between align-items-center">
                                         <span>Project Overview</span>
                                         <div className="d-flex gap-2">
-                                            <Button size="sm" variant="outline-dark" onClick={openEmailModal} disabled={!id}>Email</Button>
+                                            <Button size="sm" variant="outline-dark" onClick={openEmailModal} disabled={!id || !!viewVersion}>Email</Button>
                                             <Button
                                                 size="sm"
                                                 variant="outline-primary"
-                                                disabled={!id}
+                                                disabled={!id || !!viewVersion}
                                                 onClick={() => navigate(`/projects/edit/${id}`)}
                                             >
                                                 Edit
@@ -380,13 +441,13 @@ export default function ProjectDetails() {
                                             <strong>Stage:</strong> {stageObj.stageType || '-'}
                                         </div>
 
-                                        {actions ? (
+                                        {effectiveActions ? (
                                             <>
-                                                {actions?.missingFiles && actions.missingFiles.length > 0 ? (
+                                                {effectiveActions?.missingFiles && effectiveActions.missingFiles.length > 0 ? (
                                                     <div className="alert alert-warning py-2">
                                                         <div className="fw-semibold mb-1">Required files missing for this stage:</div>
                                                         <ul className="mb-0">
-                                                            {actions.missingFiles.map((m) => <li key={m}>{m}</li>)}
+                                                            {effectiveActions.missingFiles.map((m) => <li key={m}>{m}</li>)}
                                                         </ul>
                                                     </div>
                                                 ) : (
@@ -400,7 +461,7 @@ export default function ProjectDetails() {
                                                         value={comment}
                                                         onChange={(e) => setComment(e.target.value)}
                                                         placeholder="Optional"
-                                                        disabled={!id || !project}
+                                                        disabled={!id || !project || !!viewVersion}
                                                     />
                                                 </Form.Group>
 
@@ -408,7 +469,7 @@ export default function ProjectDetails() {
                                                     <Button
                                                         size="sm"
                                                         onClick={() => approve('APPROVED')}
-                                                        disabled={!id || !project || !actions?.canApprove || !actions?.filesOk || approving}
+                                                        disabled={!id || !project || !effectiveActions?.canApprove || !effectiveActions?.filesOk || approving || !!viewVersion}
                                                     >
                                                         Approve
                                                     </Button>
@@ -417,7 +478,7 @@ export default function ProjectDetails() {
                                                         size="sm"
                                                         variant="danger"
                                                         onClick={() => approve('REJECTED')}
-                                                        disabled={!id || !project || !actions?.canReject || approving}
+                                                        disabled={!id || !project || !effectiveActions?.canReject || approving || !!viewVersion}
                                                     >
                                                         Reject
                                                     </Button>
@@ -426,25 +487,25 @@ export default function ProjectDetails() {
                                                         size="sm"
                                                         variant="warning"
                                                         onClick={() => move()}
-                                                        disabled={!id || !project || !actions?.filesOk || !actions?.canMove?.length || moving}
+                                                        disabled={!id || !project || !effectiveActions?.filesOk || !effectiveActions?.canMove?.length || moving || !!viewVersion}
                                                     >
                                                         Move to next
                                                     </Button>
 
-                                                    {(actions?.canMove || []).map((to) => (
+                                                    {(effectiveActions?.canMove || []).map((to) => (
                                                         <Button
                                                             key={to}
                                                             size="sm"
                                                             variant="outline-warning"
                                                             onClick={() => move(to)}
-                                                            disabled={!id || !project || moving}
+                                                            disabled={!id || !project || moving || !!viewVersion}
                                                         >
                                                             Move → {to}
                                                         </Button>
                                                     ))}
                                                 </div>
 
-                                                {(!actions.canApprove && !actions.canReject && (!actions.canMove || actions.canMove.length === 0)) && (
+                                                {(!effectiveActions.canApprove && !effectiveActions.canReject && (!effectiveActions.canMove || effectiveActions.canMove.length === 0)) && (
                                                     <div className="text-muted mt-2">No actions available for your role.</div>
                                                 )}
                                             </>
@@ -464,7 +525,7 @@ export default function ProjectDetails() {
                                     <Card className="h-100">
                                         <Card.Header className="d-flex justify-content-between align-items-center">
                                             <span>Timeline</span>
-                                            <Button size="sm" variant="outline-primary" onClick={openDatesModal} disabled={!id}>
+                                            <Button size="sm" variant="outline-primary" onClick={openDatesModal} disabled={!id || !!viewVersion}>
                                                 Edit Dates
                                             </Button>
                                         </Card.Header>
@@ -493,14 +554,7 @@ export default function ProjectDetails() {
 
                         {/* Files & Estimation row */}
                         <Row className="g-3 mt-1">
-                            {/* Delivery Schedule - Visible to all with project access for now */}
-                            {isComponentVisible('DELIVERY') && (
-                                <Col lg={12}>
-                                    <DeliveryScheduleCard projectId={id} />
-                                </Col>
-                            )}
-
-                            {isComponentVisible('FILES') && hasAccess('projects.files') && (
+                            {(hasAccess('projects.files') && isComponentVisible('FILES')) && (
                                 <Col lg={6}>
                                     <Card className="h-100">
                                         <Card.Header className="d-flex justify-content-between align-items-center">
@@ -510,21 +564,41 @@ export default function ProjectDetails() {
                                         <Card.Body style={{ overflowY: 'auto' }}>
                                             <ProjectFiles
                                                 id={id}
-                                                actions={actions}
+                                                actions={effectiveActions}
                                                 stageObj={stageObj}
                                                 roleHeader={{ 'X-Roles': rolesHeader }}
                                                 onAfterChange={refresh}
                                                 reloadKey={filesReloadKey}
+                                                filesOverride={viewVersion?.files}
+                                                readOnly={!!viewVersion}
                                             />
                                         </Card.Body>
                                     </Card>
                                 </Col>
                             )}
 
-                            {/* Estimation summary / actions - Is estimation stage controlled? Probably 'TASKS' covers estimation for now or just access */}
-                            {isComponentVisible('ESTIMATION') && hasAccess('projects.estimation') && (
+                            {/* Estimation summary / actions */}
+                            {(hasAccess('projects.estimation') && isComponentVisible('ESTIMATION')) && (
                                 <Col lg={6}>
-                                    <ProjectEstimationCard projectId={id} onOpen={() => { /* optional hook */ }} />
+                                    <div className="mb-3">
+                                        <ProjectEstimationCard
+                                            projectId={id}
+                                            readOnly={!!viewVersion}
+                                            onOpen={() => { /* optional hook */ }}
+                                        />
+                                    </div>
+                                    <ProjectQuotationCard
+                                        project={project}
+                                        isVisible={true}
+                                    />
+                                </Col>
+                            )}
+
+
+                            {/* Delivery Schedule - Moved to bottom */}
+                            {isComponentVisible('DELIVERY') && (
+                                <Col lg={12}>
+                                    <DeliveryScheduleCard projectId={id} />
                                 </Col>
                             )}
                         </Row>
@@ -581,6 +655,7 @@ export default function ProjectDetails() {
                         roleHeader={{ 'X-Roles': rolesHeader }} // or however your API expects roles, likely just implicit or in useAuth
                         onRevise={refresh}
                         activeStage={project?.currentStageId}
+                        onViewSnapshot={handleViewSnapshot}
                     />
                 )}
 
@@ -597,6 +672,7 @@ export default function ProjectDetails() {
                         />
                     </div>
                 )}
+
 
                 {activeTab === 'tasks' && isComponentVisible('TASKS') && (
                     <div className="mt-3 bg-white shadow-sm rounded">
@@ -680,6 +756,6 @@ export default function ProjectDetails() {
                     <Button variant="primary" onClick={saveDates}>Save</Button>
                 </Modal.Footer>
             </Modal>
-        </div>
+        </div >
     );
 }
