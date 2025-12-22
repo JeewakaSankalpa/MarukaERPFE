@@ -17,6 +17,8 @@ export const AuthProvider = ({ children }) => {
                 username: payload.sub,
                 role: payload.role,
                 userType: payload.userType,
+                userId: localStorage.getItem("userId"),
+                employeeId: localStorage.getItem("employeeId"),
             };
         } catch {
             localStorage.removeItem("token");

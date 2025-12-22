@@ -31,6 +31,7 @@ const emptyFlow = {
     notifications: {},         // { INQUIRY: ["HR"], ... }  NEW
     backwardTransitions: {},   // { ESTIMATION: ["INQUIRY"], ... } NEW
     visibility: {},            // { INQUIRY: { fieldsVisible: ["FILES"] } } NEW
+    estimationApproverRoles: [], // NEW: Global list of roles for Estimation Approval
 };
 
 export default function WorkflowBuilder() {
@@ -74,6 +75,7 @@ export default function WorkflowBuilder() {
                     notifications: wf.notifications || {},
                     backwardTransitions: wf.backwardTransitions || {},
                     visibility: wf.visibility || {},
+                    estimationApproverRoles: wf.estimationApproverRoles || [],
                 };
 
                 setFlow(base);
@@ -617,6 +619,38 @@ export default function WorkflowBuilder() {
                                     </tbody>
                                 </Table>
                             )}
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+
+
+            {/* Global Approvers (NEW) */}
+            <Row className="g-3 mt-1">
+                <Col lg={4}>
+                    <Card className="h-100">
+                        <Card.Header>Estimation Approvers (Global)</Card.Header>
+                        <Card.Body>
+                            <div className="text-muted small mb-2">
+                                Users with these roles will be required to approve estimations.
+                            </div>
+                            {roles.length === 0 ? (
+                                <div className="text-muted">No roles found.</div>
+                            ) : roles.map((r) => (
+                                <Form.Check
+                                    key={`est-role-${r}`}
+                                    type="checkbox"
+                                    label={r}
+                                    checked={(flow.estimationApproverRoles || []).includes(r)}
+                                    onChange={() => {
+                                        const current = flow.estimationApproverRoles || [];
+                                        const next = current.includes(r)
+                                            ? current.filter(x => x !== r)
+                                            : [...current, r];
+                                        setFlow(f => ({ ...f, estimationApproverRoles: next }));
+                                    }}
+                                />
+                            ))}
                         </Card.Body>
                     </Card>
                 </Col>

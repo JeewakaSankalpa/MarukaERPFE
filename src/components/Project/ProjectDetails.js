@@ -308,12 +308,6 @@ export default function ProjectDetails() {
         } catch { return ''; }
     }
 
-    const isComponentVisible = (component) => {
-        // If actions haven't loaded yet, default to hidden or wait? 
-        // Better to hide until we know for sure.
-        if (!actions || !actions.visibleComponents) return false;
-        return actions.visibleComponents.includes(component);
-    };
 
     return (
         <div
@@ -589,6 +583,7 @@ export default function ProjectDetails() {
                                     </div>
                                     <ProjectQuotationCard
                                         project={project}
+                                        projectId={id} // Explicitly pass ID from URL
                                         isVisible={true}
                                     />
                                 </Col>

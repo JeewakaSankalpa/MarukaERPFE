@@ -1,9 +1,10 @@
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card } from "react-bootstrap";
+import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card, Spinner } from "react-bootstrap";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Select from "react-select";
 import { toast, ToastContainer } from "react-toastify";
+import { useAuth } from "../../context/AuthContext"; // Import Auth
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -17,17 +18,28 @@ const listProjectsAPI = async () => (await api.get(`/projects`, { params: { page
 const getAvailOneAPI = async (productId) => (await api.get(`/inventory/available-quantities/${productId}`)).data; // optional
 // OPTIONAL fallback for cost if your product doesn’t carry it:
 const getLastCostAPI = async (productId) => (await api.get(`/products/${productId}/last-cost`)).data; // {unitCost:number}
+// NEW: Fetch employees for approval (Restored for display)
+const listEmployeesAPI = async () => (await api.get(`/employee/all`)).data ?? [];
+
+// NEW: Approval Actions
+const submitApprovalAPI = async (id, payload) => (await api.post(`/estimations/${id}/submit-approval`, payload)).data;
+const approveAPI = async (id, payload) => (await api.post(`/estimations/${id}/approve`, payload)).data;
+const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/reject`, payload)).data;
+const createRevisionAPI = async (id, payload) => (await api.post(`/estimations/${id}/revision`, payload)).data;
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const navigate = useNavigate();
     const location = useLocation(); // Hook for URL query params
     const searchParams = new URLSearchParams(location.search);
-    const isReadOnly = searchParams.get("readOnly") === "true";
+    const forceReadOnly = searchParams.get("readOnly") === "true";
 
     /* ------------ reference data ------------ */
     const [projects, setProjects] = useState([]);
     const [products, setProducts] = useState([]);
     const [available, setAvailable] = useState([]); // [{productId, availableQty}]
+    const [employees, setEmployees] = useState([]); // Restored
+    const [loading, setLoading] = useState(false); // Global loading state
+    const { employeeId } = useAuth(); // Get real employee ID from context
 
     /* ------------ quick indexes ------------ */
     const productById = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
@@ -37,6 +49,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [projectOpt, setProjectOpt] = useState(null); // {value:id,label:name}
     const [templates, setTemplates] = useState([]);
 
+    const [estimationId, setEstimationId] = useState(null); // NEW: to store actual DB ID
     const [components, setComponents] = useState(["Component A"]);
     // rows: { productId, productOption, estUnitCost:"", suggestedCost:number|undefined, storeAvail:number|undefined, quantities:{[comp]: number} }
     const [rows, setRows] = useState([]);
@@ -81,21 +94,51 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const libraryTerms = useMemo(() => libraryItems.filter(i => i.type === 'TERM'), [libraryItems]);
     const libraryNotes = useMemo(() => libraryItems.filter(i => i.type === 'NOTE'), [libraryItems]);
 
-    /* ------------ load reference data ------------ */
+    /* ------------ Workflow State ------------ */
+    const [version, setVersion] = useState(1);
+    const [versions, setVersions] = useState([]); // History snapshots
+    const [approvalStatus, setApprovalStatus] = useState("DRAFT"); // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED
+    const [approverIds, setApproverIds] = useState([]);
+    const [approvalHistory, setApprovalHistory] = useState([]); // Current approval cycle records
+    const [approvalPolicy, setApprovalPolicy] = useState("ALL");
+
+    // Derived ReadOnly: specific to status OR forceReadOnly
+    // Logic: If status is REJECTED, users might want to fix it. But our backend `createRevision` is cleaner. Let's strictly enforce ReadOnly for non-DRAFT, but REJECTED allows "Create Revision".
+    // ACTUALLY: Backend logic `submitForApproval` allows resubmit if `REJECTED`. So maybe we allow editing if REJECTED? 
+    // Let's stick to PLAN: "Create New Version" button if APPROVED or REJECTED. So REJECTED is read-only until revised.
+    const isLocked = forceReadOnly || (approvalStatus !== "DRAFT");
+    const isReadOnly = isLocked; // Alias for legacy/readability
+
+    // Modals
+    const [showApprovalModal, setShowApprovalModal] = useState(false);
+    const [showRevisionModal, setShowRevisionModal] = useState(false);
+    // const [selectedApprovers, setSelectedApprovers] = useState([]); // REMOVED
+    // const [selectedPolicy, setSelectedPolicy] = useState("ALL"); // REMOVED
+    const [revisionReason, setRevisionReason] = useState("");
+    const [rejectComment, setRejectComment] = useState(""); // For rejection modal if we had one
+
     /* ------------ load reference data ------------ */
     useEffect(() => {
         (async () => {
             try {
-                const [projs, prods, avails, tpls] = await Promise.all([
+                const [projs, prods, avails, tpls, settings, libs, sysConfig, emps] = await Promise.all([
                     listProjectsAPI().catch(() => []),
                     listProductsAPI().catch(() => []),
                     listAvailableAPI().catch(() => []),
                     listTemplates().catch(() => []),
+                    // Fetch configured settings / libraries
+                    api.get('/settings').then(r => r.data).catch(() => []), // settings
+                    api.get('/quote-library').then(r => r.data).catch(() => []), // libs
+                    api.get('/admin/config').catch(() => ({ data: {} })), // sysConfig
+                    listEmployeesAPI().catch(() => []),
                 ]);
                 setProjects(projs || []);
                 setProducts(prods || []);
                 setAvailable(avails || []);
                 setTemplates(tpls || []);
+                setTemplates(tpls || []);
+                setEmployees(emps || []); // Restored
+
 
                 // Process Settings
                 const sets = {};
@@ -112,6 +155,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 }
             } catch (e) {
                 toast.error(e?.response?.data?.message || "Failed to load reference data");
+            } finally {
+                // Ensure initial load doesn't block if we manage loading here.
+                // But mainly we care about the estimation load logic below.
             }
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,9 +189,18 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setCustomNote("");
             setTerms([]);
             setExistingFileUrl(null);
+
+            // Reset workflow state
+            setEstimationId(null);
+            setVersion(1);
+            setVersions([]);
+            setApprovalStatus("DRAFT");
+            setApproverIds([]);
+            setApprovalPolicy("ALL");
             return;
         }
         (async () => {
+            setLoading(true);
             try {
                 const est = await getEstimation(pid).catch(() => null);
 
@@ -165,8 +220,20 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setCompDelivery({});
                     setCompDeliveryTaxable({});
                     setExistingFileUrl(null);
+                    setVatPercent(globalSettings.GLOBAL_VAT_PERCENT || "18");
+                    setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
+
+                    // Reset workflow state
+                    setEstimationId(null);
+                    setVersion(1);
+                    setVersions([]);
+                    setApprovalStatus("DRAFT");
+                    setApproverIds([]);
+                    setApprovalPolicy("ALL");
                     return;
                 }
+
+                setEstimationId(est.id); // Store the estimation ID
 
                 // Existing file?
                 setExistingFileUrl(est.quotationFileUrl || null);
@@ -196,6 +263,17 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setDiscountPercent(est.discountPercent != null ? String(est.discountPercent) : "");
                 setCustomNote(est.customNote || "");
                 setTerms(est.terms || []);
+
+                // Workflow Fields
+                setVersion(est.version || 1);
+                setApprovalStatus(est.approvalStatus || "DRAFT");
+                setApproverIds(est.approverIds || []);
+                setApprovalPolicy(est.approvalPolicy || "ALL");
+                setApprovalStatus(est.approvalStatus || "DRAFT");
+                setApproverIds(est.approverIds || []);
+                setApprovalHistory(est.approvals || []);
+                setApprovalPolicy(est.approvalPolicy || "ALL");
+                setVersions(est.history || []); // If we stored history in `history` field
 
                 // rows
                 const rowMap = new Map();
@@ -228,13 +306,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 if (typeof est.includeDelivery === "boolean") setIncludeDelivery(!!est.includeDelivery);
                 if (typeof est.includeVat === "boolean") setIncludeVat(!!est.includeVat);
                 if (typeof est.includeTax === "boolean") setIncludeTax(!!est.includeTax);
-                if (est.vatPercent != null) setVatPercent(String(est.vatPercent));
-                if (est.taxPercent != null) setTaxPercent(String(est.taxPercent));
+                setVatPercent(globalSettings.GLOBAL_VAT_PERCENT || "18");
+                setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
+                setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
             } catch (e) {
-                toast.error(e?.response?.data?.message || "Failed to load estimation");
+                toast.error(e?.response?.data?.message || "Failed to load estimation. Please try again.");
+            } finally {
+                setLoading(false);
             }
         })();
-    }, [projectOpt, productById, availMap]);
+    }, [projectOpt, productById, availMap, globalSettings]);
 
     /* ------------ helpers ------------ */
     const buildProductLabel = (p) => {
@@ -311,6 +392,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 return x;
             });
             setCompDeliveryTaxable(s => {
+                const x = { ...s };
+                if (Object.prototype.hasOwnProperty.call(x, oldName)) {
+                    x[newName] = x[oldName]; delete x[oldName];
+                }
+                return x;
+            });
+            setCompOverhead(s => {
                 const x = { ...s };
                 if (Object.prototype.hasOwnProperty.call(x, oldName)) {
                     x[newName] = x[oldName]; delete x[oldName];
@@ -615,6 +703,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             if (res.data?.quotationFileUrl) {
                 setExistingFileUrl(res.data.quotationFileUrl);
             }
+            // Update estimationId if it's a new estimation being saved for the first time
+            if (!estimationId && res.data?.id) {
+                setEstimationId(res.data.id);
+            }
 
             if (!silent) toast.success("Estimation saved");
             return true;
@@ -666,6 +758,73 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         }
     };
 
+    /* ------------ Workflow Handlers ------------ */
+
+    const handleSubmitForApproval = async () => {
+        if (!projectOpt?.value || !estimationId) { toast.warn("Save estimation first."); return; }
+        // No manual validation of approvers needed
+        try {
+            const res = await submitApprovalAPI(estimationId, {
+                approverIds: [], // Backend resolves from Workflow Config
+                policy: null     // Backend Defaults
+            });
+            setApprovalStatus(res.approvalStatus);
+            setApproverIds(res.approverIds || []);
+            setShowApprovalModal(false);
+            toast.success("Submitted for approval!");
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to submit");
+        }
+    };
+
+    const handleApprove = async () => {
+        if (!estimationId) return;
+        try {
+            const res = await approveAPI(estimationId, { comment: "Approved via Web UI" });
+            setApprovalStatus(res.approvalStatus);
+            setApproverIds(res.approverIds || []);
+            setApprovalHistory(res.approvals || []);
+            setApprovalPolicy(res.approvalPolicy || "ALL");
+            toast.success("Approved!");
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to approve");
+        }
+    };
+
+    const handleReject = async () => {
+        if (!estimationId) return;
+        const comment = prompt("Enter rejection reason:");
+        if (!comment) return;
+        try {
+            const res = await rejectAPI(estimationId, { comment });
+            setApprovalStatus(res.approvalStatus);
+            setApproverIds(res.approverIds || []);
+            setApprovalHistory(res.approvals || []);
+            setApprovalPolicy(res.approvalPolicy || "ALL");
+            toast.error("Rejected!");
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to reject");
+        }
+    };
+
+    const handleRequestRevision = async () => {
+        if (!estimationId) return;
+        if (!revisionReason) { toast.warn("Enter a reason"); return; }
+        try {
+            const res = await createRevisionAPI(estimationId, { reason: revisionReason });
+            // Fully reload to reflect new version/draft state?
+            // Actually res is the new state.
+            setApprovalStatus(res.approvalStatus);
+            setVersion(res.version);
+            setVersions(res.history || []);
+            setShowRevisionModal(false);
+            setRevisionReason("");
+            toast.success(`New Revision V${res.version} Created!`);
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to create revision");
+        }
+    };
+
     /* ------------ derived ------------ */
     const neededMap = useMemo(() => {
         const m = new Map();
@@ -676,11 +835,63 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return m;
     }, [rows]);
 
+    // Status Badge Color
+    const statusColor = {
+        "DRAFT": "secondary",
+        "PENDING_APPROVAL": "warning",
+        "APPROVED": "success",
+        "REJECTED": "danger",
+        "FINALIZED": "success"
+    }[approvalStatus] || "secondary";
+
+    // Can current user approve?
+    const canApprove = approvalStatus === "PENDING_APPROVAL" && (approverIds || []).includes(employeeId);
+
     /* ------------ render ------------ */
+    // Render Loading Overlay
+    if (loading) {
+        return (
+            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "80vh" }}>
+                <Spinner animation="border" variant="primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </Spinner>
+                <span className="ms-2">Loading Estimation...</span>
+            </div>
+        );
+    }
+
     return (
-        <Container style={{ width: "95vw", maxWidth: 1400, paddingTop: 24 }}>
+        <Container fluid className="p-3" style={{ maxWidth: 1600 }}>
             <Row className="g-3">
                 <Col>
+                    {/* Header with Version/Status */}
+                    <div className="bg-white shadow rounded p-3 mb-3 d-flex justify-content-between align-items-center">
+                        <div className="d-flex align-items-center gap-3">
+                            <h4 className="mb-0">Project Estimation</h4>
+                            <Badge bg={statusColor} className="fs-6">{approvalStatus}</Badge>
+                            <Badge bg="light" text="dark" className="border">V{version}</Badge>
+                        </div>
+                        <div className="d-flex gap-2">
+                            {/* Action Buttons */}
+                            {approvalStatus === "DRAFT" && !isLocked && (
+                                <Button variant="outline-primary" onClick={() => setShowApprovalModal(true)}>
+                                    Submit for Approval
+                                </Button>
+                            )}
+                            {canApprove && (
+                                <>
+                                    <Button variant="success" onClick={handleApprove}>Approve</Button>
+                                    <Button variant="danger" onClick={handleReject}>Reject</Button>
+                                </>
+                            )}
+                            {(approvalStatus === "APPROVED" || approvalStatus === "REJECTED" || approvalStatus === "FINALIZED") && (
+                                <Button variant="outline-dark" onClick={() => setShowRevisionModal(true)}>
+                                    Create Revision
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="bg-white shadow rounded p-3">
                         <div className="d-flex align-items-center justify-content-between mb-3">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -692,6 +903,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         onChange={setProjectOpt}
                                         placeholder="Select a project…"
                                         isClearable
+                                        isDisabled={isLocked || !!propProjectId} // Lock if accessed via Project context
                                     />
                                 </div>
                             </div>
@@ -703,7 +915,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         type="file"
                                         size="sm"
                                         style={{ width: 250 }}
-                                        disabled={isReadOnly}
+                                        disabled={isLocked}
                                         onChange={(e) => setQuotationFile(e.target.files[0])}
                                     />
                                     {existingFileUrl && (
@@ -713,8 +925,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     )}
                                 </div>
 
-                                {!isReadOnly && <Button variant="outline-success" onClick={addComponent}>+ Column</Button>}
-                                {!isReadOnly && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
+                                {!isLocked && <Button variant="outline-success" onClick={addComponent}>+ Column</Button>}
+                                {!isLocked && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
                                 <Button
                                     variant="info"
                                     onClick={() => {
@@ -741,9 +953,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <Form.Control
                                                     value={c}
                                                     onChange={(e) => renameComponent(idx, e.target.value)}
-                                                    disabled={isReadOnly}
+                                                    disabled={isLocked}
                                                 />
-                                                {!isReadOnly && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>}
+                                                {!isLocked && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>}
                                             </div>
                                         </th>
                                     ))}
@@ -769,7 +981,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <Select
                                                     options={productOptions}
                                                     value={r.productOption || null}
-                                                    isDisabled={isReadOnly}
+                                                    isDisabled={isLocked}
                                                     onChange={(opt) => onPickProduct(i, opt)}
                                                     placeholder="Search product by name…"
                                                     isClearable
@@ -791,7 +1003,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     step="0.01"
                                                     value={r.estUnitCost ?? ""}
                                                     onChange={(e) => setRowField(i, "estUnitCost", e.target.value)}
-                                                    disabled={isReadOnly}
+                                                    disabled={isLocked}
                                                 />
                                                 {typeof r.suggestedCost === "number" && (
                                                     <div className="small text-muted d-flex justify-content-between">
@@ -871,7 +1083,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     type="number"
                                                     min="0" step="0.01"
                                                     value={compOverhead[cc.name] ?? ""}
-                                                    disabled={isReadOnly}
+                                                    disabled={isLocked}
                                                     onChange={(e) => setCompOverhead(s => ({ ...s, [cc.name]: e.target.value }))}
                                                     placeholder="0"
                                                 />
@@ -882,7 +1094,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     type="number"
                                                     min="0" step="0.01"
                                                     value={compMargin[cc.name] ?? ""}
-                                                    disabled={isReadOnly}
+                                                    disabled={isLocked}
                                                     onChange={(e) => setCompMargin(s => ({ ...s, [cc.name]: e.target.value }))}
                                                     placeholder="0"
                                                 />
@@ -894,7 +1106,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     type="number"
                                                     min="0" step="0.01"
                                                     value={compDelivery[cc.name] ?? ""}
-                                                    disabled={isReadOnly}
+                                                    disabled={isLocked}
                                                     onChange={(e) => setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }))}
                                                     placeholder="0"
                                                 />
@@ -904,7 +1116,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     type="switch"
                                                     checked={!!compDeliveryTaxable[cc.name]}
                                                     onChange={(e) => setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }))}
-                                                    disabled={!includeDelivery || isReadOnly}
+                                                    disabled={!includeDelivery || isLocked}
                                                     label=""
                                                 />
                                             </td>
@@ -923,7 +1135,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             type="switch"
                                             label="Include Delivery in Total"
                                             checked={includeDelivery}
-                                            disabled={isReadOnly}
+                                            disabled={isLocked}
                                             onChange={e => setIncludeDelivery(e.target.checked)}
                                         />
                                     </Col>
@@ -934,7 +1146,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 size="sm"
                                                 type="number"
                                                 value={discountPercent}
-                                                disabled={isReadOnly}
+                                                disabled={isLocked}
                                                 onChange={e => setDiscountPercent(e.target.value)}
                                                 placeholder="0"
                                             />
@@ -943,22 +1155,21 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     <Col md={3}>
                                         <Form.Check
                                             type="switch"
-                                            label={`VAT (${globalSettings.GLOBAL_VAT_PERCENT || 0}%)`}
+                                            label={`VAT (${vatPercent || 0}%)`}
                                             checked={includeVat}
-                                            disabled={isReadOnly}
+                                            disabled={isLocked}
                                             onChange={e => {
                                                 setIncludeVat(e.target.checked);
-                                                // Reset custom override if toggled? or keep it simple
                                             }}
                                         />
-                                        <div className="small text-muted">Global Rate Applied</div>
+                                        <div className="small text-muted">Global/Saved Rate Applied</div>
                                     </Col>
                                     <Col md={3}>
                                         <Form.Check
                                             type="switch"
-                                            label={`Other Tax (${globalSettings.GLOBAL_TAX_PERCENT || 0}%)`}
+                                            label={`Other Tax (${taxPercent || 0}%)`}
                                             checked={includeTax}
-                                            disabled={isReadOnly}
+                                            disabled={isLocked}
                                             onChange={e => setIncludeTax(e.target.checked)}
                                         />
                                     </Col>
@@ -974,14 +1185,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             <div className="d-flex gap-2 my-2">
                                                 <Select
                                                     options={libraryTerms.map(t => ({ value: t, label: t.title }))}
-                                                    isDisabled={isReadOnly}
+                                                    isDisabled={isLocked}
                                                     onChange={(opt) => {
                                                         if (opt) setTerms([...terms, { label: opt.value.title, value: opt.value.content }]);
                                                     }}
                                                     placeholder="Load a Term..."
                                                     className="flex-grow-1"
                                                 />
-                                                {!isReadOnly && <Button size="sm" variant="outline-primary" onClick={() => setTerms([...terms, { label: "", value: "" }])}>
+                                                {!isLocked && <Button size="sm" variant="outline-primary" onClick={() => setTerms([...terms, { label: "", value: "" }])}>
                                                     + Custom
                                                 </Button>}
                                             </div>
@@ -993,7 +1204,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                                 <Form.Control
                                                                     size="sm"
                                                                     value={t.label}
-                                                                    disabled={isReadOnly}
+                                                                    disabled={isLocked}
                                                                     onChange={e => {
                                                                         const copy = [...terms];
                                                                         copy[i].label = e.target.value;
@@ -1006,7 +1217,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                                 <Form.Control
                                                                     size="sm"
                                                                     value={t.value}
-                                                                    disabled={isReadOnly}
+                                                                    disabled={isLocked}
                                                                     onChange={e => {
                                                                         const copy = [...terms];
                                                                         copy[i].value = e.target.value;
@@ -1016,7 +1227,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                                 />
                                                             </td>
                                                             <td style={{ width: 40 }}>
-                                                                {!isReadOnly && <Button size="sm" variant="link" className="text-danger p-0" onClick={() => setTerms(terms.filter((_, idx) => idx !== i))}>✕</Button>}
+                                                                {!isLocked && <Button size="sm" variant="link" className="text-danger p-0" onClick={() => setTerms(terms.filter((_, idx) => idx !== i))}>✕</Button>}
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -1030,7 +1241,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             <div className="d-flex gap-2 my-2 align-items-center">
                                                 <Select
                                                     options={libraryNotes.map(n => ({ value: n, label: n.title }))}
-                                                    isDisabled={isReadOnly}
+                                                    isDisabled={isLocked}
                                                     onChange={(opt) => {
                                                         if (opt) setCustomNote(prev => (prev ? prev + "\n" : "") + opt.value.content);
                                                     }}
@@ -1042,7 +1253,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 as="textarea"
                                                 rows={4}
                                                 value={customNote}
-                                                disabled={isReadOnly}
+                                                disabled={isLocked}
                                                 onChange={e => setCustomNote(e.target.value)}
                                                 placeholder="Enter any custom notes for this estimation..."
                                             />
@@ -1096,60 +1307,49 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         <div className="mt-3 d-flex justify-content-between align-items-center">
                             <div className="small text-muted">Tip: Columns are components; rename or add more as needed.</div>
                             <div className="d-flex gap-2">
-                                <Button variant="outline-dark" onClick={handlePrint}>Print / Download PDF</Button>
-                                {!isReadOnly && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
+                                {!isLocked && <span className="text-muted small me-2">Editing enabled</span>}
+                                {!isLocked && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
                             </div>
                         </div>
                     </div>
 
                     {/* Print Settings Modal */}
-                    <Modal show={showPrintModal} onHide={() => setShowPrintModal(false)}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>Print Settings</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
-                            <p className="text-muted small mb-3">
-                                Select which columns and totals to include in the generated PDF.
-                                The global "Include Delivery/VAT/Tax" settings from the main page will also apply.
-                            </p>
-                            <Form.Check
-                                type="switch"
-                                id="show-qty"
-                                label="Show Quantity"
-                                checked={printOpts.showQuantity}
-                                onChange={(e) => setPrintOpts(s => ({ ...s, showQuantity: e.target.checked }))}
-                                className="mb-2"
-                            />
-                            <Form.Check
-                                type="switch"
-                                id="show-unit"
-                                label="Show Unit Cost"
-                                checked={printOpts.showUnitCost}
-                                onChange={(e) => setPrintOpts(s => ({ ...s, showUnitCost: e.target.checked }))}
-                                className="mb-2"
-                            />
-                            <Form.Check
-                                type="switch"
-                                id="show-comp-total"
-                                label="Show Component Totals"
-                                checked={printOpts.showComponentTotals}
-                                onChange={(e) => setPrintOpts(s => ({ ...s, showComponentTotals: e.target.checked }))}
-                                className="mb-2"
-                            />
-                            <Form.Check
-                                type="switch"
-                                id="show-grand-total"
-                                label="Show Grand Total"
-                                checked={printOpts.showGrandTotal}
-                                onChange={(e) => setPrintOpts(s => ({ ...s, showGrandTotal: e.target.checked }))}
-                                className="mb-2"
-                            />
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button variant="secondary" onClick={() => setShowPrintModal(false)}>Cancel</Button>
-                            <Button variant="primary" onClick={confirmPrint}>Download PDF</Button>
-                        </Modal.Footer>
-                    </Modal>
+                    {/* Print Settings Modal Moved to ProjectQuotationCard */}
+
+                    {/* Workflow Status Card */}
+                    <div className="bg-white shadow rounded p-3 mt-3">
+                        <h6 className="mb-2">Workflow Status</h6>
+                        <div className="mb-2">
+                            <Badge bg={approvalStatus === 'APPROVED' ? 'success' : approvalStatus === 'PENDING_APPROVAL' ? 'warning' : 'secondary'}>
+                                {approvalStatus}
+                            </Badge>
+                        </div>
+                        {(approverIds.length > 0) && (
+                            <div className="small">
+                                <div className="fw-semibold mb-1">Approvers:</div>
+                                <ul className="list-unstyled mb-0">
+                                    {approverIds.map(uid => {
+                                        const emp = employees.find(e => e.id === uid);
+                                        const name = emp ? `${emp.firstName} ${emp.lastName}` : uid;
+                                        // Check status
+                                        const rec = approvalHistory.find(r => r.approverId === uid && r.status !== 'PENDING'); // Assuming backend stores specific status or we infer
+                                        // Backend ApprovalRecord: status="APPROVED"|"REJECTED".
+                                        // If not found in history, it's PENDING.
+                                        const status = rec ? rec.status : "PENDING";
+                                        const color = status === 'APPROVED' ? 'text-success' : status === 'REJECTED' ? 'text-danger' : 'text-muted';
+
+                                        return (
+                                            <li key={uid} className="mb-1 d-flex justify-content-between align-items-center">
+                                                <span>{name}</span>
+                                                <span className={`badge bg-light ${color} border`}>{status}</span>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        )}
+                        {(approverIds.length === 0 && approvalStatus !== 'DRAFT') && <div className="text-muted small">No approvers assigned.</div>}
+                    </div>
 
                     <div className="bg-white shadow rounded p-3 mt-3">
                         <h6 className="mb-2">Templates</h6>
@@ -1174,7 +1374,38 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 </Col>
             </Row>
 
+            {/* Approval Modal */}
+            <Modal show={showApprovalModal} onHide={() => setShowApprovalModal(false)}>
+                <Modal.Header closeButton><Modal.Title>Submit for Approval</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <p>Are you sure you want to submit this estimation for approval?</p>
+                    <p className="text-muted small">
+                        Approvers will be automatically assigned based on the <strong>Project Workflow</strong> configuration.
+                    </p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowApprovalModal(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={handleSubmitForApproval}>Submit</Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Revision Modal */}
+            <Modal show={showRevisionModal} onHide={() => setShowRevisionModal(false)}>
+                <Modal.Header closeButton><Modal.Title>Create New Revision</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <Form.Group>
+                        <Form.Label>Reason for Revision</Form.Label>
+                        <Form.Control as="textarea" rows={3} value={revisionReason} onChange={e => setRevisionReason(e.target.value)} />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowRevisionModal(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={handleRequestRevision}>Create Revision</Button>
+                </Modal.Footer>
+            </Modal>
+
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container >
     );
 }
+
