@@ -1,13 +1,10 @@
-import React, { useState } from "react";
-import { Card, Button, Badge, Spinner } from "react-bootstrap";
+import React from "react";
+import { Card, Button, Badge } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { Printer } from "lucide-react";
-import api from "../../api/api";
-import { toast } from "react-toastify";
 
 const ProjectQuotationCard = ({ project, projectId, isVisible }) => {
     const navigate = useNavigate();
-    const [isDownloading, setIsDownloading] = useState(false);
 
     if (!isVisible) return null;
 
@@ -15,34 +12,8 @@ const ProjectQuotationCard = ({ project, projectId, isVisible }) => {
 
     const handleViewQuotation = () => {
         if (!targetId) return;
-        // Navigate to estimation page in READ-ONLY mode just for preview
-        navigate(`/projects/estimation/${targetId}?readOnly=true`);
-    };
-
-    const handleDownloadPdf = async () => {
-        if (!targetId) return;
-        setIsDownloading(true);
-        try {
-            // Use stored estimation settings for generation
-            const pdfResp = await api.post(
-                `/estimations/by-project/${targetId}/pdf`,
-                {}, // Empty options to use defaults/stored values
-                { responseType: "blob" }
-            );
-            const blob = new Blob([pdfResp.data], { type: "application/pdf" });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${targetId}-Estimation.pdf`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            toast.success("PDF Downloaded");
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to generate PDF.");
-        } finally {
-            setIsDownloading(false);
-        }
+        // Navigate to the Printable View (QuotationPrint.js)
+        navigate(`/projects/${targetId}/quotation`);
     };
 
     return (
@@ -64,11 +35,8 @@ const ProjectQuotationCard = ({ project, projectId, isVisible }) => {
                     View the official quotation for this project. Download the PDF for clients, or preview the estimation details.
                 </p>
                 <div className="d-flex gap-2">
-                    <Button variant="primary" onClick={handleDownloadPdf} disabled={!targetId || isDownloading}>
-                        {isDownloading ? <><Spinner size="sm" animation="border" className="me-1" /> Generating...</> : "Download PDF"}
-                    </Button>
-                    <Button variant="outline-secondary" onClick={handleViewQuotation} disabled={!targetId}>
-                        Preview
+                    <Button variant="primary" onClick={handleViewQuotation} disabled={!targetId}>
+                        Print / View
                     </Button>
                 </div>
             </Card.Body>

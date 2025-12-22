@@ -84,7 +84,7 @@ const QuotationPrint = () => {
             <ReportLayout
                 title={`QUOTATION: ${project?.projectName || "Project"}`}
                 orientation="portrait"
-                subtitle={`Quote Ref: ${estimation.id.substring(0, 8).toUpperCase()}`}
+                subtitle={`Ref: ${project?.id || projectId} - v${estimation.version || 1}`}
             >
                 {/* Customer Info */}
                 <div className="mb-4 d-flex justify-content-between">
@@ -150,13 +150,33 @@ const QuotationPrint = () => {
                     </tfoot>
                 </Table>
 
-                <div className="mt-5">
+                {(estimation.customNote) && (
+                    <div className="mt-4 p-3 bg-light border rounded no-print-bg">
+                        <strong>Notes:</strong>
+                        <p className="mb-0 small" style={{ whiteSpace: "pre-wrap" }}>{estimation.customNote}</p>
+                    </div>
+                )}
+
+                <div className="mt-4">
                     <strong>Terms & Conditions:</strong>
-                    <ul className="small text-muted">
-                        <li>This quotation is valid for 30 days from the date of issue.</li>
-                        <li>Payment terms: 50% advance, 50% upon completion.</li>
-                        <li>Delivery timeline: Subject to material availability.</li>
-                    </ul>
+                    {estimation.terms && estimation.terms.length > 0 ? (
+                        <Table size="sm" className="mt-2" bordered>
+                            <tbody>
+                                {estimation.terms.map((t, idx) => (
+                                    <tr key={idx}>
+                                        <td style={{ width: "30%", fontWeight: "bold", fontSize: "0.9rem" }}>{t.label}</td>
+                                        <td style={{ fontSize: "0.9rem" }}>{t.value}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    ) : (
+                        <ul className="small text-muted mt-2">
+                            <li>This quotation is valid for 30 days from the date of issue.</li>
+                            <li>Payment terms: 50% advance, 50% upon completion.</li>
+                            <li>Delivery timeline: Subject to material availability.</li>
+                        </ul>
+                    )}
                 </div>
             </ReportLayout>
         </div>

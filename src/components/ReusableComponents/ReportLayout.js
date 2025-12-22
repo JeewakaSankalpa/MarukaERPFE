@@ -21,8 +21,30 @@ const ReportLayout = ({ title, children, orientation = "portrait" }) => {
         @media print {
           @page { size: ${orientation}; margin: 10mm; }
           body { -webkit-print-color-adjust: exact; }
+
+          /* Hide everything by default */
+          body * {
+            visibility: hidden;
+          }
+
+          /* Only show the report container and its children */
+          .report-container, .report-container * {
+            visibility: visible;
+          }
+
+          /* Position report at top left of page */
+          .report-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white;
+            min-height: 100vh;
+          }
+
           .no-print { display: none !important; }
-          .report-container { width: 100%; }
         }
         .report-header {
             display: flex;
@@ -74,7 +96,7 @@ const ReportLayout = ({ title, children, orientation = "portrait" }) => {
                     <strong>Date:</strong> {date}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

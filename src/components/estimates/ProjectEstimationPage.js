@@ -927,18 +927,6 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                                 {!isLocked && <Button variant="outline-success" onClick={addComponent}>+ Column</Button>}
                                 {!isLocked && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
-                                <Button
-                                    variant="info"
-                                    onClick={() => {
-                                        if (projectOpt?.value) {
-                                            navigate(`/projects/${projectOpt.value}/quotation`);
-                                        } else {
-                                            toast.warn("Select a project first");
-                                        }
-                                    }}
-                                >
-                                    View Quote
-                                </Button>
                             </div>
                         </div>
 
