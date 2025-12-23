@@ -66,13 +66,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [compDeliveryTaxable, setCompDeliveryTaxable] = useState({}); // { [compName]: boolean }
 
     // Print Settings
+    // Print Settings
     const [showPrintModal, setShowPrintModal] = useState(false);
-    const [printOpts, setPrintOpts] = useState({
-        showQuantity: true,
-        showUnitCost: true,
-        showComponentTotals: true,
-        showGrandTotal: true,
-    });
 
     /* ------------ file upload state ------------ */
     const [quotationFile, setQuotationFile] = useState(null);
@@ -1291,7 +1286,36 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                 </ul>
                             </div>
                         )}
-                        {(approverIds.length === 0 && approvalStatus !== 'DRAFT') && <div className="text-muted small">No approvers assigned.</div>}
+                    </div>
+
+                    {/* Version History Card */}
+                    <div className="bg-white shadow rounded p-3 mt-3">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <h6 className="mb-0">Version History ({version})</h6>
+                            {isLocked && (canApprove || approvalStatus === 'FINALIZED' || approvalStatus === 'APPROVED') && (
+                                <Button size="sm" variant="outline-dark" onClick={() => setShowRevisionModal(true)}>
+                                    New Revision
+                                </Button>
+                            )}
+                        </div>
+                        {versions.length === 0 ? (
+                            <div className="text-muted small">No history yet.</div>
+                        ) : (
+                            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                                <Table size="sm" hover className="mb-0 small">
+                                    <thead><tr><th>Ver</th><th>Status</th><th>Date</th></tr></thead>
+                                    <tbody>
+                                        {versions.map((v, i) => (
+                                            <tr key={i}>
+                                                <td>{v.version}</td>
+                                                <td><Badge bg="secondary">{v.approvalStatus}</Badge></td>
+                                                <td>{v.createdAt ? new Date(v.createdAt).toLocaleDateString() : '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                        )}
                     </div>
 
                     <div className="bg-white shadow rounded p-3 mt-3">

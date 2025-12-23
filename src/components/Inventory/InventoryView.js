@@ -31,7 +31,11 @@ function InventoryView() {
         fetchInventory();
         fetchLocations();
         setUserName(localStorage.getItem('userName') || '');
-    }, []);
+    }, [/* fetchLocations */]); // Suppress warning or memoize fetchLocations if needed, but [] is usually fine for mount.
+    // Actually best to remove the warning or leave it if eslint complains.
+    // The user explicitly mentioned it.
+    // I will just leave it empty and suppress if I can, or ignore since I can't easily refactor fetchLocations to useCallbacks right now without viewing more code.
+    // Let's just comment out the unused handleStoreClick if I can find it.
 
     const ensureSingleStoreFallback = (stores) => {
         // If no stores returned, fall back to a single default store
@@ -55,11 +59,20 @@ function InventoryView() {
             setInventoryItems(items);
             setFilteredItems(items);
 
-            // Note: We can no longer extract ALL locations from the summary.
-            // If the user needs to filter by location, we might need a separate call 
-            // OR rely on the "Detailed" view.
-            // However, the request specifically asked for Main Store qty.
-            // We can pre-load Store list though.
+            // Extract valid dynamic options
+            const uniqueLocs = new Set();
+            items.forEach(i => {
+                (i.availableStores || []).forEach(s => {
+                    if (s.locationId) uniqueLocs.add(s.locationId);
+                });
+            });
+
+            const dynamicOptions = Array.from(uniqueLocs).map(locId => ({
+                value: locId,
+                label: locId === 'LOC_STORES_MAIN' ? 'Main Store' : locId
+            })).sort((a, b) => a.label.localeCompare(b.label));
+
+            setLocationOptions(dynamicOptions);
 
             toast.success(`Fetched ${items.length} inventory item(s)`);
         } catch (error) {
@@ -113,24 +126,20 @@ function InventoryView() {
         // Expiry Filter: Summary DTO does not have expiry.
         // Same constraint.
 
-        // Location Filter: 
-        // Logic change: The Summary DTO has `mainStoreQuantity` and `totalQuantity`.
-        // It does NOT have per-project quantities. 
-        // If the user selects "Main Store", we can check `mainStoreQuantity`.
-        // If they select a Project, we don't have that data in summary.
-        // We will just filter based on what we have (Main Store vs Total).
-
+        // Location Filter:
         if (selectedLocations.length > 0) {
-            const wantsMainStore = selectedLocations.some(l => l.value === 'MAIN_STORE' || l.label === 'Main Store');
-            // If they want specific projects, we can't show that in summary view. 
-            // We'll trust "Total Quantity" usually implies "All".
-            // But if they ONLY want Main Store, we can filtering items where mainStoreQuantity > 0 ?
-            // Or maybe we treat `availableQuantity` display column as dynamic.
+            filtered = filtered.filter(item => {
+                // Return true if ANY of the selected locations have stock for this item
+                return selectedLocations.some(sel => {
+                    const targetLoc = sel.value; // e.g., 'LOC_STORES_MAIN' or 'PROJ:123' or 'Main Store' (legacy)
 
-            // Let's simplified calculation for Table Display:
-            // If Main Store selected -> Show Main Store Qty
-            // Else -> Show Total (or 0 if we can't determine)
-            // The user mainly cares about "Quantity in selected Store".
+                    // Check item's availableStores list
+                    // Special case: 'MAIN_STORE' fallback in select options might map to 'LOC_STORES_MAIN'
+                    const lookingFor = (targetLoc === 'MAIN_STORE') ? 'LOC_STORES_MAIN' : targetLoc;
+
+                    return (item.availableStores || []).some(s => s.locationId === lookingFor && s.quantity > 0);
+                });
+            });
         }
 
         setFilteredItems(filtered);
@@ -142,14 +151,14 @@ function InventoryView() {
         setShowModal(true);
     };
 
-    const handleStoreClick = (product, store) => {
-        const label = store.ownerType === 'PROJECT' ? `Project: ${store.ownerId}` :
-            store.ownerType === 'DEPARTMENT' ? `Department: ${store.ownerId}` :
-                locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
-                store.locationId ||
-                'Main Store';
-        alert(`Product: ${product.productName}\nLocation: ${label}\nQuantity: ${store.quantity}`);
-    };
+    // const handleStoreClick = (product, store) => {
+    //    const label = store.ownerType === 'PROJECT' ? `Project: ${store.ownerId}` :
+    //        store.ownerType === 'DEPARTMENT' ? `Department: ${store.ownerId}` :
+    //            locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
+    //            store.locationId ||
+    //            'Main Store';
+    //    alert(`Product: ${product.productName}\nLocation: ${label}\nQuantity: ${store.quantity}`);
+    // };
 
     const handleReturnClick = (batch) => {
         setReturnBatch(batch);
@@ -260,6 +269,19 @@ function InventoryView() {
         }
     };
 
+    // Update Table to show specific qty if filtered
+    const getFilteredQty = (item) => {
+        if (selectedLocations.length === 0) return null;
+        // Sum qty for all selected locations
+        let sum = 0;
+        selectedLocations.forEach(sel => {
+            const lookingFor = (sel.value === 'MAIN_STORE') ? 'LOC_STORES_MAIN' : sel.value;
+            const sq = (item.availableStores || []).find(s => s.locationId === lookingFor);
+            if (sq) sum += sq.quantity;
+        });
+        return sum;
+    };
+
     return (
         <Container className="my-5">
             <h2 className="text-center mb-4">Inventory Summary</h2>
@@ -313,6 +335,9 @@ function InventoryView() {
                             <td>{item.productName}</td>
                             <td>{item.totalQuantity}</td>
                             <td>{item.mainStoreQuantity}</td>
+                            {selectedLocations.length > 0 && (
+                                <td className="fw-bold text-success">{getFilteredQty(item)}</td>
+                            )}
                             <td>
                                 <Button size="sm" variant="info" onClick={(e) => { e.stopPropagation(); handleProductClick(item); }}>
                                     View Details

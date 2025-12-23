@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { Button, Spinner, Table } from "react-bootstrap";
-import logo from "../../assets/logo.jpeg"; // Assuming a logo exists, or use a placeholder text if not found
+// import logo from "../../assets/logo.jpeg"; // Unused
 
 const POPrint = () => {
     const { id } = useParams();

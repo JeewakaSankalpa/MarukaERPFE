@@ -61,6 +61,7 @@ import SalaryManagement from "./components/Employee/SalaryManagement";
 import HRConfiguration from "./components/HumanResources/HRConfiguration";
 import SalaryReport from "./components/Employee/Reports/SalaryReport";
 import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
+import ProjectMaterialReport from "./components/Inventory/Reports/ProjectMaterialReport";
 import StockValuationReport from "./components/Inventory/Reports/StockValuationReport";
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";

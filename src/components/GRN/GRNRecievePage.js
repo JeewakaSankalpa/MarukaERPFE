@@ -5,7 +5,6 @@ import api from "../../api/api";
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 
 /* ========== INLINE API HELPERS ========== */
-const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
 const createGRN = async (payload) => (await api.post(`/grns`, payload)).data;
 
@@ -32,8 +31,6 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     productName: it.productName,
                     sku: it.sku,
                     unit: it.unit || "pcs",
-                    orderedQty: it.orderedQty,
-                    receivedQty: 0,
                     orderedQty: it.orderedQty,
                     receivedQty: 0,
                     batches: [],
@@ -64,8 +61,6 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 const totalQty = (r.batches || []).reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
                 return {
                     productId: r.productId,
-                    unit: r.unit,
-                    receivedQty: totalQty,
                     unit: r.unit,
                     receivedQty: totalQty,
                     batches: (r.batches || []).filter(b => Number(b.qty) > 0).map(b => ({
@@ -237,19 +232,15 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                     {(r.batches || []).map((b, bi) => (
                                                         <div key={bi} className="border p-2 rounded">
                                                             <div className="d-flex gap-2 mb-2">
-                                                                <Form.Control placeholder="Batch No" value={b.batchNo} onChange={e => setBatch(i, bi, "batchNo", e.target.value)} style={{ maxWidth: 140 }} />
+                                                                <Form.Control placeholder="Batch / Serial No" value={b.batchNo} onChange={e => setBatch(i, bi, "batchNo", e.target.value)} style={{ maxWidth: 180 }} />
                                                                 <Form.Control type="date" value={b.expiryDate} onChange={e => setBatch(i, bi, "expiryDate", e.target.value)} style={{ maxWidth: 160 }} />
                                                                 <Form.Control type="number" min="0" placeholder="Qty" value={b.qty} onChange={e => setBatch(i, bi, "qty", e.target.value)} style={{ maxWidth: 80 }} />
                                                                 <Form.Control type="number" min="0" placeholder="Cost" value={b.unitCost} onChange={e => setBatch(i, bi, "unitCost", e.target.value)} style={{ maxWidth: 100 }} />
                                                                 <Button size="sm" variant="outline-danger" onClick={() => rmBatch(i, bi)}>✕</Button>
                                                             </div>
-                                                            <Form.Control
-                                                                size="sm"
-                                                                placeholder="Serials (comma separated)"
-                                                                value={(b.serials || []).join(",")}
-                                                                onChange={e => {
+                                                            {/* Serials input removed as per Unified Batch/Serial Request */}
                                                                     const val = e.target.value.split(",").map(s => s.trim());
-                                                                    setBatch(i, bi, "serials", val);
+                                                            setBatch(i, bi, "serials", val);
                                                                 }}
                                                             />
                                                         </div>

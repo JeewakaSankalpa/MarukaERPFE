@@ -25,8 +25,20 @@ export default function TransfersInbox() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { load(); }, [toLocationId]);
 
-    const onAccept = async (id) => { await acceptTransfer(id); toast.success("Accepted"); load(); };
-    const onReject = async (id) => { await rejectTransfer(id); toast.info("Rejected"); load(); };
+    const [processing, setProcessing] = useState(false);
+
+    const onAccept = async (id) => {
+        if (processing) return;
+        setProcessing(true);
+        try { await acceptTransfer(id); toast.success("Accepted"); load(); }
+        finally { setProcessing(false); }
+    };
+    const onReject = async (id) => {
+        if (processing) return;
+        setProcessing(true);
+        try { await rejectTransfer(id); toast.info("Rejected"); load(); }
+        finally { setProcessing(false); }
+    };
 
     const handleScan = (qrValue) => {
         if (!expandedId) return;
@@ -92,8 +104,8 @@ export default function TransfersInbox() {
                                     <td>{(r.items || []).length} items</td>
                                     <td><Badge bg="warning">Pending</Badge></td>
                                     <td onClick={e => e.stopPropagation()}>
-                                        <Button size="sm" onClick={() => onAccept(r.id)} className="me-2">Accept</Button>
-                                        <Button size="sm" variant="outline-danger" onClick={() => onReject(r.id)}>Reject</Button>
+                                        <Button size="sm" onClick={() => onAccept(r.id)} className="me-2" disabled={processing}>Accept</Button>
+                                        <Button size="sm" variant="outline-danger" onClick={() => onReject(r.id)} disabled={processing}>Reject</Button>
                                     </td>
                                 </tr>
                                 {expandedId === r.id && (

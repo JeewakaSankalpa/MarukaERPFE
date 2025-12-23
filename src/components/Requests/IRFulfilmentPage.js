@@ -199,14 +199,25 @@ export default function IRFulfilmentPage() {
         // Fetch batches
         try {
             const res = await api.get(`/inventory/batches?productId=${it.productId}`);
-            const mainLocId = "LOC_STORES_MAIN";
-            const fallbackLocId = "warehouse"; // Backend default
-            // Filter: Must match distinct main locations AND have qty
-            const filtered = (res.data || []).filter(b =>
-                (b.locationId === mainLocId || b.locationId === fallbackLocId) && b.remainingQty > 0
-            );
+
+            // Strict Main Store Filter: only matching IDs or Names
+            const validMainStores = ["LOC_STORES_MAIN", "Main Store", "MAIN_STORE"];
+
+            const filtered = (res.data || []).filter(b => {
+                // Must have qty > 0
+                if (b.quantity <= 0) return false;
+
+                // Must match one of the main store identifiers OR be null (legacy default)
+                return !b.locationId || validMainStores.includes(b.locationId);
+            });
+
+            console.log("Batches filtered for Main Store:", filtered);
+
             setAvailBatches(filtered);
-            setBatchModalProduct(it);
+            setBatchModalProduct({
+                ...it,
+                remainingQty: Math.max(0, (it.requestedQty || 0) - (it.fulfilledQty || 0))
+            });
             setSelectedSerials({});
             setShowBatchModal(true);
         } catch (e) {
@@ -249,6 +260,44 @@ export default function IRFulfilmentPage() {
             return { ...prev, [pid]: newList };
         });
         toast.success(`Added ${qtyToAdd} from ${batch.batchNumber}`);
+    };
+
+    const setBatchAllocation = (batch, newQty) => {
+        if (!batchModalProduct) return;
+        const pid = batchModalProduct.productId;
+
+        setAllocations(prev => {
+            const list = prev[pid] || [];
+            const existingIdx = list.findIndex(a => a.batchId === batch.id);
+            let newList = [...list];
+
+            if (newQty <= 0) {
+                if (existingIdx >= 0) {
+                    newList.splice(existingIdx, 1);
+                }
+            } else {
+                if (existingIdx >= 0) {
+                    newList[existingIdx] = {
+                        ...newList[existingIdx],
+                        qty: newQty,
+                        serials: []
+                    };
+                } else {
+                    newList.push({
+                        batchId: batch.id,
+                        batchNumber: batch.batchNumber,
+                        qty: newQty,
+                        serials: []
+                    });
+                }
+            }
+
+            // Sync total
+            const total = newList.reduce((s, x) => s + x.qty, 0);
+            setIssue(s => ({ ...s, [pid]: total }));
+
+            return { ...prev, [pid]: newList };
+        });
     };
 
     const toggleSerial = (batchId, serial) => {
@@ -588,6 +637,7 @@ export default function IRFulfilmentPage() {
                                         <th>Batch</th>
                                         <th>Expiry</th>
                                         <th>Cost</th>
+                                        <th>Location</th>
                                         <th>Avail Qty</th>
                                         <th>Allocated</th>
                                         <th>Add</th>
@@ -604,45 +654,38 @@ export default function IRFulfilmentPage() {
                                         return (
                                             <tr key={b.id}>
                                                 <td>
-                                                    <div>{b.batchNumber}</div>
-                                                    {b.serials && b.serials.length > 0 && (
-                                                        <div className="mt-1 p-2 border rounded bg-light">
-                                                            <small className="d-block fw-bold text-muted mb-1">Select Serials:</small>
-                                                            <div className="d-flex flex-wrap gap-2" style={{ maxHeight: 100, overflowY: 'auto' }}>
-                                                                {b.serials.map(s => {
-                                                                    const isAllocated = allocatedSerials.has(s);
-                                                                    const isSelected = selectedSerials[b.id]?.has(s);
-
-                                                                    return (
-                                                                        <div key={s} className="form-check form-check-inline mb-0">
-                                                                            <input
-                                                                                className="form-check-input"
-                                                                                type="checkbox"
-                                                                                id={`ir-ser-${b.id}-${s}`}
-                                                                                disabled={isAllocated}
-                                                                                checked={!!isSelected || !!isAllocated}
-                                                                                onChange={() => toggleSerial(b.id, s)}
-                                                                            />
-                                                                            <label className={`form-check-label small ${isAllocated ? 'text-decoration-line-through text-muted' : ''}`} htmlFor={`ir-ser-${b.id}-${s}`}>
-                                                                                {s}
-                                                                            </label>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    <div className="fw-bold">{b.batchNumber}</div>
+                                                    {/* Unified: No separate serial display needed if batch IS the serial */}
                                                 </td>
                                                 <td>{b.expiryDate || '-'}</td>
                                                 <td>{b.costPrice ? Number(b.costPrice).toFixed(2) : '-'}</td>
+                                                <td>
+                                                    <Badge bg={b.locationId === 'LOC_STORES_MAIN' ? 'success' : 'secondary'}>
+                                                        {b.locationId === 'LOC_STORES_MAIN' ? 'Main Store' : (b.locationId || 'Unknown')}
+                                                    </Badge>
+                                                </td>
                                                 <td>{b.quantity}</td>
                                                 <td>{allocatedQty}</td>
-                                                <td style={{ verticalAlign: 'top' }}>
-                                                    <div className="d-flex flex-column gap-1">
-                                                        <div className="d-flex gap-1">
-                                                            <Button size="sm" variant="success" onClick={() => addToAllocation(b, 1)}>+1</Button>
-                                                            <Button size="sm" variant="success" onClick={() => addToAllocation(b, 5)}>+5</Button>
-                                                        </div>
+                                                <td style={{ verticalAlign: 'top', width: '120px' }}>
+                                                    <div className="d-flex gap-1">
+                                                        <Form.Control
+                                                            type="number"
+                                                            size="sm"
+                                                            min="0"
+                                                            max={b.quantity} // Optional cap to prevent over-allocation errors
+                                                            placeholder="0"
+                                                            value={allocatedQty || ''}
+                                                            onChange={(e) => {
+                                                                const val = parseInt(e.target.value) || 0;
+                                                                // Calculate delta to update state correctly? 
+                                                                // No, `addToAllocation` adds DELTA. We need a way to set ABSOLUTE.
+                                                                // Or we change addToAllocation to setAllocation.
+
+                                                                // Let's create a specialized handler: setBatchAllocation
+                                                                const newQty = Math.min(Math.max(0, val), b.quantity);
+                                                                setBatchAllocation(b, newQty);
+                                                            }}
+                                                        />
                                                     </div>
                                                 </td>
                                             </tr>
