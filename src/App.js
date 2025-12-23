@@ -15,8 +15,6 @@ import {
 
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
-import AdminDashboard from "./components/AdminDashboard";
-import CustomerDashboard from "./components/Customer/CustomerDashboard";
 import SystemConfiguration from "./components/SystemConfiguration";
 
 import InventoryAdd from "./components/Inventory/InventoryAdd";
@@ -36,12 +34,10 @@ import PrivateRoute from "./components/routes/PrivateRoute";
 import ProjectDetails from "./components/Project/ProjectDetails";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 import ItemAdd from "./components/Inventory/ItemAdd";
-import InventoryDashboard from "./components/Inventory/InventoryDashboard";
 import { useAuth } from "./context/AuthContext";
 
 import SupplierCreate from "./components/Supplier/SupplierPage";
 import ProductCreate from "./components/Inventory/ProductPage";
-import SupplierDashboard from "./components/Supplier/SupplierDashboard";
 import PurchaseRequestPage from "./components/Inventory/PurchaseRequestPage";
 import StoresPlanningPage from "./components/Stores/StoresPlanningPage";
 import PendingToPOPage from "./components/Stores/PendingToPOPage";
@@ -52,9 +48,12 @@ import GRNListView from "./components/GRN/GRNListView";
 import ItemRequestForm from "./components/Requests/ItemRequestForm";
 import DepartmentList from "./components/Departments/DepartmentList";
 import DepartmentForm from "./components/Departments/DepartmentForm";
-import POCreateManual from "./components/PO/POCreateManual";
 import IRFulfilmentPage from "./components/Requests/IRFulfilmentPage";
 import ProjectEstimationPage from "./components/estimates/ProjectEstimationPage";
+import PurchaseOrderDetails from "./components/PO/PurchaseOrderDetails";
+import POPrint from "./components/PO/POPrint";
+import POCreateManual from "./components/PO/POCreateManual";
+import NotificationsPage from "./components/ReusableComponents/NotificationsPage";
 import ReportsPage from "./components/Reports/ReportsPage";
 import EmployeeCreate from "./components/Employee/EmployeeCreate";
 import EmployeeList from "./components/Employee/EmployeeList";
@@ -71,6 +70,8 @@ import InvoiceView from "./components/Projects/InvoiceView";
 import QuotationList from "./components/Sales/QuotationList";
 import QuotationPage from "./components/Sales/QuotationPage";
 import SettingsPage from "./components/settings/SettingsPage";
+
+
 
 /* ---------------- Layout ---------------- */
 function Layout({ children }) {
@@ -141,7 +142,7 @@ function ProjectEstimationRouteWrapper() {
 
 /* ------------------- App ------------------- */
 function App() {
-    const { isAuthenticated } = useAuth(); // keep if you use it elsewhere
+    // useAuth call removed as unused
 
     return (
         <Router>
@@ -156,6 +157,7 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/admin/config" element={<SystemConfiguration />} />
                         <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/notifications" element={<NotificationsPage />} />
                         {/* <Route path="/customerDashboard" element={<CustomerDashboard />} /> */}
 
                         {/* HR / Employees */}
@@ -216,6 +218,8 @@ function App() {
 
                         <Route path="/pos" element={<POListRouteWrapper />} />
                         <Route path="/pos/new" element={<POCreateManualRouteWrapper />} />
+                        <Route path="/pos/:id/print" element={<PrivateRoute><POPrint /></PrivateRoute>} />
+                        <Route path="/pos/:id" element={<PurchaseOrderDetails />} />
                         <Route path="/grn" element={<GRNRouteWrapper />} />
                         <Route path="/grns" element={<GRNListView />} />
 

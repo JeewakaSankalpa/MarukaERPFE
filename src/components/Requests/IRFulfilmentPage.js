@@ -200,7 +200,11 @@ export default function IRFulfilmentPage() {
         try {
             const res = await api.get(`/inventory/batches?productId=${it.productId}`);
             const mainLocId = "LOC_STORES_MAIN";
-            const filtered = (res.data || []).filter(b => b.locationId === mainLocId && b.remainingQty > 0);
+            const fallbackLocId = "warehouse"; // Backend default
+            // Filter: Must match distinct main locations AND have qty
+            const filtered = (res.data || []).filter(b =>
+                (b.locationId === mainLocId || b.locationId === fallbackLocId) && b.remainingQty > 0
+            );
             setAvailBatches(filtered);
             setBatchModalProduct(it);
             setSelectedSerials({});

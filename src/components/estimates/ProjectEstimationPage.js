@@ -1,16 +1,15 @@
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card, Spinner } from "react-bootstrap";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Select from "react-select";
 import { toast, ToastContainer } from "react-toastify";
-import { useAuth } from "../../context/AuthContext"; // Import Auth
+import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 
 /* ------------ API helpers ------------ */
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
-const saveEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}`, payload)).data;
 const listTemplates = async () => (await api.get(`/component-templates`)).data;
 const listProductsAPI = async () => (await api.get(`/products`, { params: { page: 0, size: 1000, sort: "name,asc" } })).data?.content ?? [];
 const listAvailableAPI = async () => (await api.get(`/inventory/available-quantities`)).data;
@@ -28,7 +27,7 @@ const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/rej
 const createRevisionAPI = async (id, payload) => (await api.post(`/estimations/${id}/revision`, payload)).data;
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
-    const navigate = useNavigate();
+    // const navigate = useNavigate(); // Unused
     const location = useLocation(); // Hook for URL query params
     const searchParams = new URLSearchParams(location.search);
     const forceReadOnly = searchParams.get("readOnly") === "true";
@@ -102,20 +101,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [approvalHistory, setApprovalHistory] = useState([]); // Current approval cycle records
     const [approvalPolicy, setApprovalPolicy] = useState("ALL");
 
-    // Derived ReadOnly: specific to status OR forceReadOnly
-    // Logic: If status is REJECTED, users might want to fix it. But our backend `createRevision` is cleaner. Let's strictly enforce ReadOnly for non-DRAFT, but REJECTED allows "Create Revision".
-    // ACTUALLY: Backend logic `submitForApproval` allows resubmit if `REJECTED`. So maybe we allow editing if REJECTED? 
-    // Let's stick to PLAN: "Create New Version" button if APPROVED or REJECTED. So REJECTED is read-only until revised.
+    // Derived ReadOnly
     const isLocked = forceReadOnly || (approvalStatus !== "DRAFT");
-    const isReadOnly = isLocked; // Alias for legacy/readability
+    const isReadOnly = isLocked;
 
     // Modals
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
-    // const [selectedApprovers, setSelectedApprovers] = useState([]); // REMOVED
-    // const [selectedPolicy, setSelectedPolicy] = useState("ALL"); // REMOVED
+
     const [revisionReason, setRevisionReason] = useState("");
-    const [rejectComment, setRejectComment] = useState(""); // For rejection modal if we had one
+    // const [rejectComment, setRejectComment] = useState("");
 
     /* ------------ load reference data ------------ */
     useEffect(() => {
@@ -136,7 +131,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setProducts(prods || []);
                 setAvailable(avails || []);
                 setTemplates(tpls || []);
-                setTemplates(tpls || []);
+                setEmployees(emps || []); // Restored
                 setEmployees(emps || []); // Restored
 
 
@@ -716,47 +711,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         }
     };
 
-    const handlePrint = () => {
-        if (!projectOpt?.value) { toast.warn("Select a project first"); return; }
-        setShowPrintModal(true);
-    };
 
-    const confirmPrint = async () => {
-        // 1. Save first
-        const saved = await saveEstimation(true);
-        if (!saved) return;
-
-        // 2. Generate PDF
-        const pid = projectOpt.value;
-        try {
-            const pdfResp = await api.post(
-                `/estimations/by-project/${pid}/pdf`,
-                {
-                    includeDelivery,
-                    includeVat,
-                    includeTax,
-                    vatPercentOverride: (vatPercent ?? "") === "" ? null : Number(vatPercent),
-                    taxPercentOverride: (taxPercent ?? "") === "" ? null : Number(taxPercent),
-                    // New granular options
-                    showQuantity: printOpts.showQuantity,
-                    showUnitCost: printOpts.showUnitCost,
-                    showComponentTotals: printOpts.showComponentTotals,
-                    showGrandTotal: printOpts.showGrandTotal,
-                },
-                { responseType: "blob" }
-            );
-            const blob = new Blob([pdfResp.data], { type: "application/pdf" });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${pid}-Estimation.pdf`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            setShowPrintModal(false);
-        } catch (e) {
-            toast.error("Failed to generate PDF");
-        }
-    };
 
     /* ------------ Workflow Handlers ------------ */
 

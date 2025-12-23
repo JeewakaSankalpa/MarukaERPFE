@@ -28,7 +28,8 @@ export default function POListView({ onOpenGRN }) {
         try { setData(await listPOs({ q, status, page, size })); }
         catch { toast.error("Failed to load POs"); }
     };
-    useEffect(() => { load(); /* eslint-disable-next-line */ }, [page, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { load(); }, [page, status, q]);
 
     const openSendModal = async (po) => {
         setSendFor(po.id);
@@ -100,9 +101,33 @@ export default function POListView({ onOpenGRN }) {
                                 </td>
                                 <td>{po.etaDate || "-"}</td>
                                 <td className="d-flex gap-2">
-                                    <Button size="sm" variant="outline-primary" onClick={() => openSendModal(po)}>Mark Sent</Button>
-                                    <Button size="sm" variant="outline-secondary" onClick={() => openEta(po.id)}>Set ETA</Button>
-                                    <Button size="sm" onClick={() => onOpenGRN?.(po.id)}>Receive (GRN)</Button>
+                                    <Button size="sm" variant="info" onClick={() => window.location.hash = `#/pos/${po.id}`}>View</Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline-primary"
+                                        onClick={() => openSendModal(po)}
+                                        disabled={po.approvalStatus !== 'APPROVED'}
+                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                    >
+                                        Mark Sent
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline-secondary"
+                                        onClick={() => openEta(po.id)}
+                                        disabled={po.approvalStatus !== 'APPROVED'}
+                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                    >
+                                        Set ETA
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => onOpenGRN?.(po.id)}
+                                        disabled={po.approvalStatus !== 'APPROVED'}
+                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                    >
+                                        Receive (GRN)
+                                    </Button>
                                 </td>
                             </tr>
                         ))}

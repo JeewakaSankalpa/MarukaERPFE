@@ -12,10 +12,6 @@ const QuotationPrint = () => {
     const [project, setProject] = useState(null);
     const [customer, setCustomer] = useState(null);
 
-    useEffect(() => {
-        fetchData();
-    }, [projectId]);
-
     const fetchData = async () => {
         try {
             const estRes = await api.get(`/estimations/by-project/${projectId}`);
@@ -34,6 +30,11 @@ const QuotationPrint = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchData();
+        // eslint-disable-next-line
+    }, [projectId]);
 
     const handleFinalize = async () => {
         if (!window.confirm("Are you sure you want to finalize this quotation? It will be locked.")) return;

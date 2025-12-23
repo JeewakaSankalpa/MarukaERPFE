@@ -6,13 +6,31 @@ import { Button } from "react-bootstrap";
 import logo from "../../assets/logo.jpeg"; // ✅ Import your logo
 import { useAuth } from "../../context/AuthContext"; // ✅ Access logged in user info
 
+import { useNavigate } from "react-router-dom"; // Added
+import api from "../../api/api"; // Added
+
 const Header = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { username, role, userType, logout } = useAuth();
+  const navigate = useNavigate(); // Added
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch Unread Count
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await api.get("/notifications/unread-count");
+        setUnreadCount(res.data || 0);
+      } catch (e) { console.error(e); }
+    };
+    fetchCount();
+    const poll = setInterval(fetchCount, 30000); // Poll every 30s
+    return () => clearInterval(poll);
   }, []);
 
   return (
@@ -45,9 +63,9 @@ const Header = () => {
 
       {/* Right Section - Notifications & Logout */}
       <div style={styles.rightSection}>
-        <div style={styles.notification}>
+        <div style={styles.notification} onClick={() => navigate("/notifications")}> {/* Added onClick */}
           <Bell size={20} color={Colors.white} />
-          <span style={styles.notificationCount}>1</span>
+          {unreadCount > 0 && <span style={styles.notificationCount}>{unreadCount}</span>}
         </div>
         <Button variant="danger" onClick={logout}>
           <FaSignOutAlt /> Logout

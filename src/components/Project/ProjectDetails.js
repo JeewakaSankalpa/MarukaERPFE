@@ -27,7 +27,7 @@ export default function ProjectDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { role, user, projectRoles } = useAuth();
-    const actor = user?.name || user?.email || 'web';
+    // const actor = user?.name || user?.email || 'web'; // W: Unused
 
     // Combine system role and project roles for workflow checks
     const rolesHeader = useMemo(() => {
@@ -294,19 +294,7 @@ export default function ProjectDetails() {
         return effectiveActions.visibleComponents.includes(compName);
     };
 
-    // Helper: convert ISO to local datetime-local input value
-    function isoLocal(iso) {
-        try {
-            const d = new Date(iso);
-            const pad = (n) => String(n).padStart(2, '0');
-            const yyyy = d.getFullYear();
-            const mm = pad(d.getMonth() + 1);
-            const dd = pad(d.getDate());
-            const hh = pad(d.getHours());
-            const mi = pad(d.getMinutes());
-            return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-        } catch { return ''; }
-    }
+
 
 
     return (
