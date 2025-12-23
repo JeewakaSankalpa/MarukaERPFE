@@ -34,13 +34,15 @@ export const MenuConfig = [
         roles: ["ADMIN", "MANAGER", "STORE_KEEPER", "EMPLOYEE"],
         subItems: [
             { id: "inventory.search", title: "Stock Search", path: "/inventory/search" },
+            { id: "inventory.stock_taking", title: "Stock Taking", path: "/inventory/stock-taking" },
+            { id: "inventory.audit_approvals", title: "Audit Approvals", path: "/inventory/audit-approvals" },
             { id: "inventory.products", title: "Products", path: "/product/create" },
             { id: "inventory.pr", title: "Purchase Requests", path: "/inventory/pr" },
             { id: "inventory.internal", title: "Internal Requests", path: "/item/requests" },
             { id: "inventory.fulfil", title: "Fulfil Requests", path: "/stores/fulfil-requests" },
             { id: "inventory.return", title: "Returns", path: "/inventory/return" },
             { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
-            { id: "inventory.reports", title: "Reports", path: "/reports" },
+            { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
 
         ]
     },
@@ -79,6 +81,21 @@ export const MenuConfig = [
         subItems: [
             { id: "partners.customers", title: "Customers", path: "/customer/view" },
             { id: "partners.suppliers", title: "Suppliers", path: "/supplier/search" },
+        ]
+    },
+    {
+        id: "reports",
+        title: "Reports",
+        icon: "FaChartLine",
+        roles: ["ADMIN", "MANAGER", "HR", "STORE_KEEPER", "EMPLOYEE"],
+        subItems: [
+            { id: "reports.dashboard", title: "Reports Dashboard", path: "/reports" },
+            { id: "reports.stock", title: "Stock Valuation", path: "/reports/stock" },
+            { id: "reports.payables", title: "Payables Report", path: "/reports/payables" },
+            { id: "reports.receivables", title: "Receivables Report", path: "/reports/receivables" },
+            { id: "reports.leave", title: "Leave Utilization", path: "/reports/leave" },
+            // Add Project Material if route exists, keeping it safe for now:
+            // { id: "reports.project_material", title: "Project Material", path: "/reports/project-material" }, 
         ]
     },
     {

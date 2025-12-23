@@ -63,8 +63,12 @@ import SalaryReport from "./components/Employee/Reports/SalaryReport";
 import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
 import ProjectMaterialReport from "./components/Inventory/Reports/ProjectMaterialReport";
 import StockValuationReport from "./components/Inventory/Reports/StockValuationReport";
+import PayablesReport from "./components/Inventory/Reports/PayablesReport";
+import ReceivablesReport from "./components/Inventory/Reports/ReceivablesReport";
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
+import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
+import StockAuditApprovalsPage from "./components/Inventory/Adjustments/StockAuditApprovalsPage";
 import AssetRegister from "./components/Assets/AssetRegister";
 import QuotationPrint from "./components/Projects/QuotationPrint";
 import InvoiceView from "./components/Projects/InvoiceView";
@@ -184,6 +188,8 @@ function App() {
                         <Route path="/inventory/return" element={<InventoryReturn />} />
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
                         <Route path="/inventory/returns/approvals" element={<InternalReturnApprovals />} />
+                        <Route path="/inventory/stock-taking" element={<StockTakingPage />} />
+                        <Route path="/inventory/audit-approvals" element={<StockAuditApprovalsPage />} />
 
                         {/* Projects */}
                         <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
@@ -233,6 +239,8 @@ function App() {
                         <Route path="/reports" element={<ReportsPage />} />
                         <Route path="/reports/leave" element={<LeaveUtilizationReport />} />
                         <Route path="/reports/stock" element={<StockValuationReport />} />
+                        <Route path="/reports/payables" element={<PayablesReport />} />
+                        <Route path="/reports/receivables" element={<ReceivablesReport />} />
                         <Route path="/assets" element={<AssetRegister />} />
 
                         {/* Sales & Quotations */}

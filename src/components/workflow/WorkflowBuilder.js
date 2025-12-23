@@ -33,6 +33,7 @@ const emptyFlow = {
     visibility: {},            // { INQUIRY: { fieldsVisible: ["FILES"] } } NEW
     estimationApproverRoles: [], // NEW: Global list of roles for Estimation Approval
     purchaseOrderApproverRoles: [], // NEW: Global list of roles for PO Approval
+    stockAuditApproverRoles: [], // NEW: Global list of roles for Stock Audit Approval
 };
 
 export default function WorkflowBuilder() {
@@ -78,6 +79,7 @@ export default function WorkflowBuilder() {
                     visibility: wf.visibility || {},
                     estimationApproverRoles: wf.estimationApproverRoles || [],
                     purchaseOrderApproverRoles: wf.purchaseOrderApproverRoles || [],
+                    stockAuditApproverRoles: wf.stockAuditApproverRoles || [],
                 };
 
                 setFlow(base);
@@ -677,6 +679,33 @@ export default function WorkflowBuilder() {
                                             ? current.filter(x => x !== r)
                                             : [...current, r];
                                         setFlow(f => ({ ...f, purchaseOrderApproverRoles: next }));
+                                    }}
+                                />
+                            ))}
+                        </Card.Body>
+                    </Card>
+                </Col>
+                <Col lg={4}>
+                    <Card className="h-100">
+                        <Card.Header>Stock Audit Approvers (Global)</Card.Header>
+                        <Card.Body>
+                            <div className="text-muted small mb-2">
+                                Users with these roles will be required to approve Stock Audits.
+                            </div>
+                            {roles.length === 0 ? (
+                                <div className="text-muted">No roles found.</div>
+                            ) : roles.map((r) => (
+                                <Form.Check
+                                    key={`stock-role-${r}`}
+                                    type="checkbox"
+                                    label={r}
+                                    checked={(flow.stockAuditApproverRoles || []).includes(r)}
+                                    onChange={() => {
+                                        const current = flow.stockAuditApproverRoles || [];
+                                        const next = current.includes(r)
+                                            ? current.filter(x => x !== r)
+                                            : [...current, r];
+                                        setFlow(f => ({ ...f, stockAuditApproverRoles: next }));
                                     }}
                                 />
                             ))}
