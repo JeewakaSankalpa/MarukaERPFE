@@ -35,6 +35,8 @@ import ProjectDetails from "./components/Project/ProjectDetails";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 import ItemAdd from "./components/Inventory/ItemAdd";
 import { useAuth } from "./context/AuthContext";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import SupplierCreate from "./components/Supplier/SupplierPage";
 import ProductCreate from "./components/Inventory/ProductPage";
@@ -152,6 +154,7 @@ function App() {
 
     return (
         <Router>
+            <ToastContainer position="top-right" autoClose={3000} style={{ zIndex: 99999 }} />
             <Layout>
                 <Routes>
                     {/* Public */}

@@ -70,9 +70,7 @@ const EmployeeProfile = () => {
                 formData.append("file", selectedFile);
 
                 // Using the specific upload endpoint
-                const uploadRes = await api.post(`/employee/${employee.id}/profile-image`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                const uploadRes = await api.post(`/employee/${employee.id}/profile-image`, formData);
                 imageUrl = uploadRes.data; // Expecting URL string
             }
 
