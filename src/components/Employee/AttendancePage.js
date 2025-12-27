@@ -42,12 +42,38 @@ function AttendancePage() {
         } catch (e) { }
     };
 
+    const getGeoLocation = () => {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                resolve({ lat: null, lon: null });
+            } else {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        });
+                    },
+                    (error) => {
+                        console.error("Geo error:", error);
+                        resolve({ lat: null, lon: null }); // Proceed without geo if error
+                    }
+                );
+            }
+        });
+    };
+
     const handleCheckIn = async () => {
         if (!currentEmployee) return;
         setLoading(true);
         try {
+            const { lat, lon } = await getGeoLocation();
+
             // shiftType hardcoded for now, could be dropdown
-            await api.post(`/attendance/checkin?employeeId=${currentEmployee.id}&manualEntry=false&shiftType=REGULAR`);
+            let url = `/attendance/checkin?employeeId=${currentEmployee.id}&manualEntry=false&shiftType=REGULAR`;
+            if (lat) url += `&lat=${lat}&lon=${lon}`;
+
+            await api.post(url);
             toast.success("Checked In Successfully!");
             fetchLogs(currentEmployee.id);
             setStatus("CHECKED_IN");
@@ -60,7 +86,12 @@ function AttendancePage() {
         if (!currentEmployee) return;
         setLoading(true);
         try {
-            await api.post(`/attendance/checkout?employeeId=${currentEmployee.id}`);
+            const { lat, lon } = await getGeoLocation();
+
+            let url = `/attendance/checkout?employeeId=${currentEmployee.id}`;
+            if (lat) url += `&lat=${lat}&lon=${lon}`;
+
+            await api.post(url);
             toast.success("Checked Out Successfully!");
             fetchLogs(currentEmployee.id);
             setStatus("CHECKED_OUT");

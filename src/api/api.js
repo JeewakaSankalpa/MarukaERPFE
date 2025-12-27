@@ -10,7 +10,7 @@ const baseURL =
 
 const api = axios.create({
     baseURL,
-    timeout: 20000,
+    timeout: 30000,
 });
 
 // ---- Array param handling: status=A&status=B (no [] brackets) ----

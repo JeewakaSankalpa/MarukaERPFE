@@ -1,11 +1,11 @@
-// src/pages/Login.jsx
 import React, { useState } from "react";
-import { Button, Form, Spinner } from "react-bootstrap";
+import { Button, Form, Spinner, Modal } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Colors from "../resources/Colors";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -13,8 +13,29 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
 
+  // Forgot Password State
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotData, setForgotData] = useState({ username: "", email: "" });
+
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleForgotSubmit = async () => {
+    if (!forgotData.username || !forgotData.email) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    try {
+      // Assuming api base url is localhost:8080 or handled by proxy/axios default.
+      // Since axios is imported directly, let's use full URL or ensure base URL config.
+      // Ideally use the `api` instance from `../api/api` but reusing axios here for speed as per user req style.
+      await axios.post("http://localhost:8080/api/auth/forgot-password", forgotData);
+      toast.success("Temporary password sent to your email.");
+      setShowForgot(false);
+    } catch (e) {
+      toast.error(e.response?.data || "Failed to reset password");
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -136,9 +157,45 @@ const Login = () => {
                 "Login"
               )}
             </Button>
+            <div className="text-center mt-3">
+              <Button variant="link" size="sm" onClick={() => setShowForgot(true)}>Forgot Password?</Button>
+            </div>
           </Form>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <Modal show={showForgot} onHide={() => setShowForgot(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Reset Password</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Username</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter your username"
+                value={forgotData.username}
+                onChange={(e) => setForgotData({ ...forgotData, username: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Email Address</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="Enter registered email"
+                value={forgotData.email}
+                onChange={(e) => setForgotData({ ...forgotData, email: e.target.value })}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowForgot(false)}>Cancel</Button>
+          <Button variant="primary" onClick={handleForgotSubmit}>Send Temporary Password</Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* If you already have a global ToastContainer in App, you can remove this */}
       <ToastContainer position="top-right" newestOnTop />

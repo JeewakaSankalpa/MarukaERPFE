@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Tabs, Tab, Form, Button, Table, Row, Col, Card, Alert, Spinner } from "react-bootstrap";
+import { Container, Tabs, Tab, Form, Button, Table, Row, Col, Card, Alert, Spinner, Badge, Modal } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { toast } from "react-toastify";
@@ -24,10 +24,17 @@ function SalaryManagement() {
         etfRate: 0.03
     });
 
+    // -- Attendance State --
+    const [attendanceReport, setAttendanceReport] = useState([]);
+    const [viewingEmployee, setViewingEmployee] = useState(null); // For modal/expand
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editRecord, setEditRecord] = useState(null);
+
     useEffect(() => {
         fetchEmployees();
         if (key === "processing") fetchSalaries();
         if (key === "config") fetchConfig();
+        if (key === "attendance") fetchAttendanceReport();
     }, [key, selectedMonth]);
 
     const fetchEmployees = async () => {
@@ -58,6 +65,67 @@ function SalaryManagement() {
         } catch (e) {
             // toast.error("Failed to load config");
         }
+    };
+
+    const fetchAttendanceReport = async () => {
+        setLoading(true);
+        try {
+            const [year, month] = selectedMonth.split("-");
+            const res = await api.get(`/attendance/report?year=${year}&month=${month}`);
+            setAttendanceReport(res.data || []);
+        } catch (e) {
+            console.error("Attendance Report Error:", e);
+            if (e.response) {
+                console.error("Status:", e.response.status);
+                console.error("Data:", e.response.data);
+                toast.error(`Failed to load: ${e.response.status} - ${JSON.stringify(e.response.data)}`);
+            } else {
+                toast.error(`Error: ${e.message}`);
+            }
+        } finally { setLoading(false); }
+    };
+
+    const handleEditAttendance = async () => {
+        try {
+            if (!editRecord.reason) { toast.error("Reason is required"); return; }
+
+            if (editRecord.attendanceId) {
+                // Update existing
+                await api.put(`/attendance/${editRecord.attendanceId}`, {
+                    checkIn: editRecord.checkIn,
+                    checkOut: editRecord.checkOut,
+                    reason: editRecord.reason
+                });
+            } else {
+                // Create manual
+                await api.post(`/attendance/manual`, {
+                    employeeId: viewingEmployee.employeeId,
+                    checkIn: editRecord.checkIn,
+                    checkOut: editRecord.checkOut,
+                    reason: editRecord.reason
+                });
+            }
+            toast.success("Attendance Updated");
+            setShowEditModal(false);
+            fetchAttendanceReport();
+        } catch (e) {
+            toast.error("Update failed");
+        }
+    };
+
+    const exportExcel = () => {
+        let csv = "Employee,Date,Status,CheckIn,CheckOut,WorkedHours,Comments\n";
+        attendanceReport.forEach(e => {
+            e.dailyRecords.forEach(d => {
+                csv += `${e.employeeName},${d.date},${d.status},${d.checkIn || ''},${d.checkOut || ''},${d.workedHours || 0},${d.comments || ''}\n`;
+            });
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Attendance_${selectedMonth}.csv`;
+        a.click();
     };
 
     const handleGenerate = async () => {
@@ -199,7 +267,119 @@ function SalaryManagement() {
                         </Form>
                     </Card>
                 </Tab>
+
+                <Tab eventKey="attendance" title="Attendance Review">
+                    <Card className="p-4 shadow-sm">
+                        <div className="d-flex justify-content-between mb-3 align-items-center">
+                            <div>
+                                <Form.Label>Review Month</Form.Label>
+                                <Form.Control type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+                            </div>
+                            <Button variant="success" onClick={exportExcel}>Export Excel/CSV</Button>
+                        </div>
+                        <Table striped bordered size="sm" hover>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Present</th>
+                                    <th>Late</th>
+                                    <th>Leaves</th>
+                                    <th>Worked Hrs</th>
+                                    <th>OT Hrs</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {attendanceReport.map(r => (
+                                    <React.Fragment key={r.employeeId}>
+                                        <tr onClick={() => setViewingEmployee(viewingEmployee?.employeeId === r.employeeId ? null : r)} style={{ cursor: 'pointer' }}>
+                                            <td>{r.employeeName}</td>
+                                            <td>{r.totalPresent}</td>
+                                            <td>{r.totalLate}</td>
+                                            <td>{r.totalLeaves}</td>
+                                            <td>{r.totalWorkedHours.toFixed(1)}</td>
+                                            <td>{r.totalOvertimeHours.toFixed(1)}</td>
+                                            <td>
+                                                {r.totalLate > 0 && <Badge bg="warning" className="me-1">Late</Badge>}
+                                            </td>
+                                            <td>
+                                                <small>{viewingEmployee?.employeeId === r.employeeId ? '▼' : '▶'}</small>
+                                            </td>
+                                        </tr>
+                                        {viewingEmployee?.employeeId === r.employeeId && (
+                                            <tr>
+                                                <td colSpan="8" className="bg-light p-3">
+                                                    <strong>Daily Breakdown:</strong>
+                                                    <Table size="sm" bordered className="mt-2 bg-white">
+                                                        <thead>
+                                                            <tr><th>Date</th><th>Status</th><th>In</th><th>Out</th><th>Hours</th><th>Comments</th><th>Edit</th></tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {r.dailyRecords.map(d => (
+                                                                <tr key={d.date} className={d.status === 'ABSENT' ? 'table-danger' : ''}>
+                                                                    <td>{d.date} <small className="text-muted">{d.dayOfWeek}</small></td>
+                                                                    <td>{d.status}</td>
+                                                                    <td>{d.checkIn ? new Date(d.checkIn).toLocaleTimeString() : '-'}</td>
+                                                                    <td>{d.checkOut ? new Date(d.checkOut).toLocaleTimeString() : '-'}</td>
+                                                                    <td>{d.workedHours}</td>
+                                                                    <td>{d.comments}</td>
+                                                                    <td>
+                                                                        <Button size="sm" variant="link" onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setEditRecord({
+                                                                                attendanceId: d.attendanceId,
+                                                                                checkIn: d.checkIn ? d.checkIn : `${d.date}T08:30`,
+                                                                                checkOut: d.checkOut ? d.checkOut : `${d.date}T17:00`,
+                                                                                reason: "",
+                                                                                date: d.date // Pass date for manual creation reference if needed
+                                                                            });
+                                                                            setShowEditModal(true);
+                                                                        }}>Edit</Button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </Table>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </Card>
+                </Tab>
             </Tabs>
+
+            {/* Edit Modal */}
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Edit Attendance Record</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {editRecord && (
+                        <Form>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Check In</Form.Label>
+                                <Form.Control type="datetime-local" value={editRecord.checkIn} onChange={(e) => setEditRecord({ ...editRecord, checkIn: e.target.value })} />
+                            </Form.Group>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Check Out</Form.Label>
+                                <Form.Control type="datetime-local" value={editRecord.checkOut} onChange={(e) => setEditRecord({ ...editRecord, checkOut: e.target.value })} />
+                            </Form.Group>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Reason / Correction Note (Required)</Form.Label>
+                                <Form.Control as="textarea" rows={3} value={editRecord.reason} onChange={(e) => setEditRecord({ ...editRecord, reason: e.target.value })} />
+                            </Form.Group>
+                        </Form>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={handleEditAttendance}>Save Changes</Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     );
 }
