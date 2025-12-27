@@ -57,6 +57,7 @@ import NotificationsPage from "./components/ReusableComponents/NotificationsPage
 import ReportsPage from "./components/Reports/ReportsPage";
 import EmployeeCreate from "./components/Employee/EmployeeCreate";
 import EmployeeList from "./components/Employee/EmployeeList";
+import EmployeeProfile from "./components/Employee/EmployeeProfile";
 import SalaryManagement from "./components/Employee/SalaryManagement";
 import HRConfiguration from "./components/HumanResources/HRConfiguration";
 import SalaryReport from "./components/Employee/Reports/SalaryReport";
@@ -169,6 +170,8 @@ function App() {
                         <Route path="/employee/create" element={<EmployeeCreate mode="create" />} />
                         <Route path="/employee/edit/:id" element={<EmployeeCreate mode="edit" />} />
                         <Route path="/employee/list" element={<EmployeeList />} />
+                        <Route path="/employee/list" element={<EmployeeList />} />
+                        <Route path="/employee/profile" element={<EmployeeProfile />} />
                         <Route path="/salary" element={<SalaryManagement />} />
                         <Route path="/hr/config" element={<HRConfiguration />} />
                         <Route path="/salary/report" element={<SalaryReport />} />
