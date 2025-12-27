@@ -26,7 +26,8 @@ function SalaryManagement() {
 
     // -- Attendance State --
     const [attendanceReport, setAttendanceReport] = useState([]);
-    const [viewingEmployee, setViewingEmployee] = useState(null); // For modal/expand
+    const [viewingEmployee, setViewingEmployee] = useState(null); // For attendance modal/expand
+    const [viewingSalary, setViewingSalary] = useState(null); // For salary Modal
     const [showEditModal, setShowEditModal] = useState(false);
     const [editRecord, setEditRecord] = useState(null);
 
@@ -185,7 +186,7 @@ function SalaryManagement() {
                                     <th>Allowances</th>
                                     <th>OT (Hrs/Pay)</th>
                                     <th>Gross</th>
-                                    <th>Deductions (EPF/Tax)</th>
+                                    <th>Deductions</th>
                                     <th>Net Salary</th>
                                     <th>Actions</th>
                                 </tr>
@@ -199,13 +200,13 @@ function SalaryManagement() {
                                         <td>{s.overtimeHours} / {s.overtimePay?.toFixed(2)}</td>
                                         <td><strong>{s.grossSalary?.toFixed(2)}</strong></td>
                                         <td>
-                                            EPF: {s.epfEmployee?.toFixed(2)}<br />
-                                            Tax: {s.tax?.toFixed(2)}
+                                            <small className="d-block">EPF(8%): {s.epfEmployee?.toFixed(2)}</small>
+                                            <small className="d-block">Tax: {s.tax?.toFixed(2)}</small>
+                                            {s.noPayDeduction > 0 && <small className="d-block text-danger">No Pay: {s.noPayDeduction?.toFixed(2)}</small>}
                                         </td>
                                         <td className="text-success fw-bold">{s.netSalary?.toFixed(2)}</td>
                                         <td>
-                                            <Button size="sm" variant="outline-primary" onClick={() => toast.info("Detailed view coming soon")}>View</Button>
-                                            {/* Edit mode could be added here */}
+                                            <Button size="sm" variant="outline-primary" onClick={() => setViewingSalary(s)}>View</Button>
                                         </td>
                                     </tr>
                                 ))}
@@ -213,6 +214,77 @@ function SalaryManagement() {
                             </tbody>
                         </Table>
                     </Card>
+
+                    {/* Salary Breakdown Modal */}
+                    <Modal show={!!viewingSalary} onHide={() => setViewingSalary(null)} size="lg">
+                        <Modal.Header closeButton>
+                            <Modal.Title>Salary Breakdown: {viewingSalary && (employees[viewingSalary.employeeId] || viewingSalary.employeeId)}</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            {viewingSalary && (
+                                <Container>
+                                    <Row className="mb-3">
+                                        <Col md={6}>
+                                            <Card className="h-100 border-success">
+                                                <Card.Header className="bg-success text-white">Earnings</Card.Header>
+                                                <Card.Body>
+                                                    <Table size="sm" borderless>
+                                                        <tbody>
+                                                            <tr><td>Basic Salary</td><td className="text-end">{viewingSalary.basicSalary?.toFixed(2)}</td></tr>
+                                                            <tr><td>Allowances</td><td className="text-end">{viewingSalary.allowances?.toFixed(2)}</td></tr>
+                                                            <tr><td>Bonuses</td><td className="text-end">{viewingSalary.bonuses?.toFixed(2)}</td></tr>
+                                                            <tr><td>Overtime ({viewingSalary.overtimeHours} hrs)</td><td className="text-end">{viewingSalary.overtimePay?.toFixed(2)}</td></tr>
+                                                            <tr className="border-top mt-2 fw-bold"><td>Gross Salary</td><td className="text-end">{viewingSalary.grossSalary?.toFixed(2)}</td></tr>
+                                                        </tbody>
+                                                    </Table>
+                                                </Card.Body>
+                                            </Card>
+                                        </Col>
+                                        <Col md={6}>
+                                            <Card className="h-100 border-danger">
+                                                <Card.Header className="bg-danger text-white">Deductions</Card.Header>
+                                                <Card.Body>
+                                                    <Table size="sm" borderless>
+                                                        <tbody>
+                                                            <tr><td>EPF (Employee 8%)</td><td className="text-end">{viewingSalary.epfEmployee?.toFixed(2)}</td></tr>
+                                                            <tr><td>Tax (PAYE)</td><td className="text-end">{viewingSalary.tax?.toFixed(2)}</td></tr>
+                                                            <tr><td>Other Deductions</td><td className="text-end">{viewingSalary.otherDeductions?.toFixed(2)}</td></tr>
+                                                            <tr className="text-danger"><td>No Pay Deduction</td><td className="text-end">{viewingSalary.noPayDeduction?.toFixed(2)}</td></tr>
+                                                            <tr className="border-top mt-2 fw-bold"><td>Total Deductions</td><td className="text-end">{(viewingSalary.epfEmployee + viewingSalary.tax + viewingSalary.otherDeductions + viewingSalary.noPayDeduction).toFixed(2)}</td></tr>
+                                                        </tbody>
+                                                    </Table>
+                                                </Card.Body>
+                                            </Card>
+                                        </Col>
+                                    </Row>
+                                    <Row>
+                                        <Col>
+                                            <Alert variant="info" className="d-flex justify-content-between align-items-center">
+                                                <h4 className="m-0">Net Salary</h4>
+                                                <h3 className="m-0 fw-bold">{viewingSalary.netSalary?.toFixed(2)}</h3>
+                                            </Alert>
+                                        </Col>
+                                    </Row>
+                                    <Row className="mt-3">
+                                        <Col>
+                                            <h6 className="text-muted">Employer Contributions (Not deducted from Net)</h6>
+                                            <Table size="sm" bordered>
+                                                <tbody>
+                                                    <tr><td>EPF (Employer 12%)</td><td>{viewingSalary.epfEmployer?.toFixed(2)}</td></tr>
+                                                    <tr><td>ETF (3%)</td><td>{viewingSalary.etf?.toFixed(2)}</td></tr>
+                                                    <tr className="fw-bold bg-light"><td>Total Company Cost</td><td>{(viewingSalary.grossSalary + viewingSalary.epfEmployer + viewingSalary.etf).toFixed(2)}</td></tr>
+                                                </tbody>
+                                            </Table>
+                                        </Col>
+                                    </Row>
+                                </Container>
+                            )}
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={() => setViewingSalary(null)}>Close</Button>
+                            <Button variant="primary" onClick={() => window.print()}>Print View</Button>
+                        </Modal.Footer>
+                    </Modal>
                 </Tab>
 
                 <Tab eventKey="config" title="Configuration">
