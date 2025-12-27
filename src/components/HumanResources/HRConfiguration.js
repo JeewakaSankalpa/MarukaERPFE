@@ -32,117 +32,199 @@ export default function HRConfiguration() {
 }
 
 function ScheduleSettings() {
-    // ... existing ScheduleSettings code ...
-    const [global, setGlobal] = useState({
-        schedule: [],
-        gracePeriodMinutes: 0
-    });
+    const [policies, setPolicies] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [editingPolicy, setEditingPolicy] = useState(null);
 
-    useEffect(() => { load(); }, []);
+    // Form State
+    const [formData, setFormData] = useState({
+        policyName: "",
+        gracePeriodMinutes: 0,
+        isDefault: false,
+        schedule: []
+    });
 
-    const load = async () => {
+    useEffect(() => { loadPolicies(); }, []);
+
+    const loadPolicies = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/hr/schedule/global');
-            if (res.data) {
-                // Ensure time format HH:mm and list of 7 days
-                const s = res.data;
-                setGlobal({
-                    schedule: (s.schedule || []).map(d => ({
-                        ...d,
-                        startTime: d.startTime ? d.startTime.substring(0, 5) : '08:30',
-                        endTime: d.endTime ? d.endTime.substring(0, 5) : '17:00'
-                    })),
-                    gracePeriodMinutes: s.gracePeriodMinutes || 0
-                });
-            }
+            const res = await api.get('/hr/schedule/policies');
+            setPolicies(Array.isArray(res.data) ? res.data : []);
         } catch (e) {
-            toast.error("Failed to load global schedule");
+            toast.error("Failed to load policies");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSave = async () => {
+    const handleAddNew = () => {
+        // Initialize Default Empty Schedule
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        const emptySchedule = days.map(d => ({
+            day: d,
+            isWorkDay: ["Saturday", "Sunday"].includes(d) ? false : true,
+            startTime: "08:30",
+            endTime: "17:00"
+        }));
+
+        setFormData({
+            policyName: "",
+            gracePeriodMinutes: 0,
+            isDefault: false,
+            schedule: emptySchedule
+        });
+        setEditingPolicy(null);
+        setShowModal(true);
+    };
+
+    const handleEdit = (policy) => {
+        setFormData({
+            policyName: policy.policyName,
+            gracePeriodMinutes: policy.gracePeriodMinutes,
+            isDefault: policy.isDefault,
+            schedule: policy.schedule.map(d => ({
+                ...d,
+                startTime: d.startTime ? d.startTime.substring(0, 5) : "08:30", // Ensure HH:mm
+                endTime: d.endTime ? d.endTime.substring(0, 5) : "17:00"
+            }))
+        });
+        setEditingPolicy(policy);
+        setShowModal(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure? This might affect employees assigned to this policy.")) return;
         try {
-            await api.post('/hr/schedule/global', {
-                schedule: global.schedule.map(d => ({
-                    ...d,
-                    startTime: d.startTime + ":00",
-                    endTime: d.endTime + ":00"
-                })),
-                gracePeriodMinutes: global.gracePeriodMinutes
-            });
-            toast.success("Global Schedule Updated");
+            await api.delete(`/hr/schedule/policies/${id}`);
+            toast.success("Policy deleted");
+            loadPolicies();
         } catch (e) {
-            toast.error("Failed to save settings");
+            toast.error("Failed to delete policy");
         }
     };
 
-    const updateDay = (index, field, value) => {
-        const newSched = [...global.schedule];
-        newSched[index] = { ...newSched[index], [field]: value };
-        setGlobal({ ...global, schedule: newSched });
-    };
+    const handleSave = async () => {
+        if (!formData.policyName) {
+            toast.error("Policy Name is required");
+            return;
+        }
 
-    if (loading) return <Spinner size="sm" />;
+        try {
+            const payload = { ...formData };
+            if (editingPolicy) {
+                await api.put(`/hr/schedule/policies/${editingPolicy.id}`, payload);
+            } else {
+                await api.post('/hr/schedule/policies', payload);
+            }
+            toast.success("Policy saved successfully");
+            setShowModal(false);
+            loadPolicies();
+        } catch (e) {
+            toast.error("Failed to save policy");
+        }
+    };
 
     return (
         <div>
-            <h5 className="mb-3">Global Default Schedule</h5>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5>Work Schedule Policies</h5>
+                <Button onClick={handleAddNew}>+ Add Policy</Button>
+            </div>
 
-            <Form.Group className="mb-3" style={{ maxWidth: 300 }}>
-                <Form.Label>Grace Period (Minutes)</Form.Label>
-                <Form.Control type="number" value={global.gracePeriodMinutes} onChange={e => setGlobal({ ...global, gracePeriodMinutes: parseInt(e.target.value) })} />
-                <Form.Text className="text-muted">Allowed delay before marking 'Late'</Form.Text>
-            </Form.Group>
+            {loading && <Spinner size="sm" />}
 
-            <Table striped bordered hover size="sm">
+            <Table striped bordered hover>
                 <thead>
                     <tr>
-                        <th>Day</th>
-                        <th className="text-center">Work Day?</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
+                        <th>Policy Name</th>
+                        <th>Grace Period</th>
+                        <th>Default?</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {global.schedule.map((d, idx) => (
-                        <tr key={d.day}>
-                            <td>{d.day}</td>
-                            <td className="text-center">
-                                <Form.Check
-                                    checked={d.isWorkDay}
-                                    onChange={e => updateDay(idx, 'isWorkDay', e.target.checked)}
-                                />
-                            </td>
+                    {policies.map(p => (
+                        <tr key={p.id}>
+                            <td>{p.policyName}</td>
+                            <td>{p.gracePeriodMinutes} mins</td>
+                            <td>{p.isDefault ? <Badge bg="success">Default</Badge> : ""}</td>
                             <td>
-                                <Form.Control
-                                    type="time"
-                                    value={d.startTime}
-                                    disabled={!d.isWorkDay}
-                                    onChange={e => updateDay(idx, 'startTime', e.target.value)}
-                                />
-                            </td>
-                            <td>
-                                <Form.Control
-                                    type="time"
-                                    value={d.endTime}
-                                    disabled={!d.isWorkDay}
-                                    onChange={e => updateDay(idx, 'endTime', e.target.value)}
-                                />
+                                <Button size="sm" variant="info" className="me-2" onClick={() => handleEdit(p)}>Edit</Button>
+                                <Button size="sm" variant="danger" onClick={() => handleDelete(p.id)}>Delete</Button>
                             </td>
                         </tr>
                     ))}
+                    {!loading && policies.length === 0 && <tr><td colSpan="4" className="text-center">No policies found</td></tr>}
                 </tbody>
             </Table>
 
-            <Button onClick={handleSave} className="mt-2">Save Global Schedule</Button>
-            <hr />
-            <p className="text-muted small">
-                Individual overrides can set totally different schedules per employee.
-            </p>
+            {/* Modal - Ideally fetch from Reusable or inline */}
+            {showModal && (
+                <div className="border p-3 mt-4 bg-light rounded">
+                    <h6>{editingPolicy ? "Edit Policy" : "New Policy"}</h6>
+                    <Row className="mb-3">
+                        <Col md={6}>
+                            <Form.Group>
+                                <Form.Label>Policy Name</Form.Label>
+                                <Form.Control value={formData.policyName} onChange={e => setFormData({ ...formData, policyName: e.target.value })} />
+                            </Form.Group>
+                        </Col>
+                        <Col md={3}>
+                            <Form.Group>
+                                <Form.Label>Grace Period</Form.Label>
+                                <Form.Control type="number" value={formData.gracePeriodMinutes} onChange={e => setFormData({ ...formData, gracePeriodMinutes: parseInt(e.target.value) || 0 })} />
+                            </Form.Group>
+                        </Col>
+                        <Col md={3} className="d-flex align-items-end">
+                            <Form.Check
+                                label="Is Default Policy?"
+                                checked={formData.isDefault}
+                                onChange={e => setFormData({ ...formData, isDefault: e.target.checked })}
+                            />
+                        </Col>
+                    </Row>
+
+                    <Table size="sm">
+                        <thead>
+                            <tr><th>Day</th><th>Work Day?</th><th>Start</th><th>End</th></tr>
+                        </thead>
+                        <tbody>
+                            {formData.schedule.map((d, idx) => (
+                                <tr key={d.day}>
+                                    <td>{d.day}</td>
+                                    <td>
+                                        <Form.Check
+                                            checked={d.isWorkDay}
+                                            onChange={e => {
+                                                const ns = [...formData.schedule];
+                                                ns[idx].isWorkDay = e.target.checked;
+                                                setFormData({ ...formData, schedule: ns });
+                                            }}
+                                        />
+                                    </td>
+                                    <td><Form.Control type="time" disabled={!d.isWorkDay} value={d.startTime} onChange={e => {
+                                        const ns = [...formData.schedule];
+                                        ns[idx].startTime = e.target.value;
+                                        setFormData({ ...formData, schedule: ns });
+                                    }} /></td>
+                                    <td><Form.Control type="time" disabled={!d.isWorkDay} value={d.endTime} onChange={e => {
+                                        const ns = [...formData.schedule];
+                                        ns[idx].endTime = e.target.value;
+                                        setFormData({ ...formData, schedule: ns });
+                                    }} /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+
+                    <div className="d-flex justify-content-end gap-2 mt-3">
+                        <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+                        <Button variant="primary" onClick={handleSave}>Save Policy</Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -29,12 +29,17 @@ function EmployeeCreate({ mode }) {
     designation: "",
     epfNo: "",
     basicSalary: "",
-    joinDate: new Date().toISOString().split('T')[0]
+    epfNo: "",
+    basicSalary: "",
+    joinDate: new Date().toISOString().split('T')[0],
+    dob: "",
+    workSchedulePolicyId: ""
   });
 
   const [departments, setDepartments] = useState([]);
   const [managers, setManagers] = useState([]);
   const [projectWorkflowRoles, setProjectWorkflowRoles] = useState([]);
+  const [schedulePolicies, setSchedulePolicies] = useState([]); // NEW
   const [loading, setLoading] = useState(false);
   const [autoPassword, setAutoPassword] = useState("");
 
@@ -43,15 +48,20 @@ function EmployeeCreate({ mode }) {
     const fetchDropdowns = async () => {
       try {
         const deptRes = await api.get("/departments");
-        setDepartments(deptRes.data?.content || []); // Assuming Page response
+        setDepartments(deptRes.data?.content || []);
 
         const empRes = await api.get("/employee/all");
-        // Filter only Managers/Admins/HR for reporting
         const allEmps = empRes.data || [];
         const mgrs = allEmps.filter(e => ["MANAGER", "ADMIN", "HR"].includes(e.role));
         setManagers(mgrs);
 
-        // Fetch Workflow Roles (All valid roles in the system)
+        // Fetch Schedule Policies
+        try {
+          const polRes = await api.get("/hr/schedule/policies");
+          setSchedulePolicies(polRes.data || []);
+        } catch (e) { console.error("Failed to load policies"); }
+
+        // Fetch Workflow Roles
         try {
           const wfRes = await api.get("/roles");
           setProjectWorkflowRoles(wfRes.data || []);
@@ -93,7 +103,10 @@ function EmployeeCreate({ mode }) {
               designation: d.designation || "",
               epfNo: d.epfNo || "",
               basicSalary: d.basicSalary || "",
-              joinDate: d.joinDate || ""
+              basicSalary: d.basicSalary || "",
+              joinDate: d.joinDate || "",
+              dob: d.dob || "",
+              workSchedulePolicyId: d.workSchedulePolicyId || ""
             });
           }
         } catch (error) {
@@ -268,6 +281,27 @@ function EmployeeCreate({ mode }) {
                 <option value="HR">HR</option>
                 <option value="ADMIN">Admin</option>
               </Form.Select>
+            </Form.Group>
+          </Col>
+        </Row>
+
+        <Row>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Date of Birth</Form.Label>
+              <Form.Control type="date" name="dob" value={formData.dob || ""} onChange={handleChange} />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Work Schedule Policy</Form.Label>
+              <Form.Select name="workSchedulePolicyId" value={formData.workSchedulePolicyId || ""} onChange={handleChange}>
+                <option value="">-- Default --</option>
+                {schedulePolicies.map(p => (
+                  <option key={p.id} value={p.id}>{p.policyName} {p.isDefault ? "(Default)" : ""}</option>
+                ))}
+              </Form.Select>
+              <Form.Text className="text-muted">Select working schedule policy</Form.Text>
             </Form.Group>
           </Col>
         </Row>

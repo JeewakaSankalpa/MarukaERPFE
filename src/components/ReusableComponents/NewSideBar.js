@@ -133,14 +133,19 @@ function NewSideBar() {
       {!collapsed && (
         <div className="px-3 py-3 border-bottom border-secondary bg-opacity-10 bg-black mb-2">
           <div className="d-flex align-items-center justify-content-between">
-            <div className="d-flex align-items-center">
-              <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-bold"
+            <div
+              className="d-flex align-items-center cursor-pointer hover-opacity-80"
+              onClick={() => navigate('/employee/profile')}
+              title="Go to My Profile"
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-bold text-white shadow-sm"
                 style={{ width: '32px', height: '32px', fontSize: '14px' }}>
                 {userRole.charAt(0)}
               </div>
               <div className="ms-2 lh-1 text-truncate" style={{ maxWidth: '120px' }}>
-                <div className="fw-semibold small">{userRole}</div>
-                <div className="text-muted" style={{ fontSize: '10px' }}>Active</div>
+                <div className="fw-semibold small text-light">{userRole}</div>
+                <div className="text-muted" style={{ fontSize: '10px' }}>View Profile</div>
               </div>
             </div>
             <NotificationBell />
