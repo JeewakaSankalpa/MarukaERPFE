@@ -237,6 +237,49 @@ export default function PurchaseOrderDetails() {
                             </tbody>
                         </Table>
 
+                        {/* Totals Breakdown */}
+                        <div className="d-flex justify-content-end">
+                            <div style={{ width: 300 }}>
+                                <Table size="sm" borderless className="mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <td className="text-end"><strong>Subtotal:</strong></td>
+                                            <td className="text-end">{po.subTotal ? po.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
+                                        </tr>
+                                        {po.deliveryCharge > 0 && (
+                                            <tr>
+                                                <td className="text-end">Delivery:</td>
+                                                <td className="text-end">{po.deliveryCharge.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                            </tr>
+                                        )}
+                                        {po.vatAmount > 0 && (
+                                            <tr>
+                                                <td className="text-end">VAT:</td>
+                                                <td className="text-end">{po.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                            </tr>
+                                        )}
+                                        {po.otherTaxAmount > 0 && (
+                                            <tr>
+                                                <td className="text-end">Other Tax:</td>
+                                                <td className="text-end">{po.otherTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                            </tr>
+                                        )}
+                                        {/* Legacy Tax Fallback */}
+                                        {(!po.vatAmount && !po.otherTaxAmount && po.taxTotal > 0) && (
+                                            <tr>
+                                                <td className="text-end">Tax:</td>
+                                                <td className="text-end">{po.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                            </tr>
+                                        )}
+                                        <tr className="border-top">
+                                            <td className="text-end fs-5"><strong>Total:</strong></td>
+                                            <td className="text-end fs-5"><strong>{po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : (po.subTotal || 0).toLocaleString()}</strong></td>
+                                        </tr>
+                                    </tbody>
+                                </Table>
+                            </div>
+                        </div>
+
                         {po.note && (
                             <div className="mt-3 p-3 bg-light rounded">
                                 <strong>Note:</strong> <span style={{ whiteSpace: "pre-wrap" }}>{po.note}</span>

@@ -12,6 +12,7 @@ function SalaryManagement() {
     // -- Processing State --
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [salaries, setSalaries] = useState([]);
+    const [processedRun, setProcessedRun] = useState(null); // The details of the run status
     const [employees, setEmployees] = useState({}); // Map ID -> Name
 
     // -- Config State --
@@ -33,7 +34,10 @@ function SalaryManagement() {
 
     useEffect(() => {
         fetchEmployees();
-        if (key === "processing") fetchSalaries();
+        if (key === "processing") {
+            fetchSalaries();
+            fetchRunStatus();
+        }
         if (key === "config") fetchConfig();
         if (key === "attendance") fetchAttendanceReport();
     }, [key, selectedMonth]);
@@ -57,6 +61,13 @@ function SalaryManagement() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchRunStatus = async () => {
+        try {
+            const res = await api.get(`/salary/run/${selectedMonth}`);
+            setProcessedRun(res.data);
+        } catch (e) { setProcessedRun(null); }
     };
 
     const fetchConfig = async () => {
@@ -169,11 +180,52 @@ function SalaryManagement() {
                                 />
                             </Col>
                             <Col md={8} className="text-end">
-                                <Button variant="success" onClick={handleGenerate} disabled={loading} className="me-2">
-                                    {loading ? <Spinner size="sm" animation="border" /> : "Generate / Refresh"}
-                                </Button>
-                                <Button variant="outline-dark" onClick={() => navigate(`/salary/report?month=${selectedMonth}`)}>
-                                    🖨️ Print Report
+                                <span className="me-3">
+                                    Status: <Badge bg={processedRun?.status === 'APPROVED' ? 'success' : processedRun?.status === 'PENDING_APPROVAL' ? 'warning' : 'secondary'}>{processedRun?.status || 'DRAFT/NEW'}</Badge>
+                                </span>
+
+                                {(!processedRun || processedRun.status === 'DRAFT') && (
+                                    <>
+                                        <Button variant="success" onClick={handleGenerate} disabled={loading} className="me-2">
+                                            {loading ? <Spinner size="sm" animation="border" /> : "Generate / Refresh"}
+                                        </Button>
+                                        <Button variant="info" onClick={async () => {
+                                            if (salaries.length === 0) return toast.warn("Generate salaries first");
+                                            if (window.confirm("Submit for Approval? This will lock re-generation.")) {
+                                                await api.post(`/salary/run/${selectedMonth}/submit`);
+                                                toast.success("Submitted");
+                                                fetchRunStatus();
+                                            }
+                                        }} className="me-2">Submit</Button>
+                                    </>
+                                )}
+
+                                {processedRun?.status === 'PENDING_APPROVAL' && (
+                                    <Button variant="warning" className="me-2" onClick={async () => {
+                                        if (window.confirm("Approve Payroll? This will finalize the records.")) {
+                                            await api.post(`/salary/run/${selectedMonth}/approve`);
+                                            toast.success("Approved");
+                                            fetchRunStatus();
+                                        }
+                                    }}>Approve Payroll</Button>
+                                )}
+
+                                {processedRun?.status === 'APPROVED' && (
+                                    <>
+                                        <Button variant="success" className="me-2" onClick={async () => {
+                                            if (window.confirm("Mark ALL salaries for this month as PAID?")) {
+                                                try {
+                                                    await api.post(`/salary/pay/${selectedMonth}`);
+                                                    toast.success("All Marked as Paid");
+                                                    fetchSalaries();
+                                                } catch (e) { toast.error("Failed"); }
+                                            }
+                                        }}>💰 Mark Month as Paid</Button>
+                                    </>
+                                )}
+
+                                <Button variant="outline-dark" onClick={() => navigate(`/salary/print-batch/${selectedMonth}`)}>
+                                    🖨️ Print Payslips (Bulk)
                                 </Button>
                             </Col>
                         </Row>
@@ -206,7 +258,19 @@ function SalaryManagement() {
                                         </td>
                                         <td className="text-success fw-bold">{s.netSalary?.toFixed(2)}</td>
                                         <td>
-                                            <Button size="sm" variant="outline-primary" onClick={() => setViewingSalary(s)}>View</Button>
+                                            <Button size="sm" variant="outline-primary" className="me-1" onClick={() => setViewingSalary(s)}>View</Button>
+                                            {s.status !== 'PAID' && processedRun?.status === 'APPROVED' && (
+                                                <Button size="sm" variant="success" onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm("Mark as Paid?")) {
+                                                        try {
+                                                            await api.post(`/salary/pay/single/${s.id}`);
+                                                            toast.success("Paid");
+                                                            fetchSalaries();
+                                                        } catch (e) { toast.error("Failed"); }
+                                                    }
+                                                }}>Pay</Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -272,9 +336,31 @@ function SalaryManagement() {
                                                 <tbody>
                                                     <tr><td>EPF (Employer 12%)</td><td>{viewingSalary.epfEmployer?.toFixed(2)}</td></tr>
                                                     <tr><td>ETF (3%)</td><td>{viewingSalary.etf?.toFixed(2)}</td></tr>
-                                                    <tr className="fw-bold bg-light"><td>Total Company Cost</td><td>{(viewingSalary.grossSalary + viewingSalary.epfEmployer + viewingSalary.etf).toFixed(2)}</td></tr>
+                                                    <tr className="fw-bold bg-light">
+                                                        <td>Total Company Cost</td>
+                                                        <td>{((viewingSalary.grossSalary - (viewingSalary.noPayDeduction || 0)) + viewingSalary.epfEmployer + viewingSalary.etf).toFixed(2)}</td>
+                                                    </tr>
                                                 </tbody>
                                             </Table>
+                                        </Col>
+                                    </Row>
+                                    <Row className="text-center mt-3 p-3 bg-light rounded border">
+                                        <Col>
+                                            <h5>Payment Status: <Badge bg={viewingSalary.status === 'PAID' ? 'success' : 'warning'}>{viewingSalary.status || 'PENDING'}</Badge></h5>
+                                            {viewingSalary.status !== 'PAID' ? (
+                                                processedRun?.status === 'APPROVED' ? (
+                                                    <Button variant="success" onClick={async () => {
+                                                        try {
+                                                            await api.patch(`/salary/${viewingSalary.id}/status`, { status: "PAID", paidDate: new Date().toISOString() });
+                                                            toast.success("Marked as PAID");
+                                                            setViewingSalary(null);
+                                                            fetchSalaries();
+                                                        } catch (e) { toast.error("Failed to update status"); }
+                                                    }}>Mark as PAID</Button>
+                                                ) : <div className="text-danger small">Payroll must be APPROVED to mark as paid.</div>
+                                            ) : (
+                                                <div className="text-muted">Paid on: {viewingSalary.paidDate ? new Date(viewingSalary.paidDate).toLocaleDateString() : '-'}</div>
+                                            )}
                                         </Col>
                                     </Row>
                                 </Container>

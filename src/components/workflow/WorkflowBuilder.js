@@ -34,6 +34,7 @@ const emptyFlow = {
     estimationApproverRoles: [], // NEW: Global list of roles for Estimation Approval
     purchaseOrderApproverRoles: [], // NEW: Global list of roles for PO Approval
     stockAuditApproverRoles: [], // NEW: Global list of roles for Stock Audit Approval
+    payrollApproverRoles: [], // NEW: Global list of roles for Payroll Approval
 };
 
 export default function WorkflowBuilder() {
@@ -79,7 +80,9 @@ export default function WorkflowBuilder() {
                     visibility: wf.visibility || {},
                     estimationApproverRoles: wf.estimationApproverRoles || [],
                     purchaseOrderApproverRoles: wf.purchaseOrderApproverRoles || [],
+                    purchaseOrderApproverRoles: wf.purchaseOrderApproverRoles || [],
                     stockAuditApproverRoles: wf.stockAuditApproverRoles || [],
+                    payrollApproverRoles: wf.payrollApproverRoles || [],
                 };
 
                 setFlow(base);
@@ -706,6 +709,37 @@ export default function WorkflowBuilder() {
                                             ? current.filter(x => x !== r)
                                             : [...current, r];
                                         setFlow(f => ({ ...f, stockAuditApproverRoles: next }));
+                                    }}
+                                />
+                            ))}
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* Global Approvers (NEW Row 2) */}
+            <Row className="g-3 mt-1">
+                <Col lg={4}>
+                    <Card className="h-100">
+                        <Card.Header>Payroll Approvers (Global)</Card.Header>
+                        <Card.Body>
+                            <div className="text-muted small mb-2">
+                                Users with these roles will be required to approve Payroll Runs.
+                            </div>
+                            {roles.length === 0 ? (
+                                <div className="text-muted">No roles found.</div>
+                            ) : roles.map((r) => (
+                                <Form.Check
+                                    key={`payroll-role-${r}`}
+                                    type="checkbox"
+                                    label={r}
+                                    checked={(flow.payrollApproverRoles || []).includes(r)}
+                                    onChange={() => {
+                                        const current = flow.payrollApproverRoles || [];
+                                        const next = current.includes(r)
+                                            ? current.filter(x => x !== r)
+                                            : [...current, r];
+                                        setFlow(f => ({ ...f, payrollApproverRoles: next }));
                                     }}
                                 />
                             ))}

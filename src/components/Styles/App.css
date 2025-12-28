@@ -79,17 +79,52 @@ body,
 }
 
 /* Print Styles */
+/* Print Styles */
 @media print {
 
+    /* Hide everything by default */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Only show the print container and its children */
+    .payslip-page,
+    .payslip-page *,
+    .container {
+        visibility: visible;
+    }
+
+    /* Position the print content effectively */
+    .payslip-page {
+        position: relative;
+        /* Changed from absolute to relative to allow stacking */
+        width: 100%;
+        page-break-after: always;
+        break-after: page;
+        display: block;
+    }
+
+    /* Ensure container allows flow */
+    .container {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Hide standard UI elements explicitly */
     .sidebar,
     .sidebar-container,
     .header,
-    .no-print,
+    .d-print-none,
     button,
-    .btn {
+    .btn,
+    .nav,
+    .navbar {
         display: none !important;
     }
 
+    /* Reset Layout Containers */
     html,
     body,
     #root,
@@ -103,5 +138,7 @@ body,
         overflow: visible !important;
         display: block !important;
         background-color: white !important;
+        position: static !important;
+        /* Important to override relative positioning */
     }
 }

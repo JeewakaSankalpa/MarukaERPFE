@@ -64,6 +64,7 @@ import EmployeeCreate from "./components/Employee/EmployeeCreate";
 import EmployeeList from "./components/Employee/EmployeeList";
 import EmployeeProfile from "./components/Employee/EmployeeProfile";
 import SalaryManagement from "./components/Employee/SalaryManagement";
+import SalaryBatchPrint from "./components/Employee/SalaryBatchPrint";
 import HRConfiguration from "./components/HumanResources/HRConfiguration";
 import SalaryReport from "./components/Employee/Reports/SalaryReport";
 import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
@@ -72,7 +73,10 @@ import StockValuationReport from "./components/Inventory/Reports/StockValuationR
 import PayablesReport from './components/Inventory/Reports/PayablesReport';
 import ReceivablesReport from './components/Inventory/Reports/ReceivablesReport';
 import ExpensesPage from './components/finance/ExpensesPage';
+import FinanceDashboard from './components/finance/FinanceDashboard';
 import TaxPage from './components/finance/TaxPage';
+import LoanManagement from './components/finance/LoanManagement';
+import FinanceReportsPage from './components/finance/FinanceReportsPage';
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
 import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
@@ -194,6 +198,7 @@ function App() {
                         <Route path="/salary" element={<SalaryManagement />} />
                         <Route path="/hr/config" element={<HRConfiguration />} />
                         <Route path="/salary/report" element={<SalaryReport />} />
+                        <Route path="/salary/print-batch/:month" element={<SalaryBatchPrint />} />
                         <Route path="/leave" element={<LeaveRequestPage />} />
                         <Route path="/attendance" element={<AttendancePage />} />
                         <Route path="/reports/leave" element={<LeaveUtilizationReport />} />
@@ -260,8 +265,11 @@ function App() {
                     {/* Sales & Finance (Combined in MenuConfig as 'finance') */}
                     <Route element={<PrivateRoute module="finance" />}>
                         {/* Quotations removed from Finance menu but route might still be needed if accessed directly or via Sales - keeping Sales routes check above */}
+                        <Route path="/finance/dashboard" element={<FinanceDashboard />} />
                         <Route path="/finance/expenses" element={<ExpensesPage />} />
                         <Route path="/finance/tax" element={<TaxPage />} />
+                        <Route path="/finance/loans" element={<LoanManagement />} />
+                        <Route path="/finance/reports" element={<FinanceReportsPage />} />
                         <Route path="/reports/payables" element={<PayablesReport />} />
                         <Route path="/reports/receivables" element={<ReceivablesReport />} />
                         <Route path="/assets" element={<AssetRegister />} />

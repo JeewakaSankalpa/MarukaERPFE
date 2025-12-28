@@ -24,6 +24,9 @@ export default function HRConfiguration() {
                         <Tab eventKey="notifications" title="Notifications">
                             <NotificationSettings />
                         </Tab>
+                        <Tab eventKey="tax" title="Taxation (PAYE)">
+                            <TaxSettings />
+                        </Tab>
                     </Tabs>
                 </Card.Body>
             </Card>
@@ -419,6 +422,104 @@ function NotificationSettings() {
             </Card>
 
             <Button onClick={handleSave}>Save Settings</Button>
+        </div>
+    );
+}
+
+function TaxSettings() {
+    const [config, setConfig] = useState({ taxBrackets: [] });
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => { load(); }, []);
+
+    const load = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get('/payroll-config');
+            setConfig(res.data || { taxBrackets: [] });
+        } catch (e) { toast.error("Failed to load tax config"); }
+        finally { setLoading(false); }
+    };
+
+    const handleSave = async () => {
+        try {
+            await api.post('/payroll-config', config);
+            toast.success("Tax settings saved");
+        } catch (e) { toast.error("Failed to save"); }
+    };
+
+    const addBracket = () => {
+        setConfig({
+            ...config,
+            taxBrackets: [...(config.taxBrackets || []), { limit: 0, rate: 0 }]
+        });
+    };
+
+    const updateBracket = (index, field, value) => {
+        const newBrackets = [...config.taxBrackets];
+        newBrackets[index][field] = parseFloat(value);
+        setConfig({ ...config, taxBrackets: newBrackets });
+    };
+
+    const removeBracket = (index) => {
+        const newBrackets = config.taxBrackets.filter((_, i) => i !== index);
+        setConfig({ ...config, taxBrackets: newBrackets });
+    };
+
+    return (
+        <div style={{ maxWidth: 800 }}>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5>PAYE / APIT Tax Brackets (Monthly)</h5>
+                <Button onClick={handleSave}>Save Configuration</Button>
+            </div>
+
+            <div className="alert alert-info small">
+                Define the tax slabs based on monthly income. <br />
+                For the final slab (infinite), set Limit to <b>0</b>.<br />
+                <strong>Example:</strong> First 100,000 @ 0%, Next 100,000 @ 6%, Remainder @ 12%
+            </div>
+
+            <Table size="sm" bordered striped>
+                <thead>
+                    <tr>
+                        <th style={{ width: '60px' }}>#</th>
+                        <th>Bracket Limit (LKR)</th>
+                        <th>Tax Rate (0.06 = 6%)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {(config.taxBrackets || []).map((b, i) => (
+                        <tr key={i}>
+                            <td>{i + 1}</td>
+                            <td>
+                                <Form.Control
+                                    type="number"
+                                    value={b.limit}
+                                    onChange={e => updateBracket(i, 'limit', e.target.value)}
+                                    placeholder="0 for Unlimited"
+                                />
+                                {b.limit === 0 && <small className="text-muted">Unlimited</small>}
+                            </td>
+                            <td>
+                                <div className="input-group">
+                                    <Form.Control
+                                        type="number"
+                                        step="0.01"
+                                        value={b.rate}
+                                        onChange={e => updateBracket(i, 'rate', e.target.value)}
+                                    />
+                                    <span className="input-group-text">{(b.rate * 100).toFixed(1)}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <Button size="sm" variant="danger" onClick={() => removeBracket(i)}>Remove</Button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </Table>
+            <Button size="sm" variant="outline-primary" onClick={addBracket}>+ Add Tax Bracket</Button>
         </div>
     );
 }

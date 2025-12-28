@@ -104,9 +104,10 @@ export const MenuConfig = [
         icon: "FaBriefcase",
         roles: ["ADMIN", "MANAGER"],
         subItems: [
-            // Quotations moved to Sales/Projects mostly, but user said "remove sales part and quotations" from here
-            { id: "finance.expenses", title: "Expenses", path: "/finance/expenses" }, // Placeholder for now
-            { id: "finance.tax", title: "Tax / VAT", path: "/finance/tax" }, // Placeholder
+            { id: "finance.dashboard", title: "Finance Dashboard", path: "/finance/dashboard" },
+            { id: "finance.expenses", title: "Expenses", path: "/finance/expenses" },
+            { id: "finance.loans", title: "Loan Management", path: "/finance/loans" },
+            { id: "finance.reports", title: "Financial Statements", path: "/finance/reports" },
             { id: "finance.assets", title: "Asset Register", path: "/assets" },
         ]
     },
