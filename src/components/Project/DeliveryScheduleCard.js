@@ -4,7 +4,7 @@ import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { FaTruck, FaFilePdf, FaSave } from 'react-icons/fa';
 
-export default function DeliveryScheduleCard({ projectId }) {
+export default function DeliveryScheduleCard({ projectId, reloadKey }) {
     const [data, setData] = useState({
         scheduledDate: '',
         location: '',
@@ -19,7 +19,7 @@ export default function DeliveryScheduleCard({ projectId }) {
 
     useEffect(() => {
         fetchInitialData();
-    }, [projectId]);
+    }, [projectId, reloadKey]);
 
     const fetchInitialData = async () => {
         try {

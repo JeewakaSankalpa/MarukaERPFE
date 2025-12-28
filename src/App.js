@@ -162,32 +162,41 @@ function App() {
                     <Route path="/" element={<Navigate to="/login" replace />} />
 
                     {/* Protected */}
+                    {/* Dashboard is common, usually no specific module */}
                     <Route element={<PrivateRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/admin/config" element={<SystemConfiguration />} />
-                        <Route path="/settings" element={<SettingsPage />} />
                         <Route path="/notifications" element={<NotificationsPage />} />
-                        {/* <Route path="/customerDashboard" element={<CustomerDashboard />} /> */}
+                        <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/user/profile" element={<EmployeeProfile />} />
+                    </Route>
 
-                        {/* HR / Employees */}
-                        <Route path="/employee/create" element={<EmployeeCreate mode="create" />} />
-                        <Route path="/employee/edit/:id" element={<EmployeeCreate mode="edit" />} />
-                        <Route path="/employee/list" element={<EmployeeList />} />
-                        <Route path="/employee/list" element={<EmployeeList />} />
-                        <Route path="/employee/profile" element={<EmployeeProfile />} />
-                        <Route path="/salary" element={<SalaryManagement />} />
-                        <Route path="/hr/config" element={<HRConfiguration />} />
-                        <Route path="/salary/report" element={<SalaryReport />} />
-                        <Route path="/leave" element={<LeaveRequestPage />} />
-                        <Route path="/attendance" element={<AttendancePage />} />
-
+                    {/* Admin */}
+                    <Route element={<PrivateRoute module="admin" />}>
+                        <Route path="/admin/config" element={<SystemConfiguration />} />
                         {/* Users */}
                         <Route path="/user/create" element={<UserCreate mode="create" />} />
                         <Route path="/user/search" element={<UserSearch />} />
                         <Route path="/user/edit/:id" element={<UserCreate mode="edit" />} />
                         <Route path="/user/view/:id" element={<UserCreate mode="view" />} />
+                    </Route>
 
-                        {/* Inventory */}
+                    {/* Human Resources */}
+                    <Route element={<PrivateRoute module="hr" />}>
+                        <Route path="/employee/create" element={<EmployeeCreate mode="create" />} />
+                        <Route path="/employee/edit/:id" element={<EmployeeCreate mode="edit" />} />
+                        <Route path="/employee/list" element={<EmployeeList />} />
+                        {/* <Route path="/employee/profile" element={<EmployeeProfile />} />  Common? */}
+                        <Route path="/salary" element={<SalaryManagement />} />
+                        <Route path="/hr/config" element={<HRConfiguration />} />
+                        <Route path="/salary/report" element={<SalaryReport />} />
+                        <Route path="/leave" element={<LeaveRequestPage />} />
+                        <Route path="/attendance" element={<AttendancePage />} />
+                        <Route path="/reports/leave" element={<LeaveUtilizationReport />} />
+                    </Route>
+
+
+                    {/* Inventory / Store / Procurement */}
+                    <Route element={<PrivateRoute module="inventory" />}>
                         <Route path="/inventory/add" element={<InventoryAdd />} />
                         <Route path="/item/add" element={<ItemAdd />} />
                         <Route path="/inventory/search" element={<InventoryView />} />
@@ -196,8 +205,31 @@ function App() {
                         <Route path="/inventory/returns/approvals" element={<InternalReturnApprovals />} />
                         <Route path="/inventory/stock-taking" element={<StockTakingPage />} />
                         <Route path="/inventory/audit-approvals" element={<StockAuditApprovalsPage />} />
+                        <Route path="/product/create" element={<ProductCreate />} />
+                        <Route path="/supplier/create" element={<SupplierCreate />} />
+                        <Route path="/supplier/search" element={<SupplierCreate />} />
 
-                        {/* Projects */}
+                        <Route path="/inventory/pr" element={<PurchaseRequestPage />} />
+                        <Route path="/stores/planning" element={<StoresPlanningPage />} />
+                        <Route path="/stores/pending-to-po" element={<PendingToPOPage />} />
+                        <Route path="/transfers/inbox" element={<TransfersInbox />} />
+                        <Route path="/item/requests" element={<ItemRequestForm />} />
+
+                        <Route path="/pos" element={<POListRouteWrapper />} />
+                        <Route path="/pos/new" element={<POCreateManualRouteWrapper />} />
+                        <Route path="/pos/:id/print" element={<POPrint />} />
+                        <Route path="/pos/:id" element={<PurchaseOrderDetails />} />
+                        <Route path="/grn" element={<GRNRouteWrapper />} />
+                        <Route path="/grns" element={<GRNListView />} />
+                        <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
+
+                        {/* Reports */}
+                        <Route path="/reports/stock" element={<StockValuationReport />} />
+                    </Route>
+
+
+                    {/* Projects */}
+                    <Route element={<PrivateRoute module="projects" />}>
                         <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
                         <Route path="/projects/search" element={<ProjectSearch />} />
                         <Route path="/projects/:id" element={<ProjectCreate mode="edit" />} />
@@ -209,54 +241,35 @@ function App() {
                         <Route path="/projects/estimation/:id" element={<ProjectEstimationRouteWrapper />} />
                         <Route path="/projects/:projectId/quotation" element={<QuotationPrint />} />
                         <Route path="/invoices/:id" element={<InvoiceView />} />
+                        <Route path="/reports/project-material" element={<ProjectMaterialReport />} />
+                    </Route>
 
-                        {/* Customer */}
-                        <Route path="/customer/create" element={<CustomerCreate />} />
+                    {/* Sales / CRS */}
+                    <Route element={<PrivateRoute module="sales" />}>
                         <Route path="/customer/create" element={<CustomerCreate />} />
                         <Route path="/customer/view" element={<CustomerViewRouteWrapper />} />
                         <Route path="/customer/edit/:id" element={<CustomerCreate />} />
-
-                        {/* Supplier / Product */}
-                        <Route path="/supplier/create" element={<SupplierCreate />} />
-                        <Route path="/supplier/search" element={<SupplierCreate />} />
-                        <Route path="/product/create" element={<ProductCreate />} />
-
-                        {/* Requests / Stores / PO / GRN */}
-                        <Route path="/inventory/pr" element={<PurchaseRequestPage />} />
-                        <Route path="/stores/planning" element={<StoresPlanningPage />} />
-                        <Route path="/stores/pending-to-po" element={<PendingToPOPage />} />
-                        <Route path="/transfers/inbox" element={<TransfersInbox />} />
-                        <Route path="/item/requests" element={<ItemRequestForm />} />
-                        {/*<Route path="/item/list-requests" element={<ItemRequests />} />*/}
-
-                        <Route path="/pos" element={<POListRouteWrapper />} />
-                        <Route path="/pos/new" element={<POCreateManualRouteWrapper />} />
-                        <Route path="/pos/:id/print" element={<PrivateRoute><POPrint /></PrivateRoute>} />
-                        <Route path="/pos/:id" element={<PurchaseOrderDetails />} />
-                        <Route path="/grn" element={<GRNRouteWrapper />} />
-                        <Route path="/grns" element={<GRNListView />} />
-
-                        {/* Departments */}
-                        <Route path="/departments" element={<DepartmentListRouteWrapper />} />
-                        <Route path="/departments/new" element={<DepartmentFormNewRouteWrapper />} />
-                        <Route path="/departments/:id" element={<DepartmentFormRouteWrapper />} />
-
-                        <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
-                        <Route path="/reports" element={<ReportsPage />} />
-                        <Route path="/reports/leave" element={<LeaveUtilizationReport />} />
-                        <Route path="/reports/stock" element={<StockValuationReport />} />
-                        <Route path="/reports/payables" element={<PayablesReport />} />
-                        <Route path="/reports/receivables" element={<ReceivablesReport />} />
-                        <Route path="/assets" element={<AssetRegister />} />
-
-                        {/* Sales & Quotations */}
                         <Route path="/sales/quotations" element={<QuotationList />} />
                         <Route path="/sales/quotations/new" element={<QuotationPage />} />
                         <Route path="/sales/quotations/:id" element={<QuotationPage />} />
                     </Route>
 
-                    {/* Fallback */}
-                    <Route path="*" element={<Navigate to="/login" replace />} />
+                    {/* Finance */}
+                    <Route element={<PrivateRoute module="finance" />}>
+                        <Route path="/reports/payables" element={<PayablesReport />} />
+                        <Route path="/reports/receivables" element={<ReceivablesReport />} />
+                        <Route path="/assets" element={<AssetRegister />} />
+                    </Route>
+
+                    {/* Departments - Common? or Admin */}
+                    <Route element={<PrivateRoute module="admin" />}>
+                        <Route path="/departments" element={<DepartmentListRouteWrapper />} />
+                        <Route path="/departments/new" element={<DepartmentFormNewRouteWrapper />} />
+                        <Route path="/departments/:id" element={<DepartmentFormRouteWrapper />} />
+                    </Route>
+
+                    <Route path="/reports" element={<ReportsPage />} />
+
                 </Routes>
             </Layout>
         </Router>

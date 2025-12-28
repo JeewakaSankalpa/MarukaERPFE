@@ -55,6 +55,7 @@ export default function ProjectDetails() {
     const [moving, setMoving] = useState(false);
 
     const [filesReloadKey, setFilesReloadKey] = useState(0);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const [showDates, setShowDates] = useState(false);
     const [estimatedStart, setEstimatedStart] = useState('');
@@ -129,7 +130,7 @@ export default function ProjectDetails() {
                 if (!alive) return;
                 setProject(p.data || null);
                 setActions(a.data || null);
-                toast.success('Project & actions loaded');
+                // toast.success('Project & actions loaded');
             } catch (e) {
                 console.error(e);
                 toast.error('Failed to load project/actions');
@@ -176,6 +177,7 @@ export default function ProjectDetails() {
             ]);
             setProject(p.data || null);
             setActions(a.data || null);
+            setRefreshKey(prev => prev + 1); // Trigger sub-components
             toast.success('Refreshed');
         } catch (e) {
             console.error(e);
@@ -567,12 +569,14 @@ export default function ProjectDetails() {
                                             projectId={id}
                                             readOnly={!!viewVersion}
                                             onOpen={() => { /* optional hook */ }}
+                                            reloadKey={refreshKey}
                                         />
                                     </div>
                                     <ProjectQuotationCard
                                         project={project}
                                         projectId={id} // Explicitly pass ID from URL
                                         isVisible={true}
+                                        reloadKey={refreshKey}
                                     />
                                 </Col>
                             )}
@@ -581,7 +585,7 @@ export default function ProjectDetails() {
                             {/* Delivery Schedule - Moved to bottom */}
                             {isComponentVisible('DELIVERY') && (
                                 <Col lg={12}>
-                                    <DeliveryScheduleCard projectId={id} />
+                                    <DeliveryScheduleCard projectId={id} reloadKey={refreshKey} />
                                 </Col>
                             )}
                         </Row>
@@ -643,7 +647,7 @@ export default function ProjectDetails() {
                 )}
 
                 {activeTab === 'inventory' && isComponentVisible('INVENTORY') && (
-                    <ProjectInventoryCard projectId={id} />
+                    <ProjectInventoryCard projectId={id} reloadKey={refreshKey} />
                 )}
 
                 {activeTab === 'payments' && isComponentVisible('PAYMENTS') && (
@@ -652,6 +656,7 @@ export default function ProjectDetails() {
                             projectId={id}
                             project={project}
                             onRefresh={refresh}
+                            reloadKey={refreshKey}
                         />
                     </div>
                 )}
@@ -659,7 +664,7 @@ export default function ProjectDetails() {
 
                 {activeTab === 'tasks' && isComponentVisible('TASKS') && (
                     <div className="mt-3 bg-white shadow-sm rounded">
-                        <ProjectTasks projectId={id} />
+                        <ProjectTasks projectId={id} reloadKey={refreshKey} />
                     </div>
                 )}
             </Suspense>
