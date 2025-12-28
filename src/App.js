@@ -1,11 +1,6 @@
-// import logo from "./logo.svg";
-// import { useAuth } from "./context/AuthContext";
-// import QuotationList from "./components/Sales/QuotationList";
-// import QuotationPage from "./components/Sales/QuotationPage";
 import "./components/Styles/App.css";
 
 import React from "react";
-
 import {
     HashRouter as Router,
     Routes,
@@ -18,6 +13,7 @@ import {
 
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
+import InteractiveDashboard from "./components/Dashboard/InteractiveDashboard";
 import SystemConfiguration from "./components/SystemConfiguration";
 
 import InventoryAdd from "./components/Inventory/InventoryAdd";
@@ -92,7 +88,7 @@ import SettingsPage from "./components/settings/SettingsPage";
 
 /* ---------------- Layout ---------------- */
 function Layout({ children }) {
-    const location = useLocation(); // ✅ use hook, not global
+    const location = useLocation();
     const isLoginRoute = location.pathname === "/login";
 
     if (isLoginRoute) return <>{children}</>;
@@ -159,8 +155,6 @@ function ProjectEstimationRouteWrapper() {
 
 /* ------------------- App ------------------- */
 function App() {
-    // useAuth call removed as unused
-
     return (
         <Router>
             <ToastContainer position="top-right" autoClose={3000} style={{ zIndex: 99999 }} />
@@ -171,12 +165,13 @@ function App() {
                     <Route path="/" element={<Navigate to="/login" replace />} />
 
                     {/* Protected */}
-                    {/* Dashboard is common, usually no specific module */}
                     <Route element={<PrivateRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/dashboard/interactive" element={<InteractiveDashboard />} />
                         <Route path="/notifications" element={<NotificationsPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="/user/profile" element={<EmployeeProfile />} />
+                        <Route path="/employee/profile" element={<EmployeeProfile />} />
                     </Route>
 
                     {/* Admin */}
@@ -194,7 +189,6 @@ function App() {
                         <Route path="/employee/create" element={<EmployeeCreate mode="create" />} />
                         <Route path="/employee/edit/:id" element={<EmployeeCreate mode="edit" />} />
                         <Route path="/employee/list" element={<EmployeeList />} />
-                        {/* <Route path="/employee/profile" element={<EmployeeProfile />} />  Common? */}
                         <Route path="/salary" element={<SalaryManagement />} />
                         <Route path="/hr/config" element={<HRConfiguration />} />
                         <Route path="/salary/report" element={<SalaryReport />} />
@@ -264,7 +258,6 @@ function App() {
 
                     {/* Sales & Finance (Combined in MenuConfig as 'finance') */}
                     <Route element={<PrivateRoute module="finance" />}>
-                        {/* Quotations removed from Finance menu but route might still be needed if accessed directly or via Sales - keeping Sales routes check above */}
                         <Route path="/finance/dashboard" element={<FinanceDashboard />} />
                         <Route path="/finance/expenses" element={<ExpensesPage />} />
                         <Route path="/finance/tax" element={<TaxPage />} />

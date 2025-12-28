@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@stomp/stompjs": "^7.2.1",
     "axios": "^1.10.0",
     "bootstrap": "^5.3.3",
+    "cmdk": "^1.1.1",
     "cra-template": "1.2.0",
     "crypto-js": "^4.2.0",
+    "framer-motion": "^12.23.26",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "jwt-decode": "^4.0.0",
@@ -21,6 +24,8 @@
     "react-scripts": "5.0.1",
     "react-select": "^5.9.0",
     "react-toastify": "^11.0.3",
+    "recharts": "^3.6.0",
+    "sockjs-client": "^1.6.1",
     "web-vitals": "^4.2.4"
   },
   "scripts": {

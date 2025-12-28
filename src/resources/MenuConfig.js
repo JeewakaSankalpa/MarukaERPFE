@@ -89,6 +89,7 @@ export const MenuConfig = [
         icon: "FaChartLine",
         roles: ["ADMIN", "MANAGER", "HR", "STORE_KEEPER", "EMPLOYEE"],
         subItems: [
+            { id: "reports.interactive", title: "Interactive Dashboard", path: "/dashboard/interactive" },
             { id: "reports.dashboard", title: "Reports Dashboard", path: "/reports" },
             { id: "reports.stock", title: "Stock Valuation", path: "/reports/stock" },
             { id: "reports.payables", title: "Payables Report", path: "/reports/payables" },

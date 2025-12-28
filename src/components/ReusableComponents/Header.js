@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Command as CmdIcon } from "lucide-react";
 import Colors from "../../resources/Colors";
 import { FaSignOutAlt } from "react-icons/fa";
 import { Button } from "react-bootstrap";
-import logo from "../../assets/logo.jpeg"; // ✅ Import your logo
-import { useAuth } from "../../context/AuthContext"; // ✅ Access logged in user info
-
-import { useNavigate } from "react-router-dom"; // Added
-import api from "../../api/api"; // Added
+import logo from "../../assets/logo.jpeg";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import api from "../../api/api";
+// WebSocket & Command Palette
+import webSocketService from "../../services/WebSocketService";
+import CommandPalette from "./CommandPalette";
+import { toast } from "react-toastify";
+import "./CommandPalette.css"; // Ensure styles are loaded
 
 const Header = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { username, role, userType, logout } = useAuth();
-  const navigate = useNavigate(); // Added
+  const { username, userId, role, userType, logout } = useAuth(); // Assume userId/id is available in AuthContext now
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -20,21 +24,63 @@ const Header = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch Unread Count
+  // Fetch Unread Count (Initial)
+  const fetchCount = async () => {
+    try {
+      const res = await api.get("/notifications/unread-count");
+      setUnreadCount(res.data || 0);
+    } catch (e) { console.error(e); }
+  };
+
   useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const res = await api.get("/notifications/unread-count");
-        setUnreadCount(res.data || 0);
-      } catch (e) { console.error(e); }
-    };
     fetchCount();
-    const poll = setInterval(fetchCount, 30000); // Poll every 30s
-    return () => clearInterval(poll);
   }, []);
+
+  // WebSocket Connection
+  useEffect(() => {
+    // If AuthContext doesn't provide userId directly, you might need to decode token or fetch profile.
+    // Assuming 'username' is unique or we fetch profile first.
+    // For now, let's try to use username if userId is missing, or best effort.
+    // Update: NotificationService pushes to /topic/notifications/{userId}.
+    // We need the ACTUAL DB userId here. 
+    // If not available in context, we might need to fetch /user/me first.
+    // Let's assume username is the ID for now or we fetch it.
+
+    // Better approach: fetch profile to get ID
+    let activeSub = null;
+
+    const connectWS = async () => {
+      try {
+        // We might need the User ID to subscribe to personal topic
+        // const profile = await api.get('/user/profile'); 
+        // const uid = profile.data.id; 
+        // For prototype, assuming username == userId or passed in context
+        const uid = userId || username;
+
+        webSocketService.connect(() => {
+          // Subscribe to personal notifications
+          activeSub = webSocketService.subscribe(`/topic/notifications/${uid}`, (notification) => {
+            // On receive
+            console.log("WS Notification:", notification);
+            toast.info(`New: ${notification.title}`);
+            setUnreadCount(prev => prev + 1);
+          });
+        });
+      } catch (e) { console.error("WS Setup Failed", e); }
+    };
+
+    connectWS();
+
+    return () => {
+      if (activeSub) activeSub.unsubscribe();
+      // webSocketService.disconnect(); // Keep connection alive if shared? Or disconnect on logout/unmount
+    };
+  }, [username, userId]);
 
   return (
     <header style={styles.main} className="no-print">
+      <CommandPalette /> {/* Mount Global Command Palette */}
+
       {/* Left Section - Logo */}
       <div style={styles.leftSection}>
         <img src={logo} alt="Maruka Logo" style={styles.logoImage} />
@@ -63,7 +109,17 @@ const Header = () => {
 
       {/* Right Section - Notifications & Logout */}
       <div style={styles.rightSection}>
-        <div style={styles.notification} onClick={() => navigate("/notifications")}> {/* Added onClick */}
+
+        {/* Search Trigger Hint */}
+        <div
+          className="d-none d-md-flex align-items-center text-white-50 small border border-secondary rounded px-2 py-1"
+          style={{ cursor: 'pointer' }}
+          onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+        >
+          <CmdIcon size={14} className="me-1" /> <span style={{ fontSize: '12px' }}>Ctrl+K</span>
+        </div>
+
+        <div style={styles.notification} onClick={() => navigate("/notifications")}>
           <Bell size={20} color={Colors.white} />
           {unreadCount > 0 && <span style={styles.notificationCount}>{unreadCount}</span>}
         </div>
