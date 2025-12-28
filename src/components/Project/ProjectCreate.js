@@ -25,6 +25,7 @@ const ProjectForm = () => {
     customerId: "",
     salesRep: "",
     comment: "",
+    currency: "LKR",
     documentURL: "",
     fileList: [], // URLs after save or load
   });
@@ -142,7 +143,7 @@ const ProjectForm = () => {
         // CREATE
         const formData = new FormData();
         const projectBlob = new Blob(
-          [JSON.stringify({ projectName, customerId, salesRep, comment })],
+          [JSON.stringify({ projectName, customerId, salesRep, comment, currency: projectData.currency })],
           { type: "application/json" }
         );
         formData.append("project", projectBlob);
@@ -168,6 +169,7 @@ const ProjectForm = () => {
             customerId,
             salesRep,
             comment,
+            currency: projectData.currency,
             status: projectData.status, // keep status if you want to allow change later
           });
           toast.success("Project updated");
@@ -316,6 +318,23 @@ const ProjectForm = () => {
                   <Form.Control.Feedback type="invalid">
                     Please select a sales representative.
                   </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="g-3 mt-1">
+              <Col xs={12} md={6}>
+                <Form.Group controlId="currency">
+                  <Form.Label>Currency</Form.Label>
+                  <Form.Select
+                    name="currency"
+                    value={projectData.currency || "LKR"}
+                    onChange={handleChange}
+                    disabled={!isEditMode}
+                  >
+                    <option value="LKR">LKR (Rupees)</option>
+                    <option value="USD">USD (Dollars)</option>
+                  </Form.Select>
                 </Form.Group>
               </Col>
             </Row>

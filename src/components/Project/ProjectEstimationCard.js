@@ -12,7 +12,7 @@ import api from '../../api/api';
  * @param {string} props.projectId - Project ID
  * @param {Function} props.onOpen - Callback when opening editor
  */
-export default function ProjectEstimationCard({ projectId, onOpen, readOnly }) {
+export default function ProjectEstimationCard({ projectId, onOpen, readOnly, currency = 'LKR' }) {
     const navigate = useNavigate();
     const [est, setEst] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly }) {
         }
     };
 
-    useEffect(() => { load(); }, [projectId]);
+    useEffect(() => { load(); }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openEditor = () => {
         // If readOnly, append query param
@@ -89,7 +89,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly }) {
                     <tr key={idx}>
                         <td>{c.name || `Component ${idx + 1}`}</td>
                         <td className="text-end">
-                            {val(c.subtotalWithMargin).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {currency} {val(c.subtotalWithMargin).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                     </tr>
                 ))}
@@ -97,14 +97,14 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly }) {
                 {totalDelivery > 0 && (
                     <tr>
                         <td>Delivery</td>
-                        <td className="text-end">{totalDelivery.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="text-end">{currency} {totalDelivery.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                 )}
 
                 {val(est.computedDiscountAmount) > 0 && (
                     <tr className="text-danger">
                         <td>Discount</td>
-                        <td className="text-end">-{val(est.computedDiscountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="text-end">-{currency} {val(est.computedDiscountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>
                 )}
 
@@ -112,7 +112,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly }) {
                     <tr>
                         <td>Taxes (VAT/Other)</td>
                         <td className="text-end">
-                            {(val(est.computedVatAmount) + val(est.computedTaxAmount)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {currency} {(val(est.computedVatAmount) + val(est.computedTaxAmount)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                     </tr>
                 )}
@@ -120,7 +120,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly }) {
                 <tr>
                     <td><strong>Grand Total</strong></td>
                     <td className="text-end">
-                        <strong>{val(est.computedGrandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                        <strong>{currency} {val(est.computedGrandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                     </td>
                 </tr>
             </>

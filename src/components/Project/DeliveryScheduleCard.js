@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Form, Row, Col, Button, Alert } from 'react-bootstrap';
+import { Card, Form, Row, Col, Button } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { FaTruck, FaFilePdf, FaSave } from 'react-icons/fa';
@@ -19,6 +19,7 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
 
     useEffect(() => {
         fetchInitialData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId, reloadKey]);
 
     const fetchInitialData = async () => {

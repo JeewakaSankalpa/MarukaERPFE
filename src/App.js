@@ -1,4 +1,7 @@
-import logo from "./logo.svg";
+// import logo from "./logo.svg";
+// import { useAuth } from "./context/AuthContext";
+// import QuotationList from "./components/Sales/QuotationList";
+// import QuotationPage from "./components/Sales/QuotationPage";
 import "./components/Styles/App.css";
 
 import React from "react";
@@ -34,7 +37,7 @@ import PrivateRoute from "./components/routes/PrivateRoute";
 import ProjectDetails from "./components/Project/ProjectDetails";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
 import ItemAdd from "./components/Inventory/ItemAdd";
-import { useAuth } from "./context/AuthContext";
+// import { useAuth } from "./context/AuthContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -66,8 +69,10 @@ import SalaryReport from "./components/Employee/Reports/SalaryReport";
 import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
 import ProjectMaterialReport from "./components/Inventory/Reports/ProjectMaterialReport";
 import StockValuationReport from "./components/Inventory/Reports/StockValuationReport";
-import PayablesReport from "./components/Inventory/Reports/PayablesReport";
-import ReceivablesReport from "./components/Inventory/Reports/ReceivablesReport";
+import PayablesReport from './components/Inventory/Reports/PayablesReport';
+import ReceivablesReport from './components/Inventory/Reports/ReceivablesReport';
+import ExpensesPage from './components/finance/ExpensesPage';
+import TaxPage from './components/finance/TaxPage';
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
 import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
@@ -75,8 +80,8 @@ import StockAuditApprovalsPage from "./components/Inventory/Adjustments/StockAud
 import AssetRegister from "./components/Assets/AssetRegister";
 import QuotationPrint from "./components/Projects/QuotationPrint";
 import InvoiceView from "./components/Projects/InvoiceView";
-import QuotationList from "./components/Sales/QuotationList";
-import QuotationPage from "./components/Sales/QuotationPage";
+// import QuotationList from "./components/Sales/QuotationList";
+// import QuotationPage from "./components/Sales/QuotationPage";
 import SettingsPage from "./components/settings/SettingsPage";
 
 
@@ -195,7 +200,7 @@ function App() {
                     </Route>
 
 
-                    {/* Inventory / Store / Procurement */}
+                    {/* Inventory */}
                     <Route element={<PrivateRoute module="inventory" />}>
                         <Route path="/inventory/add" element={<InventoryAdd />} />
                         <Route path="/item/add" element={<ItemAdd />} />
@@ -206,25 +211,32 @@ function App() {
                         <Route path="/inventory/stock-taking" element={<StockTakingPage />} />
                         <Route path="/inventory/audit-approvals" element={<StockAuditApprovalsPage />} />
                         <Route path="/product/create" element={<ProductCreate />} />
-                        <Route path="/supplier/create" element={<SupplierCreate />} />
-                        <Route path="/supplier/search" element={<SupplierCreate />} />
-
                         <Route path="/inventory/pr" element={<PurchaseRequestPage />} />
+                        <Route path="/item/requests" element={<ItemRequestForm />} />
+                        <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
+                        <Route path="/reports/stock" element={<StockValuationReport />} />
+                    </Route>
+
+                    {/* Procurement */}
+                    <Route element={<PrivateRoute module="procurement" />}>
                         <Route path="/stores/planning" element={<StoresPlanningPage />} />
                         <Route path="/stores/pending-to-po" element={<PendingToPOPage />} />
                         <Route path="/transfers/inbox" element={<TransfersInbox />} />
-                        <Route path="/item/requests" element={<ItemRequestForm />} />
-
                         <Route path="/pos" element={<POListRouteWrapper />} />
                         <Route path="/pos/new" element={<POCreateManualRouteWrapper />} />
                         <Route path="/pos/:id/print" element={<POPrint />} />
                         <Route path="/pos/:id" element={<PurchaseOrderDetails />} />
                         <Route path="/grn" element={<GRNRouteWrapper />} />
                         <Route path="/grns" element={<GRNListView />} />
-                        <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
+                    </Route>
 
-                        {/* Reports */}
-                        <Route path="/reports/stock" element={<StockValuationReport />} />
+                    {/* Partners (Customers & Suppliers) */}
+                    <Route element={<PrivateRoute module="partners" />}>
+                        <Route path="/customer/create" element={<CustomerCreate />} />
+                        <Route path="/customer/view" element={<CustomerViewRouteWrapper />} />
+                        <Route path="/customer/edit/:id" element={<CustomerCreate />} />
+                        <Route path="/supplier/create" element={<SupplierCreate />} />
+                        <Route path="/supplier/search" element={<SupplierCreate />} />
                     </Route>
 
 
@@ -244,25 +256,20 @@ function App() {
                         <Route path="/reports/project-material" element={<ProjectMaterialReport />} />
                     </Route>
 
-                    {/* Sales / CRS */}
-                    <Route element={<PrivateRoute module="sales" />}>
-                        <Route path="/customer/create" element={<CustomerCreate />} />
-                        <Route path="/customer/view" element={<CustomerViewRouteWrapper />} />
-                        <Route path="/customer/edit/:id" element={<CustomerCreate />} />
-                        <Route path="/sales/quotations" element={<QuotationList />} />
-                        <Route path="/sales/quotations/new" element={<QuotationPage />} />
-                        <Route path="/sales/quotations/:id" element={<QuotationPage />} />
-                    </Route>
 
-                    {/* Finance */}
+                    {/* Sales & Finance (Combined in MenuConfig as 'finance') */}
                     <Route element={<PrivateRoute module="finance" />}>
+                        {/* Quotations removed from Finance menu but route might still be needed if accessed directly or via Sales - keeping Sales routes check above */}
+                        <Route path="/finance/expenses" element={<ExpensesPage />} />
+                        <Route path="/finance/tax" element={<TaxPage />} />
                         <Route path="/reports/payables" element={<PayablesReport />} />
                         <Route path="/reports/receivables" element={<ReceivablesReport />} />
                         <Route path="/assets" element={<AssetRegister />} />
                     </Route>
 
-                    {/* Departments - Common? or Admin */}
-                    <Route element={<PrivateRoute module="admin" />}>
+                    {/* Settings / Admin */}
+                    <Route element={<PrivateRoute module="settings" />}>
+                        <Route path="/admin/config" element={<SystemConfiguration />} />
                         <Route path="/departments" element={<DepartmentListRouteWrapper />} />
                         <Route path="/departments/new" element={<DepartmentFormNewRouteWrapper />} />
                         <Route path="/departments/:id" element={<DepartmentFormRouteWrapper />} />

@@ -1,6 +1,6 @@
 // src/components/projects/ProjectSearch.js
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Container, Form, Row, Col, Modal, Spinner } from 'react-bootstrap';
+import { Table, Button, Container, Form, Row, Col, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
@@ -15,13 +15,6 @@ function ProjectSearch() {
     const [customerName, setCustomerName] = useState('');
     const [salesRepName, setSalesRepName] = useState('');
     const [status, setStatus] = useState(''); // optional
-
-    // Details modal
-    const [showModal, setShowModal] = useState(false);
-    const [selectedId, setSelectedId] = useState(null);
-    const [project, setProject] = useState(null);
-    const [files, setFiles] = useState([]);
-    const [filesLoading, setFilesLoading] = useState(false);
 
     useEffect(() => {
         fetchRows(); // initial load with no filters
@@ -48,6 +41,7 @@ function ProjectSearch() {
         }
     };
 
+    /*
     const openDetails = async (id) => {
         try {
             setSelectedId(id);
@@ -71,6 +65,7 @@ function ProjectSearch() {
             setFilesLoading(false);
         }
     };
+    */
 
     const clearFilters = () => {
         setProjectId('');
@@ -141,6 +136,7 @@ function ProjectSearch() {
                             <th>Project Name</th>
                             <th>Client</th>
                             <th>Sales Rep</th>
+                            <th>Currency</th>
                             <th>Status</th>
                             <th style={{ width: 120 }}>Actions</th>
                         </tr>
@@ -156,6 +152,7 @@ function ProjectSearch() {
                                 <td>{r.projectName || '-'}</td>
                                 <td>{r.customerName || '-'}</td>
                                 <td>{r.salesRepName || '-'}</td>
+                                <td>{r.currency || 'LKR'}</td>
                                 <td>{r.status || '-'}</td>
 
                                 <td className="d-flex gap-2 justify-content-center">
@@ -170,62 +167,7 @@ function ProjectSearch() {
             </div>
 
             {/* Details / Edit modal (read-only for now; you can add editing fields) */}
-            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>Project Details {selectedId ? `– ${selectedId}` : ''}</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    {filesLoading ? (
-                        <div className="d-flex align-items-center gap-2">
-                            <Spinner animation="border" size="sm" /> Loading...
-                        </div>
-                    ) : !project ? (
-                        <div>Not found.</div>
-                    ) : (
-                        <>
-                            <div className="mb-3">
-                                <strong>Name:</strong> {project.projectName}<br />
-                                <strong>Status:</strong> {project.status}<br />
-                                <strong>Comment:</strong> {project.comment || '-'}
-                            </div>
-
-                            <h6>Files</h6>
-                            {(!files || files.length === 0) ? (
-                                <div>No files uploaded.</div>
-                            ) : (
-                                <Table size="sm" bordered>
-                                    <thead>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th style={{ width: 140 }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {files.map(f => (
-                                            <tr key={f.url}>
-                                                <td className="text-break">{f.name}</td>
-                                                <td className="d-flex gap-2 justify-content-center">
-                                                    {/* View in new tab */}
-                                                    <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">
-                                                        View
-                                                    </a>
-                                                    {/* Download (works with signed URLs too) */}
-                                                    <a className="btn btn-sm btn-success" href={f.url} download>
-                                                        Download
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
-                            )}
-                        </>
-                    )}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
-                </Modal.Footer>
-            </Modal>
+            {/* Details Modal removed as unused */}
         </Container>
     );
 }

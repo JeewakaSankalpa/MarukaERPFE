@@ -13,7 +13,7 @@ import api from '../../api/api';
  * @param {Object} props.project - Project object
  * @param {Function} props.onRefresh - Callback to refresh project data
  */
-export default function ProjectPaymentsCard({ projectId, project, onRefresh }) {
+export default function ProjectPaymentsCard({ projectId, project, onRefresh, currency = 'LKR' }) {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -38,7 +38,7 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh }) {
         }
     };
 
-    useEffect(() => { loadPayments(); }, [projectId]);
+    useEffect(() => { loadPayments(); }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleUpdateValue = async () => {
         try {
@@ -89,15 +89,15 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh }) {
                 <Row className="mb-4 text-center">
                     <Col>
                         <div className="text-muted small">Total Project Value</div>
-                        <h4 className="text-primary">{project?.totalProjectValue?.toLocaleString() || '0.00'}</h4>
+                        <h4 className="text-primary">{currency} {project?.totalProjectValue?.toLocaleString() || '0.00'}</h4>
                     </Col>
                     <Col>
                         <div className="text-muted small">Total Received</div>
-                        <h4 className="text-success">{project?.totalReceived?.toLocaleString() || '0.00'}</h4>
+                        <h4 className="text-success">{currency} {project?.totalReceived?.toLocaleString() || '0.00'}</h4>
                     </Col>
                     <Col>
                         <div className="text-muted small">Balance Due</div>
-                        <h4 className="text-danger">{project?.balance?.toLocaleString() || '0.00'}</h4>
+                        <h4 className="text-danger">{currency} {project?.balance?.toLocaleString() || '0.00'}</h4>
                     </Col>
                 </Row>
 
@@ -107,7 +107,7 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh }) {
                         <tr>
                             <th>Date</th>
                             <th>Reference</th>
-                            <th className="text-end">Amount</th>
+                            <th className="text-end">Amount ({currency})</th>
                             <th>Added By</th>
                         </tr>
                     </thead>
@@ -160,7 +160,9 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh }) {
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowPay(false)}>Cancel</Button>
-                    <Button variant="success" onClick={handleAddPayment}>Add Payment</Button>
+                    <Button variant="success" onClick={handleAddPayment} disabled={loading}>
+                        {loading ? 'Adding...' : 'Add Payment'}
+                    </Button>
                 </Modal.Footer>
             </Modal>
         </Card>

@@ -26,7 +26,7 @@ const ProjectRevisions = React.lazy(() => import('./ProjectRevisions'));
 export default function ProjectDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { role, user, projectRoles } = useAuth();
+    const { role, projectRoles } = useAuth(); // user removed
     // const actor = user?.name || user?.email || 'web'; // W: Unused
 
     // Combine system role and project roles for workflow checks
@@ -54,7 +54,7 @@ export default function ProjectDetails() {
     const [approving, setApproving] = useState(false);
     const [moving, setMoving] = useState(false);
 
-    const [filesReloadKey, setFilesReloadKey] = useState(0);
+    const [filesReloadKey] = useState(0); // setFilesReloadKey unused
     const [refreshKey, setRefreshKey] = useState(0);
 
     const [showDates, setShowDates] = useState(false);
@@ -400,6 +400,9 @@ export default function ProjectDetails() {
                                         <div className="mt-2 text-muted small">
                                             Stage: {stageObj.stageType || '-'}
                                         </div>
+                                        <div className="mt-2 text-muted small">
+                                            Currency: {p.currency || 'LKR'}
+                                        </div>
 
                                         <div className="mt-2 text-muted small">
                                             Created: {p.createdAt ? new Date(p.createdAt).toLocaleString() : '-'}<br />
@@ -567,6 +570,7 @@ export default function ProjectDetails() {
                                     <div className="mb-3">
                                         <ProjectEstimationCard
                                             projectId={id}
+                                            currency={p.currency}
                                             readOnly={!!viewVersion}
                                             onOpen={() => { /* optional hook */ }}
                                             reloadKey={refreshKey}
@@ -575,6 +579,7 @@ export default function ProjectDetails() {
                                     <ProjectQuotationCard
                                         project={project}
                                         projectId={id} // Explicitly pass ID from URL
+                                        currency={p.currency}
                                         isVisible={true}
                                         reloadKey={refreshKey}
                                     />
@@ -655,6 +660,7 @@ export default function ProjectDetails() {
                         <ProjectPaymentsCard
                             projectId={id}
                             project={project}
+                            currency={p.currency}
                             onRefresh={refresh}
                             reloadKey={refreshKey}
                         />

@@ -192,13 +192,39 @@ const POPrint = () => {
                             <span>SUBTOTAL</span>
                             <span>{subTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
-                        <div className="d-flex justify-content-between mb-2">
-                            <span>TAX</span>
-                            <span>{taxTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                        </div>
+
+                        {(po.deliveryCharge > 0) && (
+                            <div className="d-flex justify-content-between mb-2">
+                                <span>DELIVERY</span>
+                                <span>{po.deliveryCharge.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        )}
+
+                        {/* Explicit VAT/Tax from new Model fields */}
+                        {(po.vatAmount > 0) && (
+                            <div className="d-flex justify-content-between mb-2">
+                                <span>VAT</span>
+                                <span>{po.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        )}
+                        {(po.otherTaxAmount > 0) && (
+                            <div className="d-flex justify-content-between mb-2">
+                                <span>OTHER TAX</span>
+                                <span>{po.otherTaxAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        )}
+
+                        {/* Legacy Tax Fallback if new fields empty but old taxTotal exists */}
+                        {(!po.vatAmount && !po.otherTaxAmount && taxTotal > 0) && (
+                            <div className="d-flex justify-content-between mb-2">
+                                <span>TAX</span>
+                                <span>{taxTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        )}
+
                         <div className="d-flex justify-content-between fw-bold" style={{ fontSize: "1.1rem" }}>
                             <span>TOTAL</span>
-                            <span>LKR {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            <span>LKR {(po.grandTotal || grandTotal).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
                     </div>
                 </div>
