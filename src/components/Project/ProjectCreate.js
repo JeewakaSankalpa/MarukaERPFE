@@ -13,17 +13,19 @@ import {
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { listWorkflows } from "../../services/workflowApi";
 
 const ProjectForm = () => {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
-  console.log('DEBUG: routeId=', routeId);
+  // console.log('DEBUG: routeId=', routeId); // Removing debug log
 
   const [projectData, setProjectData] = useState({
     id: "",
     projectName: "",
     customerId: "",
     salesRep: "",
+    workflowId: "", // NEW
     comment: "",
     currency: "LKR",
     documentURL: "",
@@ -32,6 +34,7 @@ const ProjectForm = () => {
 
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [workflows, setWorkflows] = useState([]); // NEW
   const [validated, setValidated] = useState(false);
   const [isEditMode, setIsEditMode] = useState(!routeId); // create: editable, edit: view-only
   const [files, setFiles] = useState([]); // selected File[] before submit
@@ -43,11 +46,17 @@ const ProjectForm = () => {
       .then((res) => setCustomers(res.data || []))
       .catch(() => toast.error("Failed to load customers"));
 
+
     api
       .get("/employee/all")
       .then((res) => setEmployees(res.data || []))
       .catch(() => toast.error("Failed to load employees"));
+
+    listWorkflows()
+      .then((data) => setWorkflows(data || []))
+      .catch(() => console.error("Failed to load workflows"));
   }, []);
+
 
   // load project if route has ID
   useEffect(() => {
@@ -143,7 +152,14 @@ const ProjectForm = () => {
         // CREATE
         const formData = new FormData();
         const projectBlob = new Blob(
-          [JSON.stringify({ projectName, customerId, salesRep, comment, currency: projectData.currency })],
+          [JSON.stringify({
+            projectName,
+            customerId,
+            salesRep,
+            comment,
+            currency: projectData.currency,
+            workflowId: projectData.workflowId // NEW
+          })],
           { type: "application/json" }
         );
         formData.append("project", projectBlob);
@@ -322,6 +338,7 @@ const ProjectForm = () => {
               </Col>
             </Row>
 
+
             <Row className="g-3 mt-1">
               <Col xs={12} md={6}>
                 <Form.Group controlId="currency">
@@ -335,6 +352,27 @@ const ProjectForm = () => {
                     <option value="LKR">LKR (Rupees)</option>
                     <option value="USD">USD (Dollars)</option>
                   </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col xs={12} md={6}>
+                <Form.Group controlId="workflowId">
+                  <Form.Label>Workflow Template</Form.Label>
+                  <Form.Select
+                    name="workflowId"
+                    value={projectData.workflowId || ""}
+                    onChange={handleChange}
+                    disabled={!!routeId} // Workflow cannot be changed after creation (snapshot)
+                  >
+                    <option value="">Default (Active)</option>
+                    {workflows.map((wf) => (
+                      <option key={wf.id} value={wf.id}>
+                        {wf.id} (v{wf.version})
+                      </option>
+                    ))}
+                  </Form.Select>
+                  <Form.Text className="text-muted">
+                    {routeId ? "Workflow is locked for existing projects." : "Select the workflow logic for this inquiry."}
+                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
@@ -356,49 +394,52 @@ const ProjectForm = () => {
               </Form.Control.Feedback>
             </Form.Group>
 
-            {isEditMode && (
-              <>
-                <Form.Group controlId="document" className="mb-2">
-                  <Form.Label>Upload Documents (optional)</Form.Label>
-                  <Form.Control
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleFileChange}
-                    multiple
-                  />
-                </Form.Group>
+            {
+              isEditMode && (
+                <>
+                  <Form.Group controlId="document" className="mb-2">
+                    <Form.Label>Upload Documents (optional)</Form.Label>
+                    <Form.Control
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleFileChange}
+                      multiple
+                    />
+                  </Form.Group>
 
-                {/* Selected files preview list (pre-submit) */}
-                {files.length > 0 && (
-                  <ListGroup className="mb-3">
-                    {files.map((f, idx) => (
-                      <ListGroup.Item
-                        key={`${f.name}-${f.size}-${idx}`}
-                        className="d-flex justify-content-between align-items-center"
-                      >
-                        <div className="text-truncate" style={{ maxWidth: "75%" }}>
-                          {f.name}{" "}
-                          <Badge bg="light" text="dark">
-                            {fmtSize(f.size)}
-                          </Badge>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
-                          onClick={() => removeFileAt(idx)}
-                          aria-label={`Remove ${f.name}`}
+                  {/* Selected files preview list (pre-submit) */}
+                  {files.length > 0 && (
+                    <ListGroup className="mb-3">
+                      {files.map((f, idx) => (
+                        <ListGroup.Item
+                          key={`${f.name}-${f.size}-${idx}`}
+                          className="d-flex justify-content-between align-items-center"
                         >
-                          Remove
-                        </Button>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                )}
-              </>
-            )}
+                          <div className="text-truncate" style={{ maxWidth: "75%" }}>
+                            {f.name}{" "}
+                            <Badge bg="light" text="dark">
+                              {fmtSize(f.size)}
+                            </Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline-danger"
+                            onClick={() => removeFileAt(idx)}
+                            aria-label={`Remove ${f.name}`}
+                          >
+                            Remove
+                          </Button>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
+                </>
+              )
+            }
 
             {/* After save/load: show uploaded file links with short names */}
-            {!isEditMode &&
+            {
+              !isEditMode &&
               projectData.fileList &&
               projectData.fileList.length > 0 && (
                 <div className="mb-3">
@@ -434,18 +475,21 @@ const ProjectForm = () => {
                     })}
                   </ListGroup>
                 </div>
-              )}
+              )
+            }
 
-            {(!routeId || isEditMode) && (
-              <Button variant="success" type="submit" className="w-100 mt-3">
-                {routeId ? "Update Inquiry" : "Create New Inquiry"}
-              </Button>
-            )}
-          </Form>
-        </div>
-      </Container>
+            {
+              (!routeId || isEditMode) && (
+                <Button variant="success" type="submit" className="w-100 mt-3">
+                  {routeId ? "Update Inquiry" : "Create New Inquiry"}
+                </Button>
+              )
+            }
+          </Form >
+        </div >
+      </Container >
       <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
-    </div>
+    </div >
   );
 };
 
