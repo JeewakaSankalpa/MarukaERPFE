@@ -32,6 +32,7 @@ import ProjectSearch from "./components/Project/ProjectSearch";
 import PrivateRoute from "./components/routes/PrivateRoute";
 import ProjectDetails from "./components/Project/ProjectDetails";
 import WorkflowBuilder from "./components/workflow/WorkflowBuilder";
+import WorkflowList from "./components/workflow/WorkflowList"; // NEW
 import ItemAdd from "./components/Inventory/ItemAdd";
 // import { useAuth } from "./context/AuthContext";
 import { ToastContainer } from "react-toastify";
@@ -271,6 +272,9 @@ function App() {
                     {/* Settings / Admin */}
                     <Route element={<PrivateRoute module="settings" />}>
                         <Route path="/admin/config" element={<SystemConfiguration />} />
+                        <Route path="/admin/workflows" element={<WorkflowList />} />
+                        <Route path="/admin/workflow/new" element={<WorkflowBuilder />} />
+                        <Route path="/admin/workflow/:id" element={<WorkflowBuilder />} />
                         <Route path="/departments" element={<DepartmentListRouteWrapper />} />
                         <Route path="/departments/new" element={<DepartmentFormNewRouteWrapper />} />
                         <Route path="/departments/:id" element={<DepartmentFormRouteWrapper />} />

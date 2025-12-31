@@ -20,7 +20,7 @@ export const MenuConfig = [
             { id: "projects.my_projects", title: "My Projects", path: "/projects/search" },
             { id: "projects.create", title: "New Project", path: "/projects/create" },
             { id: "projects.estimation", title: "Estimation", path: "/projects/estimation" },
-            { id: "projects.workflow", title: "Workflow", path: "/projects/workflow" },
+
             // Component-Level Permissions (Hidden from Sidebar)
             { id: "projects.payments", title: "Access Payments", path: "#", hidden: true },
             { id: "projects.files", title: "Access Files", path: "#", hidden: true },
@@ -119,6 +119,7 @@ export const MenuConfig = [
         roles: ["ADMIN"],
         subItems: [
             { id: "settings.config", title: "System Config", path: "/admin/config" },
+            { id: "settings.workflows", title: "Workflows", path: "/admin/workflows" },
             { id: "settings.estimation", title: "Estimation Settings", path: "/settings" },
             { id: "settings.departments", title: "Departments", path: "/departments" },
             { id: "settings.new_department", title: "New Department", path: "/departments/new" },
