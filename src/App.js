@@ -17,6 +17,7 @@ import InteractiveDashboard from "./components/Dashboard/InteractiveDashboard";
 import SystemConfiguration from "./components/SystemConfiguration";
 
 import InventoryAdd from "./components/Inventory/InventoryAdd";
+import InventoryDashboard from "./components/Inventory/InventoryDashboard"; // NEW
 import InventoryView from "./components/Inventory/InventoryView";
 import Header from "./components/ReusableComponents/Header";
 import NewSideBar from "./components/ReusableComponents/NewSideBar";
@@ -47,7 +48,9 @@ import TransfersInbox from "./components/Transfers/TransferInbox";
 import POListView from "./components/PO/POListView";
 import GRNReceivePage from "./components/GRN/GRNRecievePage";
 import GRNListView from "./components/GRN/GRNListView";
+import ProcurementDashboard from "./components/GRN/ProcurementDashboard"; // NEW
 import ItemRequestForm from "./components/Requests/ItemRequestForm";
+import MyRequestList from "./components/Requests/MyRequestList"; // NEW
 import DepartmentList from "./components/Departments/DepartmentList";
 import DepartmentForm from "./components/Departments/DepartmentForm";
 import IRFulfilmentPage from "./components/Requests/IRFulfilmentPage";
@@ -202,9 +205,12 @@ function App() {
 
                     {/* Inventory */}
                     <Route element={<PrivateRoute module="inventory" />}>
+                        <Route path="/inventory" element={<InventoryDashboard />} />
+                        <Route path="/inventory/dashboard" element={<InventoryDashboard />} />
                         <Route path="/inventory/add" element={<InventoryAdd />} />
                         <Route path="/item/add" element={<ItemAdd />} />
                         <Route path="/inventory/search" element={<InventoryView />} />
+                        <Route path="/inventory/view" element={<InventoryView />} />
                         <Route path="/inventory/return" element={<InventoryReturn />} />
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
                         <Route path="/inventory/returns/approvals" element={<InternalReturnApprovals />} />
@@ -213,12 +219,14 @@ function App() {
                         <Route path="/product/create" element={<ProductCreate />} />
                         <Route path="/inventory/pr" element={<PurchaseRequestPage />} />
                         <Route path="/item/requests" element={<ItemRequestForm />} />
+                        <Route path="/item/my-requests" element={<MyRequestList />} /> {/* NEW */}
                         <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
                         <Route path="/reports/stock" element={<StockValuationReport />} />
                     </Route>
 
                     {/* Procurement */}
                     <Route element={<PrivateRoute module="procurement" />}>
+                        <Route path="/procurement/dashboard" element={<ProcurementDashboard />} /> {/* NEW */}
                         <Route path="/stores/planning" element={<StoresPlanningPage />} />
                         <Route path="/stores/pending-to-po" element={<PendingToPOPage />} />
                         <Route path="/transfers/inbox" element={<TransfersInbox />} />
