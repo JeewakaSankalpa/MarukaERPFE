@@ -15,25 +15,21 @@ import { Button, Form, Spinner, Modal, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { Undo2, Redo2 } from 'lucide-react';
 import api from "../../api/api";
+<<<<<<< HEAD
 <<<<<<< Updated upstream
+=======
+import { useParams, useNavigate } from "react-router-dom";
+import { getWorkflow, saveWorkflow } from "../../services/workflowApi";
+>>>>>>> 5a8ecf832a62d237513f0bf4217b55d8948ea501
 
-/**
- * Backend endpoints expected:
- *  GET  /api/workflow                -> { stages, requiredApprovals, transitions, initialStage, version }
- *  PUT  /api/workflow                -> same shape, returns updated (with new version)
- *  GET  /api/workflow/stages         -> ["INQUIRY","ESTIMATION",...]
- *  GET  /api/roles                   -> ["ADMIN","APPROVER","SALES","MANAGER", ...]
- *  POST /api/roles                   -> body: { name: "NEW_ROLE" }
- *  DELETE /api/roles/{name}          -> delete role
- *
- * If you don’t have roles endpoints yet, you can start with GET/POST/DELETE in a simple controller.
- */
+// ... (comments omitted for brevity)
 
 // helpers
 const uniq = (arr) => Array.from(new Set(arr));
 const normalizeKey = (s) => s.trim().toUpperCase().replace(/\s+/g, "_");
 
 const emptyFlow = {
+    id: "",
     stages: [],                // ["INQUIRY","ESTIMATION",...]
     requiredApprovals: {},     // { INQUIRY: ["SALES"], ... }
     transitions: {},           // { INQUIRY: [{to:"ESTIMATION", roles:["SALES"], notifyRoles:["MANAGER"]}], ... }
@@ -43,6 +39,7 @@ const emptyFlow = {
     notifications: {},         // { INQUIRY: ["HR"], ... }  NEW
     backwardTransitions: {},   // { ESTIMATION: ["INQUIRY"], ... } NEW
     visibility: {},            // { INQUIRY: { fieldsVisible: ["FILES"] } } NEW
+<<<<<<< HEAD
     estimationApproverRoles: [], // NEW: Global list of roles for Estimation Approval
     purchaseOrderApproverRoles: [], // NEW: Global list of roles for PO Approval
     stockAuditApproverRoles: [], // NEW: Global list of roles for Stock Audit Approval
@@ -73,6 +70,12 @@ const emptyFlow = {
     fileRequirements: {},
     visualLayout: {} // { "STAGE": {x, y} }
 >>>>>>> Stashed changes
+=======
+    estimationApproverRoles: [], // NEW
+    purchaseOrderApproverRoles: [], // NEW
+    stockAuditApproverRoles: [], // NEW
+    payrollApproverRoles: [], // NEW
+>>>>>>> 5a8ecf832a62d237513f0bf4217b55d8948ea501
 };
 
 const nodeTypes = {
@@ -132,17 +135,25 @@ const nodeTypes = {
 
 
 export default function WorkflowBuilder() {
+<<<<<<< HEAD
 <<<<<<< Updated upstream
     const [flow, setFlow] = useState(emptyFlow);
 =======
+=======
+>>>>>>> 5a8ecf832a62d237513f0bf4217b55d8948ea501
     const { id } = useParams();
     const navigate = useNavigate();
     const isNew = !id || id === 'new';
 
+<<<<<<< HEAD
     // State via History Hook
     const [localFlow, setLocalFlow] = useState({ ...emptyFlow, id: isNew ? "" : id });
     // We implement manual History stack to have better control than relying on generic hooks
     // Let's use simple state and separate history arrays
+=======
+    const [flow, setFlow] = useState({ ...emptyFlow, id: isNew ? "" : id });
+    const [workflowIdInput, setWorkflowIdInput] = useState(isNew ? "" : id);
+>>>>>>> 5a8ecf832a62d237513f0bf4217b55d8948ea501
 
     // --- Manual History Implementation ---
     const [historyStack, setHistoryStack] = useState([]);
@@ -219,6 +230,7 @@ export default function WorkflowBuilder() {
                 setLoading(true);
 <<<<<<< Updated upstream
                 toastId = toast.loading("Loading workflow…");
+<<<<<<< HEAD
                 const [wfRes, stagesRes, rolesRes] = await Promise.all([
                     api.get("/workflow").catch(() => ({ data: null })),
 =======
@@ -226,32 +238,47 @@ export default function WorkflowBuilder() {
                 const [wf, stagesRes, rolesRes] = await Promise.all([
                     fetchFlow,
 >>>>>>> Stashed changes
+=======
+
+                // If creating new, don't fetch flow, just roles/stages
+                // If editing, fetch flow by ID
+                const fetchFlow = (!isNew) ? getWorkflow(id).catch(() => null) : Promise.resolve(null);
+
+                const [wf, stagesRes, rolesRes] = await Promise.all([
+                    fetchFlow,
+>>>>>>> 5a8ecf832a62d237513f0bf4217b55d8948ea501
                     api.get("/workflow/stages").catch(() => ({ data: [] })),
                     api.get("/roles").catch(() => ({ data: [] })),
                 ]);
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
                 const wf = wfRes.data || emptyFlow;
+=======
+>>>>>>> 5a8ecf832a62d237513f0bf4217b55d8948ea501
                 const base = {
                     ...emptyFlow,
-                    ...wf,
-                    stages: wf.stages || [],
-                    requiredApprovals: wf.requiredApprovals || {},
-                    transitions: wf.transitions || {},
-                    initialStage: wf.initialStage || (wf.stages?.[0] || ""),
-                    version: wf.version ?? 0,
-                    stageRevisions: wf.stageRevisions || {},
-                    notifications: wf.notifications || {},
-                    backwardTransitions: wf.backwardTransitions || {},
-                    visibility: wf.visibility || {},
-                    estimationApproverRoles: wf.estimationApproverRoles || [],
-                    purchaseOrderApproverRoles: wf.purchaseOrderApproverRoles || [],
-                    purchaseOrderApproverRoles: wf.purchaseOrderApproverRoles || [],
-                    stockAuditApproverRoles: wf.stockAuditApproverRoles || [],
-                    payrollApproverRoles: wf.payrollApproverRoles || [],
+                    ...(wf || {}),
+                    id: (wf && wf.id) ? wf.id : (isNew ? "" : id),
+                    stages: wf?.stages || [],
+                    requiredApprovals: wf?.requiredApprovals || {},
+                    transitions: wf?.transitions || {},
+                    initialStage: wf?.initialStage || (wf?.stages?.[0] || ""),
+                    version: wf?.version ?? 0,
+                    stageRevisions: wf?.stageRevisions || {},
+                    notifications: wf?.notifications || {},
+                    backwardTransitions: wf?.backwardTransitions || {},
+                    visibility: wf?.visibility || {},
+                    estimationApproverRoles: wf?.estimationApproverRoles || [],
+                    purchaseOrderApproverRoles: wf?.purchaseOrderApproverRoles || [],
+                    // purchaseOrderApproverRoles: wf?.purchaseOrderApproverRoles || [], // duplicate logic removed
+                    stockAuditApproverRoles: wf?.stockAuditApproverRoles || [],
+                    payrollApproverRoles: wf?.payrollApproverRoles || [],
                 };
 
                 setFlow(base);
+                if (wf && wf.id) setWorkflowIdInput(wf.id);
+
                 setAllStages(stagesRes.data || []);
 =======
                 const base = { ...emptyFlow, ...(wf || {}) };
@@ -274,7 +301,7 @@ export default function WorkflowBuilder() {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [id, isNew]);
 
     // Sync Flow -> Nodes/Edges (On Load or Major Change)
     useEffect(() => {
@@ -478,23 +505,40 @@ export default function WorkflowBuilder() {
 
     // --- Save flow ---
     // in save()
+    // --- Save flow ---
+    // in save()
     const save = async () => {
         if (!validation.valid) {
             toast.error("Please fix validation errors before saving.");
             return;
         }
+        if (!workflowIdInput) {
+            toast.error("Please provide a Workflow ID.");
+            return;
+        }
+
         let toastId;
         try {
             setSaving(true);
             toastId = toast.loading("Saving workflow…");
-            const { data } = await api.put("/workflow", flow);
-            setFlow(f => ({ ...f, version: data?.version ?? f.version }));
+
+            // Prepare payload
+            const payload = { ...flow, id: workflowIdInput };
+
+            const data = await saveWorkflow(payload, workflowIdInput);
+
+            setFlow(f => ({ ...f, ...data, id: workflowIdInput })); // update local
             toast.update(toastId, { render: "Workflow saved", type: "success", isLoading: false, autoClose: 1200 });
+
+            if (isNew) {
+                // Navigate to edit mode
+                navigate(`/admin/workflow/${workflowIdInput}`, { replace: true });
+            }
         } catch (e) {
             console.error(e);
             const msg = e?.response?.status === 409
                 ? "This workflow was modified by someone else. Reload and try again."
-                : "Failed to save workflow";
+                : (e?.response?.data || "Failed to save workflow");
             if (toastId) toast.update(toastId, { render: msg, type: "error", isLoading: false, autoClose: 2500 });
             else toast.error(msg);
 =======
@@ -529,6 +573,31 @@ export default function WorkflowBuilder() {
     return (
 <<<<<<< Updated upstream
         <div className="p-3" style={{ width: "100%", overflow: "auto" }}>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="d-flex align-items-center gap-3">
+                    <Button variant="outline-secondary" onClick={() => navigate("/admin/workflows")}>
+                        ← Back
+                    </Button>
+                    <h3 className="m-0">{isNew ? "Create Workflow" : `Edit Workflow: ${id}`}</h3>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                    <Form.Group controlId="wfId" className="d-flex align-items-center gap-2">
+                        <Form.Label className="m-0 text-nowrap">ID:</Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={workflowIdInput}
+                            onChange={e => setWorkflowIdInput(e.target.value)}
+                            disabled={!isNew}
+                            placeholder="e.g. standard"
+                            style={{ maxWidth: '200px' }}
+                        />
+                    </Form.Group>
+                    <Button variant="primary" disabled={saving} onClick={save}>
+                        {saving ? "Saving…" : "Save Workflow"}
+                    </Button>
+                </div>
+            </div>
+
             <Row className="g-3">
                 {/* Stages (from backend, plus you can add) */}
                 <Col lg={4}>

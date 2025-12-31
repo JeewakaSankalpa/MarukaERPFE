@@ -6,6 +6,7 @@ import {
 } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
+import { getWorkflow } from '../../services/workflowApi'; // NEW
 import { useAuth } from '../../context/AuthContext';
 import ProjectQuotationCard from "./ProjectQuotationCard"; // New Component
 import { COMPONENT_IDS } from './ComponentRegistry';
@@ -57,6 +58,9 @@ export default function ProjectDetails() {
 
     const [filesReloadKey] = useState(0); // setFilesReloadKey unused
     const [refreshKey, setRefreshKey] = useState(0);
+
+    // Workflow Definition State
+    const [workflowDef, setWorkflowDef] = useState(null); // NEW
 
     const [showDates, setShowDates] = useState(false);
     const [estimatedStart, setEstimatedStart] = useState('');
@@ -131,6 +135,16 @@ export default function ProjectDetails() {
                 if (!alive) return;
                 setProject(p.data || null);
                 setActions(a.data || null);
+
+                // Fetch workflow definition if we have a workflowId
+                if (p.data?.workflowId) {
+                    try {
+                        const w = await getWorkflow(p.data.workflowId);
+                        setWorkflowDef(w);
+                    } catch (we) {
+                        console.warn("Could not fetch workflow definition", we);
+                    }
+                }
                 // toast.success('Project & actions loaded');
             } catch (e) {
                 console.error(e);
@@ -172,14 +186,22 @@ export default function ProjectDetails() {
     const refresh = async () => {
         if (!id) return;
         try {
+            const t = new Date().getTime(); // Anti-cache
             const [p, a] = await Promise.all([
-                api.get(`/projects/details/${id}`, { headers: { 'X-Roles': rolesHeader } }),
-                api.get(`/projects/${id}/actions`, { headers: { 'X-Roles': rolesHeader } }),
+                api.get(`/projects/details/${id}?t=${t}`, { headers: { 'X-Roles': rolesHeader } }),
+                api.get(`/projects/${id}/actions?t=${t}`, { headers: { 'X-Roles': rolesHeader } }),
             ]);
             setProject(p.data || null);
             setActions(a.data || null);
             setRefreshKey(prev => prev + 1); // Trigger sub-components
-            toast.success('Refreshed');
+            // Check if workflow needs loading just in case (e.g. if it was missing)
+            if (p.data?.workflowId && !workflowDef) {
+                try {
+                    const w = await getWorkflow(p.data.workflowId);
+                    setWorkflowDef(w);
+                } catch (we) { console.warn(we); }
+            }
+            // toast.success('Refreshed');
         } catch (e) {
             console.error(e);
             toast.error('Failed to refresh project/actions');
@@ -324,8 +346,72 @@ export default function ProjectDetails() {
 
             {/* Lifecycle Widget */}
             <Suspense fallback={<div>Loading...</div>}>
-                <ProjectLifecycle stages={project?.stages || []} currentStage={project?.currentStageId} status={project?.status} />
+                <ProjectLifecycle
+                    key={refreshKey}
+                    stages={workflowDef?.stages || []}
+                    currentStage={project?.currentStage}
+                    status={project?.status}
+                />
             </Suspense>
+
+            {/* Smart Action Bar (Replaces old card) */}
+            {effectiveActions && (effectiveActions.canApprove || effectiveActions.canReject || (effectiveActions.canMove && effectiveActions.canMove.length > 0)) && (
+                <Card className="mb-3 border-primary shadow-sm" style={{ borderLeft: '5px solid #0d6efd' }}>
+                    <Card.Body className="d-flex flex-wrap align-items-center justify-content-between p-3">
+                        <div>
+                            <h5 className="m-0 text-primary">
+                                {effectiveActions.canApprove ? "Approval Required" : "Action Required"}
+                            </h5>
+                            <div className="text-muted small">
+                                {effectiveActions.canApprove
+                                    ? `Please review the ${stageObj.stageType || 'current stage'} and approve or reject.`
+                                    : `Ready to move to ${effectiveActions.canMove?.[0] || 'next stage'}.`
+                                }
+                            </div>
+                        </div>
+
+                        <div className="d-flex gap-2 align-items-center mt-2 mt-md-0">
+                            {/* Missing Files Warning in Action Bar */}
+                            {effectiveActions.missingFiles && effectiveActions.missingFiles.length > 0 && (
+                                <div className="text-warning small me-3 fw-bold">
+                                    ⚠️ Missing Required Files
+                                </div>
+                            )}
+
+                            {effectiveActions.canApprove && (
+                                <>
+                                    <Form.Control
+                                        size="sm"
+                                        value={comment}
+                                        onChange={(e) => setComment(e.target.value)}
+                                        placeholder="Approval Comment..."
+                                        style={{ maxWidth: '200px' }}
+                                    />
+                                    <Button variant="success" onClick={() => approve('APPROVED')} disabled={approving || !effectiveActions.filesOk}>
+                                        Approve
+                                    </Button>
+                                    <Button variant="outline-danger" onClick={() => approve('REJECTED')} disabled={approving}>
+                                        Reject
+                                    </Button>
+                                </>
+                            )}
+
+                            {!effectiveActions.canApprove && effectiveActions.canMove && effectiveActions.canMove.length > 0 && (
+                                <>
+                                    <Button variant="primary" onClick={() => move()} disabled={moving || !effectiveActions.filesOk}>
+                                        Move to Next
+                                    </Button>
+                                    {effectiveActions.canMove.map(to => (
+                                        <Button key={to} variant="outline-secondary" size="sm" onClick={() => move(to)} disabled={moving}>
+                                            → {to}
+                                        </Button>
+                                    ))}
+                                </>
+                            )}
+                        </div>
+                    </Card.Body>
+                </Card>
+            )}
 
             <div className="mb-3">
                 <ul className="nav nav-tabs">
@@ -453,49 +539,11 @@ export default function ProjectDetails() {
                                                     />
                                                 </Form.Group>
 
-                                                <div className="d-flex flex-wrap gap-2 mb-3">
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => approve('APPROVED')}
-                                                        disabled={!id || !project || !effectiveActions?.canApprove || !effectiveActions?.filesOk || approving || !!viewVersion}
-                                                    >
-                                                        Approve
-                                                    </Button>
-
-                                                    <Button
-                                                        size="sm"
-                                                        variant="danger"
-                                                        onClick={() => approve('REJECTED')}
-                                                        disabled={!id || !project || !effectiveActions?.canReject || approving || !!viewVersion}
-                                                    >
-                                                        Reject
-                                                    </Button>
-
-                                                    <Button
-                                                        size="sm"
-                                                        variant="warning"
-                                                        onClick={() => move()}
-                                                        disabled={!id || !project || !effectiveActions?.filesOk || !effectiveActions?.canMove?.length || moving || !!viewVersion}
-                                                    >
-                                                        Move to next
-                                                    </Button>
-
-                                                    {(effectiveActions?.canMove || []).map((to) => (
-                                                        <Button
-                                                            key={to}
-                                                            size="sm"
-                                                            variant="outline-warning"
-                                                            onClick={() => move(to)}
-                                                            disabled={!id || !project || moving || !!viewVersion}
-                                                        >
-                                                            Move → {to}
-                                                        </Button>
-                                                    ))}
+                                                <div className="text-muted small mb-2">
+                                                    <em>Use the Action Bar above to Approve, Reject, or Move stage.</em>
                                                 </div>
-
-                                                {(!effectiveActions.canApprove && !effectiveActions.canReject && (!effectiveActions.canMove || effectiveActions.canMove.length === 0)) && (
-                                                    <div className="text-muted mt-2">No actions available for your role.</div>
-                                                )}
+                                                {/* Buttons moved to Smart Action Bar */}
+                                                {/* <div className="d-flex flex-wrap gap-2 mb-3"> ... </div> */}
                                             </>
                                         ) : (
                                             <div className="text-muted">
