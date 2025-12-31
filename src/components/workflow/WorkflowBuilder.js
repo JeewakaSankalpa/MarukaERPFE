@@ -1,9 +1,21 @@
-// src/components/admin/WorkflowBuilder.js
-import React, { useEffect, useMemo, useState } from "react";
-import { Row, Col, Card, Button, Form, Table, Badge, Modal } from "react-bootstrap";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    ReactFlow,
+    Controls,
+    Background,
+    useNodesState,
+    useEdgesState,
+    addEdge,
+    MiniMap,
+    Panel // For Undo/Redo buttons
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+import { Button, Form, Spinner, Modal, Badge } from "react-bootstrap";
+import { toast } from "react-toastify";
+import { Undo2, Redo2 } from 'lucide-react';
 import api from "../../api/api";
+<<<<<<< Updated upstream
 
 /**
  * Backend endpoints expected:
@@ -35,36 +47,190 @@ const emptyFlow = {
     purchaseOrderApproverRoles: [], // NEW: Global list of roles for PO Approval
     stockAuditApproverRoles: [], // NEW: Global list of roles for Stock Audit Approval
     payrollApproverRoles: [], // NEW: Global list of roles for Payroll Approval
+=======
+import { useParams, useNavigate } from "react-router-dom";
+import { getWorkflow, saveWorkflow } from "../../services/workflowApi";
+import { StageNode } from "./StageNode"; // Custom Node
+import StagePropertyPanel from "./StagePropertyPanel"; // Inspector
+import TransitionPropertyPanel from "./TransitionPropertyPanel"; // Edge Inspector
+
+// initial empty flow
+const emptyFlow = {
+    id: "",
+    stages: [],
+    requiredApprovals: {},
+    transitions: {},
+    initialStage: "",
+    version: 0,
+    stageRevisions: {},
+    notifications: {},
+    backwardTransitions: {},
+    visibility: {},
+    estimationApproverRoles: [],
+    purchaseOrderApproverRoles: [],
+    stockAuditApproverRoles: [],
+    payrollApproverRoles: [],
+    fileRequirements: {},
+    visualLayout: {} // { "STAGE": {x, y} }
+>>>>>>> Stashed changes
 };
 
+const nodeTypes = {
+    stage: StageNode,
+};
+
+// --- Custom History Hook ---
+// function useHistory(initialState) {
+//     const [history, setHistory] = useState([initialState]);
+//     const [pointer, setPointer] = useState(0);
+
+//     const state = history[pointer];
+
+//     const maxHistory = 30;
+
+//     const setState = useCallback((action) => {
+//         setHistory((prev) => {
+//             const current = prev[pointer];
+//             const next = typeof action === 'function' ? action(current) : action;
+//             // Equality check to avoid duplicates (optional but good)
+//             if (JSON.stringify(current) === JSON.stringify(next)) return prev;
+
+//             const newHistory = prev.slice(0, pointer + 1);
+//             newHistory.push(next);
+//             if (newHistory.length > maxHistory) newHistory.shift();
+//             return newHistory;
+//         });
+//         setPointer((p) => Math.min(p + 1, maxHistory)); // Correct pointer update logic needs to account for shift
+//         // Simplified pointer logic: just point to last
+//         setPointer(prev => {
+//              const newLen = Math.min(prev + 2, maxHistory + 1); // rough guess, let's fix
+//              return pointer + 1 >= maxHistory ? maxHistory - 1 : pointer + 1;
+//         });
+//     }, [pointer]);
+
+//     // Fixed History Logic
+//     const pushState = useCallback((newState) => {
+//         setHistory(prev => {
+//             const chopped = prev.slice(0, pointer + 1);
+//             const next = [...chopped, newState];
+//             if (next.length > 50) next.shift();
+//             return next;
+//         });
+//         setPointer(prev => Math.min(prev + 1, 49)); // Max index 49 (len 50)
+//     }, [pointer]);
+
+//     const undo = useCallback(() => {
+//         if (pointer > 0) setPointer(p => p - 1);
+//     }, [pointer]);
+
+//     const redo = useCallback(() => {
+//         if (pointer < history.length - 1) setPointer(p => p + 1);
+//     }, [pointer, history.length]);
+
+//     return { state, pushState, undo, redo, canUndo: pointer > 0, canRedo: pointer < history.length - 1 };
+// }
+
+
 export default function WorkflowBuilder() {
+<<<<<<< Updated upstream
     const [flow, setFlow] = useState(emptyFlow);
+=======
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const isNew = !id || id === 'new';
 
-    // From backend
-    const [roles, setRoles] = useState([]);         // GET /api/roles
-    const [allStages, setAllStages] = useState([]); // GET /api/workflow/stages
+    // State via History Hook
+    const [localFlow, setLocalFlow] = useState({ ...emptyFlow, id: isNew ? "" : id });
+    // We implement manual History stack to have better control than relying on generic hooks
+    // Let's use simple state and separate history arrays
 
-    // Local UI states
+    // --- Manual History Implementation ---
+    const [historyStack, setHistoryStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+
+    const setFlow = (action) => {
+        const next = typeof action === 'function' ? action(localFlow) : action;
+        if (JSON.stringify(next) === JSON.stringify(localFlow)) return;
+
+        // Push current to history
+        setHistoryStack(prev => [...prev.slice(-49), localFlow]);
+        setRedoStack([]); // Clear redo
+        setLocalFlow(next);
+    };
+
+    const undo = () => {
+        if (historyStack.length === 0) return;
+        const prev = historyStack[historyStack.length - 1];
+        setRedoStack(r => [localFlow, ...r]);
+        setHistoryStack(h => h.slice(0, -1));
+        setLocalFlow(prev);
+    };
+
+    const redo = () => {
+        if (redoStack.length === 0) return;
+        const next = redoStack[0];
+        setRedoStack(r => r.slice(1));
+        setHistoryStack(h => [...h, localFlow]);
+        setLocalFlow(next);
+    };
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [historyStack, redoStack, localFlow]); // Dependencies important for closure
+>>>>>>> Stashed changes
+
+    const flow = localFlow; // alias for compatibility
+
+
+    const [workflowIdInput, setWorkflowIdInput] = useState(isNew ? "" : id);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [newStageName, setNewStageName] = useState("");
-    const [newRoleName, setNewRoleName] = useState("");
 
-    // Visibility Modal State
-    const [visModal, setVisModal] = useState({ show: false, stage: null, component: null });
+    // Data
+    const [roles, setRoles] = useState([]);
+    const [availableStages, setAvailableStages] = useState([]); // from backend
 
+    // React Flow State
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+    // Selection: { type: 'node' | 'edge', id: string }
+    const [selection, setSelection] = useState(null);
+
+    // Global Settings Modal State
+    const [showGlobalSettings, setShowGlobalSettings] = useState(false);
+
+    // Initial Load
     useEffect(() => {
         (async () => {
-            let toastId;
             try {
                 setLoading(true);
+<<<<<<< Updated upstream
                 toastId = toast.loading("Loading workflow…");
                 const [wfRes, stagesRes, rolesRes] = await Promise.all([
                     api.get("/workflow").catch(() => ({ data: null })),
+=======
+                const fetchFlow = (!isNew) ? getWorkflow(id).catch(() => null) : Promise.resolve(null);
+                const [wf, stagesRes, rolesRes] = await Promise.all([
+                    fetchFlow,
+>>>>>>> Stashed changes
                     api.get("/workflow/stages").catch(() => ({ data: [] })),
-                    api.get("/roles").catch(() => ({ data: ["ADMIN", "APPROVER", "SALES", "MANAGER"] })),
+                    api.get("/roles").catch(() => ({ data: [] })),
                 ]);
 
+<<<<<<< Updated upstream
                 const wf = wfRes.data || emptyFlow;
                 const base = {
                     ...emptyFlow,
@@ -87,183 +253,195 @@ export default function WorkflowBuilder() {
 
                 setFlow(base);
                 setAllStages(stagesRes.data || []);
+=======
+                const base = { ...emptyFlow, ...(wf || {}) };
+                // Ensure maps exist
+                base.stages = base.stages || [];
+                base.transitions = base.transitions || {};
+                base.requiredApprovals = base.requiredApprovals || {};
+                base.visualLayout = base.visualLayout || {};
+
+                setLocalFlow(base); // Update base directly, don't push to history on load
+                if (base.id) setWorkflowIdInput(base.id);
+
+                setAvailableStages(stagesRes.data || []);
+>>>>>>> Stashed changes
                 setRoles(rolesRes.data || []);
-                toast.update(toastId, { render: "Workflow loaded", type: "success", isLoading: false, autoClose: 1200 });
             } catch (e) {
                 console.error(e);
-                if (toastId) toast.update(toastId, { render: "Failed to load workflow", type: "error", isLoading: false, autoClose: 2500 });
-                setFlow(emptyFlow);
+                toast.error("Failed to load workflow data");
             } finally {
                 setLoading(false);
             }
         })();
     }, []);
 
-    // --- Stage management (within the flow) ---
+    // Sync Flow -> Nodes/Edges (On Load or Major Change)
+    useEffect(() => {
+        if (loading) return;
+
+        const newNodes = (flow.stages || []).map((s, i) => {
+            const pos = flow.visualLayout?.[s] || { x: 50 + (i % 3) * 350, y: 50 + Math.floor(i / 3) * 150 };
+            return {
+                id: s,
+                type: 'stage',
+                position: pos,
+                data: {
+                    label: s,
+                    isInitial: flow.initialStage === s,
+                    approvals: flow.requiredApprovals?.[s] || [],
+                    notifications: flow.notifications?.[s] || [],
+                    hasFiles: (flow.fileRequirements?.[s] || []).length > 0,
+                    onEdit: () => setSelection({ type: 'node', id: s })
+                }
+            };
+        });
+
+        const newEdges = [];
+        Object.entries(flow.transitions || {}).forEach(([from, rules]) => {
+            (rules || []).forEach(r => {
+                newEdges.push({
+                    id: `${from}->${r.to}`,
+                    source: from,
+                    target: r.to,
+                    animated: true,
+                    label: r.roles?.length > 0 ? 'Restricted' : null,
+                    style: { stroke: r.roles?.length > 0 ? '#fd7e14' : '#b1b7be' }
+                });
+            });
+        });
+
+        setNodes(newNodes);
+        setEdges(newEdges);
+    }, [
+        loading,
+        JSON.stringify(flow.stages),
+        JSON.stringify(flow.transitions),
+        JSON.stringify(flow.requiredApprovals),
+        JSON.stringify(flow.initialStage), // update badges
+        JSON.stringify(flow.fileRequirements),
+        JSON.stringify(flow.notifications),
+        // We do NOT include visualLayout here to avoid jitter if we are dragging.
+        // We rely on onNodeDragStop to update visualLayout.
+    ]);
+
+    // Handle Connection (Add Transition)
+    const onConnect = useCallback((params) => {
+        const { source, target } = params;
+        if (source === target) return;
+
+        // Add to flow
+        const existingRules = flow.transitions[source] || [];
+        if (existingRules.find(r => r.to === target)) return; // already exists
+
+        const nextRules = [...existingRules, { to: target, roles: [] }];
+        const nextTransitions = { ...flow.transitions, [source]: nextRules };
+
+        setFlow(f => ({ ...f, transitions: nextTransitions }));
+    }, [flow.transitions]);
+
+    // Handle Edge Delete
+    const onEdgesDelete = useCallback((edgesToDelete) => {
+        let nextTrans = { ...flow.transitions };
+        let changed = false;
+        edgesToDelete.forEach(edge => {
+            const { source, target } = edge;
+            if (!source || !target) return;
+            const rules = nextTrans[source] || [];
+            const filtered = rules.filter(r => r.to !== target);
+            if (filtered.length !== rules.length) {
+                nextTrans[source] = filtered;
+                changed = true;
+            }
+        });
+        if (changed) setFlow(f => ({ ...f, transitions: nextTrans }));
+        setSelection(null);
+    }, [flow.transitions]);
+
+    // Helper to delete specific edge ID
+    const deleteEdgeById = (edgeId) => {
+        // Find edge object to trigger onEdgesDelete logic or do it manually
+        // edgeId is "FROM->TO"
+        const [source, target] = edgeId.split('->');
+        if (!source || !target) return;
+
+        const rules = flow.transitions[source] || [];
+        const nextRules = rules.filter(r => r.to !== target);
+
+        setFlow(f => ({
+            ...f,
+            transitions: { ...f.transitions, [source]: nextRules }
+        }));
+        setSelection(null);
+    }
+
+    // Handle Node Drag Stop (Save Position)
+    const onNodeDragStop = useCallback((event, node) => {
+        setFlow(f => ({
+            ...f,
+            visualLayout: {
+                ...f.visualLayout,
+                [node.id]: node.position
+            }
+        }));
+    }, [setFlow]);
+
+    // Add Stage Logic
+    const [newStageName, setNewStageName] = useState("");
     const addStage = () => {
-        const key = normalizeKey(newStageName);
+        const key = newStageName.trim().toUpperCase().replace(/\s+/g, "_");
         if (!key) return;
         if (flow.stages.includes(key)) {
-            toast.warn("Stage already exists in the flow");
+            toast.warn("Stage exists");
             return;
         }
-        const stages = [...flow.stages, key];
-        const requiredApprovals = { ...flow.requiredApprovals, [key]: [] };
-        const transitions = { ...flow.transitions, [key]: [] };
-        const stageRevisions = { ...flow.stageRevisions, [key]: false }; // default: false?
-        setFlow((f) => ({
+
+        // Find a free spot visually? Just offset from last
+        const count = flow.stages.length;
+        const newPos = { x: 100 + (count * 50), y: 100 + (count * 50) };
+
+        setFlow(f => ({
             ...f,
-            stages,
-            requiredApprovals,
-            transitions,
-            stageRevisions,
-            initialStage: f.initialStage || key,
+            stages: [...f.stages, key],
+            requiredApprovals: { ...f.requiredApprovals, [key]: [] },
+            visualLayout: { ...f.visualLayout, [key]: newPos }
         }));
         setNewStageName("");
-        if (!allStages.includes(key)) {
-            setAllStages((prev) => [...prev, key]); // optional: reflect new stage globally too
-        }
     };
 
     const removeStage = (key) => {
-        const stages = flow.stages.filter((s) => s !== key);
-        const { [key]: _a, ...restApprovals } = flow.requiredApprovals;
-        const { [key]: _b, ...restTransitions } = flow.transitions;
-        const { [key]: _c, ...restRevisions } = flow.stageRevisions || {};
-
-        // Remove transitions TO this stage as well
-        const cleanedTransitions = Object.fromEntries(
-            Object.entries(restTransitions).map(([from, rules]) => [
-                from,
-                (rules || []).filter((r) => r.to !== key),
-            ])
-        );
-
-        setFlow((f) => ({
-            ...f,
-            stages,
-            requiredApprovals: restApprovals,
-            transitions: cleanedTransitions,
-            stageRevisions: restRevisions,
-            initialStage: f.initialStage === key ? (stages[0] || "") : f.initialStage,
-        }));
+        // cleanup logic
+        setFlow((f) => {
+            const stages = f.stages.filter((s) => s !== key);
+            const { [key]: _a, ...restApprovals } = f.requiredApprovals;
+            const { [key]: _b, ...restTransitions } = f.transitions;
+            // cleanup incoming transitions
+            const cleanedTransitions = Object.fromEntries(
+                Object.entries(restTransitions).map(([from, rules]) => [
+                    from,
+                    (rules || []).filter((r) => r.to !== key),
+                ])
+            );
+            return {
+                ...f,
+                stages,
+                requiredApprovals: restApprovals,
+                transitions: cleanedTransitions,
+                // layout cleanup? optional
+            };
+        });
+        setSelection(null);
     };
 
-    const moveStageUp = (idx) => {
-        if (idx <= 0) return;
-        const stages = [...flow.stages];
-        [stages[idx - 1], stages[idx]] = [stages[idx], stages[idx - 1]];
-        setFlow((f) => ({ ...f, stages }));
-    };
-    const moveStageDown = (idx) => {
-        if (idx >= flow.stages.length - 1) return;
-        const stages = [...flow.stages];
-        [stages[idx + 1], stages[idx]] = [stages[idx], stages[idx + 1]];
-        setFlow((f) => ({ ...f, stages }));
-    };
-
-    // --- Approvals per stage ---
-    const toggleRequiredRole = (stage, role) => {
-        const current = flow.requiredApprovals[stage] || [];
+    const toggleGlobalRole = (field, role) => {
+        const current = flow[field] || [];
         const next = current.includes(role)
-            ? current.filter((r) => r !== role)
+            ? current.filter(r => r !== role)
             : [...current, role];
-        setFlow((f) => ({
-            ...f,
-            requiredApprovals: { ...f.requiredApprovals, [stage]: next },
-        }));
+        setFlow(f => ({ ...f, [field]: next }));
     };
 
-    // --- Transitions & transition roles ---
-    const toggleTransition = (from, to) => {
-        if (from === to) return; // no self transition
-        const rules = flow.transitions[from] || [];
-        const exists = rules.find((r) => r.to === to);
-        const next = exists ? rules.filter((r) => r.to !== to) : [...rules, { to, roles: [] }];
-        setFlow((f) => ({ ...f, transitions: { ...f.transitions, [from]: next } }));
-    };
-
-    const toggleTransitionRole = (from, to, role) => {
-        const rules = flow.transitions[from] || [];
-        const idx = rules.findIndex((r) => r.to === to);
-        if (idx === -1) return;
-        const r = rules[idx];
-        const nextRoles = (r.roles || []).includes(role)
-            ? r.roles.filter((x) => x !== role)
-            : [...(r.roles || []), role];
-        const next = [...rules];
-        next[idx] = { ...r, roles: nextRoles };
-        setFlow((f) => ({ ...f, transitions: { ...f.transitions, [from]: next } }));
-    };
-
-    // --- Role management (from backend) ---
-    const addRole = async () => {
-        const name = normalizeKey(newRoleName);
-        if (!name) return;
-        if (roles.includes(name)) {
-            toast.info("Role already exists");
-            return;
-        }
-        try {
-            await api.post("/roles", { name });
-            setRoles((r) => [...r, name]);
-            toast.success("Role added");
-            setNewRoleName("");
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to add role");
-        }
-    };
-    // NEW helpers in WorkflowBuilder.js
-    const emptyRule = { key: "", label: "", required: true, accept: "", minCount: 1, maxCount: undefined, pattern: "" };
-
-    const addFileRule = (stage) => {
-        const rules = (flow.fileRequirements?.[stage] || []).concat([{ ...emptyRule }]);
-        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements || {}), [stage]: rules } }));
-    };
-
-    const updateFileRule = (stage, idx, patch) => {
-        const rules = [...(flow.fileRequirements?.[stage] || [])];
-        rules[idx] = { ...rules[idx], ...patch };
-        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements || {}), [stage]: rules } }));
-    };
-
-    const removeFileRule = (stage, idx) => {
-        const rules = [...(flow.fileRequirements?.[stage] || [])];
-        rules.splice(idx, 1);
-        setFlow(f => ({ ...f, fileRequirements: { ...(f.fileRequirements || {}), [stage]: rules } }));
-    };
-
-    const removeRole = async (name) => {
-        try {
-            await api.delete(`/roles/${encodeURIComponent(name)}`);
-            setRoles((r) => r.filter((x) => x !== name));
-            // Also scrub it from the flow (approvals + transitions)
-            setFlow((f) => {
-                const ra = Object.fromEntries(
-                    (f.stages || []).map((s) => [
-                        s,
-                        (f.requiredApprovals?.[s] || []).filter((r) => r !== name),
-                    ])
-                );
-                const tr = Object.fromEntries(
-                    Object.entries(f.transitions || {}).map(([from, rules]) => [
-                        from,
-                        (rules || []).map((rule) => ({
-                            ...rule,
-                            roles: (rule.roles || []).filter((r) => r !== name),
-                        })),
-                    ])
-                );
-                return { ...f, requiredApprovals: ra, transitions: tr };
-            });
-            toast.success("Role removed");
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to remove role");
-        }
-    };
-
+<<<<<<< Updated upstream
     // --- Validation (no mutation!) ---
     const validation = useMemo(() => {
         const errors = [];
@@ -319,13 +497,37 @@ export default function WorkflowBuilder() {
                 : "Failed to save workflow";
             if (toastId) toast.update(toastId, { render: msg, type: "error", isLoading: false, autoClose: 2500 });
             else toast.error(msg);
+=======
+    const save = async () => {
+        if (!workflowIdInput) { toast.error("ID required"); return; }
+        try {
+            setSaving(true);
+            const payload = { ...flow, id: workflowIdInput };
+            const savedFlow = await saveWorkflow(payload, workflowIdInput);
+
+            // Update local state with new version and data
+            // We preserve the current visualLayout just in case, but backend should return it.
+            setLocalFlow(savedFlow);
+
+            toast.success("Workflow Saved");
+            if (isNew) navigate(`/admin/workflow/${workflowIdInput}`, { replace: true });
+        } catch (e) {
+            console.error(e);
+            if (e.response && e.response.status === 409) {
+                toast.error("Version Conflict. Please refresh and try again.");
+            } else {
+                toast.error("Failed to save");
+            }
+>>>>>>> Stashed changes
         } finally {
             setSaving(false);
         }
     };
 
+    if (loading) return <div className="p-5 text-center"><Spinner animation="border" /></div>;
 
     return (
+<<<<<<< Updated upstream
         <div className="p-3" style={{ width: "100%", overflow: "auto" }}>
             <Row className="g-3">
                 {/* Stages (from backend, plus you can add) */}
@@ -845,203 +1047,184 @@ export default function WorkflowBuilder() {
                         <Card.Body className="d-flex gap-2">
                             <Button onClick={save} disabled={saving}>
                                 {saving ? "Saving…" : "Save workflow"}
+=======
+        <div style={{ width: '100%', height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div className="bg-white border-bottom px-3 py-2 d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center gap-2">
+                    <Button variant="outline-secondary" size="sm" onClick={() => navigate("/admin/workflows")}>← Back</Button>
+                    <span className="fw-bold fs-5">{isNew ? "New Workflow" : id}</span>
+                    <Button variant="outline-dark" size="sm" onClick={() => setShowGlobalSettings(true)}>⚙️ Global Settings</Button>
+                </div>
+                <div className="d-flex gap-2">
+                    <Form.Control
+                        size="sm"
+                        placeholder="Stage Name"
+                        value={newStageName}
+                        onChange={e => setNewStageName(e.target.value)}
+                        style={{ width: 150 }}
+                    />
+                    <Button size="sm" variant="outline-primary" onClick={addStage} disabled={!newStageName}>+ Add Stage</Button>
+                    <div className="vr mx-2"></div>
+                    <Form.Control
+                        size="sm"
+                        placeholder="Workflow ID"
+                        value={workflowIdInput}
+                        disabled={!isNew}
+                        onChange={e => setWorkflowIdInput(e.target.value)}
+                        style={{ width: 150 }}
+                    />
+                    <Button size="sm" variant="primary" onClick={save} disabled={saving}>
+                        {saving ? "Saving..." : "Save"}
+                    </Button>
+                </div>
+            </div>
+
+            {/* Content: Canvas + Sidebar */}
+            <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        onEdgesDelete={onEdgesDelete}
+                        onNodeDragStop={onNodeDragStop}
+                        onNodeClick={(_, node) => setSelection({ type: 'node', id: node.id })}
+                        onEdgeClick={(_, edge) => setSelection({ type: 'edge', id: edge.id })}
+                        onPaneClick={() => setSelection(null)}
+                        nodeTypes={nodeTypes}
+                        fitView
+                    >
+                        <Background color="#aaa" gap={16} />
+                        <Controls />
+                        <MiniMap style={{ height: 100 }} zoomable pannable />
+                        <Panel position="top-left" className="bg-white p-2 rounded shadow-sm border d-flex gap-2">
+                            <Button variant={historyStack.length > 0 ? 'light' : 'white'} size="sm" onClick={undo} disabled={historyStack.length === 0} title="Undo (Ctrl+Z)">
+                                <Undo2 size={16} className={historyStack.length === 0 ? "text-muted" : "text-dark"} />
+>>>>>>> Stashed changes
                             </Button>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-            <Row className="g-3 mt-1">
-                <Col>
-                    <Card>
-                        <Card.Header>Required Files per Stage</Card.Header>
-                        <Card.Body>
-                            {flow.stages.length === 0 ? (
-                                <div className="text-muted">Add stages to configure file rules.</div>
-                            ) : flow.stages.map((s) => (
-                                <div key={s} className="mb-3 border rounded p-2">
-                                    <div className="d-flex justify-content-between align-items-center mb-2">
-                                        <div className="fw-semibold">{s}</div>
-                                        <Button size="sm" onClick={() => addFileRule(s)}>Add file rule</Button>
-                                    </div>
+                            <Button variant={redoStack.length > 0 ? 'light' : 'white'} size="sm" onClick={redo} disabled={redoStack.length === 0} title="Redo (Ctrl+Y)">
+                                <Redo2 size={16} className={redoStack.length === 0 ? "text-muted" : "text-dark"} />
+                            </Button>
+                        </Panel>
+                    </ReactFlow>
+                </div>
 
-                                    {(flow.fileRequirements?.[s] || []).length === 0 ? (
-                                        <div className="text-muted">No file rules.</div>
-                                    ) : (
-                                        <Table size="sm" bordered responsive className="mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th style={{ width: 140 }}>Key</th>
-                                                    <th>Label</th>
-                                                    <th style={{ width: 100 }}>Required</th>
-                                                    <th>Accept</th>
-                                                    <th>Notify Roles</th>
-                                                    <th style={{ width: '10%' }}>Allow Revisions</th>
-                                                    <th style={{ width: 110 }}>Min</th>
-                                                    <th style={{ width: 110 }}>Max</th>
-                                                    <th>Pattern (regex)</th>
-                                                    <th style={{ width: 90 }}></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(flow.fileRequirements?.[s] || []).map((r, idx) => (
-                                                    <tr key={idx}>
-                                                        <td>
-                                                            <Form.Control value={r.key || ""} onChange={e => updateFileRule(s, idx, { key: normalizeKey(e.target.value) })} />
-                                                        </td>
-                                                        <td>
-                                                            <Form.Control value={r.label || ""} onChange={e => updateFileRule(s, idx, { label: e.target.value })} />
-                                                        </td>
-                                                        <td className="text-center">
-                                                            <Form.Check type="checkbox" checked={!!r.required} onChange={e => updateFileRule(s, idx, { required: e.target.checked })} />
-                                                        </td>
-                                                        <td>
-                                                            <Form.Control placeholder=".pdf,.png" value={r.accept || ""} onChange={e => updateFileRule(s, idx, { accept: e.target.value })} />
-                                                        </td>
-                                                        <td>
-                                                            <Form.Control type="number" min={0} value={r.minCount ?? ""} onChange={e => updateFileRule(s, idx, { minCount: e.target.value === "" ? null : Number(e.target.value) })} />
-                                                        </td>
-                                                        <td>
-                                                            <Form.Control type="number" min={0} value={r.maxCount ?? ""} onChange={e => updateFileRule(s, idx, { maxCount: e.target.value === "" ? null : Number(e.target.value) })} />
-                                                        </td>
-                                                        <td>
-                                                            <Form.Control placeholder="optional regex" value={r.pattern || ""} onChange={e => updateFileRule(s, idx, { pattern: e.target.value })} />
-                                                        </td>
-                                                        <td className="text-center">
-                                                            <Button size="sm" variant="outline-danger" onClick={() => removeFileRule(s, idx)}>Remove</Button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </Table>
-                                    )}
-                                </div>
-                            ))}
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
+                {/* Sidebar Panel */}
+                {selection && selection.type === 'node' && (
+                    <div style={{ zIndex: 10, width: '320px', borderLeft: '1px solid #ddd', backgroundColor: 'white', position: 'absolute', right: 0, top: 0, bottom: 0 }}>
+                        <StagePropertyPanel
+                            stage={selection.id}
+                            flow={flow}
+                            roles={roles}
+                            allStages={availableStages}
+                            onUpdateFlow={setFlow}
+                            onClose={() => setSelection(null)}
+                            onRemoveStage={removeStage}
+                        />
+                    </div>
+                )}
+                {selection && selection.type === 'edge' && (
+                    <div style={{ zIndex: 10, width: '320px', borderLeft: '1px solid #ddd', backgroundColor: 'white', position: 'absolute', right: 0, top: 0, bottom: 0 }}>
+                        <TransitionPropertyPanel
+                            edgeId={selection.id}
+                            flow={flow}
+                            roles={roles}
+                            onUpdateFlow={setFlow}
+                            onClose={() => setSelection(null)}
+                            onRemoveEdge={deleteEdgeById}
+                        />
+                    </div>
+                )}
+            </div>
 
-            {/* JSON Preview */}
-            <Row className="g-3 mt-1">
-                <Col>
-                    <Card>
-                        <Card.Header>JSON Preview</Card.Header>
-                        <Card.Body>
-                            <pre className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
-                                {JSON.stringify(flow, null, 2)}
-                            </pre>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-
-            {/* Visibility Config Modal */}
-            <Modal show={visModal.show} onHide={() => setVisModal({ ...visModal, show: false })} centered>
+            {/* Global Settings Modal */}
+            <Modal show={showGlobalSettings} onHide={() => setShowGlobalSettings(false)}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Visibility: {visModal.stage} - {visModal.component}</Modal.Title>
+                    <Modal.Title>Global Workflow Settings</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {visModal.show && (() => {
-                        const { stage, component } = visModal;
-                        const rule = flow.visibility?.[stage] || {};
-                        const visibleList = rule.fieldsVisible; // null means ALL default
-                        const isAllDefault = !visibleList;
-                        const isVisible = isAllDefault ? true : visibleList.includes(component);
-                        const roleVis = rule.roleVisibility || {};
-
-                        const toggleBase = () => {
-                            const all = ["FILES", "PAYMENTS", "INVENTORY", "ESTIMATION", "TASKS", "REVISIONS", "DELIVERY", "TIMELINE"];
-                            let nextList;
-                            if (isAllDefault) {
-                                // Default (All) -> Custom (All minus this one) -> logic: user unchecked "Everyone"
-                                // If they uncheck "Everyone", it means "Hidden for Everyone" (unless role override)
-                                nextList = all.filter(c => c !== component);
-                            } else {
-                                nextList = isVisible
-                                    ? visibleList.filter(c => c !== component) // Hide
-                                    : [...visibleList, component];             // Show
-                            }
-                            setFlow(f => ({
-                                ...f,
-                                visibility: {
-                                    ...f.visibility,
-                                    [stage]: { ...rule, fieldsVisible: nextList }
-                                }
-                            }));
-                        };
-
-                        const toggleRole = (r) => {
-                            const currentRoleComps = roleVis[r] || [];
-                            const hasAccess = currentRoleComps.includes(component);
-                            const nextRoleComps = hasAccess
-                                ? currentRoleComps.filter(c => c !== component)
-                                : [...currentRoleComps, component];
-
-                            setFlow(f => ({
-                                ...f,
-                                visibility: {
-                                    ...f.visibility,
-                                    [stage]: {
-                                        ...rule,
-                                        roleVisibility: { ...roleVis, [r]: nextRoleComps }
+                    {/* Role Management Section */}
+                    <div className="mb-4 border-bottom pb-3">
+                        <label className="fw-bold mb-2">Available Roles</label>
+                        <div className="d-flex gap-2 mb-2">
+                            <Form.Control
+                                size="sm"
+                                placeholder="Add new role..."
+                                id="new-role-input"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        const val = e.target.value.trim();
+                                        if (val && !roles.includes(val)) {
+                                            setRoles([...roles, val]);
+                                            e.target.value = '';
+                                        }
                                     }
+                                }}
+                            />
+                            <Button size="sm" variant="outline-primary" onClick={() => {
+                                const input = document.getElementById('new-role-input');
+                                const val = input.value.trim();
+                                if (val && !roles.includes(val)) {
+                                    setRoles([...roles, val]);
+                                    input.value = '';
                                 }
-                            }));
-                        };
+                            }}>Add</Button>
+                        </div>
+                        <div className="d-flex flex-wrap gap-2">
+                            {roles.map(r => (
+                                <Badge key={r} bg="secondary" className="d-flex align-items-center gap-1">
+                                    {r}
+                                    {/* Allow deleting role if not strictly used? For now just allow removing from list to clean up view */}
+                                    <span
+                                        style={{ cursor: 'pointer', opacity: 0.7 }}
+                                        onClick={() => {
+                                            if (window.confirm(`Remove role "${r}" from this view? (It will reappear if used in backend)`)) {
+                                                setRoles(roles.filter(x => x !== r));
+                                            }
+                                        }}
+                                    >×</span>
+                                </Badge>
+                            ))}
+                            {roles.length === 0 && <small className="text-muted">No roles found.</small>}
+                        </div>
+                        <Form.Text muted>
+                            Add roles here to make them available for assignment in stages.
+                        </Form.Text>
+                    </div>
 
-                        return (
-                            <div>
-                                <Form.Group className="mb-3 border-bottom pb-3">
-                                    <Form.Check
-                                        type="switch"
-                                        id="base-vis-switch"
-                                        label={<strong>Visible to Everyone</strong>}
-                                        checked={isVisible}
-                                        onChange={toggleBase}
-                                    />
-                                    <Form.Text className="text-muted">
-                                        If disabled, this component will be hidden by default. You can grant access to specific roles below.
-                                    </Form.Text>
-                                </Form.Group>
-
-                                {!isVisible && (
-                                    <div>
-                                        <h6>Role Overrides</h6>
-                                        <p className="small text-muted">Select roles that should still see this component:</p>
-                                        <div className="d-flex flex-wrap gap-2">
-                                            {roles.length === 0 ? <em className="text-muted">No roles defined.</em> : roles.map(r => {
-                                                const hasAccess = (roleVis[r] || []).includes(component);
-                                                return (
-                                                    <Button
-                                                        key={r}
-                                                        size="sm"
-                                                        variant={hasAccess ? "success" : "outline-secondary"}
-                                                        onClick={() => toggleRole(r)}
-                                                        className="d-flex align-items-center gap-2"
-                                                    >
-                                                        {r}
-                                                        {hasAccess && <span>✓</span>}
-                                                    </Button>
-                                                );
-                                            })}
+                    {[
+                        { label: 'Estimation Approvers', field: 'estimationApproverRoles' },
+                        { label: 'Purchase Order Approvers', field: 'purchaseOrderApproverRoles' },
+                        { label: 'Stock Audit Approvers', field: 'stockAuditApproverRoles' },
+                        { label: 'Payroll Approvers', field: 'payrollApproverRoles' },
+                    ].map(({ label, field }) => (
+                        <div key={field} className="mb-3">
+                            <label className="fw-bold mb-1">{label}</label>
+                            <div className="d-flex flex-wrap gap-2">
+                                {roles.map(r => {
+                                    const active = (flow[field] || []).includes(r);
+                                    return (
+                                        <div
+                                            key={r}
+                                            onClick={() => toggleGlobalRole(field, r)}
+                                            className={`badge border ${active ? 'bg-primary text-white' : 'bg-light text-dark'}`}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            {r}
                                         </div>
-                                    </div>
-                                )}
-                                {isVisible && (
-                                    <div className="alert alert-light border">
-                                        Since "Everyone" has access, role-based overrides are not applicable.
-                                    </div>
-                                )}
+                                    );
+                                })}
                             </div>
-                        );
-                    })()}
+                        </div>
+                    ))}
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setVisModal({ ...visModal, show: false })}>Close</Button>
+                    <Button variant="secondary" onClick={() => setShowGlobalSettings(false)}>Close</Button>
                 </Modal.Footer>
             </Modal>
-
-            <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop />
-        </div >
+        </div>
     );
 }

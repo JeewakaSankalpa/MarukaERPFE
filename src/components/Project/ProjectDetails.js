@@ -8,6 +8,7 @@ import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import ProjectQuotationCard from "./ProjectQuotationCard"; // New Component
+import { COMPONENT_IDS } from './ComponentRegistry';
 
 // Lazy load sub-components
 const ProjectFiles = React.lazy(() => import('./ProjectFiles'));
@@ -333,7 +334,7 @@ export default function ProjectDetails() {
                             Dashboard
                         </button>
                     </li>
-                    {isComponentVisible('REVISIONS') && (
+                    {isComponentVisible(COMPONENT_IDS.REVISIONS) && (
                         <li className="nav-item">
                             <button className={`nav-link ${activeTab === 'revisions' ? 'active' : ''}`} onClick={() => setActiveTab('revisions')}>
                                 Revisions {project?.revisionCount > 0 && <Badge bg="secondary" pill>{project.revisionCount}</Badge>}
@@ -341,21 +342,21 @@ export default function ProjectDetails() {
                         </li>
                     )}
                     {/* Inventory is usually always visible if they have module access? */}
-                    {isComponentVisible('INVENTORY') && (
+                    {isComponentVisible(COMPONENT_IDS.INVENTORY) && (
                         <li className="nav-item">
                             <button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
                                 Inventory
                             </button>
                         </li>
                     )}
-                    {(hasAccess('projects.payments') && isComponentVisible('PAYMENTS')) && (
+                    {(hasAccess('projects.payments') && isComponentVisible(COMPONENT_IDS.PAYMENTS)) && (
                         <li className="nav-item">
                             <button className={`nav-link ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
                                 Payments
                             </button>
                         </li>
                     )}
-                    {isComponentVisible('TASKS') && (
+                    {isComponentVisible(COMPONENT_IDS.TASKS) && (
                         <li className="nav-item">
                             <button className={`nav-link ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
                                 Tasks
@@ -507,7 +508,7 @@ export default function ProjectDetails() {
                             </Col>
 
                             {/* Timeline (with Edit Dates button) */}
-                            {isComponentVisible('TIMELINE') && (
+                            {isComponentVisible(COMPONENT_IDS.TIMELINE) && (
                                 <Col md={12} lg={4}>
                                     <Card className="h-100">
                                         <Card.Header className="d-flex justify-content-between align-items-center">
@@ -541,7 +542,7 @@ export default function ProjectDetails() {
 
                         {/* Files & Estimation row */}
                         <Row className="g-3 mt-1">
-                            {(hasAccess('projects.files') && isComponentVisible('FILES')) && (
+                            {(hasAccess('projects.files') && isComponentVisible(COMPONENT_IDS.FILES)) && (
                                 <Col lg={6}>
                                     <Card className="h-100">
                                         <Card.Header className="d-flex justify-content-between align-items-center">
@@ -565,7 +566,7 @@ export default function ProjectDetails() {
                             )}
 
                             {/* Estimation summary / actions */}
-                            {(hasAccess('projects.estimation') && isComponentVisible('ESTIMATION')) && (
+                            {(hasAccess('projects.estimation') && isComponentVisible(COMPONENT_IDS.ESTIMATION)) && (
                                 <Col lg={6}>
                                     <div className="mb-3">
                                         <ProjectEstimationCard
@@ -588,7 +589,7 @@ export default function ProjectDetails() {
 
 
                             {/* Delivery Schedule - Moved to bottom */}
-                            {isComponentVisible('DELIVERY') && (
+                            {isComponentVisible(COMPONENT_IDS.DELIVERY) && (
                                 <Col lg={12}>
                                     <DeliveryScheduleCard projectId={id} reloadKey={refreshKey} />
                                 </Col>
@@ -640,7 +641,7 @@ export default function ProjectDetails() {
                     </>
                 )}
 
-                {activeTab === 'revisions' && isComponentVisible('REVISIONS') && (
+                {activeTab === COMPONENT_IDS.REVISIONS && isComponentVisible(COMPONENT_IDS.REVISIONS) && (
                     <ProjectRevisions
                         projectId={id}
                         versions={project?.versions}
@@ -651,11 +652,11 @@ export default function ProjectDetails() {
                     />
                 )}
 
-                {activeTab === 'inventory' && isComponentVisible('INVENTORY') && (
+                {activeTab === 'inventory' && isComponentVisible(COMPONENT_IDS.INVENTORY) && (
                     <ProjectInventoryCard projectId={id} reloadKey={refreshKey} />
                 )}
 
-                {activeTab === 'payments' && isComponentVisible('PAYMENTS') && (
+                {activeTab === 'payments' && isComponentVisible(COMPONENT_IDS.PAYMENTS) && (
                     <div className="mt-3">
                         <ProjectPaymentsCard
                             projectId={id}
@@ -668,7 +669,7 @@ export default function ProjectDetails() {
                 )}
 
 
-                {activeTab === 'tasks' && isComponentVisible('TASKS') && (
+                {activeTab === 'tasks' && isComponentVisible(COMPONENT_IDS.TASKS) && (
                     <div className="mt-3 bg-white shadow-sm rounded">
                         <ProjectTasks projectId={id} reloadKey={refreshKey} />
                     </div>
