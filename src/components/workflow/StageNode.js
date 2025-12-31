@@ -3,7 +3,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Badge } from 'react-bootstrap';
 import { Settings, CheckCircle, FileText, Bell } from 'lucide-react';
 
-export const StageNode = memo(({ data, isConnectable, selected }) => {
+const StageNode = memo(({ data, isConnectable, selected }) => {
     // data = { label, isInitial, approvals: [], notifications: [], hasFiles: boolean, onEdit: fn }
 
     return (
@@ -70,3 +70,5 @@ export const StageNode = memo(({ data, isConnectable, selected }) => {
         </div>
     );
 });
+
+export default StageNode;
