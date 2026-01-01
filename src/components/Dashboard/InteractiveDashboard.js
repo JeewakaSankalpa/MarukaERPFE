@@ -188,18 +188,21 @@ const InteractiveDashboard = () => {
                         <Card.Header className="bg-white fw-bold">Recent System Activity</Card.Header>
                         <Card.Body>
                             <ul className="list-group list-group-flush">
-                                <li className="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>User <strong>Alice</strong> checked in</span>
-                                    <span className="badge bg-light text-dark">2m ago</span>
-                                </li>
-                                <li className="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>New Project <strong>Skyline Tower</strong> created</span>
-                                    <span className="badge bg-light text-dark">1h ago</span>
-                                </li>
-                                <li className="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>Leave request by <strong>Bob</strong></span>
-                                    <span className="badge bg-warning text-dark">3h ago</span>
-                                </li>
+                                {recentActivity.length === 0 ? (
+                                    <li className="list-group-item text-center text-muted">No recent activity</li>
+                                ) : (
+                                    recentActivity.map((log, index) => (
+                                        <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                                            <div className="d-flex align-items-center">
+                                                <ActivityIcon type={log.type} />
+                                                <span>{log.description}</span>
+                                            </div>
+                                            <span className="badge bg-light text-dark">
+                                                {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </li>
+                                    ))
+                                )}
                             </ul>
                         </Card.Body>
                     </Card>

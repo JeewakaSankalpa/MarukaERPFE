@@ -20,6 +20,7 @@ const DeliveryScheduleCard = React.lazy(() => import('./DeliveryScheduleCard'));
 // New Components
 const ProjectLifecycle = React.lazy(() => import('./ProjectLifecycle'));
 const ProjectRevisions = React.lazy(() => import('./ProjectRevisions'));
+const ProjectComments = React.lazy(() => import('./ProjectComments'));
 
 /**
  * Main Project Details Page.
@@ -448,6 +449,11 @@ export default function ProjectDetails() {
                             </button>
                         </li>
                     )}
+                    <li className="nav-item">
+                        <button className={`nav-link ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>
+                            Communication
+                        </button>
+                    </li>
                 </ul>
             </div>
 
@@ -721,10 +727,18 @@ export default function ProjectDetails() {
                         <ProjectTasks projectId={id} reloadKey={refreshKey} />
                     </div>
                 )}
-            </Suspense>
+
+                {
+                    activeTab === 'comments' && (
+                        <div className="mt-3">
+                            <ProjectComments projectId={id} />
+                        </div>
+                    )
+                }
+            </Suspense >
 
             {/* Email Modal */}
-            <Modal show={showEmailModal} onHide={() => setShowEmailModal(false)} size="lg" centered>
+            < Modal show={showEmailModal} onHide={() => setShowEmailModal(false)} size="lg" centered >
                 <Modal.Header closeButton><Modal.Title>Send Project Email</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <Form.Group className="mb-3">
@@ -774,10 +788,10 @@ export default function ProjectDetails() {
                         {sendingEmail ? <Spinner size="sm" /> : "Send Email"}
                     </Button>
                 </Modal.Footer>
-            </Modal>
+            </Modal >
 
             {/* Edit Dates Modal (in Timeline) */}
-            <Modal show={showDates} onHide={() => setShowDates(false)} centered>
+            < Modal show={showDates} onHide={() => setShowDates(false)} centered >
                 <Modal.Header closeButton><Modal.Title>Edit Project Dates</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <Form.Group className="mb-2">
@@ -797,7 +811,7 @@ export default function ProjectDetails() {
                     <Button variant="secondary" onClick={() => setShowDates(false)}>Cancel</Button>
                     <Button variant="primary" onClick={saveDates}>Save</Button>
                 </Modal.Footer>
-            </Modal>
+            </Modal >
         </div >
     );
 }
