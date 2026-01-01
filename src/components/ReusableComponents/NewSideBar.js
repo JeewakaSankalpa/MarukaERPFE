@@ -15,7 +15,7 @@ import NotificationBell from "./NotificationBell";
 
 import { MenuConfig } from "../../resources/MenuConfig";
 
-function NewSideBar() {
+function NewSideBar({ isMobileOpen = false, onClose }) {
   const [collapsed, setCollapsed] = useState(false);
   const [hoveredMenu, setHoveredMenu] = useState(null);
 
@@ -96,16 +96,21 @@ function NewSideBar() {
     return { ...menu, submenus: visibleSubmenus };
   }).filter(Boolean); // Remove nulls
 
+  const handleMobileNav = (path) => {
+    navigate(path);
+    if (onClose) onClose();
+  };
+
   return (
     <div
-      className="sidebar-container no-print"
+      className={`sidebar-container no-print ${isMobileOpen ? 'mobile-open' : ''}`}
       style={{
         display: "flex",
         flexDirection: "column",
         height: "100%", // Fit parent (main-content), not viewport
         background: `linear-gradient(180deg, ${Colors.sideBar} 0%, #0f172a 100%)`,
         width: collapsed ? "64px" : "240px",
-        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease-in-out",
         color: "#fff",
         boxShadow: "4px 0 10px rgba(0,0,0,0.1)",
         zIndex: 1000,
@@ -173,7 +178,7 @@ function NewSideBar() {
                   backgroundColor: isActiveGroup ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                   cursor: 'pointer'
                 }}
-                onClick={() => !collapsed && navigate(menu.submenus[0]?.path || menu.path)}
+                onClick={() => !collapsed && handleMobileNav(menu.submenus[0]?.path || menu.path)}
               >
                 <span className={isActiveGroup ? 'text-info' : ''}>{menu.icon}</span>
                 {!collapsed && (
@@ -190,7 +195,7 @@ function NewSideBar() {
                       <div
                         key={sIdx}
                         className={`py-1 px-2 rounded small cursor-pointer mb-1 ${isSubActive ? 'text-white fw-bold bg-white bg-opacity-10' : 'text-white-50'}`}
-                        onClick={(e) => { e.stopPropagation(); navigate(sub.path); }}
+                        onClick={(e) => { e.stopPropagation(); handleMobileNav(sub.path); }}
                         style={{
                           transition: '0.2s',
                           fontSize: '0.85rem'
@@ -225,7 +230,7 @@ function NewSideBar() {
                     <div
                       key={sIdx}
                       className="px-3 py-2 text-white-50 hover-text-white cursor-pointer small"
-                      onClick={() => navigate(sub.path)}
+                      onClick={() => handleMobileNav(sub.path)}
                     >
                       {sub.name}
                     </div>

@@ -13,7 +13,7 @@ import CommandPalette from "./CommandPalette";
 import { toast } from "react-toastify";
 import "./CommandPalette.css"; // Ensure styles are loaded
 
-const Header = () => {
+const Header = ({ onToggleSidebar }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { username, userId, role, userType, logout } = useAuth(); // Assume userId/id is available in AuthContext now
   const navigate = useNavigate();
@@ -83,6 +83,14 @@ const Header = () => {
 
       {/* Left Section - Logo */}
       <div style={styles.leftSection}>
+        {/* Mobile Toggle Button */}
+        <div
+          className="d-flex d-md-none text-white me-2"
+          onClick={onToggleSidebar}
+          style={{ cursor: 'pointer' }}
+        >
+          <div style={{ fontSize: '24px' }}>☰</div> {/* Simple Hamburger-like character or icon */}
+        </div>
         <img src={logo} alt="Maruka Logo" style={styles.logoImage} />
       </div>
 

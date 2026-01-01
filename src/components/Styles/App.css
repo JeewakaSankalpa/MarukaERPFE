@@ -125,9 +125,6 @@ body,
     }
 
     /* Reset Layout Containers */
-    html,
-    body,
-    #root,
     .app-container,
     .main-content,
     .page-content {
@@ -140,5 +137,59 @@ body,
         background-color: white !important;
         position: static !important;
         /* Important to override relative positioning */
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .sidebar-container {
+        position: fixed !important;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        height: 100vh !important;
+        transform: translateX(-100%);
+        width: 260px !important;
+        /* Slightly wider for touch */
+    }
+
+    .sidebar-container.mobile-open {
+        transform: translateX(0);
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* Overlay backdrop */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        backdrop-filter: blur(2px);
+        animation: fadeIn 0.3s;
+    }
+
+    /* Adjust page content padding/margin */
+    .page-content {
+        padding: 1rem;
+        /* Less padding on mobile */
+        width: 100%;
+    }
+
+    /* Ensure header/app container behaves */
+    .app-container {
+        overflow: hidden;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
     }
 }

@@ -91,17 +91,29 @@ import SettingsPage from "./components/settings/SettingsPage";
 
 
 /* ---------------- Layout ---------------- */
+/* ---------------- Layout ---------------- */
 function Layout({ children }) {
     const location = useLocation();
     const isLoginRoute = location.pathname === "/login";
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
 
     if (isLoginRoute) return <>{children}</>;
 
     return (
         <div className="app-container">
-            <Header />
+            <Header onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
             <div className="main-content">
-                <NewSideBar />
+                <NewSideBar
+                    isMobileOpen={isMobileSidebarOpen}
+                    onClose={() => setIsMobileSidebarOpen(false)}
+                />
+                {/* Mobile Overlay */}
+                {isMobileSidebarOpen && (
+                    <div
+                        className="sidebar-overlay d-md-none"
+                        onClick={() => setIsMobileSidebarOpen(false)}
+                    />
+                )}
                 <div className="page-content">
                     {children}
                 </div>
