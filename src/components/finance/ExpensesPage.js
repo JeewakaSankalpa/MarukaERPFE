@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Button, Table, Modal, Form, Row, Col, Card } from 'react-bootstrap';
+import { Container, Button, Table, Modal, Form, Row, Col, Card, Badge } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 
@@ -88,7 +88,13 @@ export default function ExpensesPage() {
                                 expenses.map(e => (
                                     <tr key={e.id}>
                                         <td>{e.expenseDate}</td>
-                                        <td>{e.category}</td>
+                                        <td>
+                                            {e.category === 'SUPPLIER_PAYMENT' ? (
+                                                <Badge bg="warning" text="dark">Supplier Payment</Badge>
+                                            ) : (
+                                                <Badge bg="secondary">{e.category}</Badge>
+                                            )}
+                                        </td>
                                         <td>{e.title}</td>
                                         <td className="text-end">{e.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td>{e.status}</td>
@@ -166,6 +172,6 @@ export default function ExpensesPage() {
                     <Button variant="primary" onClick={handleSave}>Save Expense</Button>
                 </Modal.Footer>
             </Modal>
-        </Container>
+        </Container >
     );
 }

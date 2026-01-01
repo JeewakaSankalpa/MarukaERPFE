@@ -77,6 +77,7 @@ import FinanceDashboard from './components/finance/FinanceDashboard';
 import TaxPage from './components/finance/TaxPage';
 import LoanManagement from './components/finance/LoanManagement';
 import FinanceReportsPage from './components/finance/FinanceReportsPage';
+import IncomePage from './components/finance/IncomePage';
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
 import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
@@ -283,6 +284,8 @@ function App() {
                         <Route path="/finance/expenses" element={<ExpensesPage />} />
                         <Route path="/finance/tax" element={<TaxPage />} />
                         <Route path="/finance/loans" element={<LoanManagement />} />
+                        <Route path="/finance/loans" element={<LoanManagement />} />
+                        <Route path="/finance/income" element={<IncomePage />} />
                         <Route path="/finance/reports" element={<FinanceReportsPage />} />
                         <Route path="/reports/payables" element={<PayablesReport />} />
                         <Route path="/reports/receivables" element={<ReceivablesReport />} />

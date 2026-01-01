@@ -17,42 +17,36 @@ const InteractiveDashboard = () => {
     const [projectStatus, setProjectStatus] = useState([]);
     const [hrStats, setHrStats] = useState({ totalEmployees: 0, presentToday: 0, absentToday: 0, pendingLeaves: 0 });
     const [opsStats, setOpsStats] = useState({ overdueProjects: 0, pendingApprovals: 0 });
+    const [recentActivity, setRecentActivity] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const ActivityIcon = ({ type }) => {
+        if (type === 'SUCCESS') return <span className="text-success me-2">●</span>;
+        if (type === 'WARNING') return <span className="text-warning me-2">●</span>;
+        if (type === 'ERROR') return <span className="text-danger me-2">●</span>;
+        return <span className="text-primary me-2">●</span>;
+    };
 
     useEffect(() => {
         const loadAnalytics = async () => {
             try {
-                // Fetch mock data from our new controller
-                try {
-                    const [salesRes, expenseRes, projectRes, hrRes, opsRes] = await Promise.all([
-                        api.get('/analytics/sales-trend'),
-                        api.get('/analytics/expense-breakdown'),
-                        api.get('/analytics/project-status'),
-                        api.get('/analytics/hr-stats'),
-                        api.get('/analytics/ops-stats')
-                    ]);
-                    setSalesData(salesRes.data.data || []);
-                    setExpenseData(expenseRes.data.data || []);
-                    setProjectStatus(projectRes.data.data || []);
-                    setHrStats(hrRes.data || { totalEmployees: 0, presentToday: 0, absentToday: 0, pendingLeaves: 0 });
-                    setOpsStats(opsRes.data || { overdueProjects: 0, pendingApprovals: 0 });
-                } catch (innerError) {
-                    console.warn("Backend analytics endpoints might be missing, using fallback data.");
-                    // Fallback Mock
-                    setSalesData([
-                        { month: 'Jan', sales: 4000, expenses: 2400 },
-                        { month: 'May', sales: 1890, expenses: 4800 },
-                    ]);
-                    setExpenseData([
-                        { name: "Payroll", value: 400000 },
-                    ]);
-                    setProjectStatus([
-                        { name: "Planning", count: 5 },
-                        { name: "Completed", count: 8 }
-                    ]);
-                    setHrStats({ totalEmployees: 50, presentToday: 45, absentToday: 5, pendingLeaves: 3 });
-                    setOpsStats({ overdueProjects: 2, pendingApprovals: 12 });
-                }
+                // Fetch analytics from backend
+                const [salesRes, expenseRes, projectRes, hrRes, opsRes, activityRes] = await Promise.all([
+                    api.get('/analytics/sales-trend'),
+                    api.get('/analytics/expense-breakdown'),
+                    api.get('/analytics/project-status'),
+                    api.get('/analytics/hr-stats'),
+                    api.get('/analytics/ops-stats'),
+                    api.get('/analytics/activity')
+                ]);
+
+                setSalesData(salesRes.data.data || []);
+                setExpenseData(expenseRes.data.data || []);
+                setProjectStatus(projectRes.data.data || []);
+                setHrStats(hrRes.data || { totalEmployees: 0, presentToday: 0, absentToday: 0, pendingLeaves: 0 });
+                setOpsStats(opsRes.data || { overdueProjects: 0, pendingApprovals: 0 });
+                setRecentActivity(activityRes.data.data || []);
+
             } catch (e) {
                 console.error("Dashboard Load Error", e);
             } finally {
