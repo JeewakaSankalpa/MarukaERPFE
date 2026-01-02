@@ -8,7 +8,34 @@ export default function WorkflowList() {
     const [workflows, setWorkflows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
     const navigate = useNavigate();
+
+    const handleDuplicate = async (wf) => {
+        const newId = prompt("Enter ID for the new duplicated workflow:", wf.id + "_copy");
+        if (!newId) return;
+
+        try {
+            setLoading(true);
+            // 1. Fetch full details of source
+            const { getWorkflow, saveWorkflow } = require("../../services/workflowApi"); // Lazy import to allow updates
+            const source = await getWorkflow(wf.id);
+
+            // 2. Prepare copy
+            const copy = { ...source, id: newId, version: 0 };
+
+            // 3. Save as new
+            await saveWorkflow(copy, newId);
+
+            toast.success("Workflow duplicated successfully!");
+            await loadData();
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to duplicate workflow: " + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         loadData();
@@ -97,6 +124,14 @@ export default function WorkflowList() {
                                             className="me-2"
                                         >
                                             Edit
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline-secondary" // Changed color
+                                            className="me-2"
+                                            onClick={() => handleDuplicate(wf)}
+                                        >
+                                            Duplicate
                                         </Button>
                                         {wf.id !== 'active' && (
                                             <Button

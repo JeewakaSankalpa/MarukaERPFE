@@ -16,6 +16,42 @@ export default function StagePropertyPanel({
     // flow: current workflow object
     // onUpdateFlow: (newFlow) => void
 
+    // Lazy import or prop for API to avoid circular deps if needed.
+    // Assuming we can import from workflowApi here.
+    const [checkingUsage, setCheckingUsage] = useState(false);
+
+    // We need to fetch usage count.
+    const checkUsage = async (stageVal) => {
+        try {
+            // Need to verify this path is accessible or move to props
+            const res = await fetch(`/api/workflow/usage/${stageVal}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (res.ok) {
+                return await res.json();
+            }
+            return 0;
+        } catch (e) {
+            console.error("Usage check failed", e);
+            return 0; // Fail safe? Or block?
+        }
+    };
+
+    const handleDeleteClick = async () => {
+        setCheckingUsage(true);
+        const count = await checkUsage(stage);
+        setCheckingUsage(false);
+
+        let msg = `Are you sure you want to delete stage "${stage}"?`;
+        if (count > 0) {
+            msg = `WARNING: This stage is currently used by ${count} active PROJECT(S)!\n\nDeleting it may cause these projects to become stuck or invalid.\n\n${msg}`;
+        }
+
+        if (window.confirm(msg)) {
+            onRemoveStage(stage);
+        }
+    };
+
     const [showVisibilityModal, setShowVisibilityModal] = useState(false);
 
     if (!stage) return <div className="p-3 text-muted">Select a stage to edit properties.</div>;
@@ -94,8 +130,15 @@ export default function StagePropertyPanel({
                             />
                             {!isInitial && (
                                 <div className="mt-3">
-                                    <Button variant="outline-danger" size="sm" className="w-100" onClick={() => onRemoveStage(stage)}>
-                                        <Trash2 size={14} className="me-2" /> Delete Stage
+                                    <Button
+                                        variant="outline-danger"
+                                        size="sm"
+                                        className="w-100"
+                                        onClick={handleDeleteClick}
+                                        disabled={checkingUsage}
+                                    >
+                                        <Trash2 size={14} className="me-2" />
+                                        {checkingUsage ? "Checking Usage..." : "Delete Stage"}
                                     </Button>
                                 </div>
                             )}
