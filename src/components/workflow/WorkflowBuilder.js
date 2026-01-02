@@ -121,11 +121,17 @@ export default function WorkflowBuilder() {
     }, [historyStack, redoStack, flow]);
 
 
+    // Debug Log Removed
+
     // --- Load Data ---
     useEffect(() => {
         (async () => {
             try {
                 setLoading(true);
+
+                // Fetch Data needed 
+                // ... (rest is same)
+
 
                 // Fetch Data needed
                 const fetchFlow = (!isNew) ? getWorkflow(id).catch(() => null) : Promise.resolve(null);
@@ -173,6 +179,7 @@ export default function WorkflowBuilder() {
 
     // --- Sync Flow -> Visual Nodes/Edges ---
     useEffect(() => {
+        console.log("Sync Effect Fired. Loading:", loading);
         if (loading) return;
 
         // Map Stages to Nodes
@@ -218,9 +225,10 @@ export default function WorkflowBuilder() {
         JSON.stringify(flow.requiredApprovals),
         JSON.stringify(flow.initialStage),
         JSON.stringify(flow.fileRequirements),
-        JSON.stringify(flow.notifications),
-        // Note: We don't depend on visualLayout to avoid re-render loops while dragging if not careful,
-        // but since we update visualLayout onDragStop, it should be fine to not list it or listen to onNodesChange for pos.
+        JSON.stringify(flow.notifications)
+        // Note: Not depending on visualLayout avoids re-render loops/crashes during drag.
+        // Positions are updated via onNodesChange (internal) and onNodeDragStop (flow state).
+        // Undo of position might need distinct handling or be ignored for stability.
     ]);
 
 
@@ -276,14 +284,28 @@ export default function WorkflowBuilder() {
     }, [flow.transitions]);
 
     const onNodeDragStop = useCallback((event, node) => {
-        setFlow(f => ({
-            ...f,
-            visualLayout: {
-                ...f.visualLayout,
-                [node.id]: node.position
+        try {
+            if (!node || !node.id || !node.position) {
+                console.warn("Invalid node or position in onNodeDragStop", node);
+                return;
             }
-        }));
-    }, []);
+            // Ensure position is valid numbers
+            if (isNaN(node.position.x) || isNaN(node.position.y)) {
+                console.warn("Invalid position NaN", node.position);
+                return;
+            }
+
+            setFlow(f => ({
+                ...f,
+                visualLayout: {
+                    ...f.visualLayout,
+                    [node.id]: node.position
+                }
+            }));
+        } catch (e) {
+            console.error("Error in onNodeDragStop", e);
+        }
+    }, [setFlow]);
 
     // Add Stage
     const [newStageName, setNewStageName] = useState("");
