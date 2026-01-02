@@ -11,7 +11,7 @@ export default function NotificationBell() {
     const [notifications, setNotifications] = useState([]);
     const [visible, setVisible] = useState(false);
     const navigate = useNavigate();
-    const { userId } = useAuth();
+    const { userId, username } = useAuth();
 
     // Initial fetch
     useEffect(() => {
@@ -53,8 +53,8 @@ export default function NotificationBell() {
             },
             onConnect: () => {
                 console.log('Connected to WebSocket');
-                console.log('Subscribing to topic:', `/topic/notifications/${userId}`);
-                client.subscribe(`/topic/notifications/${userId}`, (message) => {
+                console.log('Subscribing to topic:', `/topic/notifications/${username}`);
+                client.subscribe(`/topic/notifications/${username}`, (message) => {
                     console.log('Received WebSocket Message:', message.body);
                     const newNotification = JSON.parse(message.body);
                     setCount(prev => prev + 1);
