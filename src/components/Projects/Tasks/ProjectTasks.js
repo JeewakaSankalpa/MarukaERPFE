@@ -13,17 +13,13 @@ const ProjectTasks = ({ projectId }) => {
 
     // Form Data
     const [editingTask, setEditingTask] = useState(null);
-    const [taskForm, setTaskForm] = useState({ name: "", description: "", assignedTo: "", status: "TODO", priority: "MEDIUM", estimatedHours: "", dueDate: "" });
+    const [taskForm, setTaskForm] = useState({ name: "", description: "", assignedTo: "", status: "TODO", priority: "MEDIUM", estimatedHours: "", startDate: "", dueDate: "" });
 
     // Log Data
     const [logTask, setLogTask] = useState(null);
     const [logForm, setLogForm] = useState({ durationHours: "", note: "" });
 
-    useEffect(() => {
-        loadData();
-    }, [projectId]);
-
-    const loadData = async () => {
+    const loadData = React.useCallback(async () => {
         try {
             const [tRes, eRes] = await Promise.all([
                 api.get(`/tasks/by-project/${projectId}`),
@@ -34,7 +30,11 @@ const ProjectTasks = ({ projectId }) => {
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handleTaskSubmit = async (e) => {
         e.preventDefault();
@@ -76,6 +76,7 @@ const ProjectTasks = ({ projectId }) => {
             status: t.status,
             priority: t.priority,
             estimatedHours: t.estimatedHours,
+            startDate: t.startDate,
             dueDate: t.dueDate
         });
         setShowTaskModal(true);
@@ -167,6 +168,10 @@ const ProjectTasks = ({ projectId }) => {
                             <div className="flex-grow-1">
                                 <Form.Label>Est. Hours</Form.Label>
                                 <Form.Control type="number" step="0.5" value={taskForm.estimatedHours} onChange={e => setTaskForm({ ...taskForm, estimatedHours: e.target.value })} />
+                            </div>
+                            <div className="flex-grow-1">
+                                <Form.Label>Start Date</Form.Label>
+                                <Form.Control type="date" value={taskForm.startDate} onChange={e => setTaskForm({ ...taskForm, startDate: e.target.value })} />
                             </div>
                             <div className="flex-grow-1">
                                 <Form.Label>Due Date</Form.Label>

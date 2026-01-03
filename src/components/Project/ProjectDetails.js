@@ -23,6 +23,8 @@ const ProjectLifecycle = React.lazy(() => import('./ProjectLifecycle'));
 const ProjectRevisions = React.lazy(() => import('./ProjectRevisions'));
 const ProjectComments = React.lazy(() => import('./ProjectComments'));
 const ProjectWorkflowTab = React.lazy(() => import('./ProjectWorkflowTab'));
+const ProjectKanban = React.lazy(() => import('../Projects/Tasks/ProjectKanban'));
+const ProjectGantt = React.lazy(() => import('../Projects/Tasks/ProjectGantt'));
 
 /**
  * Main Project Details Page.
@@ -123,6 +125,7 @@ export default function ProjectDetails() {
 
     // Tabs state
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [taskSubTab, setTaskSubTab] = useState('list'); // list, kanban, gantt
 
     useEffect(() => {
         let alive = true;
@@ -732,8 +735,28 @@ export default function ProjectDetails() {
 
 
                 {activeTab === 'tasks' && isComponentVisible(COMPONENT_IDS.TASKS) && (
-                    <div className="mt-3 bg-white shadow-sm rounded">
-                        <ProjectTasks projectId={id} reloadKey={refreshKey} />
+                    <div className="mt-3">
+                        <div className="d-flex gap-2 mb-3">
+                            <Button variant={taskSubTab === 'list' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('list')}>List View</Button>
+                            <Button variant={taskSubTab === 'kanban' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('kanban')}>Kanban Board</Button>
+                            <Button variant={taskSubTab === 'gantt' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('gantt')}>Gantt Chart</Button>
+                        </div>
+
+                        {taskSubTab === 'list' && (
+                            <div className="bg-white shadow-sm rounded">
+                                <ProjectTasks projectId={id} reloadKey={refreshKey} />
+                            </div>
+                        )}
+                        {taskSubTab === 'kanban' && (
+                            <div className="">
+                                <ProjectKanban projectId={id} reloadKey={refreshKey} />
+                            </div>
+                        )}
+                        {taskSubTab === 'gantt' && (
+                            <div className="">
+                                <ProjectGantt projectId={id} reloadKey={refreshKey} />
+                            </div>
+                        )}
                     </div>
                 )}
 
