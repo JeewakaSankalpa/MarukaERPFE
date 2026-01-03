@@ -14,6 +14,7 @@ import {
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import InteractiveDashboard from "./components/Dashboard/InteractiveDashboard";
+import SupplierCustomerDashboard from "./components/Dashboard/SupplierCustomerDashboard";
 import SystemConfiguration from "./components/SystemConfiguration";
 
 import InventoryAdd from "./components/Inventory/InventoryAdd";
@@ -253,6 +254,7 @@ function App() {
 
                     {/* Partners (Customers & Suppliers) */}
                     <Route element={<PrivateRoute module="partners" />}>
+                        <Route path="/partners/dashboard" element={<SupplierCustomerDashboard />} />
                         <Route path="/customer/create" element={<CustomerCreate />} />
                         <Route path="/customer/view" element={<CustomerViewRouteWrapper />} />
                         <Route path="/customer/edit/:id" element={<CustomerCreate />} />

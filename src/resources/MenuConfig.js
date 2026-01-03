@@ -82,6 +82,7 @@ export const MenuConfig = [
         icon: "FaBriefcase",
         roles: ["ADMIN", "SALES", "MANAGER"],
         subItems: [
+            { id: "partners.dashboard", title: "Dashboard", path: "/partners/dashboard" },
             { id: "partners.customers", title: "Customers", path: "/customer/view" },
             { id: "partners.suppliers", title: "Suppliers", path: "/supplier/search" },
         ]
