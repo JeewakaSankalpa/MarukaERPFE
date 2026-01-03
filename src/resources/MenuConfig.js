@@ -70,6 +70,7 @@ export const MenuConfig = [
         roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
         subItems: [
             { id: "hr.directory", title: "Directory", path: "/employee/list", roles: ["ADMIN", "HR", "MANAGER"] },
+            { id: "hr.stats", title: "Statistics", path: "/hr/dashboard", roles: ["ADMIN", "HR", "MANAGER"] }, // NEW Link
             { id: "hr.attendance", title: "Attendance", path: "/attendance" },
             { id: "hr.leave", title: "Leave", path: "/leave" },
             { id: "hr.payroll", title: "Payroll", path: "/salary", roles: ["ADMIN", "HR", "MANAGER"] },

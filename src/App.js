@@ -67,6 +67,7 @@ import EmployeeProfile from "./components/Employee/EmployeeProfile";
 import SalaryManagement from "./components/Employee/SalaryManagement";
 import SalaryBatchPrint from "./components/Employee/SalaryBatchPrint";
 import HRConfiguration from "./components/HumanResources/HRConfiguration";
+import HRStatsDashboard from "./components/HumanResources/HRStatsDashboard"; // NEW Import
 import SalaryReport from "./components/Employee/Reports/SalaryReport";
 import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
 import ProjectMaterialReport from "./components/Inventory/Reports/ProjectMaterialReport";
@@ -209,6 +210,7 @@ function App() {
                         <Route path="/employee/list" element={<EmployeeList />} />
                         <Route path="/salary" element={<SalaryManagement />} />
                         <Route path="/hr/config" element={<HRConfiguration />} />
+                        <Route path="/hr/dashboard" element={<HRStatsDashboard />} /> {/* NEW Route */}
                         <Route path="/salary/report" element={<SalaryReport />} />
                         <Route path="/salary/print-batch/:month" element={<SalaryBatchPrint />} />
                         <Route path="/leave" element={<LeaveRequestPage />} />
