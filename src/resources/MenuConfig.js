@@ -33,12 +33,14 @@ export const MenuConfig = [
         icon: "FaBoxes",
         roles: ["ADMIN", "MANAGER", "STORE_KEEPER", "EMPLOYEE"],
         subItems: [
+            { id: "inventory.dashboard", title: "Dashboard", path: "/inventory/dashboard" }, // NEW
             { id: "inventory.search", title: "Stock Search", path: "/inventory/search" },
             { id: "inventory.stock_taking", title: "Stock Taking", path: "/inventory/stock-taking" },
             { id: "inventory.audit_approvals", title: "Audit Approvals", path: "/inventory/audit-approvals" },
             { id: "inventory.products", title: "Products", path: "/product/create" },
             { id: "inventory.pr", title: "Purchase Requests", path: "/inventory/pr" },
-            { id: "inventory.internal", title: "Internal Requests", path: "/item/requests" },
+            { id: "inventory.internal", title: "New Request", path: "/item/requests" },
+            { id: "inventory.my_requests", title: "My Requests", path: "/item/my-requests" }, // NEW
             { id: "inventory.fulfil", title: "Fulfil Requests", path: "/stores/fulfil-requests" },
             { id: "inventory.return", title: "Returns", path: "/inventory/return" },
             { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
@@ -52,6 +54,7 @@ export const MenuConfig = [
         icon: "FaChartLine",
         roles: ["ADMIN", "STORE_KEEPER", "MANAGER", "EMPLOYEE"],
         subItems: [
+            { id: "procurement.dashboard", title: "Dashboard", path: "/procurement/dashboard" }, // NEW
             { id: "procurement.planning", title: "Stores Planning", path: "/stores/planning" },
             { id: "procurement.pos", title: "Purchase Orders", path: "/pos" },
             { id: "procurement.pending", title: "Pending Items", path: "/stores/pending-to-po" },
@@ -107,6 +110,7 @@ export const MenuConfig = [
         subItems: [
             { id: "finance.dashboard", title: "Finance Dashboard", path: "/finance/dashboard" },
             { id: "finance.expenses", title: "Expenses", path: "/finance/expenses" },
+            { id: "finance.income", title: "Income", path: "/finance/income" },
             { id: "finance.loans", title: "Loan Management", path: "/finance/loans" },
             { id: "finance.reports", title: "Financial Statements", path: "/finance/reports" },
             { id: "finance.assets", title: "Asset Register", path: "/assets" },

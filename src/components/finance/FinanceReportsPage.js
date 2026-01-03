@@ -52,35 +52,37 @@ export default function FinanceReportsPage() {
                 <Card className="shadow-sm print-border">
                     <Card.Body>
                         <h4 className="text-center mb-4">Profit & Loss Statement - {month}</h4>
-                        <Table bordered striped>
-                            <tbody>
-                                <tr className="table-success">
-                                    <th>Total Revenue</th>
-                                    <th className="text-end">{formatCurrency(data.revenue)}</th>
-                                </tr>
-                                <tr><td colSpan="2" className="fw-bold bg-light">Expenses</td></tr>
-                                <tr>
-                                    <td>Operational Expenses</td>
-                                    <td className="text-end">{formatCurrency(data.opex)}</td>
-                                </tr>
-                                <tr>
-                                    <td>Payroll (Gross)</td>
-                                    <td className="text-end">{formatCurrency(data.payroll)}</td>
-                                </tr>
-                                <tr>
-                                    <td>Depreciation</td>
-                                    <td className="text-end">{formatCurrency(data.depreciation)}</td>
-                                </tr>
-                                <tr className="table-light fw-bold">
-                                    <td>Total Expenses</td>
-                                    <td className="text-end">{formatCurrency(data.totalExpenses)}</td>
-                                </tr>
-                                <tr className={data.netProfit >= 0 ? "table-primary fw-bold" : "table-danger fw-bold"}>
-                                    <td>Net Profit</td>
-                                    <td className="text-end">{formatCurrency(data.netProfit)}</td>
-                                </tr>
-                            </tbody>
-                        </Table>
+                        <div className="table-responsive">
+                            <Table bordered striped>
+                                <tbody>
+                                    <tr className="table-success">
+                                        <th>Total Revenue</th>
+                                        <th className="text-end">{formatCurrency(data.revenue)}</th>
+                                    </tr>
+                                    <tr><td colSpan="2" className="fw-bold bg-light">Expenses</td></tr>
+                                    <tr>
+                                        <td>Operational Expenses</td>
+                                        <td className="text-end">{formatCurrency(data.opex)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Payroll (Gross)</td>
+                                        <td className="text-end">{formatCurrency(data.payroll)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Depreciation</td>
+                                        <td className="text-end">{formatCurrency(data.depreciation)}</td>
+                                    </tr>
+                                    <tr className="table-light fw-bold">
+                                        <td>Total Expenses</td>
+                                        <td className="text-end">{formatCurrency(data.totalExpenses)}</td>
+                                    </tr>
+                                    <tr className={data.netProfit >= 0 ? "table-primary fw-bold" : "table-danger fw-bold"}>
+                                        <td>Net Profit</td>
+                                        <td className="text-end">{formatCurrency(data.netProfit)}</td>
+                                    </tr>
+                                </tbody>
+                            </Table>
+                        </div>
                     </Card.Body>
                 </Card>
             )}
@@ -145,22 +147,24 @@ export default function FinanceReportsPage() {
                         <Alert variant="warning">
                             {data.vatMessage}
                         </Alert>
-                        <Table bordered>
-                            <tbody>
-                                <tr>
-                                    <th>Income Tax Base (Total Revenue)</th>
-                                    <td className="text-end">{formatCurrency(data.taxableIncome)}</td>
-                                </tr>
-                                <tr>
-                                    <th>PAYE Tax Collected (To be remitted)</th>
-                                    <td className="text-end">{formatCurrency(data.payeCollected)}</td>
-                                </tr>
-                                <tr>
-                                    <th>EPF/ETF Employer Liability</th>
-                                    <td className="text-end">{formatCurrency(data.epfEtfPayable)}</td>
-                                </tr>
-                            </tbody>
-                        </Table>
+                        <div className="table-responsive">
+                            <Table bordered>
+                                <tbody>
+                                    <tr>
+                                        <th>Income Tax Base (Total Revenue)</th>
+                                        <td className="text-end">{formatCurrency(data.taxableIncome)}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>PAYE Tax Collected (To be remitted)</th>
+                                        <td className="text-end">{formatCurrency(data.payeCollected)}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>EPF/ETF Employer Liability</th>
+                                        <td className="text-end">{formatCurrency(data.epfEtfPayable)}</td>
+                                    </tr>
+                                </tbody>
+                            </Table>
+                        </div>
                     </Card.Body>
                 </Card>
             )}

@@ -17,6 +17,7 @@ import InteractiveDashboard from "./components/Dashboard/InteractiveDashboard";
 import SystemConfiguration from "./components/SystemConfiguration";
 
 import InventoryAdd from "./components/Inventory/InventoryAdd";
+import InventoryDashboard from "./components/Inventory/InventoryDashboard"; // NEW
 import InventoryView from "./components/Inventory/InventoryView";
 import Header from "./components/ReusableComponents/Header";
 import NewSideBar from "./components/ReusableComponents/NewSideBar";
@@ -47,7 +48,9 @@ import TransfersInbox from "./components/Transfers/TransferInbox";
 import POListView from "./components/PO/POListView";
 import GRNReceivePage from "./components/GRN/GRNRecievePage";
 import GRNListView from "./components/GRN/GRNListView";
+import ProcurementDashboard from "./components/GRN/ProcurementDashboard"; // NEW
 import ItemRequestForm from "./components/Requests/ItemRequestForm";
+import MyRequestList from "./components/Requests/MyRequestList"; // NEW
 import DepartmentList from "./components/Departments/DepartmentList";
 import DepartmentForm from "./components/Departments/DepartmentForm";
 import IRFulfilmentPage from "./components/Requests/IRFulfilmentPage";
@@ -74,6 +77,7 @@ import FinanceDashboard from './components/finance/FinanceDashboard';
 import TaxPage from './components/finance/TaxPage';
 import LoanManagement from './components/finance/LoanManagement';
 import FinanceReportsPage from './components/finance/FinanceReportsPage';
+import IncomePage from './components/finance/IncomePage';
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
 import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
@@ -88,17 +92,29 @@ import SettingsPage from "./components/settings/SettingsPage";
 
 
 /* ---------------- Layout ---------------- */
+/* ---------------- Layout ---------------- */
 function Layout({ children }) {
     const location = useLocation();
     const isLoginRoute = location.pathname === "/login";
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
 
     if (isLoginRoute) return <>{children}</>;
 
     return (
         <div className="app-container">
-            <Header />
+            <Header onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
             <div className="main-content">
-                <NewSideBar />
+                <NewSideBar
+                    isMobileOpen={isMobileSidebarOpen}
+                    onClose={() => setIsMobileSidebarOpen(false)}
+                />
+                {/* Mobile Overlay */}
+                {isMobileSidebarOpen && (
+                    <div
+                        className="sidebar-overlay d-md-none"
+                        onClick={() => setIsMobileSidebarOpen(false)}
+                    />
+                )}
                 <div className="page-content">
                     {children}
                 </div>
@@ -202,9 +218,12 @@ function App() {
 
                     {/* Inventory */}
                     <Route element={<PrivateRoute module="inventory" />}>
+                        <Route path="/inventory" element={<InventoryDashboard />} />
+                        <Route path="/inventory/dashboard" element={<InventoryDashboard />} />
                         <Route path="/inventory/add" element={<InventoryAdd />} />
                         <Route path="/item/add" element={<ItemAdd />} />
                         <Route path="/inventory/search" element={<InventoryView />} />
+                        <Route path="/inventory/view" element={<InventoryView />} />
                         <Route path="/inventory/return" element={<InventoryReturn />} />
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
                         <Route path="/inventory/returns/approvals" element={<InternalReturnApprovals />} />
@@ -213,12 +232,14 @@ function App() {
                         <Route path="/product/create" element={<ProductCreate />} />
                         <Route path="/inventory/pr" element={<PurchaseRequestPage />} />
                         <Route path="/item/requests" element={<ItemRequestForm />} />
+                        <Route path="/item/my-requests" element={<MyRequestList />} /> {/* NEW */}
                         <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
                         <Route path="/reports/stock" element={<StockValuationReport />} />
                     </Route>
 
                     {/* Procurement */}
                     <Route element={<PrivateRoute module="procurement" />}>
+                        <Route path="/procurement/dashboard" element={<ProcurementDashboard />} /> {/* NEW */}
                         <Route path="/stores/planning" element={<StoresPlanningPage />} />
                         <Route path="/stores/pending-to-po" element={<PendingToPOPage />} />
                         <Route path="/transfers/inbox" element={<TransfersInbox />} />
@@ -263,6 +284,8 @@ function App() {
                         <Route path="/finance/expenses" element={<ExpensesPage />} />
                         <Route path="/finance/tax" element={<TaxPage />} />
                         <Route path="/finance/loans" element={<LoanManagement />} />
+                        <Route path="/finance/loans" element={<LoanManagement />} />
+                        <Route path="/finance/income" element={<IncomePage />} />
                         <Route path="/finance/reports" element={<FinanceReportsPage />} />
                         <Route path="/reports/payables" element={<PayablesReport />} />
                         <Route path="/reports/receivables" element={<ReceivablesReport />} />

@@ -1,21 +1,81 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Badge, Popover, OverlayTrigger, ListGroup } from 'react-bootstrap';
 import { Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Assuming react-router v6
+import { useNavigate } from 'react-router-dom';
+import { Client } from '@stomp/stompjs';
 import api from '../../api/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function NotificationBell() {
     const [count, setCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
     const [visible, setVisible] = useState(false);
     const navigate = useNavigate();
+    const { userId, username } = useAuth();
 
-    // Poll for unread count every 30s
+    // Initial fetch
     useEffect(() => {
-        fetchCount();
-        const interval = setInterval(fetchCount, 30000);
-        return () => clearInterval(interval);
-    }, []);
+        if (userId) {
+            fetchCount();
+        }
+    }, [userId]);
+
+    // WebSocket Connection
+    useEffect(() => {
+        if (!userId) return;
+
+        // Determine Base URL similar to api.js
+        const apiBase = process.env.REACT_APP_API_URL ||
+            (typeof window !== 'undefined' && window.__API_URL__) ||
+            'http://localhost:8080/api';
+
+        // Convert to WebSocket URL
+        // 1. Replace http/https with ws/wss
+        // 2. Remove trailing /api if present
+        // 3. Append /ws/websocket
+        let wsUrl = apiBase.replace(/^http/, 'ws');
+        if (wsUrl.endsWith('/api')) {
+            wsUrl = wsUrl.slice(0, -4);
+        }
+        // Ensure no trailing slash before appending
+        if (wsUrl.endsWith('/')) {
+            wsUrl = wsUrl.slice(0, -1);
+        }
+        wsUrl += '/ws/websocket';
+
+        console.log("Connecting to WebSocket:", wsUrl);
+
+        const client = new Client({
+            brokerURL: wsUrl,
+            reconnectDelay: 5000,
+            debug: (str) => {
+                console.log('[WS Debug]:', str);
+            },
+            onConnect: () => {
+                console.log('Connected to WebSocket');
+                console.log('Subscribing to topic:', `/topic/notifications/${username}`);
+                client.subscribe(`/topic/notifications/${username}`, (message) => {
+                    console.log('Received WebSocket Message:', message.body);
+                    const newNotification = JSON.parse(message.body);
+                    setCount(prev => prev + 1);
+                    setNotifications(prev => [newNotification, ...prev]);
+                });
+            },
+            onStompError: (frame) => {
+                console.error('Broker reported error: ' + frame.headers['message']);
+                console.error('Additional details: ' + frame.body);
+            },
+            onWebSocketError: (event) => {
+                console.error('WebSocket Error:', event);
+            }
+        });
+
+        client.activate();
+
+        return () => {
+            client.deactivate();
+        };
+    }, [userId]);
 
     const fetchCount = async () => {
         try {
