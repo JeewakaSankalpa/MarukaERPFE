@@ -6,7 +6,7 @@ import {
 } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
-import { getWorkflow } from '../../services/workflowApi'; // NEW
+import { getWorkflow, listWorkflows } from '../../services/workflowApi'; // NEW
 import { useAuth } from '../../context/AuthContext';
 import ProjectQuotationCard from "./ProjectQuotationCard"; // New Component
 import { COMPONENT_IDS } from './ComponentRegistry';
@@ -21,6 +21,7 @@ const DeliveryScheduleCard = React.lazy(() => import('./DeliveryScheduleCard'));
 // New Components
 const ProjectLifecycle = React.lazy(() => import('./ProjectLifecycle'));
 const ProjectRevisions = React.lazy(() => import('./ProjectRevisions'));
+const ProjectWorkflowTab = React.lazy(() => import('./ProjectWorkflowTab'));
 
 /**
  * Main Project Details Page.
@@ -449,6 +450,13 @@ export default function ProjectDetails() {
                             </button>
                         </li>
                     )}
+                    {isComponentVisible(COMPONENT_IDS.WORKFLOW) && (
+                        <li className="nav-item">
+                            <button className={`nav-link ${activeTab === 'workflow' ? 'active' : ''}`} onClick={() => setActiveTab('workflow')}>
+                                Workflow
+                            </button>
+                        </li>
+                    )}
                 </ul>
             </div>
 
@@ -721,6 +729,15 @@ export default function ProjectDetails() {
                     <div className="mt-3 bg-white shadow-sm rounded">
                         <ProjectTasks projectId={id} reloadKey={refreshKey} />
                     </div>
+                )}
+
+                {activeTab === 'workflow' && isComponentVisible(COMPONENT_IDS.WORKFLOW) && (
+                    <ProjectWorkflowTab
+                        projectId={id}
+                        currentWorkflow={project?.workflowSnapshot}
+                        currentStageId={project?.currentStageId}
+                        onUpdate={refresh}
+                    />
                 )}
             </Suspense>
 

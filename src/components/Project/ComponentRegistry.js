@@ -9,7 +9,8 @@ export const COMPONENT_IDS = {
     INVENTORY: 'INVENTORY',
     PAYMENTS: 'PAYMENTS',
     TASKS: 'TASKS',
-    REVISIONS: 'REVISIONS'
+    REVISIONS: 'REVISIONS',
+    WORKFLOW: 'WORKFLOW'
 };
 
 export const PROJECT_COMPONENTS = [
@@ -20,7 +21,8 @@ export const PROJECT_COMPONENTS = [
     { id: COMPONENT_IDS.INVENTORY, label: 'Inventory (Tab)', description: 'Item usage tracking' },
     { id: COMPONENT_IDS.PAYMENTS, label: 'Payments (Tab)', description: 'Invoicing and Payments' },
     { id: COMPONENT_IDS.TASKS, label: 'Tasks (Tab)', description: 'Project sub-tasks' },
-    { id: COMPONENT_IDS.REVISIONS, label: 'Revisions', description: 'Version control tab' }
+    { id: COMPONENT_IDS.REVISIONS, label: 'Revisions', description: 'Version control tab' },
+    { id: COMPONENT_IDS.WORKFLOW, label: 'Workflow (Tab)', description: 'Workflow management and switching' }
 ];
 
 export const DEFAULT_VISIBLE_COMPONENTS = PROJECT_COMPONENTS.map(c => c.id);
