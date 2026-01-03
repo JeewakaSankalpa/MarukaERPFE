@@ -27,41 +27,16 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
   const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
 
   const hasAccess = (item) => {
-    // If no restrictions, accessible
-    if (!item.roles) return true;
 
-    // 1. Role Check (Must match one of the allowed roles)
-    const roleMatch = item.roles.includes(userRole);
-    if (!roleMatch) return false;
 
-    // 2. Module/ID Check
-    // If Admin/Manager, do we skip module check? 
-    // User said: "Admin manager and employee all. Acces to modules should be managed based on allowed criterial."
-    // So we apply STRICT check for everyone?
-    // "Admin should have system config access. and access to any other modules he/she is allowed"
-    // THIS IMPLIES: Admin isn't omnipotent, but has specific grants? 
-    // OR Admin implicitly has everything? Usually Admin has everything.
-    // Let's assume ADMIN has everything for now to avoid locking them out.
-    // ADMIN Access Note: User requested strict module checks for Admin too.
-    // So we do NOT return true for ADMIN automatically anymore.
-    // if (userRole === "ADMIN") return true;
-
-    // For others, if the item has an ID, we check if it's in their list.
-    // If it's a top-level menu (e.g. Projects), we simply check if they have ANY child OR the parent ID?
-    // Implementation Plan said: "user.moduleAccess.includes(menuItem.id)"
-    // If undefined ID (like Home?), pass.
-    if (!item.id || item.id === "home") return true;
 
     // Check if ID is in access list
-    // Also, legacy support: if they have "PROJECTS" (old style), maybe map it? 
-    // For now, strict new ID check.
-    // Check if ID is in access list
+    if (!item.id) return true; // Items without ID are public? Or maybe we should default to hidden? Assuming public/open if no ID.
+
     const hasPermission = userModules.includes(item.id);
 
-    // DEBUG LOG
-    if (item.id === "inventory") {
-      console.log(`Checking Access: ${item.title} (${item.id}) - Role: ${userRole}, HasPerm: ${hasPermission}, Modules:`, userModules);
-    }
+
+
 
     return hasPermission;
   };

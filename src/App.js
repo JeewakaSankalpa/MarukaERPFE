@@ -193,7 +193,7 @@ function App() {
 
                     {/* Admin */}
                     <Route element={<PrivateRoute module="admin" />}>
-                        <Route path="/admin/config" element={<SystemConfiguration />} />
+
                         {/* Users */}
                         <Route path="/user/create" element={<UserCreate mode="create" />} />
                         <Route path="/user/search" element={<UserSearch />} />

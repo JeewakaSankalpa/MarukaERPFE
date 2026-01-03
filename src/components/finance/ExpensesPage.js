@@ -7,6 +7,7 @@ import {
     PieChart, Pie, Cell
 } from 'recharts';
 import api from '../../api/api';
+import GRNPaymentModal from '../GRN/GRNPaymentModal';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF6666'];
 
@@ -14,6 +15,8 @@ export default function ExpensesPage() {
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [selectedGRN, setSelectedGRN] = useState(null);
+
 
     // Filters
     const [filterCategory, setFilterCategory] = useState('ALL');
@@ -70,6 +73,15 @@ export default function ExpensesPage() {
             loadExpenses();
         } catch (e) {
             toast.error("Failed to save expense");
+        }
+    };
+
+    const handleGRNClick = async (projectId) => {
+        try {
+            const res = await api.get(`/grns/${projectId}`);
+            setSelectedGRN(res.data);
+        } catch (e) {
+            toast.error("Failed to load GRN details");
         }
     };
 
@@ -228,9 +240,14 @@ export default function ExpensesPage() {
                                         <td>
                                             {/* Link to GRN if available */}
                                             {e.category === 'SUPPLIER_PAYMENT' && e.projectId ? (
-                                                <Link to={`/grn?poId=${e.projectId}`} className="text-decoration-none fw-bold text-dark">
+                                                <span
+                                                    role="button"
+                                                    className="text-decoration-none fw-bold text-dark"
+                                                    style={{ cursor: 'pointer' }}
+                                                    onClick={() => handleGRNClick(e.projectId)}
+                                                >
                                                     {e.title} <i className="bi bi-box-arrow-up-right ms-1 small text-primary"></i>
-                                                </Link>
+                                                </span>
                                             ) : (
                                                 <span className="fw-medium">{e.title}</span>
                                             )}
@@ -311,6 +328,13 @@ export default function ExpensesPage() {
                     <Button variant="primary" onClick={handleSave}>Save Expense</Button>
                 </Modal.Footer>
             </Modal>
+            {/* GRN Payment Modal */}
+            {selectedGRN && (
+                <GRNPaymentModal
+                    grn={selectedGRN}
+                    onClose={() => { setSelectedGRN(null); loadExpenses(); }}
+                />
+            )}
         </Container>
     );
 }

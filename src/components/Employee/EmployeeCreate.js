@@ -315,7 +315,7 @@ function EmployeeCreate({ mode }) {
             </div>
 
             {/* Import MenuConfig at top, assumed done */}
-            {MenuConfig.filter(m => m.id !== 'home').map(menu => ( /* Skip Home as it's default? Or allow hiding it? Usually Home is basic. */
+            {MenuConfig.map(menu => ( /* Show all menus including Home */
               <div key={menu.id} className="mb-3">
                 {/* Main Menu Checkbox */}
                 <Form.Check
