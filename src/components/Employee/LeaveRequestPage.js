@@ -18,6 +18,9 @@ function LeaveRequestPage() {
     const [employeesMap, setEmployeesMap] = useState({});
     const [quotas, setQuotas] = useState(null);
 
+    // Filters
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
     // Form
     const [leaveForm, setLeaveForm] = useState({
         startDate: "",
@@ -39,7 +42,8 @@ function LeaveRequestPage() {
                 fetchPendingLeaves();
             }
         }
-    }, [currentEmployee, userRole]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentEmployee, userRole, selectedYear]);
 
     const resolveCurrentEmployee = async () => {
         try {
@@ -63,6 +67,7 @@ function LeaveRequestPage() {
     const fetchMyLeaves = async () => {
         if (!currentEmployee) return;
         try {
+            // Fetch all leaves, then filter on render or optionally here
             const res = await api.get(`/leave/${currentEmployee.id}`);
             setMyLeaves(res.data || []);
         } catch (e) { toast.error("Failed to fetch leaves"); }
@@ -71,9 +76,7 @@ function LeaveRequestPage() {
     const fetchQuota = async () => {
         if (!currentEmployee) return;
         try {
-            // Default to current year
-            const year = new Date().getFullYear();
-            const res = await api.get(`/leave/quota/${currentEmployee.id}?year=${year}`);
+            const res = await api.get(`/leave/quota/${currentEmployee.id}?year=${selectedYear}`);
             setQuotas(res.data);
         } catch (e) { console.error("Failed to fetch quota"); }
     };
@@ -136,9 +139,8 @@ function LeaveRequestPage() {
 
         // Calculate Pending locally
         // Filter myLeaves for PENDING and matching type AND year (optimistic)
-        const currentYear = new Date().getFullYear();
         const pendingCount = myLeaves
-            .filter(l => l.status === 'PENDING' && l.leaveType === type && new Date(l.startDate).getFullYear() === currentYear)
+            .filter(l => l.status === 'PENDING' && l.leaveType === type && new Date(l.startDate).getFullYear() === selectedYear)
             .reduce((acc, l) => {
                 const start = new Date(l.startDate);
                 const end = new Date(l.endDate);
@@ -157,16 +159,27 @@ function LeaveRequestPage() {
 
     return (
         <Container className="my-5">
-            <div className="d-flex justify-content-between mb-4">
+            <div className="d-flex justify-content-between mb-4 align-items-center">
                 <h2>Leave Management</h2>
-                <Button variant="primary" onClick={() => setShowApplyModal(true)}>+ Apply Leave</Button>
+                <div className="d-flex gap-2">
+                    <Form.Select
+                        style={{ width: 120 }}
+                        value={selectedYear}
+                        onChange={e => setSelectedYear(parseInt(e.target.value))}
+                    >
+                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </Form.Select>
+                    <Button variant="primary" onClick={() => setShowApplyModal(true)}>+ Apply Leave</Button>
+                </div>
             </div>
 
             <Row>
                 {/* Main Content: History & Approvals */}
                 <Col md={8}>
                     <Tabs activeKey={key} onSelect={k => setKey(k)} className="mb-3">
-                        <Tab eventKey="my-leaves" title="My Requests">
+                        <Tab eventKey="my-leaves" title={`My Requests (${selectedYear})`}>
                             <Table striped bordered hover responsive>
                                 <thead>
                                     <tr>
@@ -177,19 +190,22 @@ function LeaveRequestPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {myLeaves.map(l => (
-                                        <tr key={l.id}>
-                                            <td><Badge bg="info">{l.leaveType}</Badge></td>
-                                            <td>{l.startDate} to {l.endDate}</td>
-                                            <td>{l.reason}</td>
-                                            <td>
-                                                <Badge bg={l.status === 'APPROVED' ? 'success' : l.status === 'REJECTED' ? 'danger' : 'warning'}>
-                                                    {l.status}
-                                                </Badge>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {myLeaves.length === 0 && <tr><td colSpan="4" className="text-center">No leave history</td></tr>}
+                                    {myLeaves
+                                        .filter(l => new Date(l.startDate).getFullYear() === selectedYear)
+                                        .map(l => (
+                                            <tr key={l.id}>
+                                                <td><Badge bg="info">{l.leaveType}</Badge></td>
+                                                <td>{l.startDate} to {l.endDate}</td>
+                                                <td>{l.reason}</td>
+                                                <td>
+                                                    <Badge bg={l.status === 'APPROVED' ? 'success' : l.status === 'REJECTED' ? 'danger' : 'warning'}>
+                                                        {l.status}
+                                                    </Badge>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    {myLeaves.filter(l => new Date(l.startDate).getFullYear() === selectedYear).length === 0 &&
+                                        <tr><td colSpan="4" className="text-center">No leave history for {selectedYear}</td></tr>}
                                 </tbody>
                             </Table>
                         </Tab>
@@ -230,7 +246,7 @@ function LeaveRequestPage() {
                 {/* Sidebar: Quota & Current Year Summary */}
                 <Col md={4}>
                     <div className="bg-light p-3 rounded mb-3">
-                        <h5 className="mb-3">Leave Balance ({new Date().getFullYear()})</h5>
+                        <h5 className="mb-3">Leave Balance ({selectedYear})</h5>
                         {quotas ? ['ANNUAL', 'CASUAL', 'SICK'].map(type => {
                             const bal = getBalance(type);
                             return (
@@ -251,10 +267,10 @@ function LeaveRequestPage() {
                     </div>
 
                     <div className="bg-light p-3 rounded">
-                        <h5 className="mb-3">History ({new Date().getFullYear()})</h5>
+                        <h5 className="mb-3">History ({selectedYear})</h5>
                         <ul className="list-unstyled small">
                             {myLeaves
-                                .filter(l => new Date(l.startDate).getFullYear() === new Date().getFullYear())
+                                .filter(l => new Date(l.startDate).getFullYear() === selectedYear)
                                 .slice(0, 5) // Show top 5
                                 .map(l => (
                                     <li key={l.id} className="mb-2 border-bottom pb-1">
@@ -265,7 +281,7 @@ function LeaveRequestPage() {
                                         <div>{l.status}</div>
                                     </li>
                                 ))}
-                            {myLeaves.filter(l => new Date(l.startDate).getFullYear() === new Date().getFullYear()).length === 0 &&
+                            {myLeaves.filter(l => new Date(l.startDate).getFullYear() === selectedYear).length === 0 &&
                                 <li>No history this year</li>}
                         </ul>
                     </div>

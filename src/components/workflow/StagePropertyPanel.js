@@ -81,9 +81,12 @@ export default function StagePropertyPanel({
         });
     };
 
+    // Helper
+    const normalizeKey = (s) => s.trim().toUpperCase().replace(/[^A-Z0-9_]+/g, "_");
+
     // File Rules Logic
     const addFileRule = () => {
-        const rules = [...fileRules, { key: "", label: "New Doc", required: true }];
+        const rules = [...fileRules, { key: "NEW_DOC", label: "New Doc", required: true }];
         onUpdateFlow({
             ...flow,
             fileRequirements: { ...(flow.fileRequirements || {}), [stage]: rules }
@@ -203,7 +206,10 @@ export default function StagePropertyPanel({
                                                 size="sm"
                                                 placeholder="Doc Name (e.g. BOQ)"
                                                 value={rule.label}
-                                                onChange={e => updateFileRule(i, { label: e.target.value })}
+                                                onChange={e => updateFileRule(i, {
+                                                    label: e.target.value,
+                                                    key: normalizeKey(e.target.value)
+                                                })}
                                                 className="mb-1 fw-bold"
                                             />
                                             <Form.Control

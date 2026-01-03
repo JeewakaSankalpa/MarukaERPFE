@@ -348,7 +348,7 @@ export default function ProjectDetails() {
             <Suspense fallback={<div>Loading...</div>}>
                 <ProjectLifecycle
                     key={refreshKey}
-                    stages={workflowDef?.stages || []}
+                    stages={project?.workflowSnapshot?.stages || workflowDef?.stages || []}
                     currentStage={project?.currentStage}
                     status={project?.status}
                 />

@@ -78,7 +78,7 @@ export default function WorkflowBuilder() {
 
     // --- History Helper ---
     // Wrapper around setLocalFlow to push history
-    const setFlow = (action) => {
+    const setFlow = useCallback((action) => {
         const next = typeof action === 'function' ? action(flow) : action;
         if (JSON.stringify(next) === JSON.stringify(flow)) return;
 
@@ -86,23 +86,23 @@ export default function WorkflowBuilder() {
         setHistoryStack(prev => [...prev.slice(-49), flow]);
         setRedoStack([]); // Clear redo
         setLocalFlow(next);
-    };
+    }, [flow]); // flow is the main dependency. historyStack setter is stable.
 
-    const undo = () => {
+    const undo = useCallback(() => {
         if (historyStack.length === 0) return;
         const prev = historyStack[historyStack.length - 1];
         setRedoStack(r => [flow, ...r]);
         setHistoryStack(h => h.slice(0, -1));
         setLocalFlow(prev);
-    };
+    }, [historyStack, flow]);
 
-    const redo = () => {
+    const redo = useCallback(() => {
         if (redoStack.length === 0) return;
         const next = redoStack[0];
         setRedoStack(r => r.slice(1));
         setHistoryStack(h => [...h, flow]);
         setLocalFlow(next);
-    };
+    }, [redoStack, flow]);
 
     // Keyboard Shortcuts
     useEffect(() => {
@@ -118,7 +118,7 @@ export default function WorkflowBuilder() {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [historyStack, redoStack, flow]);
+    }, [undo, redo]);
 
 
     // Debug Log Removed
@@ -128,10 +128,6 @@ export default function WorkflowBuilder() {
         (async () => {
             try {
                 setLoading(true);
-
-                // Fetch Data needed 
-                // ... (rest is same)
-
 
                 // Fetch Data needed
                 const fetchFlow = (!isNew) ? getWorkflow(id).catch(() => null) : Promise.resolve(null);
@@ -179,7 +175,6 @@ export default function WorkflowBuilder() {
 
     // --- Sync Flow -> Visual Nodes/Edges ---
     useEffect(() => {
-        console.log("Sync Effect Fired. Loading:", loading);
         if (loading) return;
 
         // Map Stages to Nodes
@@ -247,9 +242,9 @@ export default function WorkflowBuilder() {
             ...f,
             transitions: { ...f.transitions, [source]: nextRules }
         }));
-    }, [flow.transitions]);
+    }, [flow.transitions, setFlow]);
 
-    const deleteEdgeById = (edgeId) => {
+    const deleteEdgeById = useCallback((edgeId) => {
         const [source, target] = edgeId.split('->');
         if (!source || !target) return;
 
@@ -261,7 +256,7 @@ export default function WorkflowBuilder() {
             transitions: { ...f.transitions, [source]: nextRules }
         }));
         setSelection(null);
-    };
+    }, [flow.transitions, setFlow]);
 
     const onEdgesDelete = useCallback((edgesToDelete) => {
         // Batch delete
@@ -281,7 +276,7 @@ export default function WorkflowBuilder() {
             setFlow(f => ({ ...f, transitions: nextTrans }));
             setSelection(null);
         }
-    }, [flow.transitions]);
+    }, [flow.transitions, setFlow]);
 
     const onNodeDragStop = useCallback((event, node) => {
         try {
@@ -309,7 +304,7 @@ export default function WorkflowBuilder() {
 
     // Add Stage
     const [newStageName, setNewStageName] = useState("");
-    const addStage = () => {
+    const addStage = useCallback(() => {
         const key = normalizeKey(newStageName);
         if (!key) return;
         if (flow.stages.includes(key)) {
@@ -324,12 +319,13 @@ export default function WorkflowBuilder() {
             ...f,
             stages: [...f.stages, key],
             requiredApprovals: { ...f.requiredApprovals, [key]: [] },
-            visualLayout: { ...f.visualLayout, [key]: newPos }
+            visualLayout: { ...f.visualLayout, [key]: newPos },
+            initialStage: f.initialStage || key // Auto-set if empty
         }));
         setNewStageName("");
-    };
+    }, [flow.stages, newStageName, setFlow]);
 
-    const removeStage = (key) => {
+    const removeStage = useCallback((key) => {
         setFlow((f) => {
             const stages = f.stages.filter((s) => s !== key);
             const { [key]: _a, ...restApprovals } = f.requiredApprovals;
@@ -342,23 +338,31 @@ export default function WorkflowBuilder() {
                     (rules || []).filter((r) => r.to !== key),
                 ])
             );
+
+            // If we removed the initial stage, reset it
+            let nextInitial = f.initialStage;
+            if (f.initialStage === key) {
+                nextInitial = stages.length > 0 ? stages[0] : "";
+            }
+
             return {
                 ...f,
                 stages,
+                initialStage: nextInitial,
                 requiredApprovals: restApprovals,
                 transitions: cleanedTransitions,
             };
         });
         setSelection(null);
-    };
+    }, [setFlow]);
 
-    const toggleGlobalRole = (field, role) => {
+    const toggleGlobalRole = useCallback((field, role) => {
         const current = flow[field] || [];
         const next = current.includes(role)
             ? current.filter(r => r !== role)
             : [...current, role];
         setFlow(f => ({ ...f, [field]: next }));
-    };
+    }, [flow, setFlow]);
 
 
     const save = async () => {
@@ -373,9 +377,30 @@ export default function WorkflowBuilder() {
             return;
         }
 
+        // Ensure initial stage is set (backend requires it)
+        if (!flow.initialStage) {
+            // Fallback to first stage if somehow missing
+            if (flow.stages.length > 0) {
+                const first = flow.stages[0];
+                toast.info(`Setting initial stage to ${first}`);
+                // We can't update state and save immediately easily, so we patch payload
+                // But better to return and let user know or auto-fix in state?
+                // Let's patch payload for save success
+            } else {
+                toast.error("Initial stage is missing.");
+                return;
+            }
+        }
+
         try {
             setSaving(true);
-            const payload = { ...flow, id: workflowIdInput };
+            // Ensure initialStage is populated in payload
+            const payload = {
+                ...flow,
+                id: workflowIdInput,
+                initialStage: flow.initialStage || flow.stages[0]
+            };
+
             const savedFlow = await saveWorkflow(payload, workflowIdInput);
 
             setLocalFlow(savedFlow); // direct update
@@ -388,6 +413,9 @@ export default function WorkflowBuilder() {
             console.error(e);
             if (e.response && e.response.status === 409) {
                 toast.error("Version Conflict. Please refresh and try again.");
+            } else if (e.response && e.response.data) {
+                // Show backend validation error
+                toast.error(`Error: ${e.response.data}`);
             } else {
                 toast.error("Failed to save workflow.");
             }
