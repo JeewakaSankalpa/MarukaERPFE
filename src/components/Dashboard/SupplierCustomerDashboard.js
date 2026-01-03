@@ -28,6 +28,12 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 const SupplierCustomerDashboard = () => {
     const [activeTab, setActiveTab] = useState("customers");
+    // Default to YTD
+    const [dateRange, setDateRange] = useState({
+        startDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0]
+    });
+
     const [metrics, setMetrics] = useState({
         customerKPI: {},
         supplierKPI: {},
@@ -43,10 +49,16 @@ const SupplierCustomerDashboard = () => {
 
     useEffect(() => {
         fetchAllData();
-    }, []);
+    }, [dateRange]); // Refetch when dates change
 
     const fetchAllData = async () => {
+        setLoading(true);
         try {
+            const params = {
+                startDate: dateRange.startDate,
+                endDate: dateRange.endDate
+            };
+
             const [
                 cKPI,
                 sKPI,
@@ -58,15 +70,15 @@ const SupplierCustomerDashboard = () => {
                 rPOs,
                 prodSupStats,
             ] = await Promise.all([
-                axios.get("http://localhost:8080/api/analytics/customer-kpi"),
-                axios.get("http://localhost:8080/api/analytics/supplier-kpi"),
-                axios.get("http://localhost:8080/api/analytics/top-customers"),
-                axios.get("http://localhost:8080/api/analytics/top-suppliers"),
-                axios.get("http://localhost:8080/api/analytics/project-status"),
-                axios.get("http://localhost:8080/api/analytics/po-status"),
-                axios.get("http://localhost:8080/api/analytics/recent-invoices"),
+                axios.get("http://localhost:8080/api/analytics/customer-kpi", { params }),
+                axios.get("http://localhost:8080/api/analytics/supplier-kpi", { params }),
+                axios.get("http://localhost:8080/api/analytics/top-customers", { params }),
+                axios.get("http://localhost:8080/api/analytics/top-suppliers", { params }),
+                axios.get("http://localhost:8080/api/analytics/project-status"), // Status usually implies 'Current', maybe no date filter? Or created in range?
+                axios.get("http://localhost:8080/api/analytics/po-status", { params }),
+                axios.get("http://localhost:8080/api/analytics/recent-invoices"), // Recent usually ignores filter
                 axios.get("http://localhost:8080/api/analytics/recent-pos"),
-                axios.get("http://localhost:8080/api/analytics/product-supplier-stats"),
+                axios.get("http://localhost:8080/api/analytics/product-supplier-stats", { params }),
             ]);
 
             setMetrics({
@@ -95,21 +107,41 @@ const SupplierCustomerDashboard = () => {
                 <h2 className="h3 font-weight-bold text-gray-800">
                     Supplier & Customer Dashboard
                 </h2>
-                <div>
-                    <button
-                        className={`btn me-2 ${activeTab === "customers" ? "btn-primary" : "btn-light"
-                            }`}
-                        onClick={() => setActiveTab("customers")}
-                    >
-                        Customers
-                    </button>
-                    <button
-                        className={`btn ${activeTab === "suppliers" ? "btn-primary" : "btn-light"
-                            }`}
-                        onClick={() => setActiveTab("suppliers")}
-                    >
-                        Suppliers
-                    </button>
+                <div className="d-flex align-items-center gap-2">
+                    {/* Date Picker */}
+                    <div className="d-flex align-items-center me-3 bg-white p-2 border rounded shadow-sm">
+                        <span className="me-2 text-gray-600 small font-weight-bold">Period:</span>
+                        <input
+                            type="date"
+                            className="form-control form-control-sm me-2"
+                            value={dateRange.startDate}
+                            onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                        />
+                        <span className="me-2">-</span>
+                        <input
+                            type="date"
+                            className="form-control form-control-sm"
+                            value={dateRange.endDate}
+                            onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <button
+                            className={`btn me-2 ${activeTab === "customers" ? "btn-primary" : "btn-light"
+                                }`}
+                            onClick={() => setActiveTab("customers")}
+                        >
+                            Customers
+                        </button>
+                        <button
+                            className={`btn ${activeTab === "suppliers" ? "btn-primary" : "btn-light"
+                                }`}
+                            onClick={() => setActiveTab("suppliers")}
+                        >
+                            Suppliers
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -170,10 +202,11 @@ const renderCustomerView = (metrics) => {
                                 >
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis type="number" />
-                                    <YAxis type="category" dataKey="name" width={100} />
+                                    <YAxis type="category" dataKey="name" width={150} interval={0} />
                                     <Tooltip formatter={(val) => formatCurrency(val)} />
                                     <Legend />
-                                    <Bar dataKey="value" name="Revenue" fill="#4e73df" />
+                                    <Bar dataKey="received" name="Received" stackId="a" fill="#1cc88a" />
+                                    <Bar dataKey="outstanding" name="Outstanding" stackId="a" fill="#e74a3b" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -241,10 +274,10 @@ const renderCustomerView = (metrics) => {
                                         <td>
                                             <span
                                                 className={`badge bg-${inv.status === "PAID"
-                                                        ? "success"
-                                                        : inv.status === "PENDING"
-                                                            ? "warning"
-                                                            : "secondary"
+                                                    ? "success"
+                                                    : inv.status === "PENDING"
+                                                        ? "warning"
+                                                        : "secondary"
                                                     }`}
                                             >
                                                 {inv.status}
@@ -318,10 +351,11 @@ const renderSupplierView = (metrics) => {
                                 >
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis type="number" />
-                                    <YAxis type="category" dataKey="name" width={100} />
+                                    <YAxis type="category" dataKey="name" width={150} interval={0} />
                                     <Tooltip formatter={(val) => formatCurrency(val)} />
                                     <Legend />
-                                    <Bar dataKey="value" name="Spend" fill="#36b9cc" />
+                                    <Bar dataKey="paid" name="Paid" stackId="a" fill="#36b9cc" />
+                                    <Bar dataKey="outstanding" name="Outstanding" stackId="a" fill="#f6c23e" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -427,10 +461,10 @@ const renderSupplierView = (metrics) => {
                                         <td>
                                             <span
                                                 className={`badge bg-${po.status === "FINALIZED"
-                                                        ? "success"
-                                                        : po.status === "APPROVED"
-                                                            ? "info"
-                                                            : "secondary"
+                                                    ? "success"
+                                                    : po.status === "APPROVED"
+                                                        ? "info"
+                                                        : "secondary"
                                                     }`}
                                             >
                                                 {String(po.status)}
