@@ -9,9 +9,13 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
     const [auth, setAuth] = useState(() => {
         const token = localStorage.getItem("token");
-        if (!token) return { token: null, username: null, role: null, userType: null };
+        if (!token) return { token: null, username: null, role: null, userType: null, projectRoles: [], moduleAccess: [] };
         try {
             const payload = jwtDecode(token);
+            // Restore complex objects
+            const projectRoles = JSON.parse(localStorage.getItem("projectRoles") || "[]");
+            const moduleAccess = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
+
             return {
                 token,
                 username: payload.sub,
@@ -19,10 +23,12 @@ export const AuthProvider = ({ children }) => {
                 userType: payload.userType,
                 userId: localStorage.getItem("userId"),
                 employeeId: localStorage.getItem("employeeId"),
+                projectRoles,
+                moduleAccess
             };
         } catch {
             localStorage.removeItem("token");
-            return { token: null, username: null, role: null, userType: null };
+            return { token: null, username: null, role: null, userType: null, projectRoles: [], moduleAccess: [] };
         }
     });
 
