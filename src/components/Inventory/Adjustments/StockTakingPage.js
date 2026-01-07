@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../api/api';
 import {
     Container,
     Card,
@@ -36,7 +36,7 @@ const StockTakingPage = () => {
         try {
             // Fetch all users and filter client side for now, or use dedicated endpoint if available.
             // Assuming /api/user/search returns list.
-            const res = await axios.get('http://localhost:8080/api/user/search');
+            const res = await api.get('/user/search');
             // Filter only MANAGER or ADMIN for approval?
             const managers = res.data.filter(u => u.accessLevel === 'MANAGER' || u.accessLevel === 'ADMIN');
             setApprovers(managers);
@@ -48,7 +48,7 @@ const StockTakingPage = () => {
     const fetchBatches = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:8080/api/inventory/adjustments/batches');
+            const response = await api.get('/inventory/adjustments/batches');
             setBatches(response.data);
             setError(null);
         } catch (err) {
@@ -113,7 +113,7 @@ const StockTakingPage = () => {
         };
 
         try {
-            await axios.post('http://localhost:8080/api/inventory/adjustments/audit', auditPayload);
+            await api.post('/inventory/adjustments/audit', auditPayload);
             setSuccess("Stock audit submitted successfully for approval!");
             setAdjustments({});
             setAuditTitle('');

@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import Colors from "../resources/Colors";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
+import api from "../api/api";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -26,10 +26,7 @@ const Login = () => {
       return;
     }
     try {
-      // Assuming api base url is localhost:8080 or handled by proxy/axios default.
-      // Since axios is imported directly, let's use full URL or ensure base URL config.
-      // Ideally use the `api` instance from `../api/api` but reusing axios here for speed as per user req style.
-      await axios.post("http://localhost:8080/api/auth/forgot-password", forgotData);
+      await api.post("/auth/forgot-password", forgotData);
       toast.success("Temporary password sent to your email.");
       setShowForgot(false);
     } catch (e) {

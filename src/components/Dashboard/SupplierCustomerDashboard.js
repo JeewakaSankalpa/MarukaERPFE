@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from '../../api/api';
 import {
     BarChart,
     Bar,
@@ -70,15 +70,15 @@ const SupplierCustomerDashboard = () => {
                 rPOs,
                 prodSupStats,
             ] = await Promise.all([
-                axios.get("http://localhost:8080/api/analytics/customer-kpi", { params }),
-                axios.get("http://localhost:8080/api/analytics/supplier-kpi", { params }),
-                axios.get("http://localhost:8080/api/analytics/top-customers", { params }),
-                axios.get("http://localhost:8080/api/analytics/top-suppliers", { params }),
-                axios.get("http://localhost:8080/api/analytics/project-status"), // Status usually implies 'Current', maybe no date filter? Or created in range?
-                axios.get("http://localhost:8080/api/analytics/po-status", { params }),
-                axios.get("http://localhost:8080/api/analytics/recent-invoices"), // Recent usually ignores filter
-                axios.get("http://localhost:8080/api/analytics/recent-pos"),
-                axios.get("http://localhost:8080/api/analytics/product-supplier-stats", { params }),
+                api.get("/analytics/customer-kpi", { params }),
+                api.get("/analytics/supplier-kpi", { params }),
+                api.get("/analytics/top-customers", { params }),
+                api.get("/analytics/top-suppliers", { params }),
+                api.get("/analytics/project-status"), // Status usually implies 'Current', maybe no date filter? Or created in range?
+                api.get("/analytics/po-status", { params }),
+                api.get("/analytics/recent-invoices"), // Recent usually ignores filter
+                api.get("/analytics/recent-pos"),
+                api.get("/analytics/product-supplier-stats", { params }),
             ]);
 
             setMetrics({

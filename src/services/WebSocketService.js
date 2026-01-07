@@ -1,7 +1,10 @@
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-const SOCKET_URL = 'http://localhost:8080/ws';
+const baseURL = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' && window.__API_URL__) || 'http://localhost:8080/api';
+// Remove /api if present at end (since /ws is usually peer to /api, not child)
+const wsBase = baseURL.endsWith('/api') ? baseURL.slice(0, -4) : baseURL;
+const SOCKET_URL = `${wsBase}/ws`;
 
 class WebSocketService {
     constructor() {

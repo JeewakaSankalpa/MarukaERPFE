@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../api/api";
 import {
     BarChart,
     Bar,
@@ -45,9 +45,9 @@ const HRStatsDashboard = () => {
     const fetchDashboardData = async () => {
         try {
             const [hrStatsRes, roleRes, hierarchyRes] = await Promise.all([
-                axios.get("http://localhost:8080/api/analytics/hr-stats"),
-                axios.get("http://localhost:8080/api/analytics/role-distribution"),
-                axios.get("http://localhost:8080/api/analytics/org-hierarchy"),
+                api.get("/analytics/hr-stats"),
+                api.get("/analytics/role-distribution"),
+                api.get("/analytics/org-hierarchy"),
             ]);
 
             setStats(hrStatsRes.data);
@@ -62,7 +62,7 @@ const HRStatsDashboard = () => {
 
     const fetchTrendData = async () => {
         try {
-            const res = await axios.get("http://localhost:8080/api/analytics/attendance-trend", {
+            const res = await api.get("/analytics/attendance-trend", {
                 params: { month: trendFilter.month, year: trendFilter.year },
             });
             setAttendanceTrend(res.data);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../api/api';
 import {
     Container,
     Card,
@@ -30,7 +30,7 @@ const StockAuditApprovalsPage = () => {
     const fetchAudits = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:8080/api/inventory/adjustments/audit');
+            const response = await api.get('/inventory/adjustments/audit');
             const sorted = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             setAudits(sorted);
             setError(null);
@@ -48,7 +48,7 @@ const StockAuditApprovalsPage = () => {
         setApproving(true);
         try {
             const user = "Manager"; // Replace with actual logged in user if auth is available
-            await axios.post(`http://localhost:8080/api/inventory/adjustments/audit/${approveDialog}/approve`, null, {
+            await api.post(`/inventory/adjustments/audit/${approveDialog.id}/approve`, null, {
                 params: { approver: user }
             });
             setSuccess("Audit approved and stock updated successfully.");
