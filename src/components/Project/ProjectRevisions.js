@@ -3,10 +3,39 @@ import { Table, Button, Badge, Modal, Form, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 
-export default function ProjectRevisions({ projectId, versions, roleHeader, onRevise, onViewSnapshot }) {
+export default function ProjectRevisions({ projectId, versions, stages, currentStageType, roleHeader, onRevise, onViewSnapshot }) {
     const [showReviseModal, setShowReviseModal] = useState(false);
     const [reason, setReason] = useState('');
-    const [targetStage, setTargetStage] = useState('INQUIRY');
+
+    // Calculate unique past stages for the dropdown
+    const uniquePastStages = React.useMemo(() => {
+        if (!stages || !Array.isArray(stages)) return [];
+        const seen = new Set();
+        const past = [];
+
+        // Iterate through history
+        stages.forEach(s => {
+            // Exclude current stage type
+            if (s.stageType && s.stageType !== currentStageType) {
+                if (!seen.has(s.stageType)) {
+                    seen.add(s.stageType);
+                    past.push(s.stageType);
+                }
+            }
+        });
+        return past;
+    }, [stages, currentStageType]);
+
+    // Default target to the first available past stage, or keep existing logic
+    const [targetStage, setTargetStage] = useState(uniquePastStages.length > 0 ? uniquePastStages[0] : '');
+
+    // Update targetStage when options change/modal opens
+    React.useEffect(() => {
+        if (uniquePastStages.length > 0 && !targetStage) {
+            setTargetStage(uniquePastStages[0]);
+        }
+    }, [uniquePastStages, targetStage]);
+
     const [submitting, setSubmitting] = useState(false);
 
     // Restore Modal State
@@ -15,6 +44,7 @@ export default function ProjectRevisions({ projectId, versions, roleHeader, onRe
 
     const handleRevise = async () => {
         if (!reason) return toast.warn("Reason is required");
+        if (!targetStage) return toast.warn("Target stage is required"); // Added validation
         setSubmitting(true);
         try {
             await api.post(`/projects/${projectId}/revise`,
@@ -121,10 +151,10 @@ export default function ProjectRevisions({ projectId, versions, roleHeader, onRe
                     <Form.Group className="mb-3">
                         <Form.Label>Move Back To</Form.Label>
                         <Form.Select value={targetStage} onChange={e => setTargetStage(e.target.value)}>
-                            <option value="INQUIRY">Inquiry / Requirements</option>
-                            <option value="DESIGN">Design Phase</option>
-                            <option value="ESTIMATION">Estimation</option>
-                            <option value="QUOTATION">Quotation</option>
+                            {uniquePastStages.length === 0 && <option value="">No past stages available</option>}
+                            {uniquePastStages.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
                         </Form.Select>
                     </Form.Group>
                 </Modal.Body>

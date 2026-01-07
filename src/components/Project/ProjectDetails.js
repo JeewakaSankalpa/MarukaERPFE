@@ -427,7 +427,7 @@ export default function ProjectDetails() {
                     </li>
                     {isComponentVisible(COMPONENT_IDS.REVISIONS) && (
                         <li className="nav-item">
-                            <button className={`nav-link ${activeTab === 'revisions' ? 'active' : ''}`} onClick={() => setActiveTab('revisions')}>
+                            <button className={`nav-link ${activeTab === COMPONENT_IDS.REVISIONS ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.REVISIONS)}>
                                 Revisions {project?.revisionCount > 0 && <Badge bg="secondary" pill>{project.revisionCount}</Badge>}
                             </button>
                         </li>
@@ -435,21 +435,21 @@ export default function ProjectDetails() {
                     {/* Inventory is usually always visible if they have module access? */}
                     {isComponentVisible(COMPONENT_IDS.INVENTORY) && (
                         <li className="nav-item">
-                            <button className={`nav-link ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>
+                            <button className={`nav-link ${activeTab === COMPONENT_IDS.INVENTORY ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.INVENTORY)}>
                                 Inventory
                             </button>
                         </li>
                     )}
                     {(hasAccess('projects.payments') && isComponentVisible(COMPONENT_IDS.PAYMENTS)) && (
                         <li className="nav-item">
-                            <button className={`nav-link ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
+                            <button className={`nav-link ${activeTab === COMPONENT_IDS.PAYMENTS ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.PAYMENTS)}>
                                 Payments
                             </button>
                         </li>
                     )}
                     {isComponentVisible(COMPONENT_IDS.TASKS) && (
                         <li className="nav-item">
-                            <button className={`nav-link ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+                            <button className={`nav-link ${activeTab === COMPONENT_IDS.TASKS ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.TASKS)}>
                                 Tasks
                             </button>
                         </li>
@@ -461,7 +461,7 @@ export default function ProjectDetails() {
                     </li>
                     {isComponentVisible(COMPONENT_IDS.WORKFLOW) && (
                         <li className="nav-item">
-                            <button className={`nav-link ${activeTab === 'workflow' ? 'active' : ''}`} onClick={() => setActiveTab('workflow')}>
+                            <button className={`nav-link ${activeTab === COMPONENT_IDS.WORKFLOW ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.WORKFLOW)}>
                                 Workflow
                             </button>
                         </li>
@@ -710,18 +710,19 @@ export default function ProjectDetails() {
                     <ProjectRevisions
                         projectId={id}
                         versions={project?.versions}
+                        stages={project?.stages}
+                        currentStageType={stageObj?.stageType}
                         roleHeader={{ 'X-Roles': rolesHeader }} // or however your API expects roles, likely just implicit or in useAuth
                         onRevise={refresh}
-                        activeStage={project?.currentStageId}
                         onViewSnapshot={handleViewSnapshot}
                     />
                 )}
 
-                {activeTab === 'inventory' && isComponentVisible(COMPONENT_IDS.INVENTORY) && (
+                {activeTab === COMPONENT_IDS.INVENTORY && isComponentVisible(COMPONENT_IDS.INVENTORY) && (
                     <ProjectInventoryCard projectId={id} reloadKey={refreshKey} />
                 )}
 
-                {activeTab === 'payments' && isComponentVisible(COMPONENT_IDS.PAYMENTS) && (
+                {activeTab === COMPONENT_IDS.PAYMENTS && isComponentVisible(COMPONENT_IDS.PAYMENTS) && (
                     <div className="mt-3">
                         <ProjectPaymentsCard
                             projectId={id}
@@ -734,7 +735,7 @@ export default function ProjectDetails() {
                 )}
 
 
-                {activeTab === 'tasks' && isComponentVisible(COMPONENT_IDS.TASKS) && (
+                {activeTab === COMPONENT_IDS.TASKS && isComponentVisible(COMPONENT_IDS.TASKS) && (
                     <div className="mt-3">
                         <div className="d-flex gap-2 mb-3">
                             <Button variant={taskSubTab === 'list' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('list')}>List View</Button>
@@ -768,7 +769,7 @@ export default function ProjectDetails() {
                     )
                 }
 
-                {activeTab === 'workflow' && isComponentVisible(COMPONENT_IDS.WORKFLOW) && (
+                {activeTab === COMPONENT_IDS.WORKFLOW && isComponentVisible(COMPONENT_IDS.WORKFLOW) && (
                     <ProjectWorkflowTab
                         projectId={id}
                         currentWorkflow={project?.workflowSnapshot}
