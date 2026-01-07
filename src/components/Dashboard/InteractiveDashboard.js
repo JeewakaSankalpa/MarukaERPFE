@@ -37,7 +37,7 @@ const InteractiveDashboard = () => {
                     api.get('/analytics/project-status'),
                     api.get('/analytics/hr-stats'),
                     api.get('/analytics/ops-stats'),
-                    api.get('/analytics/activity')
+                    api.get('/analytics/recent-activity')
                 ]);
 
                 setSalesData(salesRes.data.data || []);
@@ -45,7 +45,9 @@ const InteractiveDashboard = () => {
                 setProjectStatus(projectRes.data.data || []);
                 setHrStats(hrRes.data || { totalEmployees: 0, presentToday: 0, absentToday: 0, pendingLeaves: 0 });
                 setOpsStats(opsRes.data || { overdueProjects: 0, pendingApprovals: 0 });
-                setRecentActivity(activityRes.data.data || []);
+
+                const activityData = Array.isArray(activityRes.data) ? activityRes.data : (activityRes.data.data || []);
+                setRecentActivity(activityData);
 
             } catch (e) {
                 console.error("Dashboard Load Error", e);
@@ -195,7 +197,7 @@ const InteractiveDashboard = () => {
                                         <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
                                             <div className="d-flex align-items-center">
                                                 <ActivityIcon type={log.type} />
-                                                <span>{log.description}</span>
+                                                <span>{log.message}</span>
                                             </div>
                                             <span className="badge bg-light text-dark">
                                                 {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
