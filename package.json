@@ -64,4 +64,9 @@
     "@testing-library/react": "^16.3.0",
     "tailwindcss": "^4.1.11"
   }
+},
+"overrides": {
+  "react": "$react",
+  "react-dom": "$react-dom"
+}
 }
