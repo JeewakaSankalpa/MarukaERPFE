@@ -183,7 +183,7 @@ export default function SystemConfiguration() {
                                 label="Procurement Alerts (POs, IRs)"
                                 name="app.notification.enable.store.procurement"
                                 checked={config["app.notification.enable.store.procurement"] !== "false"} // Default true
-                                onChange={(e) => setConfig({ ...config, "app.notification.enable.store.procurement": String(e.target.checked) })}
+                                onChange={handleChange}
                                 className="mb-2"
                             />
                             <Form.Check
@@ -221,82 +221,130 @@ export default function SystemConfiguration() {
 
             <Card className="shadow-sm">
                 <Card.Header className="bg-white py-3">
-                    <h5 className="mb-0 text-primary">Email Settings (SMTP)</h5>
+                    <h5 className="mb-0 text-primary">Email Configuration</h5>
                 </Card.Header>
                 <Card.Body>
                     <Form onSubmit={handleSave}>
-                        <Row className="g-3">
-                            <Col md={6}>
-                                <Form.Group>
-                                    <Form.Label>SMTP Host</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        name="spring.mail.host"
-                                        value={config["spring.mail.host"]}
-                                        onChange={handleChange}
-                                        placeholder="e.g. smtp.gmail.com"
-                                    />
-                                </Form.Group>
-                            </Col>
-                            <Col md={3}>
-                                <Form.Group>
-                                    <Form.Label>Port</Form.Label>
-                                    <Form.Control
-                                        type="number"
-                                        name="spring.mail.port"
-                                        value={config["spring.mail.port"]}
-                                        onChange={handleChange}
-                                        placeholder="587"
-                                    />
-                                </Form.Group>
-                            </Col>
-                            <Col md={3} className="d-flex align-items-center pt-4">
-                                <Form.Switch
-                                    id="auth-switch"
-                                    label="SMTP Auth"
-                                    name="spring.mail.properties.mail.smtp.auth"
-                                    checked={config["spring.mail.properties.mail.smtp.auth"] === "true"}
-                                    onChange={(e) => setConfig({ ...config, "spring.mail.properties.mail.smtp.auth": String(e.target.checked) })}
-                                />
-                                <Form.Switch
-                                    id="tls-switch"
-                                    label="STARTTLS"
-                                    className="ms-3"
-                                    name="spring.mail.properties.mail.smtp.starttls.enable"
-                                    checked={config["spring.mail.properties.mail.smtp.starttls.enable"] === "true"}
-                                    onChange={(e) => setConfig({ ...config, "spring.mail.properties.mail.smtp.starttls.enable": String(e.target.checked) })}
-                                />
-                            </Col>
+                        <div className="mb-4">
+                            <label className="form-label fw-bold">Email Provider</label>
+                            <select
+                                className="form-select"
+                                value={config['app.email.provider'] || 'SMTP'}
+                                onChange={(e) => setConfig({ ...config, 'app.email.provider': e.target.value })}
+                            >
+                                <option value="SMTP">SMTP (Standard)</option>
+                                <option value="GMAIL">Gmail API (Recommended for Render)</option>
+                                <option value="BREVO">Brevo API (Free Tier)</option>
+                            </select>
+                            <small className="text-muted">
+                                Select "Gmail API" if your hosting provider blocks SMTP ports (e.g. Render Free Tier).
+                            </small>
+                        </div>
 
-                            <Col md={6}>
-                                <Form.Group>
-                                    <Form.Label>Username / Email</Form.Label>
+                        {config['app.email.provider'] === 'GMAIL' ? (
+                            <div className="p-3 bg-light rounded border mb-3">
+                                <h6 className="text-primary mb-3">
+                                    <i className="bi bi-google me-2"></i>Gmail API Credentials
+                                </h6>
+                                <div className="mb-3">
+                                    <label className="form-label">Client ID</label>
                                     <Form.Control
                                         type="text"
-                                        name="spring.mail.username"
-                                        value={config["spring.mail.username"]}
-                                        onChange={handleChange}
-                                        autoComplete="off"
+                                        value={config['app.email.gmail.client_id'] || ''}
+                                        onChange={(e) => setConfig({ ...config, 'app.email.gmail.client_id': e.target.value })}
+                                        placeholder="Running on Google Cloud..."
                                     />
-                                </Form.Group>
-                            </Col>
-                            <Col md={6}>
-                                <Form.Group>
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Client Secret</label>
+                                    <Form.Control
+                                        type="password"
+                                        value={config['app.email.gmail.client_secret'] || ''}
+                                        onChange={(e) => setConfig({ ...config, 'app.email.gmail.client_secret': e.target.value })}
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Refresh Token</label>
+                                    <Form.Control
+                                        as="textarea"
+                                        rows={3}
+                                        value={config['app.email.gmail.refresh_token'] || ''}
+                                        onChange={(e) => setConfig({ ...config, 'app.email.gmail.refresh_token': e.target.value })}
+                                        placeholder="Enter your OAuth2 Refresh Token here..."
+                                    />
+                                    <div className="form-text mt-2">
+                                        <strong>How to get this?</strong> Use the <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noreferrer">Google OAuth Playground</a> to authorize the 'https://mail.google.com/' scope and exchange the authorization code for a Refresh Token.
+                                    </div>
+                                </div>
+                            </div>
+                        ) : config['app.email.provider'] === 'BREVO' ? (
+                            <div className="p-3 bg-light rounded border mb-3">
+                                <h6 className="text-success mb-3">Brevo API Settings</h6>
+                                <div className="mb-3">
+                                    <label className="form-label">API Key</label>
+                                    <Form.Control
+                                        type="password"
+                                        value={config['app.email.brevo.apikey'] || ''}
+                                        onChange={(e) => setConfig({ ...config, 'app.email.brevo.apikey': e.target.value })}
+                                        placeholder="xkeysib-..."
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-3 bg-light rounded border mb-3">
+                                <h6 className="text-secondary mb-3">SMTP Settings</h6>
+                                <Row className="g-3">
+                                    <Col md={8}>
+                                        <Form.Group>
+                                            <Form.Label>SMTP Host</Form.Label>
+                                            <Form.Control
+                                                type="text"
+                                                value={config["spring.mail.host"] || ""}
+                                                onChange={(e) => setConfig({ ...config, "spring.mail.host": e.target.value })}
+                                                placeholder="e.g. smtp.gmail.com"
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                    <Col md={4}>
+                                        <Form.Group>
+                                            <Form.Label>Port</Form.Label>
+                                            <Form.Control
+                                                type="number"
+                                                value={config["spring.mail.port"] || ""}
+                                                onChange={(e) => setConfig({ ...config, "spring.mail.port": e.target.value })}
+                                                placeholder="587"
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                </Row>
+                                <div className="mb-3 mt-3">
+                                    <Form.Label>Username</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        value={config["spring.mail.username"] || ""}
+                                        onChange={(e) => setConfig({ ...config, "spring.mail.username": e.target.value })}
+                                    />
+                                </div>
+                                <div className="mb-3">
                                     <Form.Label>Password</Form.Label>
                                     <Form.Control
                                         type="password"
-                                        name="spring.mail.password"
-                                        value={config["spring.mail.password"]}
-                                        onChange={handleChange}
-                                        placeholder="Leave empty to keep unchanged"
-                                        autoComplete="new-password"
+                                        value={config["spring.mail.password"] || ""}
+                                        onChange={(e) => setConfig({ ...config, "spring.mail.password": e.target.value })}
                                     />
-                                    <Form.Text className="text-muted">
-                                        Password is encrypted before sending.
-                                    </Form.Text>
-                                </Form.Group>
-                            </Col>
-                        </Row>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mb-3">
+                            <Form.Label>From Address (Notification Email)</Form.Label>
+                            <Form.Control
+                                type="email"
+                                value={config['app.notification.from.email'] || ''}
+                                onChange={(e) => setConfig({ ...config, 'app.notification.from.email': e.target.value })}
+                                placeholder="e.g. notifications@yourcompany.com"
+                            />
+                        </div>
 
                         <div className="mt-4 d-flex justify-content-end">
                             <Button variant="primary" type="submit" disabled={saving}>
@@ -304,8 +352,8 @@ export default function SystemConfiguration() {
                             </Button>
                         </div>
                     </Form>
-                </Card.Body>
-            </Card>
+                </Card.Body >
+            </Card >
         </Container >
     );
 }
