@@ -14,18 +14,23 @@ export default function PrivateRoute({ children, module }) {
 
     // Check Module Access if 'module' prop is passed
     if (module) {
-        try {
-            const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
-            if (!userModules.includes(module)) {
-                console.error(`[PrivateRoute] Access Denied! Module: '${module}'. User Modules:`, userModules);
-                if (location.pathname !== '/dashboard') {
-                    return <Navigate to="/dashboard" replace />;
+        // Bypass for ADMIN
+        if (role === "ADMIN") {
+            // Access Granted
+        } else {
+            try {
+                const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
+                if (!userModules.includes(module)) {
+                    console.error(`[PrivateRoute] Access Denied! Module: '${module}'. User Modules:`, userModules);
+                    if (location.pathname !== '/dashboard') {
+                        return <Navigate to="/dashboard" replace />;
+                    }
+                } else if (module === 'settings') {
+                    console.log(`[PrivateRoute] Access GRANTED for settings. User Modules:`, userModules);
                 }
-            } else if (module === 'settings') {
-                console.log(`[PrivateRoute] Access GRANTED for settings. User Modules:`, userModules);
+            } catch (e) {
+                console.error("Error parsing module access", e);
             }
-        } catch (e) {
-            console.error("Error parsing module access", e);
         }
     }
 

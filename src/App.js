@@ -82,6 +82,7 @@ import FinanceReportsPage from './components/finance/FinanceReportsPage';
 import IncomePage from './components/finance/IncomePage';
 import AccountsPage from './components/finance/AccountsPage';
 import JournalEntryList from './components/finance/JournalEntryList';
+import PettyCashApprovalPage from './components/finance/PettyCashApprovalPage';
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
 import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
@@ -92,6 +93,7 @@ import InvoiceView from "./components/Projects/InvoiceView";
 // import QuotationList from "./components/Sales/QuotationList";
 // import QuotationPage from "./components/Sales/QuotationPage";
 import SettingsPage from "./components/settings/SettingsPage";
+import SuperAdminPage from "./components/admin/SuperAdminPage";
 
 
 
@@ -298,11 +300,13 @@ function App() {
                         <Route path="/reports/payables" element={<PayablesReport />} />
                         <Route path="/reports/receivables" element={<ReceivablesReport />} />
                         <Route path="/assets" element={<AssetRegister />} />
+                        <Route path="/finance/petty-cash-approvals" element={<PettyCashApprovalPage />} />
                     </Route>
 
                     {/* Settings / Admin */}
                     <Route element={<PrivateRoute module="settings" />}>
                         <Route path="/admin/config" element={<SystemConfiguration />} />
+                        <Route path="/admin/super-admin" element={<SuperAdminPage />} />
                         <Route path="/admin/workflows" element={<WorkflowList />} />
                         <Route path="/admin/workflow/new" element={<WorkflowBuilder />} />
                         <Route path="/admin/workflow/:id" element={<WorkflowBuilder />} />

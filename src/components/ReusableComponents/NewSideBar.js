@@ -29,16 +29,24 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
   const hasAccess = (item) => {
 
 
-
     // Check if ID is in access list
-    if (!item.id) return true; // Items without ID are public? Or maybe we should default to hidden? Assuming public/open if no ID.
+    if (!item.id) return true;
 
-    const hasPermission = userModules.includes(item.id);
+    // Special Restricted Items (Must have explicit permission, no hierarchy)
+    if (item.id === "settings.super_admin") {
+      return userModules.includes("settings.super_admin");
+    }
 
+    // Exact Match
+    if (userModules.includes(item.id)) return true;
 
+    // Hierarchy Match (e.g. "projects" grants access to "projects.create")
+    if (item.id.includes('.')) {
+      const parentId = item.id.split('.')[0];
+      if (userModules.includes(parentId)) return true;
+    }
 
-
-    return hasPermission;
+    return false;
   };
 
   const iconMap = {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Badge, Tag, Row, Col, Statistic } from 'antd';
-import { PlusOutlined, BankOutlined, DollarOutlined } from '@ant-design/icons';
+import { PlusOutlined, BankOutlined, DollarOutlined, BookOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import AccountLedgerModal from './AccountLedgerModal';
 
 const { Option } = Select;
 
@@ -10,6 +11,10 @@ const AccountsPage = () => {
     const [loading, setLoading] = useState(false);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm();
+
+    // Ledger Modal State
+    const [ledgerVisible, setLedgerVisible] = useState(false);
+    const [selectedAccountId, setSelectedAccountId] = useState(null);
 
     const fetchAccounts = async () => {
         setLoading(true);
@@ -40,6 +45,11 @@ const AccountsPage = () => {
         } catch (error) {
             console.error("Failed to create account", error);
         }
+    };
+
+    const handleViewLedger = (accId) => {
+        setSelectedAccountId(accId);
+        setLedgerVisible(true);
     };
 
     const columns = [
@@ -87,6 +97,13 @@ const AccountsPage = () => {
             dataIndex: 'isActive',
             key: 'isActive',
             render: active => active ? <Badge status="success" text="Active" /> : <Badge status="default" text="Inactive" />
+        },
+        {
+            title: 'Actions',
+            key: 'actions',
+            render: (_, record) => (
+                <Button size="small" icon={<BookOutlined />} onClick={() => handleViewLedger(record.id)}>Ledger</Button>
+            )
         }
     ];
 
@@ -162,6 +179,12 @@ const AccountsPage = () => {
                     </Form.Item>
                 </Form>
             </Modal>
+
+            <AccountLedgerModal
+                accountId={selectedAccountId}
+                open={ledgerVisible}
+                onCancel={() => setLedgerVisible(false)}
+            />
         </div>
     );
 };

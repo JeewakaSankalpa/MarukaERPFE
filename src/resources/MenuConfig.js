@@ -45,7 +45,6 @@ export const MenuConfig = [
             { id: "inventory.return", title: "Returns", path: "/inventory/return" },
             { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
             { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
-
         ]
     },
     {
@@ -115,6 +114,7 @@ export const MenuConfig = [
             { id: "finance.income", title: "Income", path: "/finance/income" },
             { id: "finance.accounts", title: "Chart of Accounts", path: "/finance/accounts" }, // NEW
             { id: "finance.journals", title: "Journal Entries", path: "/finance/journals" },  // NEW
+            { id: "finance.approvals", title: "Petty Cash Approvals", path: "/finance/petty-cash-approvals" },
             { id: "finance.loans", title: "Loan Management", path: "/finance/loans" },
             { id: "finance.reports", title: "Financial Statements", path: "/finance/reports" },
             { id: "finance.assets", title: "Asset Register", path: "/assets" },
@@ -131,6 +131,7 @@ export const MenuConfig = [
             { id: "settings.estimation", title: "Estimation Settings", path: "/settings" },
             { id: "settings.departments", title: "Departments", path: "/departments" },
             { id: "settings.new_department", title: "New Department", path: "/departments/new" },
+            { id: "settings.super_admin", title: "System Reset (DANGER)", path: "/admin/super-admin" },
         ]
     }
 ];

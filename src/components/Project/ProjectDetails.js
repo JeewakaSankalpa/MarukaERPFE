@@ -785,7 +785,7 @@ export default function ProjectDetails() {
                 )}
 
                 {activeTab === 'finance' && (
-                    <ProjectFinanceTab projectId={id} />
+                    <ProjectFinanceTab projectId={id} currency={p.currency} />
                 )}
             </Suspense >
 
