@@ -40,12 +40,6 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
     // Exact Match
     if (userModules.includes(item.id)) return true;
 
-    // Hierarchy Match (e.g. "projects" grants access to "projects.create")
-    if (item.id.includes('.')) {
-      const parentId = item.id.split('.')[0];
-      if (userModules.includes(parentId)) return true;
-    }
-
     return false;
   };
 
@@ -65,17 +59,23 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
 
     submenus: menu.subItems.map(item => ({ ...item, name: item.title })) // Map 'title' to 'name' to fix display issue
   })).map(menu => {
-    // Filter submenus first
+    // 1. Filter submenus based on access
     const visibleSubmenus = menu.submenus.filter(sub => hasAccess(sub) && !sub.hidden);
 
-    // If no filtered submenus, do we show parent? 
-    // Only if parent itself is accessible AND (has submenus OR is a leaf?)
-    // Actually, usually if all children are hidden, hide parent.
-    // Let's check parent access first
-    if (!hasAccess(menu)) return null;
-    if (menu.hidden) return null; // Hide parent if marked hidden
+    // 2. Determine if Parent should be shown
+    // Show if:
+    // a) It has visible submenus (Container)
+    // b) OR (It has explicit access AND custom path) -> It's a Link
+    const hasParentAccess = hasAccess(menu);
+    const isLink = !!menu.path;
 
-    // If parent has access, show it. 
+    // Logic: If it's just a folder (no path), it MUST have children to be shown.
+    // If it's a link (like Dashboard), it can be shown just by itself.
+    const shouldShowParent = (visibleSubmenus.length > 0 || (hasParentAccess && isLink)) && !menu.hidden;
+
+    if (!shouldShowParent) return null;
+
+    // 3. Return the menu structure
     return { ...menu, submenus: visibleSubmenus };
   }).filter(Boolean); // Remove nulls
 
