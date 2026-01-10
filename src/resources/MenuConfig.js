@@ -113,6 +113,8 @@ export const MenuConfig = [
             { id: "finance.dashboard", title: "Finance Dashboard", path: "/finance/dashboard" },
             { id: "finance.expenses", title: "Expenses", path: "/finance/expenses" },
             { id: "finance.income", title: "Income", path: "/finance/income" },
+            { id: "finance.accounts", title: "Chart of Accounts", path: "/finance/accounts" }, // NEW
+            { id: "finance.journals", title: "Journal Entries", path: "/finance/journals" },  // NEW
             { id: "finance.loans", title: "Loan Management", path: "/finance/loans" },
             { id: "finance.reports", title: "Financial Statements", path: "/finance/reports" },
             { id: "finance.assets", title: "Asset Register", path: "/assets" },

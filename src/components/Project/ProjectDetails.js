@@ -25,6 +25,7 @@ const ProjectComments = React.lazy(() => import('./ProjectComments'));
 const ProjectWorkflowTab = React.lazy(() => import('./ProjectWorkflowTab'));
 const ProjectKanban = React.lazy(() => import('../Projects/Tasks/ProjectKanban'));
 const ProjectGantt = React.lazy(() => import('../Projects/Tasks/ProjectGantt'));
+const ProjectFinanceTab = React.lazy(() => import('./ProjectFinanceTab'));
 
 /**
  * Main Project Details Page.
@@ -466,6 +467,11 @@ export default function ProjectDetails() {
                             </button>
                         </li>
                     )}
+                    <li className="nav-item">
+                        <button className={`nav-link ${activeTab === 'finance' ? 'active' : ''}`} onClick={() => setActiveTab('finance')}>
+                            Finance
+                        </button>
+                    </li>
                 </ul>
             </div>
 
@@ -776,6 +782,10 @@ export default function ProjectDetails() {
                         currentStageId={project?.currentStageId}
                         onUpdate={refresh}
                     />
+                )}
+
+                {activeTab === 'finance' && (
+                    <ProjectFinanceTab projectId={id} />
                 )}
             </Suspense >
 

@@ -80,6 +80,8 @@ import TaxPage from './components/finance/TaxPage';
 import LoanManagement from './components/finance/LoanManagement';
 import FinanceReportsPage from './components/finance/FinanceReportsPage';
 import IncomePage from './components/finance/IncomePage';
+import AccountsPage from './components/finance/AccountsPage';
+import JournalEntryList from './components/finance/JournalEntryList';
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
 import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
@@ -285,6 +287,8 @@ function App() {
                     {/* Sales & Finance (Combined in MenuConfig as 'finance') */}
                     <Route element={<PrivateRoute module="finance" />}>
                         <Route path="/finance/dashboard" element={<FinanceDashboard />} />
+                        <Route path="/finance/accounts" element={<AccountsPage />} />
+                        <Route path="/finance/journals" element={<JournalEntryList />} />
                         <Route path="/finance/expenses" element={<ExpensesPage />} />
                         <Route path="/finance/tax" element={<TaxPage />} />
                         <Route path="/finance/loans" element={<LoanManagement />} />

@@ -120,6 +120,7 @@ export default function FinanceDashboard() {
                                 <Card.Header>Quick Actions</Card.Header>
                                 <Card.Body className="d-flex gap-3">
                                     <Button variant="outline-primary" href="#/finance/expenses">Go to Expenses</Button>
+                                    <Button variant="outline-primary" href="#/finance/accounts">Chart of Accounts</Button>
                                     <Button variant="outline-primary" href="#/salary">Go to Payroll</Button>
                                     <Button variant="outline-primary" href="#/assets">Go to Assets</Button>
                                     <Button variant="outline-primary" href="#/finance/loans">Loan Management</Button>
