@@ -91,7 +91,16 @@ function EmployeeCreate({ mode }) {
     const fetchRules = async () => {
       try {
         const res = await api.get('/notification-rules');
-        setNotificationRules(res.data);
+        const rules = res.data || [];
+        setNotificationRules(rules);
+
+        // Pre-fill subscriptions if in edit mode
+        if (id) {
+          const subscribed = rules
+            .filter(r => r.targetEmployeeIds && r.targetEmployeeIds.includes(id))
+            .map(r => r.id);
+          setSubscribedRuleIds(subscribed);
+        }
       } catch (e) { console.error("Failed to load generic rules"); }
     };
     fetchRules();

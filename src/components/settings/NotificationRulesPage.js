@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { Container, Table, Form, Button, Card, Badge, Accordion, Row, Col } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
-import { MenuConfig } from '../../resources/MenuConfig';
+
 
 export default function NotificationRulesPage() {
     const [rules, setRules] = useState([]);
@@ -20,7 +19,7 @@ export default function NotificationRulesPage() {
         setLoading(true);
         try {
             const res = await api.get('/notification-rules');
-            setRules(res.data);
+            setRules(res.data || []);
         } catch (err) {
             toast.error("Failed to load rules");
         } finally {
@@ -30,24 +29,14 @@ export default function NotificationRulesPage() {
 
     const loadEmployees = async () => {
         try {
-            const res = await api.get('/employee/list');
-            setEmployees(res.data);
+            const res = await api.get('/employee/all');
+            setEmployees(res.data || []);
         } catch (err) {
             console.error("Failed to fetch employees", err);
         }
     };
 
-    const toggleModule = (ruleId, moduleId) => {
-        const rule = rules.find(r => r.id === ruleId);
-        if (!rule) return;
 
-        const currentModules = rule.targetModuleAccess || [];
-        const newModules = currentModules.includes(moduleId)
-            ? currentModules.filter(m => m !== moduleId)
-            : [...currentModules, moduleId];
-
-        updateRule(ruleId, { ...rule, targetModuleAccess: newModules });
-    };
 
     const toggleEmployee = (ruleId, empId) => {
         const rule = rules.find(r => r.id === ruleId);
@@ -61,23 +50,51 @@ export default function NotificationRulesPage() {
         updateRule(ruleId, { ...rule, targetEmployeeIds: newEmps });
     };
 
+    const selectAllFiltered = (ruleId) => {
+        const rule = rules.find(r => r.id === ruleId);
+        if (!rule) return;
+
+        const currentEmps = new Set(rule.targetEmployeeIds || []);
+        filteredEmployees.forEach(e => currentEmps.add(e.id));
+
+        updateRule(ruleId, { ...rule, targetEmployeeIds: Array.from(currentEmps) });
+    };
+
+    const clearAllFiltered = (ruleId) => {
+        const rule = rules.find(r => r.id === ruleId);
+        if (!rule) return;
+
+        const currentEmps = new Set(rule.targetEmployeeIds || []);
+        filteredEmployees.forEach(e => currentEmps.delete(e.id));
+
+        updateRule(ruleId, { ...rule, targetEmployeeIds: Array.from(currentEmps) });
+    };
+
     const toggleChannel = (ruleId, channel) => {
         const rule = rules.find(r => r.id === ruleId);
         if (!rule) return;
 
-        const newChannels = rule.channels.includes(channel)
-            ? rule.channels.filter(c => c !== channel)
-            : [...rule.channels, channel];
+        const channels = rule.channels || [];
+        const newChannels = channels.includes(channel)
+            ? channels.filter(c => c !== channel)
+            : [...channels, channel];
 
         updateRule(ruleId, { ...rule, channels: newChannels });
     };
 
     const updateRule = async (id, updatedData) => {
+        // Enforce WYSIWYG: Clear hidden fields that are not in the UI
+        const payload = {
+            ...updatedData,
+            targetRoles: [],
+            targetModuleAccess: []
+        };
+
         // Optimistic UI update
-        setRules(rules.map(r => r.id === id ? updatedData : r));
+        setRules(rules.map(r => r.id === id ? payload : r));
 
         try {
-            await api.put(`/notification-rules/${id}`, updatedData);
+            await api.put(`/notification-rules/${id}`, payload);
         } catch (err) {
             toast.error("Update failed");
             loadRules(); // Revert
@@ -86,31 +103,20 @@ export default function NotificationRulesPage() {
 
     const CHANNELS = ["EMAIL", "IN_APP"];
 
-    // Flatten MenuConfig for easier selection
-    const ALL_MODULES = [];
-    MenuConfig.forEach(group => {
-        if (group.path) ALL_MODULES.push({ id: group.id, title: `${group.title} (Main)` });
-        if (group.subItems) {
-            group.subItems.forEach(sub => {
-                ALL_MODULES.push({ id: sub.id, title: `${group.title} > ${sub.title}` });
-            });
-        }
-    });
-
     // Filter employees for search
-    const filteredEmployees = employees.filter(e =>
+    const filteredEmployees = (employees || []).filter(e =>
         (e.firstName + " " + e.lastName).toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <Container className="py-3">
             <h3>Notification Rules Manager (Admin)</h3>
-            <p className="text-muted">Configure notification routing via Module Access OR Specific Employees.</p>
+            <p className="text-muted">Configure notification routing via Specific Employees.</p>
 
             <Form.Group className="mb-3">
                 <Form.Control
                     type="text"
-                    placeholder="Search employees for selection..."
+                    placeholder="Search employees for bulk selection..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -121,8 +127,7 @@ export default function NotificationRulesPage() {
                     <thead>
                         <tr>
                             <th>Event Type</th>
-                            <th style={{ width: '30%' }}>Target Modules</th>
-                            <th style={{ width: '30%' }}>Target Employees</th>
+                            <th style={{ width: '50%' }}>Target Employees</th>
                             <th>Channels</th>
                             <th>Status</th>
                         </tr>
@@ -134,24 +139,15 @@ export default function NotificationRulesPage() {
                                     <strong>{rule.eventType}</strong>
                                 </td>
                                 <td>
-                                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                        {ALL_MODULES.map(mod => (
-                                            <Form.Check
-                                                key={mod.id}
-                                                type="checkbox"
-                                                label={mod.title}
-                                                checked={(rule.targetModuleAccess || []).includes(mod.id)}
-                                                onChange={() => toggleModule(rule.id, mod.id)}
-                                                style={{ fontSize: '0.9em' }}
-                                            />
-                                        ))}
+                                    <div className="d-flex gap-2 mb-2">
+                                        <Button size="sm" variant="outline-primary" onClick={() => selectAllFiltered(rule.id)}>
+                                            Select All (Filtered)
+                                        </Button>
+                                        <Button size="sm" variant="outline-secondary" onClick={() => clearAllFiltered(rule.id)}>
+                                            Clear All (Filtered)
+                                        </Button>
                                     </div>
-                                    <small className="text-muted">
-                                        Selected: {(rule.targetModuleAccess || []).length}
-                                    </small>
-                                </td>
-                                <td>
-                                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                                         {filteredEmployees.map(emp => (
                                             <Form.Check
                                                 key={emp.id}
