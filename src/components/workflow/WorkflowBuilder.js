@@ -135,7 +135,7 @@ export default function WorkflowBuilder() {
                 const [wf, stagesRes, rolesRes] = await Promise.all([
                     fetchFlow,
                     api.get("/workflow/stages").catch(() => ({ data: [] })),
-                    api.get("/roles").catch(() => ({ data: [] })),
+                    api.get("/projects/workflow/roles").catch(() => ({ data: [] })), // Use workflow roles
                 ]);
 
                 // Merge with emptyFlow to ensure all fields exist
@@ -172,6 +172,30 @@ export default function WorkflowBuilder() {
             }
         })();
     }, [id, isNew]);
+
+    // --- Handlers ---
+
+    const addGlobalRole = async (val) => {
+        if (!val) return;
+        try {
+            await api.post(`/workflow/roles?name=${encodeURIComponent(val)}`);
+            setRoles(prev => [...prev, val].sort());
+            toast.success("Role added globally");
+        } catch (e) {
+            toast.error("Failed to add role");
+        }
+    };
+
+    const removeGlobalRole = async (val) => {
+        if (!window.confirm(`Delete global role "${val}"? This will remove it from the list for all workflows.`)) return;
+        try {
+            await api.delete(`/workflow/roles/${encodeURIComponent(val)}`);
+            setRoles(prev => prev.filter(r => r !== val));
+            toast.success("Role deleted");
+        } catch (e) {
+            toast.error("Failed to delete role");
+        }
+    };
 
     // --- Sync Flow -> Visual Nodes/Edges ---
     useEffect(() => {
@@ -526,17 +550,17 @@ export default function WorkflowBuilder() {
                 <Modal.Body>
                     {/* Role Management Section */}
                     <div className="mb-4 border-bottom pb-3">
-                        <label className="fw-bold mb-2">Available Roles</label>
+                        <label className="fw-bold mb-2">Global Roles</label>
                         <div className="d-flex gap-2 mb-2">
                             <Form.Control
                                 size="sm"
-                                placeholder="Add new role..."
+                                placeholder="Add new global role..."
                                 id="new-role-input"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        const val = e.target.value.trim();
+                                        const val = e.target.value.trim().toUpperCase(); // Enforce UPPERCASE
                                         if (val && !roles.includes(val)) {
-                                            setRoles([...roles, val]);
+                                            addGlobalRole(val);
                                             e.target.value = '';
                                         }
                                     }
@@ -544,9 +568,9 @@ export default function WorkflowBuilder() {
                             />
                             <Button size="sm" variant="outline-primary" onClick={() => {
                                 const input = document.getElementById('new-role-input');
-                                const val = input.value.trim();
+                                const val = input.value.trim().toUpperCase();
                                 if (val && !roles.includes(val)) {
-                                    setRoles([...roles, val]);
+                                    addGlobalRole(val);
                                     input.value = '';
                                 }
                             }}>Add</Button>
@@ -557,15 +581,11 @@ export default function WorkflowBuilder() {
                                     {r}
                                     <span
                                         style={{ cursor: 'pointer', opacity: 0.7 }}
-                                        onClick={() => {
-                                            if (window.confirm(`Remove role "${r}" from this view?`)) {
-                                                setRoles(roles.filter(x => x !== r));
-                                            }
-                                        }}
+                                        onClick={() => removeGlobalRole(r)}
                                     >×</span>
                                 </Badge>
                             ))}
-                            {roles.length === 0 && <small className="text-muted">No roles found.</small>}
+                            {roles.length === 0 && <small className="text-muted">No global roles defined.</small>}
                         </div>
                     </div>
 

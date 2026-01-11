@@ -29,8 +29,6 @@ function EmployeeCreate({ mode }) {
     designation: "",
     epfNo: "",
     basicSalary: "",
-    epfNo: "",
-    basicSalary: "",
     joinDate: new Date().toISOString().split('T')[0],
     dob: "",
     workSchedulePolicyId: ""
@@ -39,7 +37,8 @@ function EmployeeCreate({ mode }) {
   const [departments, setDepartments] = useState([]);
   const [managers, setManagers] = useState([]);
   const [projectWorkflowRoles, setProjectWorkflowRoles] = useState([]);
-  const [schedulePolicies, setSchedulePolicies] = useState([]); // NEW
+  const [rolesLoading, setRolesLoading] = useState(true); // NEW: Track loading state specifically
+  const [schedulePolicies, setSchedulePolicies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [autoPassword, setAutoPassword] = useState("");
 
@@ -69,16 +68,21 @@ function EmployeeCreate({ mode }) {
           setSchedulePolicies(polRes.data || []);
         } catch (e) { console.error("Failed to load policies"); }
 
-        // Fetch Workflow Roles
+        // Fetch Workflow Roles - FIXED ENDPOINT
         try {
-          const wfRes = await api.get("/roles");
+          console.log("Fetching project workflow roles...");
+          const wfRes = await api.get("/projects/workflow/roles");
+          console.log("Workflow roles response:", wfRes.data);
           setProjectWorkflowRoles(wfRes.data || []);
         } catch (e) {
           console.error("Failed to fetch roles", e);
+        } finally {
+          setRolesLoading(false);
         }
       } catch (error) {
         console.error("Failed to fetch dropdown data", error);
         toast.error("Failed to load dropdown data.");
+        setRolesLoading(false);
       }
     };
     fetchDropdowns();
@@ -88,11 +92,6 @@ function EmployeeCreate({ mode }) {
       try {
         const res = await api.get('/notification-rules');
         setNotificationRules(res.data);
-
-        // If in Edit Mode, we need to verify subscriptions against loaded rules
-        // BUT, we only know the Employee ID later? 
-        // Actually, we have 'id' from useParams if Edit Mode.
-        // Let's do this logic in the 'fetchData' (edit mode) effect or here if id exists.
       } catch (e) { console.error("Failed to load generic rules"); }
     };
     fetchRules();
@@ -196,9 +195,7 @@ function EmployeeCreate({ mode }) {
       if (!isEditMode) {
         const createRes = await api.post(`/employee/register?creatorRole=${creatorRole}`, employeePayload);
         // We need the new employee's ID to save subscriptions
-        const newEmpId = createRes.data?.id; // Assuming backend returns the object. If not, we might miss this step for new users unless we refactor.
-        // If createRes.data is just "Employee created", we have a problem. 
-        // Typically registers return the object. Let's assume it does or handle gracefully.
+        const newEmpId = createRes.data?.id;
 
         if (newEmpId) {
           await api.post(`/notification-rules/user/${newEmpId}/subscriptions`, subscribedRuleIds);
@@ -346,7 +343,6 @@ function EmployeeCreate({ mode }) {
               Select the menus this user should have access to. Admin users have full access by default.
             </div>
 
-            {/* Import MenuConfig at top, assumed done */}
             {MenuConfig.map(menu => ( /* Show all menus including Home */
               <div key={menu.id} className="mb-3">
                 {/* Main Menu Checkbox */}
@@ -362,13 +358,9 @@ function EmployeeCreate({ mode }) {
 
                       if (checked) {
                         current.add(menu.id);
-                        // Optional: Select all children too? 
-                        // User might want to just enable the group and then pick specific children.
-                        // Let's Auto-Select children for convenience, but allow unchecking.
                         menu.subItems.forEach(sub => current.add(sub.id));
                       } else {
                         current.delete(menu.id);
-                        // Auto-Deselect children
                         menu.subItems.forEach(sub => current.delete(sub.id));
                       }
 
@@ -384,7 +376,7 @@ function EmployeeCreate({ mode }) {
                       key={sub.id}
                       type="checkbox"
                       id={`check-${sub.id}`}
-                      label={sub.title || sub.name} // Handle both title keys just in case
+                      label={sub.title || sub.name}
                       checked={formData.moduleAccess && formData.moduleAccess.includes(sub.id)}
                       onChange={(e) => {
                         const checked = e.target.checked;
@@ -392,7 +384,6 @@ function EmployeeCreate({ mode }) {
                           const current = new Set(prev.moduleAccess || []);
                           if (checked) {
                             current.add(sub.id);
-                            // Auto-select parent if child is selected?
                             current.add(menu.id);
                           } else {
                             current.delete(sub.id);
@@ -413,10 +404,11 @@ function EmployeeCreate({ mode }) {
           <Form.Label>Project Workflow Roles</Form.Label>
           <div className="border rounded p-3 bg-white">
             <div className="small text-muted mb-2">
-              Assign roles for Project Workflow Approvals (fetched from current workflow).
+              Assign roles for Project Workflow Approvals (fetched from all defined workflows).
             </div>
             <div className="d-flex flex-wrap gap-3">
-              {projectWorkflowRoles.length === 0 && <span className="text-muted">Loading roles...</span>}
+              {rolesLoading && <span className="text-muted">Loading roles...</span>}
+              {!rolesLoading && projectWorkflowRoles.length === 0 && <span className="text-muted">No specific roles found in active workflow.</span>}
               {projectWorkflowRoles.map(role => (
                 <Form.Check
                   key={role}

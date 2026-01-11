@@ -77,9 +77,7 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
             <Card.Header className="d-flex justify-content-between align-items-center">
                 <span>Project Payments (Receivables)</span>
                 <div className="d-flex gap-2">
-                    <Button size="sm" variant="outline-primary" onClick={() => { setNewValue(project?.totalProjectValue || ''); setShowEditValue(true); }}>
-                        Edit Total Value
-                    </Button>
+
                     <Button size="sm" variant="success" onClick={() => setShowPay(true)}>
                         Add Payment
                     </Button>

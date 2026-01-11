@@ -247,23 +247,39 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
             <div className="d-flex gap-2 align-items-center mb-2">
                 <Form.Select
                     size="sm"
-                    value={docType}
-                    onChange={(e) => setDocType(e.target.value)}
-                    style={{ width: 320 }}
+                    value={docType === '__custom__' || (docType && !ruleOptions.find(o => o.value === docType)) ? '__custom__' : docType}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__custom__') setDocType(''); // clear to let user type
+                        else setDocType(val);
+                    }}
+                    style={{ width: 200 }}
                     title="Select required file name (from rules or missing list)"
-                    disabled={!actions || !stageType || readOnly}
+                    disabled={!stageType || readOnly}
                 >
-                    {ruleOptions.length === 0 ? (
-                        <option value="">— No file rules or missing items —</option>
-                    ) : (
-                        ruleOptions.map(o => (
-                            <option key={o.value} value={o.value}>{o.label}</option>
-                        ))
+                    {ruleOptions.length > 0 && (
+                        <optgroup label="Requirements">
+                            {ruleOptions.map(o => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                        </optgroup>
                     )}
+                    <option value="__custom__">-- Other / New --</option>
                 </Form.Select>
 
-                <div className="small text-muted">
-                    Selected file type: <strong>{docType || '—'}</strong>
+                {(docType === '' || !ruleOptions.find(o => o.value === docType)) && (
+                    <Form.Control
+                        size="sm"
+                        type="text"
+                        placeholder="Enter file type..."
+                        value={docType}
+                        onChange={e => setDocType(e.target.value)}
+                        style={{ width: 180 }}
+                    />
+                )}
+
+                <div className="small text-muted" style={{ minWidth: 100 }}>
+                    Type: <strong>{docType || '(none)'}</strong>
                 </div>
 
                 <Button
@@ -272,7 +288,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     onClick={loadFiles}
                     disabled={filesLoading || !id}
                 >
-                    {filesLoading ? 'Loading…' : (files.length ? 'Reload files' : 'Load files')}
+                    {filesLoading ? 'Loading…' : (files.length ? 'Reload' : 'Load')}
                 </Button>
 
                 <Button

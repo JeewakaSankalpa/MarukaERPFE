@@ -6,26 +6,17 @@ import {
 } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
-import { getWorkflow, listWorkflows } from '../../services/workflowApi'; // NEW
+import { getWorkflow, listWorkflows } from '../../services/workflowApi';
 import { useAuth } from '../../context/AuthContext';
-import ProjectQuotationCard from "./ProjectQuotationCard"; // New Component
-import { COMPONENT_IDS } from './ComponentRegistry';
+import { COMPONENT_IDS, ProjectComponentRegistry } from './ComponentRegistry'; // Registry Import
 
-// Lazy load sub-components
-const ProjectFiles = React.lazy(() => import('./ProjectFiles'));
-const ProjectEstimationCard = React.lazy(() => import('./ProjectEstimationCard'));
-const ProjectPaymentsCard = React.lazy(() => import('./ProjectPaymentsCard'));
-const ProjectInventoryCard = React.lazy(() => import('./ProjectInventoryCard'));
-const ProjectTasks = React.lazy(() => import('../Projects/Tasks/ProjectTasks'));
-const DeliveryScheduleCard = React.lazy(() => import('./DeliveryScheduleCard'));
-// New Components
+// Lazy load sub-components (Some might be unused if registry handles them, 
+// but we keep imports if they are used elsewhere or in registry definition to be safe if moved)
+const ProjectFiles = React.lazy(() => import('./ProjectFiles')); // Used in legacy check or registry? Registry handles it.
 const ProjectLifecycle = React.lazy(() => import('./ProjectLifecycle'));
-const ProjectRevisions = React.lazy(() => import('./ProjectRevisions'));
-const ProjectComments = React.lazy(() => import('./ProjectComments'));
-const ProjectWorkflowTab = React.lazy(() => import('./ProjectWorkflowTab'));
-const ProjectKanban = React.lazy(() => import('../Projects/Tasks/ProjectKanban'));
-const ProjectGantt = React.lazy(() => import('../Projects/Tasks/ProjectGantt'));
-const ProjectFinanceTab = React.lazy(() => import('./ProjectFinanceTab'));
+// Most others are now rendered via Registry logic, but we might need them if we reference them directly? 
+// Actually, Registry imports them. We can remove them here to clean up, 
+// BUT for safety (if I missed one in registry) I will comment them out or leave them unused.
 
 /**
  * Main Project Details Page.
@@ -33,8 +24,7 @@ const ProjectFinanceTab = React.lazy(() => import('./ProjectFinanceTab'));
 export default function ProjectDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { role, projectRoles } = useAuth(); // user removed
-    // const actor = user?.name || user?.email || 'web'; // W: Unused
+    const { role, projectRoles } = useAuth();
 
     // Combine system role and project roles for workflow checks
     const rolesHeader = useMemo(() => {
@@ -51,8 +41,6 @@ export default function ProjectDetails() {
         return userModules.includes(id);
     };
 
-
-
     const [project, setProject] = useState(null);
     const [actions, setActions] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -61,11 +49,11 @@ export default function ProjectDetails() {
     const [approving, setApproving] = useState(false);
     const [moving, setMoving] = useState(false);
 
-    const [filesReloadKey] = useState(0); // setFilesReloadKey unused
+    const [filesReloadKey] = useState(0);
     const [refreshKey, setRefreshKey] = useState(0);
 
     // Workflow Definition State
-    const [workflowDef, setWorkflowDef] = useState(null); // NEW
+    const [workflowDef, setWorkflowDef] = useState(null);
 
     const [showDates, setShowDates] = useState(false);
     const [estimatedStart, setEstimatedStart] = useState('');
@@ -125,8 +113,8 @@ export default function ProjectDetails() {
     };
 
     // Tabs state
-    const [activeTab, setActiveTab] = useState('dashboard');
-    const [taskSubTab, setTaskSubTab] = useState('list'); // list, kanban, gantt
+    const [activeTab, setActiveTab] = useState(COMPONENT_IDS.DASHBOARD);
+    // const [taskSubTab, setTaskSubTab] = useState('list'); // Moved to Tasks Component ideally, or kept if Tasks uses it
 
     useEffect(() => {
         let alive = true;
@@ -151,7 +139,6 @@ export default function ProjectDetails() {
                         console.warn("Could not fetch workflow definition", we);
                     }
                 }
-                // toast.success('Project & actions loaded');
             } catch (e) {
                 console.error(e);
                 toast.error('Failed to load project/actions');
@@ -200,14 +187,12 @@ export default function ProjectDetails() {
             setProject(p.data || null);
             setActions(a.data || null);
             setRefreshKey(prev => prev + 1); // Trigger sub-components
-            // Check if workflow needs loading just in case (e.g. if it was missing)
             if (p.data?.workflowId && !workflowDef) {
                 try {
                     const w = await getWorkflow(p.data.workflowId);
                     setWorkflowDef(w);
                 } catch (we) { console.warn(we); }
             }
-            // toast.success('Refreshed');
         } catch (e) {
             console.error(e);
             toast.error('Failed to refresh project/actions');
@@ -304,28 +289,45 @@ export default function ProjectDetails() {
     // Calculate effective project object
     const p = viewVersion ? viewVersion.project : (project || {});
     const stageObj = p.currentStage || {};
-    const stageList = Array.isArray(p.stages) ? p.stages : [];
+    // const stageList = Array.isArray(p.stages) ? p.stages : []; // Used in Approvals Table 
 
     // Effective actions (disable everything in revision mode)
     const effectiveActions = viewVersion ? {
-        // In read-only mode, we might want to see files and timeline etc.
-        // Assuming default visibility or allowing all view-only components
-        // Use snapshot visibility if available, else default to all read-only
-        visibleComponents: viewVersion.meta?.visibleComponents || ['FILES', 'TIMELINE', 'REVISIONS', 'ESTIMATION', 'DELIVERY', 'INVENTORY', 'PAYMENTS', 'TASKS'],
+        visibleComponents: viewVersion.meta?.visibleComponents || ['FILES', 'TIMELINE', 'REVISIONS', 'ESTIMATION', 'DELIVERY', 'INVENTORY', 'PAYMENTS', 'TASKS', 'OVERVIEW', 'STATUS', 'APPROVALS'],
         canApprove: false,
         canReject: false,
         canMove: [],
         missingFiles: []
     } : (actions || {});
 
-    // Override isComponentVisible to use effectiveActions
-    const isComponentVisible = (compName) => {
-        if (!effectiveActions) return false;
-        if (!effectiveActions.visibleComponents) return false;
-        return effectiveActions.visibleComponents.includes(compName);
+    // --- REGISTRY BASED RENDERING HELPERS ---
+
+    // 1. Resolve Effective Visibility
+    const isVisible = (id) => {
+        // In Revision Mode, strict snapshot visibility
+        if (viewVersion) {
+            return viewVersion.meta?.visibleComponents?.includes(id);
+        }
+        // Live Mode
+        if (!effectiveActions || !effectiveActions.visibleComponents) return false;
+        return effectiveActions.visibleComponents.includes(id);
     };
 
-
+    // 2. Prepare Context for Renderers
+    const renderContext = {
+        id,
+        project: p,
+        stageObj,
+        actions: effectiveActions,
+        effectiveActions, // alias
+        roleHeader: { 'X-Roles': rolesHeader },
+        refresh,
+        refreshKey,
+        filesReloadKey,
+        viewVersion,
+        onViewSnapshot: handleViewSnapshot,
+        openEmailModal, navigate // Passed down for OVERVIEW card
+    };
 
 
     return (
@@ -360,7 +362,7 @@ export default function ProjectDetails() {
                 />
             </Suspense>
 
-            {/* Smart Action Bar (Replaces old card) */}
+            {/* Smart Action Bar */}
             {effectiveActions && (effectiveActions.canApprove || effectiveActions.canReject || (effectiveActions.canMove && effectiveActions.canMove.length > 0)) && (
                 <Card className="mb-3 border-primary shadow-sm" style={{ borderLeft: '5px solid #0d6efd' }}>
                     <Card.Body className="d-flex flex-wrap align-items-center justify-content-between p-3">
@@ -377,7 +379,6 @@ export default function ProjectDetails() {
                         </div>
 
                         <div className="d-flex gap-2 align-items-center mt-2 mt-md-0">
-                            {/* Missing Files Warning in Action Bar */}
                             {effectiveActions.missingFiles && effectiveActions.missingFiles.length > 0 && (
                                 <div className="text-warning small me-3 fw-bold">
                                     ⚠️ Missing Required Files
@@ -419,374 +420,68 @@ export default function ProjectDetails() {
                 </Card>
             )}
 
+            {/* --- TABS NAVIGATION --- */}
             <div className="mb-3">
                 <ul className="nav nav-tabs">
-                    <li className="nav-item">
-                        <button className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-                            Dashboard
-                        </button>
-                    </li>
-                    {isComponentVisible(COMPONENT_IDS.REVISIONS) && (
-                        <li className="nav-item">
-                            <button className={`nav-link ${activeTab === COMPONENT_IDS.REVISIONS ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.REVISIONS)}>
-                                Revisions {project?.revisionCount > 0 && <Badge bg="secondary" pill>{project.revisionCount}</Badge>}
-                            </button>
-                        </li>
-                    )}
-                    {/* Inventory is usually always visible if they have module access? */}
-                    {isComponentVisible(COMPONENT_IDS.INVENTORY) && (
-                        <li className="nav-item">
-                            <button className={`nav-link ${activeTab === COMPONENT_IDS.INVENTORY ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.INVENTORY)}>
-                                Inventory
-                            </button>
-                        </li>
-                    )}
-                    {(hasAccess('projects.payments') && isComponentVisible(COMPONENT_IDS.PAYMENTS)) && (
-                        <li className="nav-item">
-                            <button className={`nav-link ${activeTab === COMPONENT_IDS.PAYMENTS ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.PAYMENTS)}>
-                                Payments
-                            </button>
-                        </li>
-                    )}
-                    {isComponentVisible(COMPONENT_IDS.TASKS) && (
-                        <li className="nav-item">
-                            <button className={`nav-link ${activeTab === COMPONENT_IDS.TASKS ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.TASKS)}>
-                                Tasks
-                            </button>
-                        </li>
-                    )}
-                    <li className="nav-item">
-                        <button className={`nav-link ${activeTab === 'comments' ? 'active' : ''}`} onClick={() => setActiveTab('comments')}>
-                            Communication
-                        </button>
-                    </li>
-                    {isComponentVisible(COMPONENT_IDS.WORKFLOW) && (
-                        <li className="nav-item">
-                            <button className={`nav-link ${activeTab === COMPONENT_IDS.WORKFLOW ? 'active' : ''}`} onClick={() => setActiveTab(COMPONENT_IDS.WORKFLOW)}>
-                                Workflow
-                            </button>
-                        </li>
-                    )}
-                    <li className="nav-item">
-                        <button className={`nav-link ${activeTab === 'finance' ? 'active' : ''}`} onClick={() => setActiveTab('finance')}>
-                            Finance
-                        </button>
-                    </li>
+                    {/* Dynamic Tabs from Registry */}
+                    {ProjectComponentRegistry.getByZone('TAB').map(comp => {
+                        if (!isVisible(comp.id)) return null;
+
+                        return (
+                            <li className="nav-item" key={comp.id}>
+                                <button
+                                    className={`nav-link ${activeTab === comp.id ? 'active' : ''}`}
+                                    onClick={() => setActiveTab(comp.id)}
+                                >
+                                    {comp.label}
+                                    {comp.id === 'REVISIONS' && project?.revisionCount > 0 && (
+                                        <Badge bg="secondary" pill className="ms-1">{project.revisionCount}</Badge>
+                                    )}
+                                </button>
+                            </li>
+                        );
+                    })}
                 </ul>
             </div>
 
             <Suspense fallback={<div className="p-4 text-center"><Spinner animation="border" /> Loading component...</div>}>
-                {activeTab === 'dashboard' && (
-                    <>
-                        <Row className="g-3">
-                            {/* Project Overview */}
-                            <Col md={6} lg={4}>
-                                <Card className="h-100">
-                                    <Card.Header className="d-flex justify-content-between align-items-center">
-                                        <span>Project Overview</span>
-                                        <div className="d-flex gap-2">
-                                            <Button size="sm" variant="outline-dark" onClick={openEmailModal} disabled={!id || !!viewVersion}>Email</Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline-primary"
-                                                disabled={!id || !!viewVersion}
-                                                onClick={() => navigate(`/projects/edit/${id}`)}
-                                            >
-                                                Edit
-                                            </Button>
-                                        </div>
-                                    </Card.Header>
-                                    <Card.Body style={{ overflowY: 'auto' }}>
-                                        <div><strong>ID:</strong> {id || '-'}</div>
-                                        <div><strong>Name:</strong> {p.projectName || '-'}</div>
-                                        <div><strong>Client:</strong> {p.customerName || p.customerId || '-'}</div>
-                                        <div><strong>Sales Rep:</strong> {p.salesRepName || p.salesRep || '-'}</div>
 
-                                        <div className="mt-2">
-                                            <strong>Status:</strong>{' '}
-                                            <Badge bg="info">{p.status || '-'}</Badge>
-                                        </div>
+                {/* --- DASHBOARD TAB CONTENT --- */}
+                {/* Note: 'DASHBOARD' is the ID of the dashboard tab in DEFAULT_COMPONENTS */}
+                {activeTab === 'DASHBOARD' && (
+                    <Row className="g-3">
+                        {/* DYNAMIC DASHBOARD COMPONENTS LOOP */}
+                        {ProjectComponentRegistry.getByZone('DASHBOARD').map(comp => {
+                            if (!isVisible(comp.id)) return null;
 
-                                        <div className="mt-2 text-muted small">
-                                            Stage: {stageObj.stageType || '-'}
-                                        </div>
-                                        <div className="mt-2 text-muted small">
-                                            Currency: {p.currency || 'LKR'}
-                                        </div>
-
-                                        <div className="mt-2 text-muted small">
-                                            Created: {p.createdAt ? new Date(p.createdAt).toLocaleString() : '-'}<br />
-                                            Updated: {p.updatedAt ? new Date(p.updatedAt).toLocaleString() : '-'}
-                                        </div>
-
-                                        {p.comment ? <div className="mt-2"><em>{p.comment}</em></div> : null}
-
-                                        {!id && <div className="mt-2 text-warning">No project id provided.</div>}
-                                        {id && !project && !loading && (
-                                            <div className="mt-2 text-warning">Project not found.</div>
-                                        )}
-                                    </Card.Body>
-                                </Card>
-                            </Col>
-
-                            {/* Current Status & Actions */}
-                            <Col md={6} lg={4}>
-                                <Card className="h-100">
-                                    <Card.Header>Current Status & Actions</Card.Header>
-                                    <Card.Body style={{ overflowY: 'auto' }}>
-                                        <div className="mb-2">
-                                            <strong>Stage:</strong> {stageObj.stageType || '-'}
-                                        </div>
-
-                                        {effectiveActions ? (
-                                            <>
-                                                {effectiveActions?.missingFiles && effectiveActions.missingFiles.length > 0 ? (
-                                                    <div className="alert alert-warning py-2">
-                                                        <div className="fw-semibold mb-1">Required files missing for this stage:</div>
-                                                        <ul className="mb-0">
-                                                            {effectiveActions.missingFiles.map((m) => <li key={m}>{m}</li>)}
-                                                        </ul>
-                                                    </div>
-                                                ) : (
-                                                    <div className="small text-success mb-2">All required files are present ✅</div>
-                                                )}
-
-                                                <Form.Group className="mb-2">
-                                                    <Form.Label className="small">Approval comment</Form.Label>
-                                                    <Form.Control
-                                                        size="sm"
-                                                        value={comment}
-                                                        onChange={(e) => setComment(e.target.value)}
-                                                        placeholder="Optional"
-                                                        disabled={!id || !project || !!viewVersion}
-                                                    />
-                                                </Form.Group>
-
-                                                <div className="text-muted small mb-2">
-                                                    <em>Use the Action Bar above to Approve, Reject, or Move stage.</em>
-                                                </div>
-                                                {/* Buttons moved to Smart Action Bar */}
-                                                {/* <div className="d-flex flex-wrap gap-2 mb-3"> ... </div> */}
-                                            </>
-                                        ) : (
-                                            <div className="text-muted">
-                                                Actions are not loaded yet or unavailable. Make sure the backend endpoint
-                                                <code> /api/projects/{id}/actions</code> returns permissions for your role.
-                                            </div>
-                                        )}
-                                    </Card.Body>
-                                </Card>
-                            </Col>
-
-                            {/* Timeline (with Edit Dates button) */}
-                            {isComponentVisible(COMPONENT_IDS.TIMELINE) && (
-                                <Col md={12} lg={4}>
-                                    <Card className="h-100">
-                                        <Card.Header className="d-flex justify-content-between align-items-center">
-                                            <span>Timeline</span>
-                                            <Button size="sm" variant="outline-primary" onClick={openDatesModal} disabled={!id || !!viewVersion}>
-                                                Edit Dates
-                                            </Button>
-                                        </Card.Header>
-                                        <Card.Body style={{ overflowY: 'auto' }}>
-                                            <div><strong>Est. Start:</strong> {p.estimatedStart ? new Date(p.estimatedStart).toLocaleDateString() : '-'}</div>
-                                            <div><strong>Est. End:</strong> {p.estimatedEnd ? new Date(p.estimatedEnd).toLocaleDateString() : '-'}</div>
-                                            <div><strong>Due Date:</strong> {p.dueDate ? new Date(p.dueDate).toLocaleString() : '-'}</div>
-
-                                            {dueMeta ? (
-                                                <div className="mt-3">
-                                                    <div className="d-flex justify-content-between small mb-1">
-                                                        <span>Progress to Due</span>
-                                                        <span>{dueMeta.pct}%</span>
-                                                    </div>
-                                                    <ProgressBar now={dueMeta.pct} />
-                                                    <div className="small text-muted mt-1">Time left: {dueMeta.label}</div>
-                                                </div>
-                                            ) : (
-                                                <div className="small text-muted mt-3">No due date data.</div>
-                                            )}
-                                        </Card.Body>
-                                    </Card>
+                            // Render
+                            return (
+                                <Col key={comp.id} md={comp.layout?.md || 12} lg={comp.layout?.lg || 6}>
+                                    {comp.render({
+                                        ...renderContext,
+                                        // Pass extra props for specific legacy components if needed? 
+                                        // renderContext contains almost everything
+                                    })}
                                 </Col>
-                            )}
-                        </Row>
+                            );
+                        })}
 
-                        {/* Files & Estimation row */}
-                        <Row className="g-3 mt-1">
-                            {(hasAccess('projects.files') && isComponentVisible(COMPONENT_IDS.FILES)) && (
-                                <Col lg={6}>
-                                    <Card className="h-100">
-                                        <Card.Header className="d-flex justify-content-between align-items-center">
-                                            <span>Files</span>
-                                            <Badge bg="secondary">{stageObj?.stageType || '—'}</Badge>
-                                        </Card.Header>
-                                        <Card.Body style={{ overflowY: 'auto' }}>
-                                            <ProjectFiles
-                                                id={id}
-                                                actions={effectiveActions}
-                                                stageObj={stageObj}
-                                                roleHeader={{ 'X-Roles': rolesHeader }}
-                                                onAfterChange={refresh}
-                                                reloadKey={filesReloadKey}
-                                                filesOverride={viewVersion?.files}
-                                                readOnly={!!viewVersion}
-                                            />
-                                        </Card.Body>
-                                    </Card>
-                                </Col>
-                            )}
-
-                            {/* Estimation summary / actions */}
-                            {(hasAccess('projects.estimation') && isComponentVisible(COMPONENT_IDS.ESTIMATION)) && (
-                                <Col lg={6}>
-                                    <div className="mb-3">
-                                        <ProjectEstimationCard
-                                            projectId={id}
-                                            currency={p.currency}
-                                            readOnly={!!viewVersion}
-                                            onOpen={() => { /* optional hook */ }}
-                                            reloadKey={refreshKey}
-                                        />
-                                    </div>
-                                    <ProjectQuotationCard
-                                        project={project}
-                                        projectId={id} // Explicitly pass ID from URL
-                                        currency={p.currency}
-                                        isVisible={true}
-                                        reloadKey={refreshKey}
-                                    />
-                                </Col>
-                            )}
-
-
-                            {/* Delivery Schedule - Moved to bottom */}
-                            {isComponentVisible(COMPONENT_IDS.DELIVERY) && (
-                                <Col lg={12}>
-                                    <DeliveryScheduleCard projectId={id} reloadKey={refreshKey} />
-                                </Col>
-                            )}
-                        </Row>
-
-                        {/* Approvals history */}
-                        <Row className="g-3 mt-1">
-                            <Col lg={12}>
-                                <Card className="h-100">
-                                    <Card.Header>Approval Stages</Card.Header>
-                                    <Card.Body style={{ overflowY: 'auto' }}>
-                                        {!id && <div className="text-muted">No project id provided.</div>}
-
-                                        {id && (!stageList.length) && (
-                                            <div className="text-muted">No stage history.</div>
-                                        )}
-
-                                        {stageList.length > 0 && (
-                                            <Table size="sm" bordered responsive>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Stage</th>
-                                                        <th>Approver (Role)</th>
-                                                        <th>Status</th>
-                                                        <th>When</th>
-                                                        <th>Comment</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {stageList.map((stg) =>
-                                                        (stg.approvals || []).map((a) => (
-                                                            <tr key={`${stg.id || stg.stageType}-${a.approverId}-${a.timestamp || Math.random()}`}>
-                                                                <td>{stg.stageType}</td>
-                                                                <td>{a.approverName ? `${a.approverName} (${a.approverRole})` : `${a.approverId} (${a.approverRole})`}</td>
-                                                                <td>{a.status}</td>
-                                                                <td>{a.timestamp ? new Date(a.timestamp).toLocaleString() : '-'}</td>
-                                                                <td className="text-break">{a.comments || '-'}</td>
-                                                            </tr>
-                                                        ))
-                                                    )}
-                                                </tbody>
-                                            </Table>
-                                        )}
-                                    </Card.Body>
-                                </Card>
-                            </Col>
-                        </Row>
-                    </>
+                    </Row>
                 )}
 
-                {activeTab === COMPONENT_IDS.REVISIONS && isComponentVisible(COMPONENT_IDS.REVISIONS) && (
-                    <ProjectRevisions
-                        projectId={id}
-                        versions={project?.versions}
-                        stages={project?.stages}
-                        currentStageType={stageObj?.stageType}
-                        roleHeader={{ 'X-Roles': rolesHeader }} // or however your API expects roles, likely just implicit or in useAuth
-                        onRevise={refresh}
-                        onViewSnapshot={handleViewSnapshot}
-                    />
-                )}
+                {/* --- OTHER TABS CONTENT --- */}
+                {ProjectComponentRegistry.getByZone('TAB').map(comp => {
+                    if (activeTab !== comp.id) return null;
+                    if (comp.id === 'DASHBOARD') return null; // Handled above
+                    if (!isVisible(comp.id)) return null;
 
-                {activeTab === COMPONENT_IDS.INVENTORY && isComponentVisible(COMPONENT_IDS.INVENTORY) && (
-                    <ProjectInventoryCard projectId={id} reloadKey={refreshKey} />
-                )}
-
-                {activeTab === COMPONENT_IDS.PAYMENTS && isComponentVisible(COMPONENT_IDS.PAYMENTS) && (
-                    <div className="mt-3">
-                        <ProjectPaymentsCard
-                            projectId={id}
-                            project={project}
-                            currency={p.currency}
-                            onRefresh={refresh}
-                            reloadKey={refreshKey}
-                        />
-                    </div>
-                )}
-
-
-                {activeTab === COMPONENT_IDS.TASKS && isComponentVisible(COMPONENT_IDS.TASKS) && (
-                    <div className="mt-3">
-                        <div className="d-flex gap-2 mb-3">
-                            <Button variant={taskSubTab === 'list' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('list')}>List View</Button>
-                            <Button variant={taskSubTab === 'kanban' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('kanban')}>Kanban Board</Button>
-                            <Button variant={taskSubTab === 'gantt' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('gantt')}>Gantt Chart</Button>
+                    return (
+                        <div key={comp.id} className="fade-in">
+                            {comp.render(renderContext)}
                         </div>
+                    );
+                })}
 
-                        {taskSubTab === 'list' && (
-                            <div className="bg-white shadow-sm rounded">
-                                <ProjectTasks projectId={id} reloadKey={refreshKey} />
-                            </div>
-                        )}
-                        {taskSubTab === 'kanban' && (
-                            <div className="">
-                                <ProjectKanban projectId={id} reloadKey={refreshKey} />
-                            </div>
-                        )}
-                        {taskSubTab === 'gantt' && (
-                            <div className="">
-                                <ProjectGantt projectId={id} reloadKey={refreshKey} />
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {
-                    activeTab === 'comments' && (
-                        <div className="mt-3">
-                            <ProjectComments projectId={id} />
-                        </div>
-                    )
-                }
-
-                {activeTab === COMPONENT_IDS.WORKFLOW && isComponentVisible(COMPONENT_IDS.WORKFLOW) && (
-                    <ProjectWorkflowTab
-                        projectId={id}
-                        currentWorkflow={project?.workflowSnapshot}
-                        currentStageId={project?.currentStageId}
-                        onUpdate={refresh}
-                    />
-                )}
-
-                {activeTab === 'finance' && (
-                    <ProjectFinanceTab projectId={id} currency={p.currency} />
-                )}
             </Suspense >
 
             {/* Email Modal */}
@@ -799,7 +494,7 @@ export default function ProjectDetails() {
                             type="email"
                             placeholder="recipient@example.com"
                             value={emailTo}
-                            onChange={e => setEmailTo(e.target.value)}
+                            onChange={(e) => setEmailTo(e.target.value)}
                         />
                     </Form.Group>
                     <Form.Group className="mb-3">
@@ -807,63 +502,64 @@ export default function ProjectDetails() {
                         <Form.Control
                             type="text"
                             value={emailSubject}
-                            onChange={e => setEmailSubject(e.target.value)}
+                            onChange={(e) => setEmailSubject(e.target.value)}
                         />
                     </Form.Group>
                     <Form.Group className="mb-3">
-                        <Form.Label>Body</Form.Label>
+                        <Form.Label>Message</Form.Label>
                         <Form.Control
                             as="textarea"
                             rows={5}
                             value={emailBody}
-                            onChange={e => setEmailBody(e.target.value)}
+                            onChange={(e) => setEmailBody(e.target.value)}
                         />
                     </Form.Group>
-
-                    <Form.Label>Attachments ({selectedAttachments.size} selected)</Form.Label>
-                    <div style={{ maxHeight: 200, overflowY: 'auto' }} className="border rounded p-2">
-                        {projectFiles.length === 0 && <div className="text-muted small">No files available.</div>}
-                        {projectFiles.map((f, i) => (
-                            <Form.Check
-                                key={f.url + i}
-                                type="checkbox"
-                                label={f.originalName || f.storedName}
-                                checked={selectedAttachments.has(f.url)}
-                                onChange={() => toggleAttachment(f.url)}
-                            />
-                        ))}
+                    <div className="mb-3">
+                        <Form.Label>Attachments</Form.Label>
+                        <div className="d-flex flex-wrap gap-2">
+                            {projectFiles.map(f => (
+                                <Button
+                                    key={f.url}
+                                    size="sm"
+                                    variant={selectedAttachments.has(f.url) ? "primary" : "outline-secondary"}
+                                    onClick={() => toggleAttachment(f.url)}
+                                >
+                                    {f.originalName}
+                                </Button>
+                            ))}
+                        </div>
                     </div>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowEmailModal(false)}>Cancel</Button>
+                    <Button variant="secondary" onClick={() => setShowEmailModal(false)}>Close</Button>
                     <Button variant="primary" onClick={sendEmail} disabled={sendingEmail}>
                         {sendingEmail ? <Spinner size="sm" /> : "Send Email"}
                     </Button>
                 </Modal.Footer>
-            </Modal >
+            </Modal>
 
-            {/* Edit Dates Modal (in Timeline) */}
-            < Modal show={showDates} onHide={() => setShowDates(false)} centered >
-                <Modal.Header closeButton><Modal.Title>Edit Project Dates</Modal.Title></Modal.Header>
+            {/* Dates Edit Modal */}
+            <Modal show={showDates} onHide={() => setShowDates(false)}>
+                <Modal.Header closeButton><Modal.Title>Edit Timeline Dates</Modal.Title></Modal.Header>
                 <Modal.Body>
-                    <Form.Group className="mb-2">
+                    <Form.Group className="mb-3">
                         <Form.Label>Estimated Start</Form.Label>
-                        <Form.Control type="datetime-local" value={estimatedStart} onChange={(e) => setEstimatedStart(e.target.value)} />
+                        <Form.Control type="datetime-local" value={estimatedStart} onChange={e => setEstimatedStart(e.target.value)} />
                     </Form.Group>
-                    <Form.Group className="mb-2">
+                    <Form.Group className="mb-3">
                         <Form.Label>Estimated End</Form.Label>
-                        <Form.Control type="datetime-local" value={estimatedEnd} onChange={(e) => setEstimatedEnd(e.target.value)} />
+                        <Form.Control type="datetime-local" value={estimatedEnd} onChange={e => setEstimatedEnd(e.target.value)} />
                     </Form.Group>
-                    <Form.Group>
+                    <Form.Group className="mb-3">
                         <Form.Label>Due Date</Form.Label>
-                        <Form.Control type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                        <Form.Control type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowDates(false)}>Cancel</Button>
-                    <Button variant="primary" onClick={saveDates}>Save</Button>
+                    <Button variant="primary" onClick={saveDates}>Save Changes</Button>
                 </Modal.Footer>
-            </Modal >
-        </div >
+            </Modal>
+        </div>
     );
 }

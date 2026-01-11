@@ -1,28 +1,21 @@
-// Registry of available "Cards" or Sections in the Project Details View
-// These keys MUST match the checks in ProjectDetails.js (e.g. isComponentVisible('FILES'))
+import { ProjectComponentRegistry } from './Structure/ProjectComponentRegistry';
+import { registerDefaultComponents } from './Structure/DefaultComponents';
+import { COMPONENT_IDS } from './Structure/ProjectConstants';
 
-export const COMPONENT_IDS = {
-    FILES: 'FILES',
-    ESTIMATION: 'ESTIMATION',
-    TIMELINE: 'TIMELINE',
-    DELIVERY: 'DELIVERY',
-    INVENTORY: 'INVENTORY',
-    PAYMENTS: 'PAYMENTS',
-    TASKS: 'TASKS',
-    REVISIONS: 'REVISIONS',
-    WORKFLOW: 'WORKFLOW'
-};
+// Initialize defaults once
+registerDefaultComponents();
 
-export const PROJECT_COMPONENTS = [
-    { id: COMPONENT_IDS.FILES, label: 'Files / Documents', description: 'File uploads and lists' },
-    { id: COMPONENT_IDS.ESTIMATION, label: 'Estimation & Quotation', description: 'Cost estimation and BOQ' },
-    { id: COMPONENT_IDS.TIMELINE, label: 'Timeline', description: 'Project dates and progress' },
-    { id: COMPONENT_IDS.DELIVERY, label: 'Delivery Schedule', description: 'Delivery tracking' },
-    { id: COMPONENT_IDS.INVENTORY, label: 'Inventory (Tab)', description: 'Item usage tracking' },
-    { id: COMPONENT_IDS.PAYMENTS, label: 'Payments (Tab)', description: 'Invoicing and Payments' },
-    { id: COMPONENT_IDS.TASKS, label: 'Tasks (Tab)', description: 'Project sub-tasks' },
-    { id: COMPONENT_IDS.REVISIONS, label: 'Revisions', description: 'Version control tab' },
-    { id: COMPONENT_IDS.WORKFLOW, label: 'Workflow (Tab)', description: 'Workflow management and switching' }
-];
+// Re-export constants for backward compatibility
+export { COMPONENT_IDS };
+
+// Legacy array for Workflow Builder - Dynamic Proxy
+export const PROJECT_COMPONENTS = ProjectComponentRegistry.getAll().map(c => ({
+    id: c.id,
+    label: c.label,
+    description: c.description || c.label
+}));
 
 export const DEFAULT_VISIBLE_COMPONENTS = PROJECT_COMPONENTS.map(c => c.id);
+
+// Export Registry for new consumers
+export { ProjectComponentRegistry };

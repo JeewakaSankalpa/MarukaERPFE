@@ -35,7 +35,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const fetchAccount = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/ project - accounts / ${projectId} `);
+            const res = await api.get(`/project-accounts/${projectId}`);
             setAccount(res.data || {});
         } catch (error) {
             console.error("Failed to fetch project account", error);
@@ -46,7 +46,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
     const fetchExpenses = async () => {
         try {
-            const res = await api.get(`/ finance / expenses / search ? category = PETTY_CASH`);
+            const res = await api.get(`/finance/expenses/search?category=PETTY_CASH`);
             // The search endpoint might need projectId filtering. 
             // Current ExpenseController.search doesn't support projectId.
             // Temporary Workaround: Fetch all and filter client side OR better, assume we update backend later. 
@@ -63,7 +63,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
     const fetchRequests = async () => {
         try {
-            const res = await api.get(`/ project - accounts / ${projectId} /petty-cash/requests`);
+            const res = await api.get(`/project-accounts/${projectId}/petty-cash/requests`);
             setRequests(res.data || []);
         } catch (e) { console.error(e); }
     }
@@ -88,7 +88,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const handleRequestFunds = async (values) => {
         setRequestLoading(true);
         try {
-            await api.post(`/ project - accounts / ${projectId} /petty-cash/request`, {
+            await api.post(`/project-accounts/${projectId}/petty-cash/request`, {
                 amount: values.amount,
                 reason: values.reason
             });
@@ -119,7 +119,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         }
 
         try {
-            await api.post(`/ project - accounts / ${projectId}/expenses`, formData, {
+            await api.post(`/project-accounts/${projectId}/expenses`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             message.success('Expense added successfully');
