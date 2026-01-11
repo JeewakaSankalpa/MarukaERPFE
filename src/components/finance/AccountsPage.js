@@ -36,7 +36,7 @@ const AccountsPage = () => {
         try {
             await axios.post('http://localhost:8080/api/finance/accounts', {
                 ...values,
-                balance: 0, // Initial balance
+                // balance passed from form
                 isActive: true
             });
             setIsModalVisible(false);
@@ -161,6 +161,9 @@ const AccountsPage = () => {
                     </Form.Item>
                     <Form.Item name="name" label="Account Name" rules={[{ required: true }]}>
                         <Input placeholder="e.g. Cash in Hand" />
+                    </Form.Item>
+                    <Form.Item name="balance" label="Opening Balance" initialValue={0}>
+                        <Input type="number" step="0.01" />
                     </Form.Item>
                     <Form.Item name="type" label="Type" rules={[{ required: true }]}>
                         <Select>
