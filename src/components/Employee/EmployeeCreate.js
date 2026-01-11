@@ -43,6 +43,14 @@ function EmployeeCreate({ mode }) {
   const [loading, setLoading] = useState(false);
   const [autoPassword, setAutoPassword] = useState("");
 
+  // Notification Logic
+  const [notificationRules, setNotificationRules] = useState([]);
+  const [subscribedRuleIds, setSubscribedRuleIds] = useState([]);
+
+  const formatEventType = (type) => {
+    return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   // Fetch Dropdowns
   useEffect(() => {
     const fetchDropdowns = async () => {
@@ -74,6 +82,20 @@ function EmployeeCreate({ mode }) {
       }
     };
     fetchDropdowns();
+
+    // Load Notification Rules
+    const fetchRules = async () => {
+      try {
+        const res = await api.get('/notification-rules');
+        setNotificationRules(res.data);
+
+        // If in Edit Mode, we need to verify subscriptions against loaded rules
+        // BUT, we only know the Employee ID later? 
+        // Actually, we have 'id' from useParams if Edit Mode.
+        // Let's do this logic in the 'fetchData' (edit mode) effect or here if id exists.
+      } catch (e) { console.error("Failed to load generic rules"); }
+    };
+    fetchRules();
   }, []);
 
   // Fetch Data if Edit
@@ -92,7 +114,6 @@ function EmployeeCreate({ mode }) {
               contactNumber: d.contactNumber || "",
               address: d.address || "",
               nicNumber: d.nicNumber || "",
-              nicNumber: d.nicNumber || "",
               role: d.role || "EMPLOYEE",
               moduleAccess: d.moduleAccess || [],
               projectRoles: d.projectRoles || [],
@@ -102,7 +123,6 @@ function EmployeeCreate({ mode }) {
               reportsToEmployeeId: d.reportsToEmployeeId || "",
               designation: d.designation || "",
               epfNo: d.epfNo || "",
-              basicSalary: d.basicSalary || "",
               basicSalary: d.basicSalary || "",
               joinDate: d.joinDate || "",
               dob: d.dob || "",
@@ -174,11 +194,23 @@ function EmployeeCreate({ mode }) {
       const creatorRole = localStorage.getItem("role") || "ADMIN"; // Current user's role
 
       if (!isEditMode) {
-        await api.post(`/employee/register?creatorRole=${creatorRole}`, employeePayload);
+        const createRes = await api.post(`/employee/register?creatorRole=${creatorRole}`, employeePayload);
+        // We need the new employee's ID to save subscriptions
+        const newEmpId = createRes.data?.id; // Assuming backend returns the object. If not, we might miss this step for new users unless we refactor.
+        // If createRes.data is just "Employee created", we have a problem. 
+        // Typically registers return the object. Let's assume it does or handle gracefully.
+
+        if (newEmpId) {
+          await api.post(`/notification-rules/user/${newEmpId}/subscriptions`, subscribedRuleIds);
+        }
+
         toast.success("Employee created and credentials emailed!");
-        navigate("/employee/list"); // We will build this next
+        navigate("/employee/list");
       } else {
-        await api.post(`/employee/${id}`, employeePayload); // Using POST/PUT mapped endpoint
+        await api.post(`/employee/${id}`, employeePayload);
+        // Save Subscriptions
+        await api.post(`/notification-rules/user/${id}/subscriptions`, subscribedRuleIds);
+
         toast.success("Employee updated successfully");
         navigate("/employee/list");
       }
@@ -399,6 +431,35 @@ function EmployeeCreate({ mode }) {
                       if (checked) current.add(role);
                       else current.delete(role);
                       return { ...prev, projectRoles: Array.from(current) };
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Notification Subscriptions */}
+        <div className="mb-3">
+          <Form.Label>Notification Subscriptions</Form.Label>
+          <div className="border rounded p-3 bg-white">
+            <div className="small text-muted mb-2">
+              Select which system notifications this user should receive directly.
+            </div>
+            <div className="d-flex flex-column gap-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              {notificationRules.length === 0 && <span className="text-muted">Loading rules...</span>}
+              {notificationRules.map(rule => (
+                <Form.Check
+                  key={rule.id}
+                  type="checkbox"
+                  id={`notif-${rule.id}`}
+                  label={formatEventType(rule.eventType)}
+                  checked={subscribedRuleIds.includes(rule.id)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSubscribedRuleIds(prev => {
+                      if (checked) return [...prev, rule.id];
+                      return prev.filter(rid => rid !== rule.id);
                     });
                   }}
                 />

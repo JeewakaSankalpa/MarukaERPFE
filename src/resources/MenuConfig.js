@@ -124,14 +124,16 @@ export const MenuConfig = [
         id: "settings",
         title: "Settings",
         icon: "FaCogs",
-        roles: ["ADMIN"],
+        roles: ["ADMIN", "MANAGER", "HR", "EMPLOYEE"],
         subItems: [
-            { id: "settings.config", title: "System Config", path: "/admin/config" },
-            { id: "settings.workflows", title: "Workflows", path: "/admin/workflows" },
-            { id: "settings.estimation", title: "Estimation Settings", path: "/settings" },
-            { id: "settings.departments", title: "Departments", path: "/departments" },
-            { id: "settings.new_department", title: "New Department", path: "/departments/new" },
-            { id: "settings.super_admin", title: "System Reset (DANGER)", path: "/admin/super-admin" },
+            { id: "settings.notifications", title: "My Notification Preferences", path: "/my-notifications" },
+            { id: "settings.rules", title: "Notification Logic (Admin)", path: "/admin/notification-rules", roles: ["ADMIN"] },
+            { id: "settings.config", title: "System Config", path: "/admin/config", roles: ["ADMIN"] },
+            { id: "settings.workflows", title: "Workflows", path: "/admin/workflows", roles: ["ADMIN"] },
+            { id: "settings.estimation", title: "Estimation Settings", path: "/settings", roles: ["ADMIN", "MANAGER"] },
+            { id: "settings.departments", title: "Departments", path: "/departments", roles: ["ADMIN", "HR"] },
+            { id: "settings.new_department", title: "New Department", path: "/departments/new", roles: ["ADMIN", "HR"] },
+            { id: "settings.super_admin", title: "System Reset (DANGER)", path: "/admin/super-admin", roles: ["ADMIN"] },
         ]
     }
 ];

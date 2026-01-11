@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Container, Card, Form, Button, Row, Col, Table, Tabs, Tab } from 'react-bootstrap';
 import api from '../../api/api';
 
+
 export default function SettingsPage() {
     const [settings, setSettings] = useState([]);
     const [libraryItems, setLibraryItems] = useState([]);
@@ -182,6 +183,7 @@ export default function SettingsPage() {
                         </Card.Body>
                     </Card>
                 </Tab>
+
             </Tabs>
         </Container>
     );

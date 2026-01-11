@@ -93,6 +93,8 @@ import InvoiceView from "./components/Projects/InvoiceView";
 // import QuotationList from "./components/Sales/QuotationList";
 // import QuotationPage from "./components/Sales/QuotationPage";
 import SettingsPage from "./components/settings/SettingsPage";
+import MyNotificationsPage from "./components/settings/MyNotificationsPage";
+import NotificationRulesPage from "./components/settings/NotificationRulesPage";
 import SuperAdminPage from "./components/admin/SuperAdminPage";
 
 
@@ -192,7 +194,9 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/dashboard/interactive" element={<InteractiveDashboard />} />
                         <Route path="/notifications" element={<NotificationsPage />} />
+                        <Route path="/notifications" element={<NotificationsPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/my-notifications" element={<MyNotificationsPage />} />
                         <Route path="/user/profile" element={<EmployeeProfile />} />
                         <Route path="/employee/profile" element={<EmployeeProfile />} />
                     </Route>
@@ -308,6 +312,7 @@ function App() {
                         <Route path="/admin/config" element={<SystemConfiguration />} />
                         <Route path="/admin/super-admin" element={<SuperAdminPage />} />
                         <Route path="/admin/workflows" element={<WorkflowList />} />
+                        <Route path="/admin/notification-rules" element={<NotificationRulesPage />} />
                         <Route path="/admin/workflow/new" element={<WorkflowBuilder />} />
                         <Route path="/admin/workflow/:id" element={<WorkflowBuilder />} />
                         <Route path="/departments" element={<DepartmentListRouteWrapper />} />
