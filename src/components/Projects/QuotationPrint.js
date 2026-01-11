@@ -96,7 +96,8 @@ const QuotationPrint = () => {
                                 {customer.comName}<br />
                                 {customer.pAddr}<br />
                                 {customer.pContact}<br />
-                                {customer.email}
+                                {customer.email}<br />
+                                {customer.vatNumber && <><strong>VAT No:</strong> {customer.vatNumber}</>}
                             </>
                         ) : "Customer Details Not Available"}
                     </div>
