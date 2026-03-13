@@ -5,6 +5,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ModuleList } from "../../resources/ModuleConstants";
 import { MenuConfig } from "../../resources/MenuConfig";
+import { DatePicker, ConfigProvider } from "antd";
+import dayjs from "dayjs";
 
 function EmployeeCreate({ mode }) {
   const navigate = useNavigate();
@@ -173,25 +175,9 @@ function EmployeeCreate({ mode }) {
         return;
       }
 
-      // 1. Auth Registration (Only for Create)
-      if (!isEditMode) {
-        const authPayload = {
-          username: payload.userName, // Note: backend expects 'username'
-          password: payload.password,
-          role: payload.role,
-          userType: "EMPLOYEE" // Mapped to backend UserType enum
-        };
-        try {
-          await api.post("/auth/register", authPayload);
-        } catch (authErr) {
-          // If auth fails (e.g. username exists), stop here
-          toast.error(authErr.response?.data || "Authentication registration failed");
-          setLoading(false);
-          return;
-        }
-      }
+      // Removed the separate /auth/register call because it causes partial failures (orphaned credentials) if employee profile creation fails.
+      // The backend EmployeeService automatically creates the AuthUser synchronously.
 
-      // 2. Employee Profile Creation/Update
       // Map frontend keys to backend expected DTO if needed.
       // Backend expects: username, password (again, will be encoded again), etc.
       const employeePayload = {
@@ -203,8 +189,18 @@ function EmployeeCreate({ mode }) {
 
       if (!isEditMode) {
         const createRes = await api.post(`/employee/register?creatorRole=${creatorRole}`, employeePayload);
-        // We need the new employee's ID to save subscriptions
-        const newEmpId = createRes.data?.id;
+        
+        // Backend currently returns a 200 OK string for errors like "Access Denied...".
+        // We must manually surface this as an error.
+        if (typeof createRes.data === 'string' && !createRes.data.includes("successfully")) {
+            throw new Error(createRes.data);
+        }
+
+        // To fix the newEmpId for subscriptions: the backend now returns JSON with { message, id } OR string. Let's handle both.
+        let newEmpId;
+        if (typeof createRes.data === 'object' && createRes.data.id) {
+            newEmpId = createRes.data.id;
+        }
 
         if (newEmpId) {
           await api.post(`/notification-rules/user/${newEmpId}/subscriptions`, subscribedRuleIds);
@@ -223,7 +219,8 @@ function EmployeeCreate({ mode }) {
 
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data || "Operation failed");
+      const errorMessage = error.response?.data || error.message || "Operation failed";
+      toast.error(typeof errorMessage === 'string' ? errorMessage : "Operation failed");
     } finally {
       setLoading(false);
     }
@@ -282,9 +279,27 @@ function EmployeeCreate({ mode }) {
             </Form.Group>
           </Col>
           <Col md={4}>
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3 d-flex flex-column">
               <Form.Label>Join Date</Form.Label>
-              <Form.Control type="date" name="joinDate" value={formData.joinDate} onChange={handleChange} />
+              <ConfigProvider
+                theme={{
+                  token: {
+                    colorPrimary: '#0d6efd',
+                    borderRadius: 6,
+                    controlHeight: 38,
+                    colorBorder: '#dee2e6',
+                    fontFamily: 'inherit',
+                  },
+                }}
+              >
+                <DatePicker 
+                  style={{ width: '100%', padding: '0.375rem 0.75rem', fontSize: '1rem' }}
+                  value={formData.joinDate ? dayjs(formData.joinDate) : null} 
+                  onChange={(date, dateString) => setFormData(prev => ({ ...prev, joinDate: dateString }))} 
+                  format="YYYY-MM-DD"
+                  placeholder="Select Join Date"
+                />
+              </ConfigProvider>
             </Form.Group>
           </Col>
         </Row>
@@ -325,9 +340,27 @@ function EmployeeCreate({ mode }) {
 
         <Row>
           <Col md={6}>
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3 d-flex flex-column">
               <Form.Label>Date of Birth</Form.Label>
-              <Form.Control type="date" name="dob" value={formData.dob || ""} onChange={handleChange} />
+              <ConfigProvider
+                theme={{
+                  token: {
+                    colorPrimary: '#0d6efd',
+                    borderRadius: 6,
+                    controlHeight: 38,
+                    colorBorder: '#dee2e6',
+                    fontFamily: 'inherit',
+                  },
+                }}
+              >
+                <DatePicker 
+                  style={{ width: '100%', padding: '0.375rem 0.75rem', fontSize: '1rem' }}
+                  value={formData.dob ? dayjs(formData.dob) : null} 
+                  onChange={(date, dateString) => setFormData(prev => ({ ...prev, dob: dateString }))} 
+                  format="YYYY-MM-DD"
+                  placeholder="Select Date of Birth"
+                />
+              </ConfigProvider>
             </Form.Group>
           </Col>
           <Col md={6}>
