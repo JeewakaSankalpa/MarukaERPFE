@@ -29,8 +29,9 @@ function UserCreate({ mode }) {
             const fetchUser = async () => {
                 try {
                     const response = await api.get(`/employee/${id}`);
+                    const { password, ...safeData } = response.data;
                     setUserData({
-                        ...response.data,
+                        ...safeData,
                         allowedStores: response.data.allowedStores || []
                     });
                     if (mode === 'view') {
@@ -57,7 +58,9 @@ function UserCreate({ mode }) {
                 await api.post('/user/create', userData);
                 toast.success('User created successfully');
             } else if (isEditMode) {
-                await api.put(`/user/update/${id}`, userData);
+                // Never send password on profile update — password changes go through a separate flow
+                const { password: _pw, ...updatePayload } = userData;
+                await api.put(`/user/update/${id}`, updatePayload);
                 toast.success('User updated successfully');
             }
             navigate('/user/search');
@@ -77,10 +80,10 @@ function UserCreate({ mode }) {
         <Container fluid className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
             <div style={{ maxWidth: '600px', width: '100%' }} className="p-4 bg-white rounded shadow">
                 <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0 mb-0 text-center mb-0">{mode === 'create' ? 'Create User' : isEditMode ? 'Edit User' : 'View User'}</h2>
-                        </div>
-<Form onSubmit={handleSubmit}>
+                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                    <h2 className="mb-0 mb-0 text-center mb-0">{mode === 'create' ? 'Create User' : isEditMode ? 'Edit User' : 'View User'}</h2>
+                </div>
+                <Form onSubmit={handleSubmit}>
                     <Row>
                         <Col md={6}>
                             <Form.Group controlId="username" className="mb-3">
