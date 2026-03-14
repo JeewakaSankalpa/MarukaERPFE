@@ -53,12 +53,6 @@ const InventoryDashboard = () => {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="fw-bold text-dark">Inventory Overview</h2>
-        <div className="d-flex gap-2">
-
-          <Button variant="outline-primary" onClick={() => navigate('/item/add')} className="d-flex align-items-center gap-2">
-            <FaBoxes /> New Item
-          </Button>
-        </div>
       </div>
 
       {/* KPI Cards */}
