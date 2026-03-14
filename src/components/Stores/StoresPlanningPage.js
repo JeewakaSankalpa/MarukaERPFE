@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 // src/components/Stores/StoresPlanningPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Button, Form, Table, Spinner } from "react-bootstrap";
@@ -9,6 +11,7 @@ const fetchAggregate = async () => (await api.get(`/stores/requests/aggregate`))
 const upsertPending   = async (shortages) => (await api.post(`/stores/pending-purchase`, shortages)).data;
 
 export default function StoresPlanningPage() {
+    const navigate = useNavigate();
     const [rows, setRows] = useState([]);           // [{productId, productName, needQty, availableQty}]
     const [selection, setSelection] = useState({}); // productId -> user-entered qty
     const [loading, setLoading] = useState(false);
@@ -86,8 +89,11 @@ export default function StoresPlanningPage() {
         <Container style={{ width: "80vw", maxWidth: 1000, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Stores Planning (Procurement)</h2>
-                    {loading && <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Stores Planning (Procurement)</h2>
+                        </div>
+{loading && <div className="d-flex align-items-center gap-2">
                         <Spinner size="sm" animation="border" /> <span className="text-muted small">Loading…</span>
                     </div>}
                 </div>

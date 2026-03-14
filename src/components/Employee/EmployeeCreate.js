@@ -1,5 +1,6 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
-import { Form, Button, Container, Row, Col, Alert } from "react-bootstrap";
+import { Form, Button, Container, Row, Col, Alert, Spinner } from "react-bootstrap";
 import api from "../../api/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -228,8 +229,11 @@ function EmployeeCreate({ mode }) {
 
   return (
     <Container className="my-5">
-      <h2 className="text-center mb-4">{isEditMode ? 'Edit Employee' : 'Add New Employee'}</h2>
-      <Form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm bg-light">
+      <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">{isEditMode ? 'Edit Employee' : 'Add New Employee'}</h2>
+                        </div>
+<Form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm bg-light">
         <Row>
           <Col md={6}>
             <Form.Group className="mb-3">
@@ -546,7 +550,10 @@ function EmployeeCreate({ mode }) {
 
         <div className="d-flex gap-2 justify-content-end mt-4">
           <Button variant="secondary" onClick={() => navigate("/employee/list")}>Cancel</Button>
-          <Button variant="primary" type="submit" disabled={loading}>{loading ? "Saving..." : "Save Employee"}</Button>
+          <Button variant="primary" type="submit" disabled={loading}>
+            {loading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
+            {isEditMode ? "Update Employee" : "Save Employee"}
+          </Button>
         </div>
       </Form>
     </Container >

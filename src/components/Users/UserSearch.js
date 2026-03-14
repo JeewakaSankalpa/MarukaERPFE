@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
@@ -38,8 +39,11 @@ function UserSearch() {
     return (
         <Container className="my-5">
             {/* <div className="p-4 rounded shadow" style={{ width: '100%', maxWidth: '700px', backgroundColor: '#f9f9f9' }}> */}
-                <h2 className="text-center mb-4">User Search</h2>
-                <Form className="d-flex mb-3">
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">User Search</h2>
+                        </div>
+<Form className="d-flex mb-3">
                     <Form.Control
                         type="text"
                         placeholder="Search by Name, NIC, or Phone Number"

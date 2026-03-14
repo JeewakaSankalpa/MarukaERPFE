@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Container, Card, Form, Button, Row, Col, Alert, Spinner } from "react-bootstrap";
+import { Container, Card, Form, Button, Row, Col, Spinner } from "react-bootstrap";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import api from "../api/api";
 import CryptoJS from "crypto-js";
 import { Link } from "react-router-dom";
@@ -34,7 +36,6 @@ export default function SystemConfiguration() {
     });
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState(null);
 
     useEffect(() => {
         loadConfig();
@@ -57,7 +58,7 @@ export default function SystemConfiguration() {
             }
         } catch (error) {
             console.error("Failed to load config", error);
-            setMessage({ type: "danger", text: "Failed to load configurations." });
+            toast.error("Failed to load configurations.");
         } finally {
             setLoading(false);
         }
@@ -74,7 +75,6 @@ export default function SystemConfiguration() {
     const handleSave = async (e) => {
         e.preventDefault();
         setSaving(true);
-        setMessage(null);
 
         try {
             // Prepare payload
@@ -96,10 +96,10 @@ export default function SystemConfiguration() {
             }
 
             await api.post("/admin/config", payload);
-            setMessage({ type: "success", text: "Configuration saved successfully!" });
+            toast.success("Configuration saved successfully!");
         } catch (error) {
             console.error("Save failed", error);
-            setMessage({ type: "danger", text: "Failed to save configuration." });
+            toast.error("Failed to save configuration.");
         } finally {
             setSaving(false);
         }
@@ -113,8 +113,6 @@ export default function SystemConfiguration() {
                 <Link to="/admin" className="btn btn-light me-3"><ArrowLeft size={18} /></Link>
                 <h2 className="mb-0">System Configuration</h2>
             </div>
-
-            {message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}
 
 
 
@@ -354,6 +352,7 @@ export default function SystemConfiguration() {
                     </Form>
                 </Card.Body >
             </Card >
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container >
     );
 }

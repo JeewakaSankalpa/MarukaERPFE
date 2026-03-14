@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Form, Button, Alert } from 'react-bootstrap';
+import { Card, Form, Button } from 'react-bootstrap';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import api from '../../api/api';
 
 export default function NotificationSettings() {
     const [preferences, setPreferences] = useState({ email: true, in_app: true });
     const [loading, setLoading] = useState(false);
-    const [msg, setMsg] = useState(null);
 
     useEffect(() => {
         fetchPreferences();
@@ -28,12 +29,11 @@ export default function NotificationSettings() {
 
     const savePreferences = async () => {
         setLoading(true);
-        setMsg(null);
         try {
             await api.patch('/users/me/preferences', preferences);
-            setMsg({ type: 'success', text: 'Preferences updated successfully!' });
+            toast.success('Preferences updated successfully!');
         } catch (err) {
-            setMsg({ type: 'danger', text: 'Failed to update preferences.' });
+            toast.error('Failed to update preferences.');
         } finally {
             setLoading(false);
         }
@@ -44,8 +44,6 @@ export default function NotificationSettings() {
             <Card.Body>
                 <Card.Title>Notification Preferences</Card.Title>
                 <Card.Text>Manage how you receive notifications.</Card.Text>
-
-                {msg && <Alert variant={msg.type} onClose={() => setMsg(null)} dismissible>{msg.text}</Alert>}
 
                 <Form>
                     <Form.Check
@@ -69,6 +67,7 @@ export default function NotificationSettings() {
                     </Button>
                 </Form>
             </Card.Body>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Card>
     );
 }

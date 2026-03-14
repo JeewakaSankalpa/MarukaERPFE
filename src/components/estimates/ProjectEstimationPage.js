@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card, Spinner } from "react-bootstrap";
@@ -27,7 +28,7 @@ const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/rej
 const createRevisionAPI = async (id, payload) => (await api.post(`/estimations/${id}/revision`, payload)).data;
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
-    // const navigate = useNavigate(); // Unused
+    const navigate = useNavigate();
     const location = useLocation(); // Hook for URL query params
     const searchParams = new URLSearchParams(location.search);
     const forceReadOnly = searchParams.get("readOnly") === "true";
@@ -817,7 +818,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     {/* Header with Version/Status */}
                     <div className="bg-white shadow rounded p-3 mb-3 d-flex justify-content-between align-items-center">
                         <div className="d-flex align-items-center gap-3">
-                            <h4 className="mb-0">Project Estimation</h4>
+                            <div className="d-flex align-items-center mb-0">
+                                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                                <h4 className="mb-0">Project Estimation</h4>
+                            </div>
                             <Badge bg={statusColor} className="fs-6">{approvalStatus}</Badge>
                             <Badge bg="light" text="dark" className="border">V{version}</Badge>
                         </div>

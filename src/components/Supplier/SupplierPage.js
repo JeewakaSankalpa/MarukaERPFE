@@ -1,5 +1,7 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
-import { Container, Button, Form, Table, Badge, Row, Col } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Row, Col, Spinner } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
@@ -20,6 +22,7 @@ const patchSupplierStatus = async (id, status) =>
 
 /* ================== List ================== */
 function SupplierList({ onOpen }) {
+    const navigate = useNavigate();
     const [q, setQ] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(0);
@@ -50,8 +53,11 @@ function SupplierList({ onOpen }) {
         <Container style={{ width: "80vw", maxWidth: 900, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Suppliers</h2>
-                    <Button onClick={() => onOpen(null)}>+ New Supplier</Button>
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Suppliers</h2>
+                        </div>
+<Button onClick={() => onOpen(null)}>+ New Supplier</Button>
                 </div>
 
                 <div className="d-flex gap-2 mb-3">
@@ -108,6 +114,7 @@ function SupplierForm({ id, onClose, onSaved }) {
     const [form, setForm] = useState({ supplierCode: "", name: "", status: "ACTIVE", email: "", phone: "", taxId: "", address: {} });
     const [validated, setValidated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(!id);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -138,6 +145,8 @@ function SupplierForm({ id, onClose, onSaved }) {
         e.preventDefault();
         setValidated(true);
         if (!form.name) return;
+
+        setIsSubmitting(true);
 
         // Validation Logic
         const emailRegex = /[^@\s]+@[^@\s]+\.[^@\s]+/;
@@ -172,6 +181,8 @@ function SupplierForm({ id, onClose, onSaved }) {
             onClose?.();
         } catch {
             toast.error("Save failed");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -276,7 +287,10 @@ function SupplierForm({ id, onClose, onSaved }) {
                     </Row>
 
                     {(isEditMode || !id) && (
-                        <Button type="submit" className="w-100 mt-3">{id ? "Update Supplier" : "Save Supplier"}</Button>
+                        <Button type="submit" className="w-100 mt-3" disabled={isSubmitting}>
+                            {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
+                            {id ? "Update Supplier" : "Save Supplier"}
+                        </Button>
                     )}
                 </Form>
             </div>

@@ -1,9 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Container, Table, Button, Modal, Form, Badge, Row, Col, Card } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 
 export default function LoanManagement() {
+    const navigate = useNavigate();
     const [loans, setLoans] = useState([]);
     const [showAdd, setShowAdd] = useState(false);
     const [showRepay, setShowRepay] = useState(false);
@@ -58,8 +61,11 @@ export default function LoanManagement() {
     return (
         <Container className="py-4">
             <div className="d-flex justify-content-between mb-4">
-                <h2>Loan Management</h2>
-                <Button onClick={() => setShowAdd(true)}>+ Add New Loan</Button>
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Loan Management</h2>
+                        </div>
+<Button onClick={() => setShowAdd(true)}>+ Add New Loan</Button>
             </div>
 
             <Row>

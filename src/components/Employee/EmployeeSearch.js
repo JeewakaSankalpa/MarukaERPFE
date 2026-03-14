@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Table, Form, Button, Container } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
@@ -63,8 +64,11 @@ function EmployeeSearch() {
 
     return (
         <Container className="my-5">
-            <h2 className="text-center mb-4">Employee Search</h2>
-            <Form onSubmit={handleSearchSubmit} className="d-flex mb-3">
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">Employee Search</h2>
+                        </div>
+<Form onSubmit={handleSearchSubmit} className="d-flex mb-3">
                 <Form.Control
                     type="text"
                     placeholder="Search by Employee Name"

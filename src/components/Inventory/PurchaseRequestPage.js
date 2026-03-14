@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Container, Button, Form, Table, Row, Col, Badge, InputGroup
@@ -51,6 +53,7 @@ const safe = (s) => (s ?? "");
 
 /* ================== Create / Edit Form ================== */
 function PRForm({ onSaved }) {
+    const navigate = useNavigate();
     const [suppliers, setSuppliers] = useState([]);
     const [supplierId, setSupplierId] = useState("");
     const [products, setProducts] = useState([]); // supplier's products
@@ -143,10 +146,10 @@ function PRForm({ onSaved }) {
     return (
         <Container style={{ width: "80vw", maxWidth: 980, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center">
-                    <h2 style={{ fontSize: "1.5rem" }}>Create Purchase Request</h2>
+                <div className="d-flex align-items-center mb-4">
+                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Request</h2>
                 </div>
-
                 <Form noValidate validated={validated} onSubmit={save} className="mt-3">
                     <Row className="g-3">
                         <Col md={6}>

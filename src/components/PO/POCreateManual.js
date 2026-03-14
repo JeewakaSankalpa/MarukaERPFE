@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Form, Button, Table } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -16,6 +18,7 @@ const createPOManual = async (payload) => (await api.post(`/pos`, payload)).data
 
 /* ========== PAGE ========== */
 export default function POCreateManual({ onCreated }) {
+    const navigate = useNavigate();
     const [supplierQ, setSupplierQ] = useState("");
     const [supplierPage, setSupplierPage] = useState(0);
     const [supplierData, setSupplierData] = useState({ content: [], totalPages: 0 });
@@ -174,9 +177,11 @@ export default function POCreateManual({ onCreated }) {
     return (
         <Container style={{ width: "80vw", maxWidth: 1200, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
-                <h2 className="mb-3" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
-
-                {/* Supplier select */}
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
+                        </div>
+{/* Supplier select */}
                 <Row className="g-3">
                     <Col md={6}>
                         <div className="p-3 border rounded h-100">

@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState, useRef } from "react";
 import { Container, Row, Col, Form, Button, Card, Badge } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
@@ -100,8 +101,11 @@ export default function QuotationPage() {
         <Container fluid className="p-4" style={{ maxWidth: 1600 }}>
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h3 className="mb-0">{isNew ? "New Quotation" : `Quotation: ${quote.quotationNumber || '...'}`}</h3>
-                    {!isNew && <Badge bg="info">{quote.status}</Badge>}
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">{isNew ? "New Quotation" : `Quotation: ${quote.quotationNumber || '...'}`}</h3>
+                        </div>
+{!isNew && <Badge bg="info">{quote.status}</Badge>}
                 </div>
                 <div className="d-flex gap-2">
                     <Button variant="outline-secondary" onClick={() => navigate("/sales/quotations")}>Cancel</Button>

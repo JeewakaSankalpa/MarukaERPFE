@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 // src/components/projects/ProjectSearch.js
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Container, Form, Row, Col, Spinner } from 'react-bootstrap';
@@ -78,8 +79,11 @@ function ProjectSearch() {
     return (
         <Container className="my-5">
             <div className="d-flex justify-content-between align-items-center mb-4">
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h2 className="mb-0">Projects</h2>
-                <Button variant="primary" onClick={() => navigate('/projects/create')}>
+                        </div>
+<Button variant="primary" onClick={() => navigate('/projects/create')}>
                     Create New Inquiry
                 </Button>
             </div>

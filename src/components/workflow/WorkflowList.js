@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
 import { Table, Button, Card, Badge, Spinner, Alert } from "react-bootstrap";
 import { listWorkflows, activateWorkflow } from "../../services/workflowApi";
@@ -77,8 +78,11 @@ export default function WorkflowList() {
     return (
         <div className="p-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h3>Workflow Configuration</h3>
-                <Button onClick={() => navigate("/admin/workflow/new")}>
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Workflow Configuration</h3>
+                        </div>
+<Button onClick={() => navigate("/admin/workflow/new")}>
                     Create New Workflow
                 </Button>
             </div>

@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Row, Col, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -9,6 +11,7 @@ const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
 const createGRN = async (payload) => (await api.post(`/grns`, payload)).data;
 
 export default function GRNReceivePage({ poId: initialPoId }) {
+    const navigate = useNavigate();
     const [poId, setPoId] = useState(initialPoId || "");
     const [po, setPo] = useState(null);
     const [locationId, setLocationId] = useState("LOC_STORES_MAIN");
@@ -150,8 +153,11 @@ export default function GRNReceivePage({ poId: initialPoId }) {
         <Container style={{ width: "80vw", maxWidth: 1100, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h2 style={{ fontSize: "1.5rem" }}>Receive (GRN)</h2>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Receive (GRN)</h2>
+                        </div>
+<div className="d-flex gap-2">
                         <Form.Control placeholder="PO ID" value={poId} onChange={e => setPoId(e.target.value)} style={{ maxWidth: 280 }} />
                         <Button variant="outline-secondary" onClick={() => setPoId(poId)}>Load</Button>
                     </div>

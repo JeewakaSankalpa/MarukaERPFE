@@ -1,9 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Container, Tabs, Tab, Table, Card, Form, Button, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 
 export default function FinanceReportsPage() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('PL');
 
     // Filters
@@ -63,8 +66,11 @@ export default function FinanceReportsPage() {
     return (
         <Container className="py-4">
             <div className="d-flex justify-content-between align-items-center mb-4 noprint">
-                <h2>Financial Reports</h2>
-                <div className="d-flex gap-2">
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Financial Reports</h2>
+                        </div>
+<div className="d-flex gap-2">
                     <Button variant="outline-dark" onClick={print}>Print Report</Button>
                 </div>
             </div>

@@ -1,5 +1,7 @@
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
-import { Container, Form, Button } from "react-bootstrap";
+import { Container, Form, Button, Spinner } from "react-bootstrap";
 import { ToastContainer, toast } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,8 +12,10 @@ const getDepartment    = async (id)      => (await api.get(`/departments/${id}`)
 const updateDepartment = async (id, payload) => (await api.put(`/departments/${id}`, payload)).data;
 
 export default function DepartmentForm({ id: routeId, onDone }) {
+    const navigate = useNavigate();
     const [isEditMode, setIsEditMode] = useState(!routeId);
     const [validated, setValidated] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [form, setForm] = useState({ name: "", description: "" });
     const [status, setStatus] = useState("ACTIVE");
@@ -34,6 +38,8 @@ export default function DepartmentForm({ id: routeId, onDone }) {
         e.preventDefault(); setValidated(true);
         if (!form.name?.trim()) return;
 
+        setIsSubmitting(true);
+
         try {
             if (!routeId) {
                 const res = await createDepartment({ name: form.name.trim(), description: form.description || "" });
@@ -49,6 +55,8 @@ export default function DepartmentForm({ id: routeId, onDone }) {
         } catch (err) {
             const msg = err?.response?.data?.message || "Save failed";
             toast.error(msg);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -101,7 +109,10 @@ export default function DepartmentForm({ id: routeId, onDone }) {
                     )}
 
                     {(isEditMode || !routeId) && (
-                        <Button type="submit" className="w-100">{routeId ? "Update Department" : "Create Department"}</Button>
+                        <Button type="submit" className="w-100" disabled={isSubmitting}>
+                            {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
+                            {routeId ? "Update Department" : "Create Department"}
+                        </Button>
                     )}
                 </Form>
             </div>

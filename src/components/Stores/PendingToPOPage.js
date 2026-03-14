@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Button, Form, Table, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -11,6 +13,7 @@ const createPOsFromPending = async (pendingId, allocation) =>
 
 /* ========== PAGE ========== */
 export default function PendingToPOPage() {
+    const navigate = useNavigate();
     const [plan, setPlan] = useState(null); // {id, lines:[{productId, productNameSnapshot, shortageQty, suppliers:[...] }]}
     const [choices, setChoices] = useState({}); // productId -> { supplierId, qty, unitPrice, taxPercent }
 
@@ -64,9 +67,11 @@ export default function PendingToPOPage() {
         <Container style={{ width:"80vw", maxWidth:1000, paddingTop:24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h2 style={{ fontSize:"1.5rem" }}>Pending Purchases → Create POs</h2>
+                    <div className="d-flex align-items-center mb-4">
+                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                        <h2 className="mb-0" style={{ fontSize:"1.5rem" }}>Pending Purchases → Create POs</h2>
+                    </div>
                 </div>
-
                 <Table hover responsive>
                     <thead>
                     <tr>

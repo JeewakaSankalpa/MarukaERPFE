@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Table, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -10,6 +12,7 @@ const acceptTransfer = async (id) => (await api.patch(`/transfers/${id}/accept`)
 const rejectTransfer = async (id) => (await api.patch(`/transfers/${id}/reject`)).data;
 
 export default function TransfersInbox() {
+    const navigate = useNavigate();
     const [toLocationId, setToLocationId] = useState("LOC_PROJECT_OR_DEPT");
     const [rows, setRows] = useState([]);
 
@@ -83,8 +86,11 @@ export default function TransfersInbox() {
         <Container style={{ width: "90vw", maxWidth: 1200, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h2 style={{ fontSize: "1.5rem" }}>Transfers Inbox</h2>
-                    <input value={toLocationId} onChange={e => setToLocationId(e.target.value)} className="form-control" style={{ maxWidth: 280 }} />
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Transfers Inbox</h2>
+                        </div>
+<input value={toLocationId} onChange={e => setToLocationId(e.target.value)} className="form-control" style={{ maxWidth: 280 }} />
                 </div>
 
                 <Table hover responsive>

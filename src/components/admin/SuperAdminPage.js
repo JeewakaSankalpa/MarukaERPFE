@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Card, Button, Modal, message, Typography } from 'antd';
+import { Card, Button, Modal, Typography } from 'antd';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { ExclamationCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 
@@ -40,14 +42,14 @@ const SuperAdminPage = () => {
         setLoading(true);
         try {
             await api.post('/admin/system-reset');
-            message.success('System Reset Successful. Redirecting to login...');
+            toast.success('System Reset Successful. Redirecting to login...');
             setTimeout(() => {
                 localStorage.clear();
                 window.location.href = '/login';
             }, 2000);
         } catch (error) {
             console.error(error);
-            message.error('System Reset Failed: ' + (error.response?.data || error.message));
+            toast.error('System Reset Failed: ' + (error.response?.data || error.message));
         } finally {
             setLoading(false);
         }
@@ -76,6 +78,7 @@ const SuperAdminPage = () => {
                     </Button>
                 </div>
             </Card>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </div>
     );
 };

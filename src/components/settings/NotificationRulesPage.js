@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { Container, Table, Form, Button, Card, Badge, Accordion, Row, Col } from 'react-bootstrap';
 import api from '../../api/api';
@@ -5,6 +7,7 @@ import { toast } from 'react-toastify';
 
 
 export default function NotificationRulesPage() {
+    const navigate = useNavigate();
     const [rules, setRules] = useState([]);
     const [loading, setLoading] = useState(false);
     const [employees, setEmployees] = useState([]);
@@ -110,8 +113,11 @@ export default function NotificationRulesPage() {
 
     return (
         <Container className="py-3">
-            <h3>Notification Rules Manager (Admin)</h3>
-            <p className="text-muted">Configure notification routing via Specific Employees.</p>
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Notification Rules Manager (Admin)</h3>
+                        </div>
+<p className="text-muted">Configure notification routing via Specific Employees.</p>
 
             <Form.Group className="mb-3">
                 <Form.Control

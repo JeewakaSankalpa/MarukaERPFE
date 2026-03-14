@@ -1,15 +1,21 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { Card, Tabs, Tab, Form, Button, Table, Row, Col, Spinner, Badge } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 
 export default function HRConfiguration() {
+    const navigate = useNavigate();
     const [key, setKey] = useState('schedule');
 
     return (
         <div className="p-3">
-            <h3>Global HR Configurations</h3>
-            <Card>
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Global HR Configurations</h3>
+                        </div>
+<Card>
                 <Card.Body>
                     <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-3">
                         <Tab eventKey="schedule" title="Working Schedule">

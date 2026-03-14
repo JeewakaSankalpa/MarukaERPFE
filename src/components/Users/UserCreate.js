@@ -1,12 +1,16 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Form, Button, Container, Row, Col } from 'react-bootstrap';
+import { Form, Button, Container, Row, Col, Spinner } from 'react-bootstrap';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function UserCreate({ mode }) {
     const { id } = useParams();
     const navigate = useNavigate();
     const [isEditMode, setIsEditMode] = useState(mode === 'create');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [userData, setUserData] = useState({
         username: '',
         password: '',
@@ -47,18 +51,21 @@ function UserCreate({ mode }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         try {
             if (mode === 'create') {
                 await api.post('/user/create', userData);
-                alert('User created successfully');
+                toast.success('User created successfully');
             } else if (isEditMode) {
                 await api.put(`/user/update/${id}`, userData);
-                alert('User updated successfully');
+                toast.success('User updated successfully');
             }
             navigate('/user/search');
         } catch (error) {
             console.error('User save failed:', error);
-            alert('User save failed. Please try again.');
+            toast.error('User save failed. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -69,8 +76,11 @@ function UserCreate({ mode }) {
     return (
         <Container fluid className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
             <div style={{ maxWidth: '600px', width: '100%' }} className="p-4 bg-white rounded shadow">
-                <h2 className="text-center mb-4">{mode === 'create' ? 'Create User' : isEditMode ? 'Edit User' : 'View User'}</h2>
-                <Form onSubmit={handleSubmit}>
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">{mode === 'create' ? 'Create User' : isEditMode ? 'Edit User' : 'View User'}</h2>
+                        </div>
+<Form onSubmit={handleSubmit}>
                     <Row>
                         <Col md={6}>
                             <Form.Group controlId="username" className="mb-3">
@@ -237,12 +247,14 @@ function UserCreate({ mode }) {
                         </Button>
                     )}
                     {isEditMode && (
-                        <Button variant="success" type="submit" className="w-100">
+                        <Button variant="success" type="submit" className="w-100" disabled={isSubmitting}>
+                            {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
                             Save Changes
                         </Button>
                     )}
                 </Form>
             </div>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
 }

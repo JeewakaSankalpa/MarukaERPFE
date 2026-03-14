@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState, useMemo } from "react";
 import { Container, Row, Col, Button, Table, Badge, Modal, Form } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
@@ -183,8 +184,11 @@ export default function PurchaseOrderDetails() {
                     <div className="bg-white shadow rounded p-4 mb-4">
                         <div className="d-flex justify-content-between align-items-start mb-4">
                             <div>
-                                <h3 className="mb-1">Purchase Order: {po.poNumber}</h3>
-                                <div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
+                                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Purchase Order: {po.poNumber}</h3>
+                        </div>
+<div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
                             </div>
                             <div className="text-end">
                                 <Button size="sm" variant="outline-primary" className="mb-2" onClick={() => setShowAddressModal(true)}>

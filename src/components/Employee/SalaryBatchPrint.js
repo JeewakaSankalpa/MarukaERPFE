@@ -1,9 +1,13 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate,  useParams } from 'react-router-dom';
 import api from "../../api/api";
 import { Container, Button, Table, Row, Col, Card } from "react-bootstrap";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function SalaryBatchPrint() {
+    const navigate = useNavigate();
     const { month } = useParams();
     const [salaries, setSalaries] = useState([]);
     const [employees, setEmployees] = useState({});
@@ -23,7 +27,7 @@ export default function SalaryBatchPrint() {
             const res = await api.get(`/salary/list?month=${month}`);
             setSalaries(res.data || []);
         } catch (e) {
-            alert("Failed to load data");
+            toast.error("Failed to load data");
         } finally {
             setLoading(false);
         }
@@ -46,8 +50,11 @@ export default function SalaryBatchPrint() {
                 return (
                     <div key={s.id} className="payslip-page mb-5 border p-4" style={{ pageBreakAfter: "always" }}>
                         <div className="text-center mb-4">
-                            <h3>Maruka ERP - Payslip</h3>
-                            <h5>Month: {month}</h5>
+                            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Maruka ERP - Payslip</h3>
+                        </div>
+<h5>Month: {month}</h5>
                         </div>
 
                         <Row className="mb-3">
@@ -132,6 +139,7 @@ export default function SalaryBatchPrint() {
                     </div>
                 );
             })}
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="d-print-none" />
         </Container>
     );
 }

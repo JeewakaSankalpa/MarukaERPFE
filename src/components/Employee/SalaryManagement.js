@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
 import { Container, Tabs, Tab, Form, Button, Table, Row, Col, Card, Alert, Spinner, Badge, Modal } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
@@ -164,9 +165,11 @@ function SalaryManagement() {
 
     return (
         <Container className="my-5">
-            <h2 className="mb-4">Salary & Payroll Management</h2>
-
-            <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-4">
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Salary & Payroll Management</h2>
+                        </div>
+<Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-4">
 
                 <Tab eventKey="processing" title="Monthly Processing">
                     <Card className="p-4 shadow-sm">

@@ -1,11 +1,16 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Card, Tag, Modal, Form, Select, message } from 'antd';
+import { Table, Button, Tag, Modal, Form, Select } from 'antd';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 
 const { Option } = Select;
 
 const PettyCashApprovalPage = () => {
+    const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(false);
     const [accounts, setAccounts] = useState([]);
@@ -22,7 +27,7 @@ const PettyCashApprovalPage = () => {
             const res = await api.get('/project-accounts/petty-cash/requests');
             setRequests(res.data || []);
         } catch (e) {
-            message.error("Failed to load requests");
+            toast.error("Failed to load requests");
         } finally {
             setLoading(false);
         }
@@ -54,12 +59,12 @@ const PettyCashApprovalPage = () => {
                 amount: currentRequest.amount,
                 sourceAccountId: values.sourceAccountId
             });
-            message.success("Request Approved");
+            toast.success("Request Approved");
             setApprovalVisible(false);
             form.resetFields();
             fetchRequests();
         } catch (e) {
-            message.error("Approval Failed");
+            toast.error("Approval Failed");
         } finally {
             setApprovalLoading(false);
         }
@@ -68,10 +73,10 @@ const PettyCashApprovalPage = () => {
     const handleReject = async (id) => {
         try {
             await api.post(`/project-accounts/petty-cash/requests/${id}/reject`);
-            message.warning("Request Rejected");
+            toast.warning("Request Rejected");
             fetchRequests();
         } catch (e) {
-            message.error("Rejection Failed");
+            toast.error("Rejection Failed");
         }
     };
 
@@ -95,8 +100,11 @@ const PettyCashApprovalPage = () => {
 
     return (
         <div className="p-4">
-            <h2>Petty Cash Approvals</h2>
-            <Table
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Petty Cash Approvals</h2>
+                        </div>
+<Table
                 dataSource={requests}
                 columns={columns}
                 rowKey="id"
@@ -126,6 +134,7 @@ const PettyCashApprovalPage = () => {
                     </Form.Item>
                 </Form>
             </Modal>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </div>
     );
 };

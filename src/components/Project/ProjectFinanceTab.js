@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, message, Tabs, Select } from 'antd';
+import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select } from 'antd';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { DollarOutlined, BankOutlined, PlusOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 import ProjectFinancialReport from '../finance/ProjectFinancialReport';
@@ -92,12 +94,12 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                 amount: values.amount,
                 reason: values.reason
             });
-            message.success('Fund request submitted successfully');
+            toast.success('Fund request submitted successfully');
             setRequestModalVisible(false);
             requestForm.resetFields();
             fetchRequests();
         } catch (e) {
-            message.error('Failed to submit request');
+            toast.error('Failed to submit request');
         } finally {
             setRequestLoading(false);
         }
@@ -122,13 +124,13 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             await api.post(`/project-accounts/${projectId}/expenses`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            message.success('Expense added successfully');
+            toast.success('Expense added successfully');
             setExpenseModalVisible(false);
             expenseForm.resetFields();
             setFileList([]);
             fetchAccount(); // Update balance
         } catch (e) {
-            message.error('Failed to add expense');
+            toast.error('Failed to add expense');
         } finally {
             setExpenseLoading(false);
         }
@@ -141,12 +143,12 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                 amount: values.amount,
                 sourceAccountId: values.targetAccountId // Using same DTO field name for target
             });
-            message.success('Funds returned successfully');
+            toast.success('Funds returned successfully');
             setReturnModalVisible(false);
             returnForm.resetFields();
             fetchAccount();
         } catch (e) {
-            message.error('Failed to return funds');
+            toast.error('Failed to return funds');
         } finally {
             setReturnLoading(false);
         }
@@ -302,6 +304,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                     </Form.Item>
                 </Form>
             </Modal>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </div>
     );
 };

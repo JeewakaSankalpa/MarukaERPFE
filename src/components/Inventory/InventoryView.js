@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Table, Container, Form, Button, Row, Col, Modal } from 'react-bootstrap';
 import Select from 'react-select';
@@ -9,6 +11,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 
 function InventoryView() {
+    const navigate = useNavigate();
     const [inventoryItems, setInventoryItems] = useState([]);
     const [filteredItems, setFilteredItems] = useState([]);
     const [locationOptions, setLocationOptions] = useState([]);
@@ -284,9 +287,11 @@ function InventoryView() {
 
     return (
         <Container className="my-5">
-            <h2 className="text-center mb-4">Inventory Summary</h2>
-
-            <Form className="mb-4">
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">Inventory Summary</h2>
+                        </div>
+<Form className="mb-4">
                 <Row>
                     {/* Simplified Filters - Removed Location/Expiry/Supplier for Summary View stability */}
                     <Col md={6}>
