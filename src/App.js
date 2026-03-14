@@ -255,7 +255,7 @@ function App() {
                         <Route path="/stores/pending-to-po" element={<PendingToPOPage />} />
                         <Route path="/transfers/inbox" element={<TransfersInbox />} />
                         <Route path="/pos" element={<POListRouteWrapper />} />
-                        <Route path="/pos/new" element={<POCreateManualRouteWrapper />} />
+                        <Route path="/pos/create" element={<POCreateManualRouteWrapper />} />
                         <Route path="/pos/:id/print" element={<POPrint />} />
                         <Route path="/pos/:id" element={<PurchaseOrderDetails />} />
                         <Route path="/grn" element={<GRNRouteWrapper />} />
