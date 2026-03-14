@@ -45,6 +45,17 @@ function EmployeeList() {
         }
     };
 
+    const handleEnable = async (id) => {
+        if (!window.confirm("Are you sure you want to enable this employee?")) return;
+        try {
+            await api.put(`/employee/${id}/enable`); 
+            toast.success("Employee enabled");
+            fetchEmployees();
+        } catch (e) {
+            toast.error("Failed to enable employee");
+        }
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -80,7 +91,11 @@ function EmployeeList() {
                             </td>
                             <td>
                                 <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleEdit(emp.id)}>Edit</Button>
-                                <Button variant="outline-danger" size="sm" onClick={() => handleDisable(emp.id)}>Disable</Button>
+                                {emp.active ? (
+                                    <Button variant="outline-danger" size="sm" onClick={() => handleDisable(emp.id)}>Disable</Button>
+                                ) : (
+                                    <Button variant="outline-success" size="sm" onClick={() => handleEnable(emp.id)}>Enable</Button>
+                                )}
                             </td>
                         </tr>
                     ))}
