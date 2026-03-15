@@ -36,10 +36,25 @@ export default function SystemConfiguration() {
     });
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [mappingRoles, setMappingRoles] = useState([]);
+    const [mappingLoading, setMappingLoading] = useState(false);
 
     useEffect(() => {
         loadConfig();
+        loadMappingRoles();
     }, []);
+
+    const loadMappingRoles = async () => {
+        setMappingLoading(true);
+        try {
+            const res = await api.get("/api/finance/account-mappings/roles");
+            setMappingRoles(res.data || []);
+        } catch (error) {
+            console.error("Failed to load mapping roles", error);
+        } finally {
+            setMappingLoading(false);
+        }
+    };
 
     const loadConfig = async () => {
         setLoading(true);
@@ -214,6 +229,65 @@ export default function SystemConfiguration() {
                             />
                         </Col>
                     </Row>
+                </Card.Body>
+            </Card>
+
+            <Card className="shadow-sm mb-4">
+                <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 className="mb-0 text-primary">Business Mappings (Finance)</h5>
+                    <small className="text-muted">Links application logic to specific GL Accounts</small>
+                </Card.Header>
+                <Card.Body>
+                    <p className="text-muted small mb-3">
+                        Define which General Ledger account codes should be used for core business operations. 
+                        The system uses default codes but you can override them here. 
+                        A 🟢 indicates the account exists in your Chart of Accounts.
+                    </p>
+                    {mappingLoading ? (
+                        <div className="text-center py-3"><Spinner animation="border" size="sm" /></div>
+                    ) : (
+                        <div className="table-responsive">
+                            <table className="table table-sm table-hover border-top">
+                                <thead className="bg-light">
+                                    <tr>
+                                        <th>Business Role</th>
+                                        <th>Mapped GL Code</th>
+                                        <th className="text-center">Status</th>
+                                        <th>Default</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {mappingRoles.map(role => (
+                                        <tr key={role.role}>
+                                            <td className="align-middle">
+                                                <div className="fw-bold">{role.displayName}</div>
+                                                <small className="text-muted">{role.configKey}</small>
+                                            </td>
+                                            <td>
+                                                <Form.Control 
+                                                    size="sm"
+                                                    value={config[role.configKey] || role.currentCode}
+                                                    name={role.configKey}
+                                                    onChange={handleChange}
+                                                    placeholder={role.defaultCode}
+                                                />
+                                            </td>
+                                            <td className="text-center align-middle">
+                                                {role.exists ? (
+                                                    <span className="badge bg-success" title="Valid Account Code">🟢 Valid</span>
+                                                ) : (
+                                                    <span className="badge bg-danger" title="Account not found in COA">🔴 Missing</span>
+                                                )}
+                                            </td>
+                                            <td className="align-middle text-muted small">
+                                                <code>{role.defaultCode}</code>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </Card.Body>
             </Card>
 

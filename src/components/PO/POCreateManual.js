@@ -32,7 +32,6 @@ export default function POCreateManual({ onCreated }) {
     const [note, setNote] = useState("");
 
     // Rows: { productId, name, sku, unit, qty, unitPrice, taxPercent, taxAmount, note }
-    // We now support explicit taxAmount per line if needed, but UI might still drive by %
     const [rows, setRows] = useState([]);
 
     // Settings & Toggles
@@ -103,9 +102,7 @@ export default function POCreateManual({ onCreated }) {
         // 1. Delivery Charge
         const del = Number(deliveryCharge || 0);
 
-        // 2. Base for Tax (Subtotal + Delivery?) 
-        // Typically VAT is on (Sub + Delivery) depending on implementation. 
-        // User asked to "load tax and vat from saved ones... enable or disable"
+        // 2. Base for Tax
         const taxableBase = sub + del;
 
         // 3. VAT
@@ -116,12 +113,11 @@ export default function POCreateManual({ onCreated }) {
             vatAmt = taxableBase * (vatRate / 100);
         }
 
-        // 4. Other Tax (NBT/SSCL etc.) - simplfied as "Other Tax" for now
+        // 4. Other Tax
         let otherAmt = 0;
         let otherRate = 0;
         if (enableOtherTax) {
-            otherRate = Number(globalSettings['GLOBAL_TAX_PERCENT'] || 0); // Reuse global tax key
-            // Is this on base or base+VAT? Assuming base for now.
+            otherRate = Number(globalSettings['GLOBAL_TAX_PERCENT'] || 0);
             otherAmt = taxableBase * (otherRate / 100);
         }
 
@@ -144,11 +140,7 @@ export default function POCreateManual({ onCreated }) {
                 productId: r.productId,
                 qty: Number(r.qty),
                 unitPrice: r.unitPrice ? String(r.unitPrice) : undefined,
-                note: r.note || undefined,
-                // We are using global tax mostly, line specific taxPercent is ignored here unless we want overrides
-                // For this implementation, we rely on PO-level fields for the calculated tax breakdown
-                // but if backend needs line tax, we could push it. 
-                // Let's stick effectively to PO level tax for simplicity as per request
+                note: r.note || undefined
             }));
 
             if (items.length === 0) { toast.warn("Add at least one product line"); return; }
@@ -158,12 +150,11 @@ export default function POCreateManual({ onCreated }) {
                 etaDate: etaDate || null,
                 note: note || null,
                 items,
-                // New Fields
                 deliveryCharge: totals.delivery,
                 vatAmount: totals.vat,
                 otherTaxAmount: totals.other,
-                grandTotal: totals.grand, // Optional if backend recalcs, but safer to send what user saw
-                taxTotal: totals.vat + totals.other // Legacy field support
+                grandTotal: totals.grand,
+                taxTotal: totals.vat + totals.other
             };
 
             const po = await createPOManual(payload);
@@ -175,13 +166,13 @@ export default function POCreateManual({ onCreated }) {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 1200, paddingTop: 24 }}>
+        <Container className="py-4">
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
-                        </div>
-{/* Supplier select */}
+                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
+                </div>
+                {/* Supplier select */}
                 <Row className="g-3">
                     <Col md={6}>
                         <div className="p-3 border rounded h-100">
