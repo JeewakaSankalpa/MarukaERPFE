@@ -1,6 +1,8 @@
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Container, Button, Form, Table, Row, Col, Badge, InputGroup } from "react-bootstrap";
+import { Container, Button, Form, Table, Row, Col, Badge, InputGroup, Spinner } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
@@ -47,6 +49,7 @@ const listActiveProjects = async () => {
 };
 
 export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProjectId }) {
+    const navigate = useNavigate();
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
     const urlProjectId = queryParams.get("projectId");
@@ -54,6 +57,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const [routeId, setRouteId] = useState(irId || null);
     const [isEditMode, setIsEditMode] = useState(!irId);
     const [validated, setValidated] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // dropdown data
     const [departments, setDepartments] = useState([]); // [{id,name,description,status,...}]
@@ -150,6 +154,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         }));
         if (items.length === 0) { toast.warn("Add at least one product with quantity"); return; }
 
+        setIsSubmitting(true);
+
         try {
             const body = { departmentId, projectId, comment, items };
             const created = await createIR(body);
@@ -158,6 +164,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             setIsEditMode(false);
         } catch (err) {
             toast.error(err?.response?.data?.message || "Failed to submit request");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -288,7 +296,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                     </div>
 
                     {(isEditMode || !routeId) && (
-                        <Button type="submit" className="w-100 mt-2">Submit Item Request</Button>
+                        <Button type="submit" className="w-100 mt-2" disabled={isSubmitting}>
+                            {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
+                            Submit Item Request
+                        </Button>
                     )}
                 </Form>
             </div>

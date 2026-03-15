@@ -1,7 +1,8 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Container, Button, Table, Modal, Form, Row, Col, Card, Badge, InputGroup } from 'react-bootstrap';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom';
+import { useNavigate,  Link } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell
@@ -12,6 +13,7 @@ import GRNPaymentModal from '../GRN/GRNPaymentModal';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF6666'];
 
 export default function ExpensesPage() {
+    const navigate = useNavigate();
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -130,8 +132,11 @@ export default function ExpensesPage() {
     return (
         <Container fluid className="py-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Expense Management</h2>
-                <Button variant="primary" onClick={() => setShowModal(true)}>+ New Expense</Button>
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Expense Management</h2>
+                        </div>
+<Button variant="primary" onClick={() => setShowModal(true)}>+ New Expense</Button>
             </div>
 
             {/* Charts */}

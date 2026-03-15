@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 // src/components/projects/ProjectForm.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -9,6 +10,7 @@ import {
   Container,
   ListGroup,
   Badge,
+  Spinner,
 } from "react-bootstrap";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
@@ -18,7 +20,7 @@ import { listWorkflows } from "../../services/workflowApi";
 const ProjectForm = () => {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
-  // console.log('DEBUG: routeId=', routeId); // Removing debug log
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [projectData, setProjectData] = useState({
     id: "",
@@ -147,6 +149,7 @@ const ProjectForm = () => {
     const { projectName, customerId, salesRep, comment } = projectData;
     if (!projectName || !customerId || !salesRep || !comment) return;
 
+    setIsSubmitting(true);
     try {
       if (!routeId) {
         // CREATE
@@ -228,6 +231,8 @@ const ProjectForm = () => {
       } else {
         toast.error("Request failed");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -480,7 +485,8 @@ const ProjectForm = () => {
 
             {
               (!routeId || isEditMode) && (
-                <Button variant="success" type="submit" className="w-100 mt-3">
+                <Button variant="success" type="submit" className="w-100 mt-3" disabled={isSubmitting}>
+                  {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
                   {routeId ? "Update Inquiry" : "Create New Inquiry"}
                 </Button>
               )

@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -12,6 +14,7 @@ const setEta = async (id, etaDate) => (await api.patch(`/pos/${id}/eta`, { etaDa
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 
 export default function POListView({ onOpenGRN }) {
+    const navigate = useNavigate();
     const [q, setQ] = useState(""); const [status, setStatus] = useState("");
     const [page, setPage] = useState(0); const [size] = useState(10);
     const [data, setData] = useState({ content: [], totalPages: 0 });
@@ -66,8 +69,11 @@ export default function POListView({ onOpenGRN }) {
         <Container style={{ width: "80vw", maxWidth: 1100, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h2 style={{ fontSize: "1.5rem" }}>Purchase Orders</h2>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Purchase Orders</h2>
+                        </div>
+<div className="d-flex gap-2">
                         <Form.Select value={status} onChange={e => setStatus(e.target.value)} style={{ maxWidth: 220 }}>
                             <option value="">All Statuses</option>
                             <option value="CREATED">CREATED</option>

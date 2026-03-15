@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import api from '../../../api/api';
 import {
@@ -12,13 +14,14 @@ import {
     Spinner,
     Badge
 } from 'react-bootstrap';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const StockTakingPage = () => {
+    const navigate = useNavigate();
     const [batches, setBatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
     const [adjustments, setAdjustments] = useState({}); // Map: batchId -> physicalQty
     const [searchQuery, setSearchQuery] = useState('');
     const [auditTitle, setAuditTitle] = useState('');
@@ -50,10 +53,9 @@ const StockTakingPage = () => {
             setLoading(true);
             const response = await api.get('/inventory/adjustments/batches');
             setBatches(response.data);
-            setError(null);
         } catch (err) {
             console.error("Error fetching batches:", err);
-            setError("Failed to load stock batches.");
+            toast.error("Failed to load stock batches.");
         } finally {
             setLoading(false);
         }
@@ -82,19 +84,18 @@ const StockTakingPage = () => {
         const itemsToSubmit = getAdjustedBatches();
 
         if (itemsToSubmit.length === 0) {
-            setError("No changes detected to submit.");
+            toast.warning("No changes detected to submit.");
             return;
         }
 
         if (!auditTitle.trim()) {
-            setError("Please provide a title or reference for this audit (e.g., 'Year End Count').");
+            toast.warning("Please provide a title or reference for this audit (e.g., 'Year End Count').");
             return;
         }
 
 
 
         setSubmitting(true);
-        setError(null);
 
         const auditPayload = {
             title: auditTitle,
@@ -114,12 +115,12 @@ const StockTakingPage = () => {
 
         try {
             await api.post('/inventory/adjustments/audit', auditPayload);
-            setSuccess("Stock audit submitted successfully for approval!");
+            toast.success("Stock audit submitted successfully for approval!");
             setAdjustments({});
             setAuditTitle('');
         } catch (err) {
             console.error("Error submitting audit:", err);
-            setError("Failed to submit stock audit.");
+            toast.error("Failed to submit stock audit.");
         } finally {
             setSubmitting(false);
         }
@@ -142,12 +143,11 @@ const StockTakingPage = () => {
 
     return (
         <Container fluid className="p-4">
-            <h3 className="mb-4">Manual Stock Taking</h3>
-
-            {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
-            {success && <Alert variant="success" onClose={() => setSuccess(null)} dismissible>{success}</Alert>}
-
-            <Card className="mb-4 shadow-sm">
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Manual Stock Taking</h3>
+                        </div>
+<Card className="mb-4 shadow-sm">
                 <Card.Body>
                     <Row className="align-items-center g-3">
                         <Col md={3}>
@@ -272,6 +272,7 @@ const StockTakingPage = () => {
                     </tbody>
                 </Table>
             </div>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
 };

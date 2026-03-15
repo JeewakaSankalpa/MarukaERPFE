@@ -56,6 +56,7 @@ export const MenuConfig = [
             { id: "procurement.dashboard", title: "Dashboard", path: "/procurement/dashboard" }, // NEW
             { id: "procurement.planning", title: "Stores Planning", path: "/stores/planning" },
             { id: "procurement.pos", title: "Purchase Orders", path: "/pos" },
+            { id: "procurement.pos_create", title: "Create PO", path: "/pos/create" },
             { id: "procurement.pending", title: "Pending Items", path: "/stores/pending-to-po" },
             { id: "procurement.grn", title: "Receive (GRN)", path: "/grn" },
             { id: "procurement.grn_history", title: "GRN History", path: "/grns" },

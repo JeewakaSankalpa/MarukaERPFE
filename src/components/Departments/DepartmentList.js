@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Table, Form, Button, Badge, Modal } from "react-bootstrap";
 import { ToastContainer, toast } from "react-toastify";
@@ -13,6 +15,7 @@ const patchStatus = async (id, status) =>
 const getDepartment = async (id) => (await api.get(`/departments/${id}`)).data;
 
 export default function DepartmentList({ onOpenForm }) {
+    const navigate = useNavigate();
     const [q, setQ] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(0); const [size] = useState(10);
@@ -43,8 +46,11 @@ export default function DepartmentList({ onOpenForm }) {
         <Container style={{ width: "80vw", maxWidth: 1100, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Departments</h2>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Departments</h2>
+                        </div>
+<div className="d-flex gap-2">
                         <Form.Select value={status} onChange={e=>{ setStatus(e.target.value); setPage(0); }} style={{ maxWidth: 200 }}>
                             <option value="">All</option>
                             <option value="ACTIVE">ACTIVE</option>

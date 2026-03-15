@@ -1,7 +1,8 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Container, Table, Card, Badge, Form, Row, Col, InputGroup } from 'react-bootstrap';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom';
+import { useNavigate,  Link } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell
@@ -11,6 +12,7 @@ import api from '../../api/api';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
 
 export default function IncomePage() {
+    const navigate = useNavigate();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -98,9 +100,11 @@ export default function IncomePage() {
 
     return (
         <Container fluid className="py-4">
-            <h2 className="mb-4">Income Management</h2>
-
-            {/* Summary Cards */}
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Income Management</h2>
+                        </div>
+{/* Summary Cards */}
             <Row className="mb-4 g-3">
                 <Col md={4}>
                     <Card className="text-center shadow-sm border-0 bg-primary text-white h-100">

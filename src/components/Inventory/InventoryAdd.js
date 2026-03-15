@@ -1,8 +1,13 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Container, Form, Button, Row, Col } from 'react-bootstrap';
 import api from '../../api/api';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function InventoryAdd() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -49,17 +54,19 @@ function InventoryAdd() {
         ...inventoryData,
         productId: selectedProduct?.id,
       });
-      alert('Inventory added successfully');
+      toast.success('Inventory added successfully');
     } catch (error) {
       console.error('Failed to add inventory:', error);
-      alert('Inventory addition failed.');
+      toast.error('Inventory addition failed.');
     }
   };
 
   return (
     <Container className="my-5">
-      <h2 className="text-center mb-4">Add Inventory</h2>
-
+      <div className="d-flex align-items-center mb-4">
+        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <h2 className="mb-0 mb-0 text-center mb-0">Add Inventory</h2>
+      </div>
       <Form onSubmit={handleSubmit}>
         {/* Search Product */}
         {/* <Form.Group controlId="searchProduct" className="mb-3">
@@ -87,101 +94,99 @@ function InventoryAdd() {
         </Form.Group> */}
 
         {/* {selectedProduct && ( */}
-          {/* <> */}
-            <Row>
-              <Col md={6}>
-                <Form.Group controlId="itemName" className="mb-3">
-                  <Form.Label>Item Name</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="itemName"
-                    value={inventoryData.itemName}
-                    onChange={handleChange}
-                    required
-                    // disabled
-                  />
-                </Form.Group>
-              </Col>
+        {/* <> */}
+        <Row>
+          <Col md={6}>
+            <Form.Group controlId="itemName" className="mb-3">
+              <Form.Label>Item Name</Form.Label>
+              <Form.Control
+                type="text"
+                name="itemName"
+                value={inventoryData.itemName}
+                onChange={handleChange}
+                required
+              // disabled
+              />
+            </Form.Group>
+          </Col>
 
-              <Col md={6}>
-                <Form.Group controlId="batchNumber" className="mb-3">
-                  <Form.Label>Batch Number</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="batchNumber"
-                    value={inventoryData.batchNumber}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+          <Col md={6}>
+            <Form.Group controlId="batchNumber" className="mb-3">
+              <Form.Label>Batch Number</Form.Label>
+              <Form.Control
+                type="text"
+                name="batchNumber"
+                value={inventoryData.batchNumber}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
+          </Col>
+        </Row>
 
-            <Row>
-              <Col md={6}>
-                <Form.Group controlId="expiryDate" className="mb-3">
-                  <Form.Label>Expiry Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    name="expiryDate"
-                    value={inventoryData.expiryDate}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
+        <Row>
+          <Col md={6}>
+            <Form.Group controlId="expiryDate" className="mb-3">
+              <Form.Label>Expiry Date</Form.Label>
+              <Form.Control
+                type="date"
+                name="expiryDate"
+                value={inventoryData.expiryDate}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
+          </Col>
 
-              <Col md={6}>
-                <Form.Group controlId="quantity" className="mb-3">
-                  <Form.Label>Quantity</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="quantity"
-                    value={inventoryData.quantity}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+          <Col md={6}>
+            <Form.Group controlId="quantity" className="mb-3">
+              <Form.Label>Quantity</Form.Label>
+              <Form.Control
+                type="number"
+                name="quantity"
+                value={inventoryData.quantity}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
+          </Col>
+        </Row>
 
-            <Row>
-              <Col md={6}>
-                <Form.Group controlId="unitPrice" className="mb-3">
-                  <Form.Label>Unit Price</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="unitPrice"
-                    value={inventoryData.unitPrice}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
+        <Row>
+          <Col md={6}>
+            <Form.Group controlId="unitPrice" className="mb-3">
+              <Form.Label>Unit Price</Form.Label>
+              <Form.Control
+                type="number"
+                name="unitPrice"
+                value={inventoryData.unitPrice}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
+          </Col>
 
-              <Col md={6}>
-                <Form.Group controlId="sellingPrice" className="mb-3">
-                  <Form.Label>Selling Price</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="sellingPrice"
-                    value={inventoryData.sellingPrice}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+          <Col md={6}>
+            <Form.Group controlId="sellingPrice" className="mb-3">
+              <Form.Label>Selling Price</Form.Label>
+              <Form.Control
+                type="number"
+                name="sellingPrice"
+                value={inventoryData.sellingPrice}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
+          </Col>
+        </Row>
 
-            <Button type="submit" variant="primary" className="me-2">
-              Add to Inventory
-            </Button>
-            <Button type="reset" variant="secondary">
-              Reset
-            </Button>
-          {/* </> */}
+        <Button type="submit" variant="primary" className="me-2">
+          Add to Inventory
+        </Button>
+        {/* </> */}
         {/* )} */}
       </Form>
+      <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
     </Container>
   );
 }

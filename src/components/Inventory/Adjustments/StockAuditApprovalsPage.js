@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import api from '../../../api/api';
 import {
@@ -14,12 +16,13 @@ import {
     Col
 } from 'react-bootstrap';
 import { FaChevronDown } from 'react-icons/fa';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const StockAuditApprovalsPage = () => {
+    const navigate = useNavigate();
     const [audits, setAudits] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
     const [approveDialog, setApproveDialog] = useState(null); // Audit ID to approve
     const [approving, setApproving] = useState(false);
 
@@ -33,10 +36,9 @@ const StockAuditApprovalsPage = () => {
             const response = await api.get('/inventory/adjustments/audit');
             const sorted = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             setAudits(sorted);
-            setError(null);
         } catch (err) {
             console.error("Error fetching audits:", err);
-            setError("Failed to load stock audits.");
+            toast.error("Failed to load stock audits.");
         } finally {
             setLoading(false);
         }
@@ -51,12 +53,12 @@ const StockAuditApprovalsPage = () => {
             await api.post(`/inventory/adjustments/audit/${approveDialog.id}/approve`, null, {
                 params: { approver: user }
             });
-            setSuccess("Audit approved and stock updated successfully.");
+            toast.success("Audit approved and stock updated successfully.");
             setApproveDialog(null);
             fetchAudits(); // Refresh list
         } catch (err) {
             console.error("Error approving audit:", err);
-            setError("Failed to approve audit.");
+            toast.error("Failed to approve audit.");
         } finally {
             setApproving(false);
         }
@@ -66,12 +68,11 @@ const StockAuditApprovalsPage = () => {
 
     return (
         <Container fluid className="p-4">
-            <h3 className="mb-4">Stock Audit Approvals</h3>
-
-            {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
-            {success && <Alert variant="success" onClose={() => setSuccess(null)} dismissible>{success}</Alert>}
-
-            {audits.length === 0 ? (
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Stock Audit Approvals</h3>
+                        </div>
+{audits.length === 0 ? (
                 <Card className="text-center p-5 text-muted">
                     <h5>No stock audits found.</h5>
                 </Card>
@@ -160,6 +161,7 @@ const StockAuditApprovalsPage = () => {
                     </Button>
                 </Modal.Footer>
             </Modal>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
 };

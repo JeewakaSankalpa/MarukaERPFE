@@ -1,9 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Image, ListGroup } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 
 const EmployeeProfile = () => {
+    const navigate = useNavigate();
     const [employee, setEmployee] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -115,8 +118,11 @@ const EmployeeProfile = () => {
 
     return (
         <Container className="my-5">
-            <h2 className="mb-4">My Profile</h2>
-            <Row>
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">My Profile</h2>
+                        </div>
+<Row>
                 <Col md={4}>
                     <Card className="text-center p-3 mb-3">
                         <div className="mx-auto mb-3 d-flex align-items-center justify-content-center bg-secondary text-white fw-bold shadow-sm"

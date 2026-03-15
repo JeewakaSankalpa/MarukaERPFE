@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -8,6 +10,7 @@ const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forE
 const listGRNs = async ({ q, page = 0, size = 10 }) => (await api.get(`/grns?${qp({ q, page, size, sort: "createdAt,desc" })}`)).data;
 
 export default function GRNListView() {
+    const navigate = useNavigate();
     const [q, setQ] = useState("");
     const [page, setPage] = useState(0);
     const [data, setData] = useState({ content: [], totalPages: 0 });
@@ -50,8 +53,11 @@ export default function GRNListView() {
         <Container style={{ width: "85vw", maxWidth: 1200, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h2 style={{ fontSize: "1.5rem" }}>Goods Received Notes (GRN)</h2>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Goods Received Notes (GRN)</h2>
+                        </div>
+<div className="d-flex gap-2">
                         <Form.Control placeholder="Search GRN / Supplier" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>

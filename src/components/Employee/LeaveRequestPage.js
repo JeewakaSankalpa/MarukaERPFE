@@ -1,9 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Tabs, Tab, Table, Button, Form, Badge, Modal, Row, Col } from "react-bootstrap";
 import api from "../../api/api";
 import { toast } from "react-toastify";
 
 function LeaveRequestPage() {
+    const navigate = useNavigate();
     const [key, setKey] = useState("my-leaves");
     const [showApplyModal, setShowApplyModal] = useState(false);
 
@@ -160,8 +163,11 @@ function LeaveRequestPage() {
     return (
         <Container className="my-5">
             <div className="d-flex justify-content-between mb-4 align-items-center">
-                <h2>Leave Management</h2>
-                <div className="d-flex gap-2">
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Leave Management</h2>
+                        </div>
+<div className="d-flex gap-2">
                     <Form.Select
                         style={{ width: 120 }}
                         value={selectedYear}

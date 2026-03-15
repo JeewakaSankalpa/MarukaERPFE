@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
 import { Container, Table, Tabs, Tab, Badge, Form, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -45,8 +46,11 @@ export default function ReportsPage() {
     return (
         <Container style={{ width: "85vw", maxWidth: 1200, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
-                <h2 className="mb-4">Reports</h2>
-                <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-3">
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Reports</h2>
+                        </div>
+<Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-3">
                     <Tab eventKey="hr" title="HR & Payroll">
                         <div className="p-3">
                             <h5 className="mb-3">Available Reports</h5>

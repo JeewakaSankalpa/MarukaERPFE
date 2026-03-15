@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Badge, Tag, Row, Col, Statistic } from 'antd';
 import { PlusOutlined, BankOutlined, DollarOutlined, BookOutlined } from '@ant-design/icons';
@@ -7,6 +9,7 @@ import AccountLedgerModal from './AccountLedgerModal';
 const { Option } = Select;
 
 const AccountsPage = () => {
+    const navigate = useNavigate();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -110,8 +113,11 @@ const AccountsPage = () => {
     return (
         <div style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ margin: 0 }}><BankOutlined /> Chart of Accounts</h2>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ margin: 0 }}><BankOutlined /> Chart of Accounts</h2>
+                        </div>
+<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
                     New Account
                 </Button>
             </div>

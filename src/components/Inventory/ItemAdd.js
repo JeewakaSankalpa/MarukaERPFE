@@ -1,8 +1,13 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from "react";
-import { Container, Form, Button, Row, Col } from "react-bootstrap";
+import { Container, Form, Button, Row, Col, Spinner } from "react-bootstrap";
 import api from "../../api/api";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function ItemAdd() {
+    const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -11,6 +16,7 @@ function ItemAdd() {
     itemId: "",
     description: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchProducts = async (query) => {
     try {
@@ -39,24 +45,29 @@ function ItemAdd() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       await api.post("/inventory/add", {
         ...inventoryData,
         productId: selectedProduct?.id,
       });
-      alert("Inventory added successfully");
+      toast.success("Inventory added successfully");
     } catch (error) {
       console.error("Failed to add inventory:", error);
-      alert("Inventory addition failed.");
+      toast.error("Inventory addition failed.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Container className="my-5">
-      <h2 className="text-center mb-4">Add Item</h2>
-
-      <Form onSubmit={handleSubmit}>
+      <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">Add Item</h2>
+                        </div>
+<Form onSubmit={handleSubmit}>
         {/* Search Product */}
         {/* <Form.Group controlId="searchProduct" className="mb-3">
           <Form.Label>Search Product</Form.Label>
@@ -126,15 +137,17 @@ function ItemAdd() {
           </Form.Group>
         </Row>
 
-        <Button type="submit" variant="primary" className="me-2">
+        <Button type="submit" variant="primary" className="me-2" disabled={isSubmitting}>
+          {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
           Add Product
         </Button>
-        <Button type="reset" variant="secondary">
+        <Button type="reset" variant="secondary" disabled={isSubmitting}>
           Reset
         </Button>
         {/* </> */}
         {/* )} */}
       </Form>
+      <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
     </Container>
   );
 }

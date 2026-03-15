@@ -1,13 +1,17 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import React, { useEffect, useState } from 'react';
 import { Container, Card, Form, Button, Row, Col, Table, Tabs, Tab } from 'react-bootstrap';
 import api from '../../api/api';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 
 export default function SettingsPage() {
+    const navigate = useNavigate();
     const [settings, setSettings] = useState([]);
     const [libraryItems, setLibraryItems] = useState([]);
-    const [loading, setLoading] = useState(false);
 
     // Filtered lists
     const terms = libraryItems.filter(i => i.type === 'TERM');
@@ -18,7 +22,6 @@ export default function SettingsPage() {
     }, []);
 
     const loadAll = async () => {
-        setLoading(true);
         try {
             const [sets, libs] = await Promise.all([
                 api.get('/settings').then(r => r.data),
@@ -28,8 +31,6 @@ export default function SettingsPage() {
             setLibraryItems(libs);
         } catch (err) {
             console.error(err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -48,9 +49,9 @@ export default function SettingsPage() {
     const saveSettings = async () => {
         try {
             await api.post('/settings', settings);
-            alert('Settings saved!');
+            toast.success('Settings saved!');
         } catch (err) {
-            alert('Error saving settings');
+            toast.error('Error saving settings');
         }
     };
 
@@ -61,7 +62,7 @@ export default function SettingsPage() {
             await api.post('/quote-library', item);
             loadAll(); // Reload to get new ID/Updates
         } catch (err) {
-            alert('Error saving library item');
+            toast.error('Error saving library item');
         }
     };
 
@@ -71,7 +72,7 @@ export default function SettingsPage() {
             await api.delete(`/quote-library/${id}`);
             setLibraryItems(libraryItems.filter(i => i.id !== id));
         } catch (err) {
-            alert('Error deleting item');
+            toast.error('Error deleting item');
         }
     };
 
@@ -138,8 +139,11 @@ export default function SettingsPage() {
 
     return (
         <Container className="py-3">
-            <h3>System Settings</h3>
-            <Tabs defaultActiveKey="global" className="mb-3">
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">System Settings</h3>
+                        </div>
+<Tabs defaultActiveKey="global" className="mb-3">
                 <Tab eventKey="global" title="Global Variables">
                     <Card>
                         <Card.Body>
@@ -185,6 +189,7 @@ export default function SettingsPage() {
                 </Tab>
 
             </Tabs>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
 }

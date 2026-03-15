@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { Button, Spinner, Table, Alert } from "react-bootstrap";
 import ReportLayout from "../ReusableComponents/ReportLayout";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const QuotationPrint = () => {
     const { projectId } = useParams();
@@ -42,7 +44,7 @@ const QuotationPrint = () => {
             await api.post(`/estimations/${estimation.id}/finalize`);
             fetchData();
         } catch (error) {
-            alert("Failed to finalize quotation");
+            toast.error("Failed to finalize quotation");
         }
     };
 
@@ -53,7 +55,7 @@ const QuotationPrint = () => {
             navigate(`/invoices/${res.data.id}`);
         } catch (error) {
             console.error(error);
-            alert("Failed to generate invoice");
+            toast.error("Failed to generate invoice");
         }
     };
 
@@ -81,6 +83,8 @@ const QuotationPrint = () => {
             </div>
 
             {isFinalized && <Alert variant="success" className="no-print">This quotation is finalized and locked.</Alert>}
+
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="no-print" />
 
             <ReportLayout
                 title={`QUOTATION: ${project?.projectName || "Project"}`}

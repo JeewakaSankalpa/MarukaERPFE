@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -23,6 +25,7 @@ const listSuppliersQuick = async () =>
 
 /* ================== List ================== */
 function ProductList({ onOpen }) {
+    const navigate = useNavigate();
     const [q, setQ] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(0);
@@ -52,8 +55,11 @@ function ProductList({ onOpen }) {
         <Container style={{ width: "80vw", maxWidth: 900, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Products</h2>
-                    <Button onClick={() => onOpen(null)}>+ New Product</Button>
+                    <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Products</h2>
+                        </div>
+<Button onClick={() => onOpen(null)}>+ New Product</Button>
                 </div>
 
                 <div className="d-flex gap-2 mb-3">

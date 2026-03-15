@@ -1,7 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function ReturnToInventory() {
+    const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -49,10 +54,10 @@ function ReturnToInventory() {
         };
         try {
             await api.post('/inventory/add', dataToSubmit);
-            alert('Inventory added successfully');
+            toast.success('Inventory added successfully');
         } catch (error) {
             console.error('Failed to add inventory:', error);
-            alert('Inventory addition failed. Please try again.');
+            toast.error('Inventory addition failed. Please try again.');
         }
     };
 
@@ -74,7 +79,11 @@ function ReturnToInventory() {
 
             {/* {selectedProduct && (
                 <> */}
-                    {/* <h3>Selected Product: {selectedProduct.name}</h3> */}
+                    {/* <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Selected Product: {selectedProduct.name}</h3>
+                        </div>
+*/}
                     <div>
                         <label>Item Name:</label>
                         <input type="text" name="batchNumber" value={inventoryData.batchNumber}
@@ -105,6 +114,7 @@ function ReturnToInventory() {
                     <button type="submit">Return Goods</button>
                 {/* </> */}
             {/* )} */}
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </form>
     );
 }

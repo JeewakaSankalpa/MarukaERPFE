@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { Button, Spinner, Table } from "react-bootstrap";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 // import logo from "../../assets/logo.jpeg"; // Unused
 
 const POPrint = () => {
@@ -24,7 +26,7 @@ const POPrint = () => {
                 }
             } catch (e) {
                 console.error("Failed to load PO", e);
-                alert("Failed to load PO details");
+                toast.error("Failed to load PO details");
             } finally {
                 setLoading(false);
             }
@@ -60,6 +62,8 @@ const POPrint = () => {
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
                 <Button variant="primary" onClick={handlePrint}>Print / PDF</Button>
             </div>
+            
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="no-print" />
 
             {/* Print Area Container */}
             <div className="print-container" style={{ maxWidth: "210mm", margin: "0 auto" }}>

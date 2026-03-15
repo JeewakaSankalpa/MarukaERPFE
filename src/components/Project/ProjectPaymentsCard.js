@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { Card, Button, Row, Col, Table, Modal, Form } from 'react-bootstrap';
 import { toast } from 'react-toastify';
@@ -14,6 +16,7 @@ import api from '../../api/api';
  * @param {Function} props.onRefresh - Callback to refresh project data
  */
 export default function ProjectPaymentsCard({ projectId, project, onRefresh, currency = 'LKR' }) {
+    const navigate = useNavigate();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -87,8 +90,11 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
                 <Row className="mb-4 text-center">
                     <Col>
                         <div className="text-muted small">Total Project Value</div>
-                        <h4 className="text-primary">{currency} {project?.totalProjectValue?.toLocaleString() || '0.00'}</h4>
-                    </Col>
+                        <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h4 className="mb-0 mb-0 mb-0 text-primary">{currency} {project?.totalProjectValue?.toLocaleString() || '0.00'}</h4>
+                        </div>
+</Col>
                     <Col>
                         <div className="text-muted small">Total Received</div>
                         <h4 className="text-success">{currency} {project?.totalReceived?.toLocaleString() || '0.00'}</h4>

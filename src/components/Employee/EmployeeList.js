@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
 import { Table, Container, Button, Badge } from "react-bootstrap";
 import api from "../../api/api";
@@ -45,13 +46,27 @@ function EmployeeList() {
         }
     };
 
+    const handleEnable = async (id) => {
+        if (!window.confirm("Are you sure you want to enable this employee?")) return;
+        try {
+            await api.put(`/employee/${id}/enable`); 
+            toast.success("Employee enabled");
+            fetchEmployees();
+        } catch (e) {
+            toast.error("Failed to enable employee");
+        }
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
         <Container className="my-5">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Employee Directory</h2>
-                <Button variant="primary" onClick={() => navigate("/employee/create")}>+ Add Employee</Button>
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Employee Directory</h2>
+                        </div>
+<Button variant="primary" onClick={() => navigate("/employee/create")}>+ Add Employee</Button>
             </div>
 
             <Table striped bordered hover responsive>
@@ -80,7 +95,11 @@ function EmployeeList() {
                             </td>
                             <td>
                                 <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleEdit(emp.id)}>Edit</Button>
-                                <Button variant="outline-danger" size="sm" onClick={() => handleDisable(emp.id)}>Disable</Button>
+                                {emp.active ? (
+                                    <Button variant="outline-danger" size="sm" onClick={() => handleDisable(emp.id)}>Disable</Button>
+                                ) : (
+                                    <Button variant="outline-success" size="sm" onClick={() => handleEnable(emp.id)}>Enable</Button>
+                                )}
                             </td>
                         </tr>
                     ))}

@@ -1,9 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Card, Table, Badge, Row, Col } from "react-bootstrap";
 import api from "../../api/api";
 import { toast } from "react-toastify";
 
 function AttendancePage() {
+    const navigate = useNavigate();
     const [currentEmployee, setCurrentEmployee] = useState(null);
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -107,9 +110,11 @@ function AttendancePage() {
 
     return (
         <Container className="my-5">
-            <h2 className="mb-4">Attendance Tracker</h2>
-
-            <Card className="text-center p-5 mb-4 shadow-sm">
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Attendance Tracker</h2>
+                        </div>
+<Card className="text-center p-5 mb-4 shadow-sm">
                 <h3>Hello, {currentEmployee?.firstName}</h3>
                 <p className="lead">Current Status:
                     <Badge bg={status === 'CHECKED_IN' ? 'success' : 'secondary'} className="ms-2">

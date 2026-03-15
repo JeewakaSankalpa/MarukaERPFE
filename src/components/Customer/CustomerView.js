@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 // src/components/customer/CustomerList.js
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Container, Form, Modal, Row, Col, Badge } from 'react-bootstrap';
@@ -75,8 +76,11 @@ function CustomerView({ onEditCustomer }) {
 
     return (
         <Container className="my-5">
-            <h2 className="text-center mb-4">Customer List</h2>
-            <Form className="d-flex mb-3">
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">Customer List</h2>
+                        </div>
+<Form className="d-flex mb-3">
                 <Form.Control
                     type="text"
                     placeholder="Search by Mobile Number"

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Badge, Popover, OverlayTrigger, ListGroup } from 'react-bootstrap';
 import { Bell } from 'lucide-react';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import api from '../../api/api';
@@ -110,6 +112,7 @@ export default function NotificationBell() {
                 setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
             } catch (e) {
                 console.error("Failed to mark read", e);
+                toast.error("Failed to mark notification as read");
             }
         }
         if (n.link) {

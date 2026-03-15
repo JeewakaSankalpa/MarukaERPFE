@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
 import { Container, Table, Button, Badge } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
@@ -14,8 +15,11 @@ export default function QuotationList() {
     return (
         <Container fluid className="p-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h3>Sales Quotations</h3>
-                <Button onClick={() => navigate("/sales/quotations/new")}>+ New Quotation</Button>
+                <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h3 className="mb-0">Sales Quotations</h3>
+                        </div>
+<Button onClick={() => navigate("/sales/quotations/new")}>+ New Quotation</Button>
             </div>
 
             <div className="bg-white rounded shadow p-3">

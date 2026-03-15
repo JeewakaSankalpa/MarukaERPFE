@@ -1,5 +1,6 @@
+import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from "react";
-import { Form, Button, Container, Row } from "react-bootstrap";
+import { Form, Button, Container, Row, Spinner } from "react-bootstrap";
 import api from "../../api/api";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -9,6 +10,7 @@ function CustomerCreate() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // const [id, setId] = useState("");
   // const [name, setName] = useState("");
   // const [mobileNumber, setMobileNumber] = useState("");
@@ -146,6 +148,8 @@ function CustomerCreate() {
 
     const formData = new FormData();
 
+    setIsSubmitting(true);
+
     // Create a copy of companyData to sanitize for JSON payload
     const customerPayload = { ...companyData };
     // Remove file objects from the JSON payload as they are sent separately
@@ -190,6 +194,8 @@ function CustomerCreate() {
     } catch (error) {
       console.error("Failed to save customer:", error);
       toast.error(`Failed to save customer: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -210,8 +216,11 @@ function CustomerCreate() {
         >
 
           <div className="bg-white shadow rounded p-4">
-            <h2 className="text-center mb-4">{isEditMode ? "Edit Customer" : "Add Customer"}</h2>
-            <Form onSubmit={handleSubmit}>
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0 mb-0 text-center mb-0">{isEditMode ? "Edit Customer" : "Add Customer"}</h2>
+                        </div>
+<Form onSubmit={handleSubmit}>
               <Form.Group controlId="comName" className="mb-3">
                 <Form.Label>Company Name</Form.Label>
                 <Form.Control
@@ -455,7 +464,8 @@ function CustomerCreate() {
                 }))
               }
             /> */}
-              <Button variant="primary" type="submit" className="me-2">
+              <Button variant="primary" type="submit" className="me-2" disabled={isSubmitting}>
+                {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
                 Save
               </Button>
               <Button variant="secondary" type="cancel" onClick={handleCancel}>

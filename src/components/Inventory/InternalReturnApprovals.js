@@ -1,9 +1,12 @@
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Spinner, Badge } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 
 export default function InternalReturnApprovals() {
+    const navigate = useNavigate();
     const [returns, setReturns] = useState([]);
     const [loading, setLoading] = useState(false);
     const [processingId, setProcessingId] = useState(null);
@@ -50,8 +53,11 @@ export default function InternalReturnApprovals() {
 
     return (
         <div className="container-fluid p-4">
-            <h2 className="mb-4">Internal Return Approvals</h2>
-            <Card>
+            <div className="d-flex align-items-center mb-4">
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <h2 className="mb-0">Internal Return Approvals</h2>
+                        </div>
+<Card>
                 <Card.Header>Pending Requests (Project to Store)</Card.Header>
                 <Card.Body>
                     {loading && <div className="text-center p-3"><Spinner animation="border" /> Loading...</div>}
