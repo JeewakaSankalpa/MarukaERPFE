@@ -22,6 +22,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const [creditPeriodDays, setCreditPeriodDays] = useState("");
     const [initialPaymentAmount, setInitialPaymentAmount] = useState("");
     const [initialPaymentRef, setInitialPaymentRef] = useState("");
+    const [vatAmount, setVatAmount] = useState("");
+    const [deliveryCharge, setDeliveryCharge] = useState("");
 
     const [posting, setPosting] = useState(false);
     const [showQrModal, setShowQrModal] = useState(false);
@@ -92,7 +94,9 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 supplierInvoiceDate: supplierInvoiceDate || undefined,
                 creditPeriodDays: creditPeriodDays ? Number(creditPeriodDays) : undefined,
                 initialPaymentAmount: initialPaymentAmount ? Number(initialPaymentAmount) : undefined,
-                initialPaymentRef
+                initialPaymentRef,
+                vatAmount: vatAmount ? Number(vatAmount) : 0,
+                deliveryCharge: deliveryCharge ? Number(deliveryCharge) : 0
             };
 
             setPosting(true);
@@ -203,12 +207,25 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                             <Form.Control value={initialPaymentRef} onChange={e => setInitialPaymentRef(e.target.value)} />
                         </Form.Group>
                     </Col>
+                    <Col md={3}>
+                        <Form.Group>
+                            <Form.Label>VAT Amount</Form.Label>
+                            <Form.Control type="number" value={vatAmount} onChange={e => setVatAmount(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                        <Form.Group>
+                            <Form.Label>Delivery Charge</Form.Label>
+                            <Form.Control type="number" value={deliveryCharge} onChange={e => setDeliveryCharge(e.target.value)} />
+                        </Form.Group>
+                    </Col>
                     <Col md={6}>
                         {po && (
                             <div className="d-flex gap-3 align-items-center mt-4">
                                 <Badge bg="light" text="dark">PO: {po.poNumber}</Badge>
                                 <Badge bg="light" text="dark">Supplier: {po.supplierNameSnapshot || po.supplierName}</Badge>
                                 <Badge bg={po.status === "FULLY_RECEIVED" ? "success" : po.status === "PARTIALLY_RECEIVED" ? "info" : "secondary"}>{po.status}</Badge>
+                                <Badge bg="primary">Payable: Rs. {((rows.reduce((acc, r) => acc + (r.batches || []).reduce((sum, b) => sum + ((Number(b.qty) || 0) * (Number(b.unitCost) || 0)), 0), 0)) + (Number(vatAmount) || 0) + (Number(deliveryCharge) || 0)).toFixed(2)}</Badge>
                             </div>
                         )}
                     </Col>
@@ -283,11 +300,11 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                             <Button
                                 className="w-100 mt-2"
                                 onClick={save}
-                                disabled={posting}
+                                disabled={posting || po.status === 'FULLY_RECEIVED'}
                             >
                                 {posting
                                     ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Posting GRN&hellip;</>
-                                    : "Post GRN"}
+                                    : po.status === 'FULLY_RECEIVED' ? "PO Already Fully Received" : "Post GRN"}
                             </Button>
                         </>
                     )

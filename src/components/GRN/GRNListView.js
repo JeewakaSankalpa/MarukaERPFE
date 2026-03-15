@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
-import { Container, Button, Form, Table, Badge, Modal, Row, Col } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Modal, Row, Col, Alert } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import GRNPaymentModal from "./GRNPaymentModal";
@@ -33,6 +33,8 @@ export default function GRNListView() {
             supplierInvoiceDate: grn.supplierInvoiceDate,
             creditPeriodDays: grn.creditPeriodDays,
             invoiceAmount: grn.invoiceAmount,
+            vatAmount: grn.vatAmount,
+            deliveryCharge: grn.deliveryCharge,
             paymentStatus: grn.paymentStatus
         });
         setShowEdit(true);
@@ -54,10 +56,10 @@ export default function GRNListView() {
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                     <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Goods Received Notes (GRN)</h2>
-                        </div>
-<div className="d-flex gap-2">
+                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Goods Received Notes (GRN)</h2>
+                    </div>
+                    <div className="d-flex gap-2">
                         <Form.Control placeholder="Search GRN / Supplier" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>
@@ -67,7 +69,7 @@ export default function GRNListView() {
                     <thead>
                         <tr>
                             <th>GRN No</th><th>PO No</th><th>Supplier</th><th>Date</th>
-                            <th className="text-end">Invoice Amt</th><th className="text-end">Paid</th>
+                            <th className="text-end">Gross Total</th><th className="text-end">Paid</th>
                             <th>Status</th><th>Due Date</th><th>Actions</th>
                         </tr>
                     </thead>
@@ -78,7 +80,9 @@ export default function GRNListView() {
                                 <td>{g.poNumber}</td>
                                 <td>{g.supplierNameSnapshot}</td>
                                 <td>{g.createdAt?.substring(0, 10)}</td>
-                                <td className="text-end">{g.invoiceAmount?.toFixed(2)}</td>
+                                <td className="text-end">
+                                    {((g.invoiceAmount || 0) + (g.vatAmount || 0) + (g.deliveryCharge || 0)).toFixed(2)}
+                                </td>
                                 <td className="text-end">{g.totalPaid?.toFixed(2)}</td>
                                 <td>
                                     <Badge bg={
@@ -112,21 +116,27 @@ export default function GRNListView() {
                 <Modal.Header closeButton><Modal.Title>Edit GRN Invoice Details</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <Form>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Supplier Invoice No</Form.Label>
-                            <Form.Control
-                                value={editData.supplierInvoiceNo || ""}
-                                onChange={e => setEditData({ ...editData, supplierInvoiceNo: e.target.value })}
-                            />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Invoice Date</Form.Label>
-                            <Form.Control
-                                type="date"
-                                value={editData.supplierInvoiceDate || ""}
-                                onChange={e => setEditData({ ...editData, supplierInvoiceDate: e.target.value })}
-                            />
-                        </Form.Group>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Supplier Invoice No</Form.Label>
+                                    <Form.Control
+                                        value={editData.supplierInvoiceNo || ""}
+                                        onChange={e => setEditData({ ...editData, supplierInvoiceNo: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Invoice Date</Form.Label>
+                                    <Form.Control
+                                        type="date"
+                                        value={editData.supplierInvoiceDate || ""}
+                                        onChange={e => setEditData({ ...editData, supplierInvoiceDate: e.target.value })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                        </Row>
                         <Form.Group className="mb-3">
                             <Form.Label>Credit Period (Days)</Form.Label>
                             <Form.Control
@@ -136,13 +146,39 @@ export default function GRNListView() {
                             />
                         </Form.Group>
                         <Form.Group className="mb-3">
-                            <Form.Label>Invoice Amount</Form.Label>
+                            <Form.Label>Invoice Subtotal</Form.Label>
                             <Form.Control
                                 type="number"
                                 value={editData.invoiceAmount || ""}
                                 onChange={e => setEditData({ ...editData, invoiceAmount: parseFloat(e.target.value) })}
                             />
                         </Form.Group>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>VAT Amount</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        value={editData.vatAmount || ""}
+                                        onChange={e => setEditData({ ...editData, vatAmount: parseFloat(e.target.value) })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Delivery Charge</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        value={editData.deliveryCharge || ""}
+                                        onChange={e => setEditData({ ...editData, deliveryCharge: parseFloat(e.target.value) })}
+                                    />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Alert variant="info">
+                            <strong>Gross Total: </strong> 
+                            Rs. {((editData.invoiceAmount || 0) + (editData.vatAmount || 0) + (editData.deliveryCharge || 0)).toFixed(2)}
+                        </Alert>
                     </Form>
                 </Modal.Body>
                 <Modal.Footer>

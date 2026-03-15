@@ -155,8 +155,8 @@ export default function POListView({ onOpenGRN }) {
                                     <Button
                                         size="sm"
                                         onClick={() => onOpenGRN?.(po.id)}
-                                        disabled={po.approvalStatus !== 'APPROVED'}
-                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                        disabled={po.approvalStatus !== 'APPROVED' || po.status === 'FULLY_RECEIVED'}
+                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : po.status === 'FULLY_RECEIVED' ? "Already fully received" : ""}
                                     >
                                         Receive (GRN)
                                     </Button>
