@@ -11,13 +11,6 @@ function CustomerCreate() {
   const { id } = useParams();
   const isEditMode = Boolean(id);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [id, setId] = useState("");
-  // const [name, setName] = useState("");
-  // const [mobileNumber, setMobileNumber] = useState("");
-  // const [email, setEmail] = useState("");
-  // const [taxId, setTaxId] = useState("");
-  //   const [dateOfBirth, setDateOfBirth] = useState("");
-  // const [address, setAddress] = useState("");
   const [showForm, setShowForm] = useState(true);
 
   const [companyData, setCompanyData] = useState({
@@ -76,24 +69,11 @@ function CustomerCreate() {
     try {
       const response = await api.get(`/customer/${id}`);
       const data = response.data;
-      // Map response data to form state if needed, or use directly if matches
       setCompanyData(data);
     } catch (error) {
       console.error("Failed to fetch customer:", error);
-      // Fallback or alert
     }
   };
-
-  // const handleFileChange = (e) => {
-  //   const picked = Array.from(e.target.files || []);
-  //   // Merge with existing selections; avoid duplicates by name+size
-  //   const existingKeys = new Set(files.map((f) => `${f.name}-${f.size}`));
-  //   const merged = [
-  //     ...files,
-  //     ...picked.filter((f) => !existingKeys.has(`${f.name}-${f.size}`)),
-  //   ];
-  //   setFiles(merged);
-  // };
 
   const [errors, setErrors] = useState({});
   const [validated, setValidated] = useState(false);
@@ -139,32 +119,22 @@ function CustomerCreate() {
     return Object.keys(newErrors).length === 0;
   };
 
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setValidated(true);
     if (!validateForm()) return;
 
     const formData = new FormData();
-
     setIsSubmitting(true);
 
-    // Create a copy of companyData to sanitize for JSON payload
     const customerPayload = { ...companyData };
-    // Remove file objects from the JSON payload as they are sent separately
     customerPayload.vatDocument = null;
     customerPayload.businessRegDocument = null;
-    customerPayload.fileList = null; // Ensure this is not sending objects
+    customerPayload.fileList = null;
 
-    console.log("Sending Customer Payload:", customerPayload);
-
-    // IMPORTANT: Send the JSON data as a Blob with type 'application/json'
-    // This tells the backend to treat this part as the "customer" object
     const jsonBlob = new Blob([JSON.stringify(customerPayload)], { type: "application/json" });
     formData.append("customer", jsonBlob);
 
-    // Append files if they exist
     if (companyData.vatDocument instanceof File) {
       formData.append("vatDocument", companyData.vatDocument);
     }
@@ -172,13 +142,11 @@ function CustomerCreate() {
       formData.append("businessRegDocument", companyData.businessRegDocument);
     }
 
-    // Append password for creation
     if (!isEditMode && companyData.password) {
       formData.append("password", companyData.password);
     }
 
     try {
-      // IMPORTANT: Do NOT manually set Content-Type. Let the browser set it with the boundary.
       const config = { headers: { "Content-Type": "multipart/form-data" } };
       if (isEditMode) {
         await api.put(`/customer/update/${id}`, formData, config);
@@ -214,13 +182,12 @@ function CustomerCreate() {
             height: "calc(100vh - 10rem)",
           }}
         >
-
           <div className="bg-white shadow rounded p-4">
             <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0 mb-0 text-center mb-0">{isEditMode ? "Edit Customer" : "Add Customer"}</h2>
-                        </div>
-<Form onSubmit={handleSubmit}>
+              <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+              <h2 className="mb-0 text-center">{isEditMode ? "Edit Customer" : "Add Customer"}</h2>
+            </div>
+            <Form onSubmit={handleSubmit}>
               <Form.Group controlId="comName" className="mb-3">
                 <Form.Label>Company Name</Form.Label>
                 <Form.Control
@@ -234,7 +201,7 @@ function CustomerCreate() {
                 />
                 <Form.Control.Feedback type="invalid">{errors.comName}</Form.Control.Feedback>
               </Form.Group>
-              <Form.Group controlId="name" className="mb-3">
+              <Form.Group controlId="comAddress" className="mb-3">
                 <Form.Label>Company Address</Form.Label>
                 <Form.Control
                   type="text"
@@ -298,8 +265,8 @@ function CustomerCreate() {
                   required
                 >
                   <option value="">-- Select --</option>
-                  <option value="VAT">Rupees</option>
-                  <option value="SVAT">USD</option>
+                  <option value="LKR">Rupees</option>
+                  <option value="USD">USD</option>
                 </Form.Select>
               </Form.Group>
 
@@ -358,13 +325,12 @@ function CustomerCreate() {
 
               {!isEditMode && (
                 <Form.Group controlId="password" className="mb-3">
-                  <Form.Label>Password</Form.Label>
+                  <Form.Label>Password (Optional - Defaults to "TestP")</Form.Label>
                   <Form.Control
                     type="password"
                     name="password"
                     value={companyData.password}
                     onChange={handleChange}
-                    required
                   />
                 </Form.Group>
               )}
@@ -375,7 +341,6 @@ function CustomerCreate() {
                   <Form.Select
                     name="vatType"
                     value={companyData.vatType}
-
                     onChange={handleChange}
                     required
                   >
@@ -399,31 +364,7 @@ function CustomerCreate() {
                   </Form.Group>
                 )}
               </Row>
-              {/* <Form.Group controlId="document" className="mb-2">
-              <Form.Label>Upload VAT Registration Document *</Form.Label>
-              <Form.Control
-                type="file"
-                name="comName"
-                accept=".pdf,.doc,.docx"
-                value={companyData.comName}
-                onChange={handleChange}
-                multiple
-                required
-              />
-            </Form.Group>
-            <Form.Group controlId="document" className="mb-2">
-              <Form.Label>Upload Registration Document (Optional)</Form.Label>
-              <Form.Control
-                type="file"
-                name="comName"
-                accept=".pdf,.doc,.docx"
-                value={companyData.comName}
-                onChange={handleChange}
-                multiple
-                required
-              />
-            </Form.Group> */}
-              {/* VAT Document (Required) */}
+
               <Form.Group controlId="vatDoc" className="mb-2">
                 <Form.Label>VAT Registration Document *</Form.Label>
                 <Form.Control
@@ -439,7 +380,6 @@ function CustomerCreate() {
                 />
               </Form.Group>
 
-              {/* Business Registration Document (Optional) */}
               <Form.Group controlId="brDoc" className="mb-2">
                 <Form.Label>Business Registration Document (Optional)</Form.Label>
                 <Form.Control
@@ -453,17 +393,7 @@ function CustomerCreate() {
                   }
                 />
               </Form.Group>
-              {/* <label>Business Registration Document (Optional)</label>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.png"
-              onChange={(e) =>
-                setCompanyData((prev) => ({
-                  ...prev,
-                  businessRegDocument: e.target.files[0],
-                }))
-              }
-            /> */}
+
               <Button variant="primary" type="submit" className="me-2" disabled={isSubmitting}>
                 {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
                 Save
