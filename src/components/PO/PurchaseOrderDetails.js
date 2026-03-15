@@ -179,7 +179,7 @@ export default function PurchaseOrderDetails() {
     const isDraft = !approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED';
 
     return (
-        <Container style={{ width: "90vw", maxWidth: 1200, paddingTop: 24 }}>
+        <Container className="py-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <div className="d-flex gap-2 align-items-center">
                     <button type="button" className="btn btn-light me-1" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>

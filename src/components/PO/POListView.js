@@ -77,7 +77,7 @@ export default function POListView({ onOpenGRN }) {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 1200, paddingTop: 24 }}>
+        <Container className="py-4">
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                     <div className="d-flex align-items-center mb-4">
