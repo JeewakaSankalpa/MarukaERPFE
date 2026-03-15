@@ -65,21 +65,34 @@ export default function POListView({ onOpenGRN }) {
     const openEta = (id) => { setEtaFor(id); setEtaDate(""); };
     const saveEta = async () => { await setEta(etaFor, etaDate); setEtaFor(null); toast.success("ETA updated"); load(); };
 
+    const approvalBadge = (approvalStatus) => {
+        const color = approvalStatus === 'APPROVED' ? 'success'
+            : approvalStatus === 'PENDING_APPROVAL' ? 'warning'
+            : approvalStatus === 'REJECTED' ? 'danger' : 'secondary';
+        return (
+            <Badge bg={color} text={color === 'warning' ? 'dark' : 'white'}>
+                {approvalStatus || 'DRAFT'}
+            </Badge>
+        );
+    };
+
     return (
-        <Container style={{ width: "80vw", maxWidth: 1100, paddingTop: 24 }}>
+        <Container style={{ width: "80vw", maxWidth: 1200, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                     <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Purchase Orders</h2>
-                        </div>
-<div className="d-flex gap-2">
+                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Purchase Orders</h2>
+                    </div>
+                    <div className="d-flex gap-2">
                         <Form.Select value={status} onChange={e => setStatus(e.target.value)} style={{ maxWidth: 220 }}>
                             <option value="">All Statuses</option>
                             <option value="CREATED">CREATED</option>
                             <option value="SENT_TO_SUPPLIER">SENT_TO_SUPPLIER</option>
                             <option value="PARTIALLY_RECEIVED">PARTIALLY_RECEIVED</option>
                             <option value="FULLY_RECEIVED">FULLY_RECEIVED</option>
+                            <option value="CONFIRMED">CONFIRMED</option>
+                            <option value="CANCELLED">CANCELLED</option>
                         </Form.Select>
                         <Form.Control placeholder="Search PO# / Supplier" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
@@ -89,7 +102,14 @@ export default function POListView({ onOpenGRN }) {
                 <Table hover responsive>
                     <thead>
                         <tr>
-                            <th>PO No</th><th>Supplier</th><th>Items</th><th>Status</th><th>ETA</th><th></th>
+                            <th>PO No</th>
+                            <th>Supplier</th>
+                            <th>Items</th>
+                            <th>Status</th>
+                            <th>Approval</th>
+                            <th className="text-end">Grand Total</th>
+                            <th>ETA</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,7 +117,9 @@ export default function POListView({ onOpenGRN }) {
                             <tr key={po.id}>
                                 <td>{po.poNumber}</td>
                                 <td>{po.supplierNameSnapshot || po.supplierName}</td>
-                                <td>{(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 3).join(", ")}{(po.items?.length > 3) ? "…" : ""}</td>
+                                <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
+                                </td>
                                 <td>
                                     <Badge bg={
                                         po.status === "FULLY_RECEIVED" ? "success" :
@@ -105,9 +127,13 @@ export default function POListView({ onOpenGRN }) {
                                                 po.status === "SENT_TO_SUPPLIER" ? "primary" : "secondary"
                                     }>{po.status}</Badge>
                                 </td>
+                                <td>{approvalBadge(po.approvalStatus)}</td>
+                                <td className="text-end">
+                                    {po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                </td>
                                 <td>{po.etaDate || "-"}</td>
-                                <td className="d-flex gap-2">
-                                    <Button size="sm" variant="info" onClick={() => window.location.hash = `#/pos/${po.id}`}>View</Button>
+                                <td className="d-flex gap-1">
+                                    <Button size="sm" variant="info" onClick={() => navigate(`/pos/${po.id}`)}>View</Button>
                                     <Button
                                         size="sm"
                                         variant="outline-primary"

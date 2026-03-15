@@ -16,11 +16,12 @@ const rejectAPI = async (id, payload) => (await api.post(`/pos/${id}/reject`, pa
 const listSavedAddressesAPI = async () => (await api.get(`/addresses`)).data;
 const createSavedAddressAPI = async (payload) => (await api.post(`/addresses`, payload)).data;
 const updatePOAddressAPI = async (id, payload) => (await api.patch(`/pos/${id}/address`, payload)).data;
+const updateFinancialsAPI = async (id, payload) => (await api.patch(`/pos/${id}/financials`, payload)).data;
 
 export default function PurchaseOrderDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { employeeId } = useAuth(); // Logged-in user's Employee ID
+    const { employeeId } = useAuth();
 
     const [po, setPo] = useState(null);
     const [employees, setEmployees] = useState([]);
@@ -32,15 +33,23 @@ export default function PurchaseOrderDetails() {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
 
+    // Loading states for async actions
+    const [submitting, setSubmitting] = useState(false);
+    const [approving, setApproving] = useState(false);
+    const [rejecting, setRejecting] = useState(false);
+
     // Address Modal
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [savedAddresses, setSavedAddresses] = useState([]);
     const [addressForm, setAddressForm] = useState({ name: "", line1: "", line2: "", city: "", state: "", postalCode: "", country: "Sri Lanka" });
     const [useSavedAddressId, setUseSavedAddressId] = useState("");
 
+    // Financials Modal
+    const [showFinancialsModal, setShowFinancialsModal] = useState(false);
+    const [financialsForm, setFinancialsForm] = useState({ deliveryCharge: '', vatAmount: '', otherTaxAmount: '' });
+
     const loadData = async () => {
         try {
-            setLoading(true);
             setLoading(true);
             const [poData, empData, addrData] = await Promise.all([getPO(id), listEmployeesAPI(), listSavedAddressesAPI()]);
             setPo(poData);
@@ -59,7 +68,6 @@ export default function PurchaseOrderDetails() {
         // eslint-disable-next-line
     }, [id]);
 
-    // Computed Logic
     const isApprover = useMemo(() => {
         if (!po || !po.approverIds) return false;
         return po.approverIds.includes(employeeId);
@@ -73,58 +81,74 @@ export default function PurchaseOrderDetails() {
 
     /* ========== ACTIONS ========== */
     const handleSubmitForApproval = async () => {
+        setShowSubmitModal(false);
+        setSubmitting(true);
         try {
-            const updated = await submitApprovalAPI(id, { manualPolicy: "ANY" }); // Defaulting to ANY or config driven
+            const updated = await submitApprovalAPI(id, { manualPolicy: "ANY" });
             setPo(updated);
-            setShowSubmitModal(false);
             toast.success("Submitted for approval");
         } catch (e) {
             toast.error(e.response?.data?.message || "Failed to submit");
+        } finally {
+            setSubmitting(false);
         }
     };
 
     const handleApprove = async () => {
+        const comment = approvalComment;
+        setShowApproveModal(false);
+        setApproving(true);
         try {
-            const updated = await approveAPI(id, { comment: approvalComment });
+            const updated = await approveAPI(id, { comment });
             setPo(updated);
-            setShowApproveModal(false);
             setApprovalComment("");
             toast.success("Approved successfully");
         } catch (e) {
             toast.error(e.response?.data?.message || "Failed to approve");
+        } finally {
+            setApproving(false);
         }
     };
 
     const handleReject = async () => {
+        const comment = approvalComment;
+        setShowRejectModal(false);
+        setRejecting(true);
         try {
-            const updated = await rejectAPI(id, { comment: approvalComment });
+            const updated = await rejectAPI(id, { comment });
             setPo(updated);
-            setShowRejectModal(false);
             setApprovalComment("");
             toast.success("Rejected PO");
         } catch (e) {
             toast.error(e.response?.data?.message || "Failed to reject");
+        } finally {
+            setRejecting(false);
+        }
+    };
+
+    const handleUpdateFinancials = async () => {
+        try {
+            const payload = {
+                deliveryCharge: financialsForm.deliveryCharge !== '' ? parseFloat(financialsForm.deliveryCharge) : null,
+                vatAmount: financialsForm.vatAmount !== '' ? parseFloat(financialsForm.vatAmount) : null,
+                otherTaxAmount: financialsForm.otherTaxAmount !== '' ? parseFloat(financialsForm.otherTaxAmount) : null,
+            };
+            const updated = await updateFinancialsAPI(id, payload);
+            setShowFinancialsModal(false);
+            setPo(updated);
+            toast.success("Totals updated");
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Failed to update totals");
         }
     };
 
     const handleUpdateAddress = async () => {
         try {
             let addrToSave = { ...addressForm };
-
-            // If selecting from saved
             if (useSavedAddressId) {
                 const found = savedAddresses.find(a => a.id === useSavedAddressId);
                 if (found) addrToSave = { ...found.address, name: found.name };
-            } else {
-                // If creating new (optional: save to book)
-                // For now just update PO
             }
-
-            // Remove name from pure address if backend compliant, but our backend ignores extra fields usually or we can clean it
-            // Backend Address object doesn't have 'name'. But SavedAddress does.
-            // PO.shippingAddress is type Address.
-            // Let's strip 'name' if it's not in Address model. Address.java: line1, line2, city... NO name.
-            // So we pass the address fields.
             const cleanAddr = {
                 line1: addrToSave.line1,
                 line2: addrToSave.line2,
@@ -133,16 +157,12 @@ export default function PurchaseOrderDetails() {
                 postalCode: addrToSave.postalCode,
                 country: addrToSave.country
             };
-
             const updated = await updatePOAddressAPI(id, cleanAddr);
-            // If user wanted to save to book (we can add a checkbox "Save to address book")
-            // For now, let's keep it simple: "Picking Saved" or "Typing New"
             if (!useSavedAddressId && addrToSave.saveToBook) {
                 await createSavedAddressAPI({ name: addrToSave.name, address: cleanAddr });
                 const refreshList = await listSavedAddressesAPI();
                 setSavedAddresses(refreshList);
             }
-
             setPo(updated);
             setShowAddressModal(false);
             toast.success("Shipping address updated");
@@ -156,24 +176,58 @@ export default function PurchaseOrderDetails() {
     if (!po) return <Container className="pt-4 text-center">Purchase Order not found</Container>;
 
     const { approvalStatus, approverIds = [], approvals = [] } = po;
+    const isDraft = !approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED';
 
     return (
         <Container style={{ width: "90vw", maxWidth: 1200, paddingTop: 24 }}>
             <div className="d-flex justify-content-between align-items-center mb-3">
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 align-items-center">
+                    <button type="button" className="btn btn-light me-1" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                     <Button variant="outline-secondary" onClick={() => navigate("/pos")}>&larr; Back to List</Button>
                     <Button variant="info" onClick={() => navigate(`/pos/${id}/print`)}>Print View</Button>
                 </div>
-                <div>
-                    {/* Actions based on state */}
-                    {(approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED' || !approvalStatus) && (
-                        <Button variant="primary" onClick={() => setShowSubmitModal(true)}>Submit for Approval</Button>
+                <div className="d-flex gap-2">
+                    {isDraft && (
+                        <>
+                            <Button variant="outline-secondary" onClick={() => {
+                                setFinancialsForm({
+                                    deliveryCharge: po.deliveryCharge ?? '',
+                                    vatAmount: po.vatAmount ?? '',
+                                    otherTaxAmount: po.otherTaxAmount ?? ''
+                                });
+                                setShowFinancialsModal(true);
+                            }}>Edit Totals</Button>
+                            <Button
+                                variant="primary"
+                                disabled={submitting}
+                                onClick={() => setShowSubmitModal(true)}
+                            >
+                                {submitting
+                                    ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting&hellip;</>
+                                    : 'Submit for Approval'}
+                            </Button>
+                        </>
                     )}
-
                     {approvalStatus === 'PENDING_APPROVAL' && isApprover && myApprovalStatus === 'PENDING' && (
                         <div className="d-flex gap-2">
-                            <Button variant="success" onClick={() => setShowApproveModal(true)}>Approve</Button>
-                            <Button variant="danger" onClick={() => setShowRejectModal(true)}>Reject</Button>
+                            <Button
+                                variant="success"
+                                disabled={approving || rejecting}
+                                onClick={() => setShowApproveModal(true)}
+                            >
+                                {approving
+                                    ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Approving&hellip;</>
+                                    : 'Approve'}
+                            </Button>
+                            <Button
+                                variant="danger"
+                                disabled={approving || rejecting}
+                                onClick={() => setShowRejectModal(true)}
+                            >
+                                {rejecting
+                                    ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Rejecting&hellip;</>
+                                    : 'Reject'}
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -184,11 +238,8 @@ export default function PurchaseOrderDetails() {
                     <div className="bg-white shadow rounded p-4 mb-4">
                         <div className="d-flex justify-content-between align-items-start mb-4">
                             <div>
-                                <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h3 className="mb-0">Purchase Order: {po.poNumber}</h3>
-                        </div>
-<div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
+                                <h3 className="mb-1">Purchase Order: {po.poNumber}</h3>
+                                <div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
                             </div>
                             <div className="text-end">
                                 <Button size="sm" variant="outline-primary" className="mb-2" onClick={() => setShowAddressModal(true)}>
@@ -200,7 +251,6 @@ export default function PurchaseOrderDetails() {
                                         po.status === 'PARTIALLY_RECEIVED' ? 'info' :
                                             po.status === 'SENT_TO_SUPPLIER' ? 'primary' : 'secondary'
                                 } className="fs-6 me-2">{po.status}</Badge>
-
                                 <Badge bg={
                                     approvalStatus === 'APPROVED' ? 'success' :
                                         approvalStatus === 'PENDING_APPROVAL' ? 'warning' :
@@ -218,7 +268,7 @@ export default function PurchaseOrderDetails() {
                                     <th>SKU</th>
                                     <th>Unit</th>
                                     <th className="text-end">Qty</th>
-                                    <th className="text-end">Price</th>
+                                    <th className="text-end">Unit Price</th>
                                     <th className="text-end">Total</th>
                                 </tr>
                             </thead>
@@ -233,7 +283,7 @@ export default function PurchaseOrderDetails() {
                                             <td>{item.sku}</td>
                                             <td>{item.unit}</td>
                                             <td className="text-end">{qty}</td>
-                                            <td className="text-end">{price > 0 ? price.toFixed(2) : "-"}</td>
+                                            <td className="text-end">{price > 0 ? Number(price).toFixed(2) : "-"}</td>
                                             <td className="text-end">{total > 0 ? total.toFixed(2) : "-"}</td>
                                         </tr>
                                     );
@@ -241,43 +291,36 @@ export default function PurchaseOrderDetails() {
                             </tbody>
                         </Table>
 
-                        {/* Totals Breakdown */}
+                        {/* Totals Breakdown — always visible */}
                         <div className="d-flex justify-content-end">
-                            <div style={{ width: 300 }}>
+                            <div style={{ width: 320 }}>
                                 <Table size="sm" borderless className="mb-0">
                                     <tbody>
                                         <tr>
                                             <td className="text-end"><strong>Subtotal:</strong></td>
-                                            <td className="text-end">{po.subTotal ? po.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
+                                            <td className="text-end">{(po.subTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         </tr>
-                                        {po.deliveryCharge > 0 && (
-                                            <tr>
-                                                <td className="text-end">Delivery:</td>
-                                                <td className="text-end">{po.deliveryCharge.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                            </tr>
-                                        )}
-                                        {po.vatAmount > 0 && (
-                                            <tr>
-                                                <td className="text-end">VAT:</td>
-                                                <td className="text-end">{po.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                            </tr>
-                                        )}
-                                        {po.otherTaxAmount > 0 && (
-                                            <tr>
-                                                <td className="text-end">Other Tax:</td>
-                                                <td className="text-end">{po.otherTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                            </tr>
-                                        )}
-                                        {/* Legacy Tax Fallback */}
+                                        <tr>
+                                            <td className="text-end text-muted">Delivery:</td>
+                                            <td className="text-end text-muted">{(po.deliveryCharge || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="text-end text-muted">VAT:</td>
+                                            <td className="text-end text-muted">{(po.vatAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="text-end text-muted">Other Tax:</td>
+                                            <td className="text-end text-muted">{(po.otherTaxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        </tr>
                                         {(!po.vatAmount && !po.otherTaxAmount && po.taxTotal > 0) && (
                                             <tr>
-                                                <td className="text-end">Tax:</td>
-                                                <td className="text-end">{po.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                <td className="text-end text-muted">Tax (legacy):</td>
+                                                <td className="text-end text-muted">{po.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             </tr>
                                         )}
                                         <tr className="border-top">
-                                            <td className="text-end fs-5"><strong>Total:</strong></td>
-                                            <td className="text-end fs-5"><strong>{po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : (po.subTotal || 0).toLocaleString()}</strong></td>
+                                            <td className="text-end fs-5"><strong>Grand Total:</strong></td>
+                                            <td className="text-end fs-5"><strong>{(po.grandTotal || po.subTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
                                         </tr>
                                     </tbody>
                                 </Table>
@@ -293,24 +336,16 @@ export default function PurchaseOrderDetails() {
                 </Col>
 
                 <Col md={4}>
-                    {/* Workflow Status Card */}
                     <div className="bg-white shadow rounded p-3 mb-3">
                         <h6 className="mb-3 border-bottom pb-2">Approval Workflow</h6>
-
                         {(approverIds.length > 0) ? (
                             <ul className="list-unstyled mb-0">
                                 {approverIds.map(uid => {
                                     const emp = employees.find(e => e.id === uid);
                                     const name = emp ? `${emp.firstName} ${emp.lastName}` : uid;
-
-                                    // Check history for latest status from this approver
-                                    // Filter approvals by this approver, sort by timestamp desc, pick first? 
-                                    // Actually we just check if they approved "APPROVED" in the `approvals` list.
                                     const rec = approvals.slice().reverse().find(r => r.approverId === uid);
-
                                     const status = rec ? rec.status : "PENDING";
                                     const color = status === 'APPROVED' ? 'success' : status === 'REJECTED' ? 'danger' : 'secondary';
-
                                     return (
                                         <li key={uid} className="mb-2 p-2 border rounded bg-light">
                                             <div className="d-flex justify-content-between align-items-center mb-1">
@@ -377,6 +412,44 @@ export default function PurchaseOrderDetails() {
                 </Modal.Footer>
             </Modal>
 
+            {/* Edit Totals Modal */}
+            <Modal show={showFinancialsModal} onHide={() => setShowFinancialsModal(false)}>
+                <Modal.Header closeButton><Modal.Title>Edit Totals</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Delivery Charge</Form.Label>
+                        <Form.Control
+                            type="number" min="0" step="0.01"
+                            value={financialsForm.deliveryCharge}
+                            onChange={e => setFinancialsForm(f => ({ ...f, deliveryCharge: e.target.value }))}
+                            placeholder="0.00"
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>VAT Amount</Form.Label>
+                        <Form.Control
+                            type="number" min="0" step="0.01"
+                            value={financialsForm.vatAmount}
+                            onChange={e => setFinancialsForm(f => ({ ...f, vatAmount: e.target.value }))}
+                            placeholder="0.00"
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Other Tax (NBT / SSCL etc.)</Form.Label>
+                        <Form.Control
+                            type="number" min="0" step="0.01"
+                            value={financialsForm.otherTaxAmount}
+                            onChange={e => setFinancialsForm(f => ({ ...f, otherTaxAmount: e.target.value }))}
+                            placeholder="0.00"
+                        />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowFinancialsModal(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={handleUpdateFinancials}>Save Totals</Button>
+                </Modal.Footer>
+            </Modal>
+
             {/* Address Modal */}
             <Modal show={showAddressModal} onHide={() => setShowAddressModal(false)} size="lg">
                 <Modal.Header closeButton><Modal.Title>Update Shipping Address</Modal.Title></Modal.Header>
@@ -402,76 +475,21 @@ export default function PurchaseOrderDetails() {
                             ))}
                         </Form.Select>
                     </Form.Group>
-
                     <h6 className="mt-4 border-bottom pb-2">Address Details</h6>
                     <Row>
                         <Col md={12}>
                             <Form.Group className="mb-2">
                                 <Form.Label>Location Name (for saving)</Form.Label>
-                                <Form.Control
-                                    placeholder="e.g. Main Warehouse"
-                                    value={addressForm.name || ""}
-                                    onChange={e => setAddressForm({ ...addressForm, name: e.target.value })}
-                                    disabled={!!useSavedAddressId}
-                                />
+                                <Form.Control placeholder="e.g. Main Warehouse" value={addressForm.name || ""} onChange={e => setAddressForm({ ...addressForm, name: e.target.value })} disabled={!!useSavedAddressId} />
                             </Form.Group>
                         </Col>
-                        <Col md={12}>
-                            <Form.Group className="mb-2">
-                                <Form.Label>Address Line 1</Form.Label>
-                                <Form.Control
-                                    value={addressForm.line1 || ""}
-                                    onChange={e => setAddressForm({ ...addressForm, line1: e.target.value })}
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={12}>
-                            <Form.Group className="mb-2">
-                                <Form.Label>Address Line 2</Form.Label>
-                                <Form.Control
-                                    value={addressForm.line2 || ""}
-                                    onChange={e => setAddressForm({ ...addressForm, line2: e.target.value })}
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-2">
-                                <Form.Label>City</Form.Label>
-                                <Form.Control
-                                    value={addressForm.city || ""}
-                                    onChange={e => setAddressForm({ ...addressForm, city: e.target.value })}
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-2">
-                                <Form.Label>State / Province</Form.Label>
-                                <Form.Control
-                                    value={addressForm.state || ""}
-                                    onChange={e => setAddressForm({ ...addressForm, state: e.target.value })}
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-2">
-                                <Form.Label>Postal Code</Form.Label>
-                                <Form.Control
-                                    value={addressForm.postalCode || ""}
-                                    onChange={e => setAddressForm({ ...addressForm, postalCode: e.target.value })}
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-2">
-                                <Form.Label>Country</Form.Label>
-                                <Form.Control
-                                    value={addressForm.country || "Sri Lanka"}
-                                    onChange={e => setAddressForm({ ...addressForm, country: e.target.value })}
-                                />
-                            </Form.Group>
-                        </Col>
+                        <Col md={12}><Form.Group className="mb-2"><Form.Label>Address Line 1</Form.Label><Form.Control value={addressForm.line1 || ""} onChange={e => setAddressForm({ ...addressForm, line1: e.target.value })} /></Form.Group></Col>
+                        <Col md={12}><Form.Group className="mb-2"><Form.Label>Address Line 2</Form.Label><Form.Control value={addressForm.line2 || ""} onChange={e => setAddressForm({ ...addressForm, line2: e.target.value })} /></Form.Group></Col>
+                        <Col md={6}><Form.Group className="mb-2"><Form.Label>City</Form.Label><Form.Control value={addressForm.city || ""} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} /></Form.Group></Col>
+                        <Col md={6}><Form.Group className="mb-2"><Form.Label>State / Province</Form.Label><Form.Control value={addressForm.state || ""} onChange={e => setAddressForm({ ...addressForm, state: e.target.value })} /></Form.Group></Col>
+                        <Col md={6}><Form.Group className="mb-2"><Form.Label>Postal Code</Form.Label><Form.Control value={addressForm.postalCode || ""} onChange={e => setAddressForm({ ...addressForm, postalCode: e.target.value })} /></Form.Group></Col>
+                        <Col md={6}><Form.Group className="mb-2"><Form.Label>Country</Form.Label><Form.Control value={addressForm.country || "Sri Lanka"} onChange={e => setAddressForm({ ...addressForm, country: e.target.value })} /></Form.Group></Col>
                     </Row>
-
                     {!useSavedAddressId && (
                         <Form.Check
                             type="checkbox"
@@ -481,7 +499,6 @@ export default function PurchaseOrderDetails() {
                             onChange={e => setAddressForm({ ...addressForm, saveToBook: e.target.checked })}
                         />
                     )}
-
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowAddressModal(false)}>Cancel</Button>
