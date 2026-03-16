@@ -48,6 +48,7 @@ export default function ProjectDetails() {
     const [comment, setComment] = useState('');
     const [approving, setApproving] = useState(false);
     const [moving, setMoving] = useState(false);
+    const [processingMessage, setProcessingMessage] = useState('');
 
     const [filesReloadKey] = useState(0);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -203,6 +204,7 @@ export default function ProjectDetails() {
         const stageId = project?.currentStage?.id;
         if (!id || !stageId) { toast.warn('No current stage to approve/reject.'); return; }
         setApproving(true);
+        setProcessingMessage(status === 'APPROVED' ? 'Submitting approval…' : 'Submitting rejection…');
         try {
             await api.post(
                 `/projects/${id}/stages/${stageId}/approve`,
@@ -211,18 +213,21 @@ export default function ProjectDetails() {
             );
             toast.success(status === 'APPROVED' ? 'Approved' : 'Rejected');
             setComment('');
+            setProcessingMessage('Refreshing project data…');
             await refresh();
         } catch (e) {
             console.error(e);
-            toast.error('Failed to submit approval');
+            toast.error(e.response?.data?.message || 'Failed to submit approval');
         } finally {
             setApproving(false);
+            setProcessingMessage('');
         }
     };
 
     const move = async (to) => {
         if (!id) { toast.warn('No project id to move.'); return; }
         setMoving(true);
+        setProcessingMessage(`Moving to ${to || 'next stage'}…`);
         try {
             await api.post(
                 `/projects/${id}/move`,
@@ -230,12 +235,26 @@ export default function ProjectDetails() {
                 { headers: { 'X-Roles': rolesHeader } }
             );
             toast.success(to ? `Moved to ${to}` : 'Moved to next stage');
+            setProcessingMessage('Refreshing project data…');
             await refresh();
         } catch (e) {
             console.error(e);
-            toast.error('Failed to move stage');
+            // Timeout: the backend may have still processed the move successfully
+            if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
+                toast.info('The request took a while — checking the latest project status…');
+                setProcessingMessage('Checking project status…');
+                try {
+                    await refresh();
+                    toast.success('Project data refreshed successfully!');
+                } catch (refreshErr) {
+                    toast.error('Could not refresh project data. Please reload the page.');
+                }
+            } else {
+                toast.error(e.response?.data?.message || 'Failed to move stage');
+            }
         } finally {
             setMoving(false);
+            setProcessingMessage('');
         }
     };
 
@@ -333,8 +352,41 @@ export default function ProjectDetails() {
     return (
         <div
             className="p-2"
-            style={{ width: '100%', maxHeight: 'calc(100vh - 110px)', overflowY: 'auto' }}
+            style={{ width: '100%', maxHeight: 'calc(100vh - 110px)', overflowY: 'auto', position: 'relative' }}
         >
+            {/* Processing Overlay */}
+            {(moving || approving) && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    <div style={{
+                        backgroundColor: '#fff',
+                        borderRadius: '16px',
+                        padding: '36px 48px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '16px',
+                        minWidth: '260px',
+                    }}>
+                        <Spinner animation="border" variant="primary" style={{ width: '3rem', height: '3rem' }} />
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#1a1a2e' }}>
+                            {processingMessage || 'Processing…'}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: '#6c757d', textAlign: 'center' }}>
+                            Please wait while the backend processes your request.
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {loading && (
                 <div className="p-2 pb-0 small text-muted">
                     <Spinner size="sm" className="me-2" /> Loading…

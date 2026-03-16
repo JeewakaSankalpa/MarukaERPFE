@@ -10,7 +10,7 @@ const baseURL =
 
 const api = axios.create({
     baseURL,
-    timeout: 30000,
+    timeout: 90000, // 90s — backend can be slow due to GCS file validation + notification events
 });
 
 // ---- Array param handling: status=A&status=B (no [] brackets) ----
