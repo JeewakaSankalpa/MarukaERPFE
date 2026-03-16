@@ -174,7 +174,7 @@ function ProductForm({ id, onClose, onSaved }) {
             categoryId: form.categoryId || undefined,
             unit: form.unit || undefined,
             status: form.status,
-            originalCostPrice: form.originalCostPrice,
+            originalCostPrice: form.originalCostPrice || undefined,
             defaultSellingPrice: form.defaultSellingPrice || undefined,
             suppliers: (form.suppliers || []).map(s => ({
                 supplierId: s.supplierId,
