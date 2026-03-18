@@ -173,9 +173,16 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         <Container style={{ width: "80vw", maxWidth: 1000, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center">
-                    <h2 style={{ fontSize: "1.5rem" }}>
-                        {routeId ? (isEditMode ? "Edit Item Request" : "View Item Request") : "Create Item Request"}
-                    </h2>
+                    <div className="d-flex align-items-center gap-2">
+                        {urlProjectId && (
+                            <Button variant="light" size="sm" onClick={() => navigate(`/projects/manage/${urlProjectId}`)} title="Back to Project Dashboard">
+                                <ArrowLeft size={20} />
+                            </Button>
+                        )}
+                        <h2 style={{ fontSize: "1.5rem", margin: 0 }}>
+                            {routeId ? (isEditMode ? "Edit Item Request" : "View Item Request") : "Create Item Request"}
+                        </h2>
+                    </div>
                     {routeId && (
                         <Button size="sm" variant={isEditMode ? "secondary" : "primary"} onClick={() => setIsEditMode(v => !v)}>
                             {isEditMode ? "Cancel Edit" : "Edit"}
