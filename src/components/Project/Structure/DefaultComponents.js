@@ -207,6 +207,7 @@ export const registerDefaultComponents = () => {
                 currentStageId={props.project?.currentStageId}
                 onUpdate={props.refresh}
                 project={props.project}
+                setProcessingMessage={props.setProcessingMessage}
             />
         )
     });

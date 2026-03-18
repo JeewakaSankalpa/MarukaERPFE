@@ -4,7 +4,7 @@ import { listWorkflows } from '../../services/workflowApi';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 
-export default function ProjectWorkflowTab({ projectId, currentWorkflow, currentStageId, onUpdate, project }) {
+export default function ProjectWorkflowTab({ projectId, currentWorkflow, currentStageId, onUpdate, project, setProcessingMessage }) {
     const [workflows, setWorkflows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [switching, setSwitching] = useState(false);
@@ -41,18 +41,25 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
         }
 
         setSwitching(true);
+        if (setProcessingMessage) {
+            setProcessingMessage('Switching workflow and refreshing project data…');
+        } else {
+            toast.info("Switching workflow, please wait...");
+        }
+
         try {
             await api.post(`/projects/${projectId}/workflow/switch`, {
                 targetWorkflowId: selectedWorkflowId
             });
-            toast.success("Workflow switched successfully");
-            if (onUpdate) onUpdate();
+            toast.success("Workflow switched successfully!");
+            if (onUpdate) await onUpdate(); // Pulls the latest project details in-place
         } catch (e) {
             console.error(e);
             const msg = e.response?.data?.message || e.message;
             toast.error("Failed to switch: " + msg);
         } finally {
             setSwitching(false);
+            if (setProcessingMessage) setProcessingMessage('');
         }
     };
 

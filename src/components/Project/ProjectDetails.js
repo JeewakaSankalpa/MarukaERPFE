@@ -131,14 +131,13 @@ export default function ProjectDetails() {
                 setProject(p.data || null);
                 setActions(a.data || null);
 
-                // Fetch workflow definition if we have a workflowId
+                // PERFORMANCE FIX #1: Fetch workflow definition without blocking the main render
                 if (p.data?.workflowId) {
-                    try {
-                        const w = await getWorkflow(p.data.workflowId);
-                        setWorkflowDef(w);
-                    } catch (we) {
-                        console.warn("Could not fetch workflow definition", we);
-                    }
+                    getWorkflow(p.data.workflowId)
+                        .then(w => {
+                            if (alive) setWorkflowDef(w);
+                        })
+                        .catch(we => console.warn("Could not fetch workflow definition", we));
                 }
             } catch (e) {
                 console.error(e);
@@ -188,11 +187,11 @@ export default function ProjectDetails() {
             setProject(p.data || null);
             setActions(a.data || null);
             setRefreshKey(prev => prev + 1); // Trigger sub-components
+            // PERFORMANCE FIX #1: Non-blocking fetch for refresh as well
             if (p.data?.workflowId && !workflowDef) {
-                try {
-                    const w = await getWorkflow(p.data.workflowId);
-                    setWorkflowDef(w);
-                } catch (we) { console.warn(we); }
+                getWorkflow(p.data.workflowId)
+                    .then(setWorkflowDef)
+                    .catch(e => console.warn(e));
             }
         } catch (e) {
             console.error(e);
@@ -345,7 +344,8 @@ export default function ProjectDetails() {
         filesReloadKey,
         viewVersion,
         onViewSnapshot: handleViewSnapshot,
-        openEmailModal, navigate // Passed down for OVERVIEW card
+        openEmailModal, navigate, // Passed down for OVERVIEW card
+        setProcessingMessage
     };
 
 
@@ -355,7 +355,7 @@ export default function ProjectDetails() {
             style={{ width: '100%', maxHeight: 'calc(100vh - 110px)', overflowY: 'auto', position: 'relative' }}
         >
             {/* Processing Overlay */}
-            {(moving || approving) && (
+            {(moving || approving || processingMessage) && (
                 <div style={{
                     position: 'fixed',
                     top: 0, left: 0, right: 0, bottom: 0,
