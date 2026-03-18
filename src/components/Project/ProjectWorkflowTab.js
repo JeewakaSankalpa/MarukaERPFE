@@ -4,11 +4,14 @@ import { listWorkflows } from '../../services/workflowApi';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 
-export default function ProjectWorkflowTab({ projectId, currentWorkflow, currentStageId, onUpdate }) {
+export default function ProjectWorkflowTab({ projectId, currentWorkflow, currentStageId, onUpdate, project, setProcessingMessage }) {
     const [workflows, setWorkflows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [switching, setSwitching] = useState(false);
     const [selectedWorkflowId, setSelectedWorkflowId] = useState('');
+
+    // Resolve the actual active workflow ID from either the snapshot or the project field
+    const activeWorkflowId = currentWorkflow?.id || project?.workflowId || 'active';
 
     useEffect(() => {
         loadWorkflows();
@@ -38,18 +41,25 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
         }
 
         setSwitching(true);
+        if (setProcessingMessage) {
+            setProcessingMessage('Switching workflow and refreshing project data…');
+        } else {
+            toast.info("Switching workflow, please wait...");
+        }
+
         try {
             await api.post(`/projects/${projectId}/workflow/switch`, {
                 targetWorkflowId: selectedWorkflowId
             });
-            toast.success("Workflow switched successfully");
-            if (onUpdate) onUpdate();
+            toast.success("Workflow switched successfully!");
+            if (onUpdate) await onUpdate(); // Pulls the latest project details in-place
         } catch (e) {
             console.error(e);
             const msg = e.response?.data?.message || e.message;
             toast.error("Failed to switch: " + msg);
         } finally {
             setSwitching(false);
+            if (setProcessingMessage) setProcessingMessage('');
         }
     };
 
@@ -65,7 +75,7 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
                         <tbody>
                             <tr>
                                 <td className="bg-light" style={{ width: '200px' }}>Current Workflow ID</td>
-                                <td>{currentWorkflow?.id || <em>Global Default</em>}</td>
+                                <td>{activeWorkflowId === 'active' ? <em>Global Default (active)</em> : activeWorkflowId}</td>
                             </tr>
                             <tr>
                                 <td className="bg-light">Version</td>
@@ -106,14 +116,14 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
                                     <option key={w.id} value={w.id}>
                                         {w.id === 'active' ? 'Active (Default)' : w.id}
                                         {w.version ? ` (v${w.version})` : ''}
-                                        {currentWorkflow?.id === w.id && ' (Current)'}
+                                        {activeWorkflowId === w.id && ' ✓ Current'}
                                     </option>
                                 ))}
                             </Form.Select>
                         </Form.Group>
                         <Button
                             variant="warning"
-                            disabled={!selectedWorkflowId || switching || selectedWorkflowId === currentWorkflow?.id}
+                            disabled={!selectedWorkflowId || switching || selectedWorkflowId === activeWorkflowId}
                             onClick={handleSwitch}
                         >
                             {switching ? <Spinner size="sm" /> : 'Switch Workflow'}

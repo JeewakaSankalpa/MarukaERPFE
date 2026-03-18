@@ -206,6 +206,8 @@ export const registerDefaultComponents = () => {
                 currentWorkflow={props.project?.workflowSnapshot}
                 currentStageId={props.project?.currentStageId}
                 onUpdate={props.refresh}
+                project={props.project}
+                setProcessingMessage={props.setProcessingMessage}
             />
         )
     });
