@@ -335,7 +335,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                                     <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">
                                         View
                                     </a>
-                                    <a className="btn btn-sm btn-success" href={f.url} download>
+                                    <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download>
                                         Download
                                     </a>
                                 </td>

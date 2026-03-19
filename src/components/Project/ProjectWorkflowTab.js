@@ -30,33 +30,40 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
         }
     };
 
-    const handleSwitch = async () => {
-        if (!selectedWorkflowId) return;
+    const handleSync = async (targetId) => {
+        if (!targetId) return;
 
-        const target = workflows.find(w => w.id === selectedWorkflowId);
-        if (!target) return;
-
-        if (!window.confirm(`Are you sure you want to switch this project to workflow "${target.id}" (v${target.version || 0})?\n\nThis will create a backup snapshot of the current state.`)) {
-            return;
+        const isSame = targetId === activeWorkflowId;
+        
+        if (!isSame) {
+            const target = workflows.find(w => w.id === targetId);
+            if (!target) return;
+            if (!window.confirm(`Are you sure you want to switch this project to workflow "${target.id}" (v${target.version || 0})?\n\nThis will create a backup snapshot of the current state.`)) {
+                return;
+            }
+        } else {
+            if (!window.confirm(`Sync the latest global updates from the "${targetId}" workflow to this project?\n\nThis will create a backup snapshot of the current state.`)) {
+                return;
+            }
         }
 
         setSwitching(true);
         if (setProcessingMessage) {
-            setProcessingMessage('Switching workflow and refreshing project data…');
+            setProcessingMessage(isSame ? 'Syncing latest workflow updates…' : 'Switching workflow…');
         } else {
-            toast.info("Switching workflow, please wait...");
+            toast.info(isSame ? "Syncing updates..." : "Switching workflow...");
         }
 
         try {
             await api.post(`/projects/${projectId}/workflow/switch`, {
-                targetWorkflowId: selectedWorkflowId
+                targetWorkflowId: targetId
             });
-            toast.success("Workflow switched successfully!");
+            toast.success(isSame ? "Workflow synced to latest version!" : "Workflow switched successfully!");
             if (onUpdate) await onUpdate(); // Pulls the latest project details in-place
         } catch (e) {
             console.error(e);
             const msg = e.response?.data?.message || e.message;
-            toast.error("Failed to switch: " + msg);
+            toast.error("Failed to update: " + msg);
         } finally {
             setSwitching(false);
             if (setProcessingMessage) setProcessingMessage('');
@@ -104,31 +111,46 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
                 {loading ? (
                     <div className="text-center p-3"><Spinner size="sm" /> Loading workflows...</div>
                 ) : (
-                    <div className="d-flex gap-3 align-items-end">
-                        <Form.Group style={{ minWidth: '300px' }}>
-                            <Form.Label>Select Target Workflow</Form.Label>
-                            <Form.Select
-                                value={selectedWorkflowId}
-                                onChange={e => setSelectedWorkflowId(e.target.value)}
+                    <>
+                        <div className="d-flex gap-2 mb-4 align-items-center">
+                            <Button 
+                                variant="primary" 
+                                disabled={switching} 
+                                onClick={() => handleSync(activeWorkflowId)}
                             >
-                                <option value="">-- Choose Workflow --</option>
-                                {workflows.map(w => (
-                                    <option key={w.id} value={w.id}>
-                                        {w.id === 'active' ? 'Active (Default)' : w.id}
-                                        {w.version ? ` (v${w.version})` : ''}
-                                        {activeWorkflowId === w.id && ' ✓ Current'}
-                                    </option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
-                        <Button
-                            variant="warning"
-                            disabled={!selectedWorkflowId || switching || selectedWorkflowId === activeWorkflowId}
-                            onClick={handleSwitch}
-                        >
-                            {switching ? <Spinner size="sm" /> : 'Switch Workflow'}
-                        </Button>
-                    </div>
+                                {switching ? <Spinner size="sm" /> : 'Sync Latest Workflow Updates'}
+                            </Button>
+                            <span className="text-muted small ms-2">
+                                Pulls the very latest changes from the global "{activeWorkflowId}" workflow.
+                            </span>
+                        </div>
+
+                        <div className="d-flex gap-3 align-items-end">
+                            <Form.Group style={{ minWidth: '300px' }}>
+                                <Form.Label>Select Target Workflow</Form.Label>
+                                <Form.Select
+                                    value={selectedWorkflowId}
+                                    onChange={e => setSelectedWorkflowId(e.target.value)}
+                                >
+                                    <option value="">-- Choose Workflow --</option>
+                                    {workflows.map(w => (
+                                        <option key={w.id} value={w.id}>
+                                            {w.id === 'active' ? 'Active (Default)' : w.id}
+                                            {w.version ? ` (v${w.version})` : ''}
+                                            {activeWorkflowId === w.id && ' ✓ Current'}
+                                        </option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                            <Button
+                                variant="warning"
+                                disabled={!selectedWorkflowId || switching || selectedWorkflowId === activeWorkflowId}
+                                onClick={() => handleSync(selectedWorkflowId)}
+                            >
+                                {switching ? <Spinner size="sm" /> : 'Switch Workflow'}
+                            </Button>
+                        </div>
+                    </>
                 )}
             </Card.Body>
         </Card>

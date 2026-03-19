@@ -48,19 +48,11 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
     const fetchExpenses = async () => {
         try {
-            const res = await api.get(`/finance/expenses/search?category=PETTY_CASH`);
-            // The search endpoint might need projectId filtering. 
-            // Current ExpenseController.search doesn't support projectId.
-            // Temporary Workaround: Fetch all and filter client side OR better, assume we update backend later. 
-            // For now, let's just list 'events' which are basically cashbook.
-            // Actually, we want to see Expenses. 
-            // Let's use the 'listPayments' or similar if we stored them there?
-            // Wait, I implemented 'addProjectExpense' which saves to Expense collection.
-            // I should ideally add 'projectId' filter to ExpenseController. 
-            // For now, I will skip fetching specific "Expenses" list if API is missing and rely on "Transaction History" which shows balance changes.
-            // But the user wants to "view expenses". 
-            // I'll filter by projectId client side if getAll returns it, or just use TransactionHistory for now which logs deductions.
-        } catch (e) { }
+            const res = await api.get(`/finance/expenses/search?projectId=${projectId}`);
+            setExpenses(res.data || []);
+        } catch (e) {
+            console.error("Failed to fetch expenses", e);
+        }
     };
 
     const fetchRequests = async () => {
@@ -73,8 +65,8 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const fetchBankAccounts = async () => {
         try {
             const res = await api.get('/finance/accounts');
-            // Filter Asset/Cash/Bank accounts
-            setBankAccounts(res.data.filter(a => a.type === 'ASSET' && (a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank'))));
+            // Allow returning funds to any Asset account
+            setBankAccounts(res.data.filter(a => a.type === 'ASSET'));
         } catch (e) {
             console.error("Failed to fetch accounts", e);
         }
@@ -84,6 +76,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         if (projectId) {
             fetchAccount();
             fetchRequests();
+            fetchExpenses();
         }
     }, [projectId]);
 
@@ -121,16 +114,16 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         }
 
         try {
-            await api.post(`/project-accounts/${projectId}/expenses`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await api.post(`/project-accounts/${projectId}/expenses`, formData);
             toast.success('Expense added successfully');
             setExpenseModalVisible(false);
             expenseForm.resetFields();
             setFileList([]);
             fetchAccount(); // Update balance
+            fetchExpenses(); // Update expenses list
         } catch (e) {
-            toast.error('Failed to add expense');
+            const msg = e.response?.data?.message || e.message || 'Failed to add expense';
+            toast.error(msg);
         } finally {
             setExpenseLoading(false);
         }
@@ -221,9 +214,20 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                         ]}
                     />
                 </TabPane>
-                import ProjectFinancialReport from '../finance/ProjectFinancialReport';
-
-                // ... (inside Tabs)
+                <TabPane tab="Project Expenses" key="4">
+                    <Table
+                        dataSource={expenses}
+                        rowKey="id"
+                        size="small"
+                        columns={[
+                            { title: 'Date', dataIndex: 'expenseDate', render: d => new Date(d).toLocaleDateString() },
+                            { title: 'Title', dataIndex: 'title' },
+                            { title: 'Amount', dataIndex: 'amount', render: v => <span style={{color: 'red'}}>{currency} {v}</span> },
+                            { title: 'Description', dataIndex: 'description' },
+                            { title: 'Attachment', dataIndex: 'attachmentUrl', render: url => url ? <a href={url} target="_blank" rel="noreferrer">View File</a> : 'None' }
+                        ]}
+                    />
+                </TabPane>
                 <TabPane tab="Transaction History" key="2">
                     <TransactionHistory projectId={projectId} />
                 </TabPane>
@@ -329,10 +333,10 @@ const TransactionHistory = ({ projectId }) => {
         { title: 'Date', dataIndex: 'at', render: d => new Date(d).toLocaleDateString() },
         { title: 'Type', dataIndex: 'type' },
         {
-            title: 'Amount Change', dataIndex: 'amountChange',
-            render: (val) => <span style={{ color: val < 0 ? 'red' : 'green', fontWeight: 'bold' }}>{val}</span>
+            title: 'Amount Change', dataIndex: 'deltaPaid',
+            render: (val) => val ? <span style={{ color: val < 0 ? 'red' : 'green', fontWeight: 'bold' }}>{val}</span> : '-'
         },
-        { title: 'Details', dataIndex: 'details' },
+        { title: 'Details', dataIndex: 'note' },
         { title: 'Actor', dataIndex: 'actor' }
     ];
 

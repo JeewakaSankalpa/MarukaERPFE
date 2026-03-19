@@ -104,6 +104,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     // Modals
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
+    const [rejectComment, setRejectComment] = useState("");
+    const [submittingApproval, setSubmittingApproval] = useState(false);
+    const [submittingReject, setSubmittingReject] = useState(false);
+    const [submittingApproveAction, setSubmittingApproveAction] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     const [revisionReason, setRevisionReason] = useState("");
     // const [rejectComment, setRejectComment] = useState("");
@@ -300,6 +308,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setVatPercent(globalSettings.GLOBAL_VAT_PERCENT || "18");
                 setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
                 setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
+
+                // After loading data, mark as clean and allow dirty tracking
+                setTimeout(() => { setIsDirty(false); setIsInitialLoad(false); }, 300);
             } catch (e) {
                 toast.error(e?.response?.data?.message || "Failed to load estimation. Please try again.");
             } finally {
@@ -528,6 +539,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         }));
     }, [components]);
 
+    // Track dirty state — fires whenever editable form fields change after initial load
+    useEffect(() => {
+        if (!isInitialLoad) setIsDirty(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rows, components, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
+        includeDelivery, includeVat, includeTax, discountPercent, customNote, terms]);
+
     /* ------------ per-component + totals ------------ */
     const compCalcs = useMemo(() => {
         return components.map((cname) => {
@@ -700,6 +718,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             }
 
             if (!silent) toast.success("Estimation saved");
+            setIsDirty(false); // Mark as clean after save
             return true;
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to save estimation");
@@ -713,7 +732,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const handleSubmitForApproval = async () => {
         if (!projectOpt?.value || !estimationId) { toast.warn("Save estimation first."); return; }
-        // No manual validation of approvers needed
+        setSubmittingApproval(true);
         try {
             const res = await submitApprovalAPI(estimationId, {
                 approverIds: [], // Backend resolves from Workflow Config
@@ -721,40 +740,57 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             });
             setApprovalStatus(res.approvalStatus);
             setApproverIds(res.approverIds || []);
-            setShowApprovalModal(false);
+            setShowApprovalModal(false); // Close modal on success
             toast.success("Submitted for approval!");
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to submit");
+        } finally {
+            setSubmittingApproval(false);
         }
     };
 
     const handleApprove = async () => {
-        if (!estimationId) return;
+        if (!estimationId || submittingApproveAction) return;
+        setSubmittingApproveAction(true);
         try {
             const res = await approveAPI(estimationId, { comment: "Approved via Web UI" });
+            // Update all approval-related state in place — no page reload needed
             setApprovalStatus(res.approvalStatus);
             setApproverIds(res.approverIds || []);
             setApprovalHistory(res.approvals || []);
             setApprovalPolicy(res.approvalPolicy || "ALL");
-            toast.success("Approved!");
+            toast.success("Estimation Approved! ✅");
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to approve");
+        } finally {
+            setSubmittingApproveAction(false);
         }
     };
 
-    const handleReject = async () => {
+    const handleReject = () => {
         if (!estimationId) return;
-        const comment = prompt("Enter rejection reason:");
-        if (!comment) return;
+        setRejectComment("");
+        setShowRejectModal(true);
+    };
+
+    const confirmReject = async () => {
+        if (!rejectComment.trim()) {
+            toast.warn("Please enter a reason for rejection.");
+            return;
+        }
+        setSubmittingReject(true);
         try {
-            const res = await rejectAPI(estimationId, { comment });
+            const res = await rejectAPI(estimationId, { comment: rejectComment.trim() });
             setApprovalStatus(res.approvalStatus);
             setApproverIds(res.approverIds || []);
             setApprovalHistory(res.approvals || []);
             setApprovalPolicy(res.approvalPolicy || "ALL");
-            toast.error("Rejected!");
+            setShowRejectModal(false);
+            toast.error("Estimation Rejected.");
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to reject");
+        } finally {
+            setSubmittingReject(false);
         }
     };
 
@@ -828,14 +864,32 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         <div className="d-flex gap-2">
                             {/* Action Buttons */}
                             {approvalStatus === "DRAFT" && !isLocked && (
-                                <Button variant="outline-primary" onClick={() => setShowApprovalModal(true)}>
-                                    Submit for Approval
+                                <Button
+                                    variant={isDirty ? "warning" : "outline-primary"}
+                                    onClick={() => {
+                                        if (isDirty) {
+                                            setShowSaveConfirmModal(true);
+                                        } else {
+                                            setShowApprovalModal(true);
+                                        }
+                                    }}
+                                >
+                                    {isDirty ? "⚠ Unsaved Changes – Submit for Approval" : "Submit for Approval"}
                                 </Button>
                             )}
                             {canApprove && (
                                 <>
-                                    <Button variant="success" onClick={handleApprove}>Approve</Button>
-                                    <Button variant="danger" onClick={handleReject}>Reject</Button>
+                                    <Button
+                                        variant="success"
+                                        onClick={handleApprove}
+                                        disabled={submittingApproveAction}
+                                    >
+                                        {submittingApproveAction
+                                            ? <><Spinner as="span" animation="border" size="sm" className="me-2" />Approving...</>
+                                            : "Approve"
+                                        }
+                                    </Button>
+                                    <Button variant="danger" onClick={handleReject} disabled={submittingApproveAction}>Reject</Button>
                                 </>
                             )}
                             {(approvalStatus === "APPROVED" || approvalStatus === "REJECTED" || approvalStatus === "FINALIZED") && (
@@ -901,7 +955,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             </div>
                                         </th>
                                     ))}
-                                    <th className="text-end" style={{ width: 120 }}>Needed</th>
+                                    <th className="text-end" style={{ width: 120 }}>Total Qty</th>
                                     <th className="text-end" style={{ width: 120 }}>Avail</th>
                                     <th className="text-end" style={{ width: 140 }}>Row Total</th>
                                     <th style={{ width: 60 }}></th>
@@ -927,6 +981,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     onChange={(opt) => onPickProduct(i, opt)}
                                                     placeholder="Search product by name…"
                                                     isClearable
+                                                    menuPosition="fixed"
+                                                    menuPortalTarget={document.body}
+                                                    styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                                                     filterOption={(option, input) =>
                                                         option.label.toLowerCase().includes(input.toLowerCase())
                                                     }
@@ -1355,8 +1412,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     </p>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowApprovalModal(false)}>Cancel</Button>
-                    <Button variant="primary" onClick={handleSubmitForApproval}>Submit</Button>
+                    <Button variant="secondary" onClick={() => setShowApprovalModal(false)} disabled={submittingApproval}>Cancel</Button>
+                    <Button variant="primary" onClick={handleSubmitForApproval} disabled={submittingApproval}>
+                        {submittingApproval ? <><Spinner as="span" animation="border" size="sm" className="me-2" />Submitting...</> : "Submit"}
+                    </Button>
                 </Modal.Footer>
             </Modal>
 
@@ -1375,8 +1434,110 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 </Modal.Footer>
             </Modal>
 
+            {/* Save Before Submit Modal */}
+            <Modal show={showSaveConfirmModal} onHide={() => setShowSaveConfirmModal(false)} centered>
+                <Modal.Header closeButton className="border-0 pb-0">
+                    <Modal.Title className="d-flex align-items-center gap-2">
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: '#fef9c3', color: '#ca8a04', fontSize: 18
+                        }}>⚠</span>
+                        Unsaved Changes
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="pt-2">
+                    <p className="text-muted mb-1">
+                        You have <strong>unsaved changes</strong> in this estimation.
+                    </p>
+                    <p className="text-muted small mb-0">
+                        Would you like to <strong>save your changes first</strong> before submitting for approval,
+                        or submit using the <strong>last saved version</strong>?
+                    </p>
+                </Modal.Body>
+                <Modal.Footer className="border-0 pt-0 d-flex justify-content-between">
+                    <Button variant="outline-secondary" onClick={() => setShowSaveConfirmModal(false)}>
+                        Cancel
+                    </Button>
+                    <div className="d-flex gap-2">
+                        <Button
+                            variant="outline-dark"
+                            onClick={() => {
+                                setShowSaveConfirmModal(false);
+                                setShowApprovalModal(true);
+                            }}
+                        >
+                            Submit Without Saving
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={async () => {
+                                setShowSaveConfirmModal(false);
+                                const saved = await saveEstimation(false);
+                                if (saved) setShowApprovalModal(true);
+                            }}
+                        >
+                            Save &amp; Submit
+                        </Button>
+                    </div>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Reject Modal */}
+            <Modal show={showRejectModal} onHide={() => !submittingReject && setShowRejectModal(false)} centered>
+                <Modal.Header closeButton className="border-0 pb-0">
+                    <Modal.Title className="d-flex align-items-center gap-2">
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: '#fee2e2', color: '#dc2626', fontSize: 18
+                        }}>✕</span>
+                        Reject Estimation
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="pt-2">
+                    <p className="text-muted small mb-3">
+                        This will mark the estimation as <strong className="text-danger">Rejected</strong>.
+                        The submitter will be notified with your reason.
+                    </p>
+                    <Form.Group>
+                        <Form.Label className="fw-semibold">Reason for Rejection <span className="text-danger">*</span></Form.Label>
+                        <Form.Control
+                            as="textarea"
+                            rows={4}
+                            placeholder="Explain clearly why this estimation is being rejected..."
+                            value={rejectComment}
+                            onChange={e => setRejectComment(e.target.value)}
+                            isInvalid={rejectComment.trim() === '' && submittingReject}
+                            style={{ resize: 'vertical' }}
+                            disabled={submittingReject}
+                        />
+                        <Form.Control.Feedback type="invalid">
+                            Rejection reason is required.
+                        </Form.Control.Feedback>
+                        {rejectComment.trim() === '' && (
+                            <Form.Text className="text-muted">A reason is required before rejecting.</Form.Text>
+                        )}
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer className="border-0 pt-0">
+                    <Button variant="outline-secondary" onClick={() => setShowRejectModal(false)} disabled={submittingReject}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="danger"
+                        onClick={confirmReject}
+                        disabled={submittingReject || !rejectComment.trim()}
+                    >
+                        {submittingReject
+                            ? <><Spinner as="span" animation="border" size="sm" className="me-2" />Rejecting...</>
+                            : "Confirm Rejection"
+                        }
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container >
     );
 }
-

@@ -36,8 +36,8 @@ const PettyCashApprovalPage = () => {
     const fetchAccounts = async () => {
         try {
             const res = await api.get('/finance/accounts');
-            // Filter Asset/Cash/Bank accounts
-            setAccounts(res.data.filter(a => a.type === 'ASSET' && (a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank'))));
+            // Allow any Asset account to be used as a source
+            setAccounts(res.data.filter(a => a.type === 'ASSET'));
         } catch (e) { console.error(e); }
     };
 

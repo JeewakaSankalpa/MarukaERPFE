@@ -420,13 +420,22 @@ export default function ProjectDetails() {
                     <Card.Body className="d-flex flex-wrap align-items-center justify-content-between p-3">
                         <div>
                             <h5 className="m-0 text-primary">
-                                {effectiveActions.canApprove ? "Approval Required" : "Action Required"}
+                                {effectiveActions.canApprove 
+                                    ? (!effectiveActions.filesOk ? "Upload Required Before Approval" : "Approval Required") 
+                                    : (effectiveActions.canMove && effectiveActions.canMove.length > 0) 
+                                        ? "Ready for Next Stage" 
+                                        : "Action Required"}
                             </h5>
-                            <div className="text-muted small">
-                                {effectiveActions.canApprove
-                                    ? `Please review the ${stageObj.stageType || 'current stage'} and approve or reject.`
-                                    : `Ready to move to ${effectiveActions.canMove?.[0] || 'next stage'}.`
-                                }
+                            <div className="text-muted small mt-1">
+                                {effectiveActions.canApprove && !effectiveActions.filesOk ? (
+                                    <span className="text-danger fw-bold">Missing required documents: {effectiveActions.missingFiles?.join(', ')}</span>
+                                ) : effectiveActions.canApprove ? (
+                                    `Please review the ${stageObj.stageType || 'current stage'} and submit your approval or rejection.`
+                                ) : (effectiveActions.canMove && effectiveActions.canMove.length > 0) ? (
+                                    `All requirements met. Action required: Click 'Move to ${effectiveActions.canMove[0]}' to advance the project.`
+                                ) : (
+                                    `Review pending tasks or documents.`
+                                )}
                             </div>
                         </div>
 
