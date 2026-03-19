@@ -57,7 +57,27 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
         setLoading(true);
         try {
             await api.post(`/projects/${projectId}/delivery`, data);
-            toast.success("Delivery Schedule Saved");
+            toast.success("Delivery Schedule Saved! Generating documents...");
+
+            // Poll until the saved record comes back with an ID (backend may need a moment to persist)
+            let attempts = 0;
+            const poll = async () => {
+                try {
+                    const res = await api.get(`/projects/${projectId}/delivery`);
+                    if (res.status === 200 && res.data && res.data.id) {
+                        setData(res.data);
+                        toast.success("Gate Pass & Delivery Note are ready!");
+                        return;
+                    }
+                } catch { /* ignore */ }
+                attempts++;
+                if (attempts < 8) {
+                    setTimeout(poll, 1500); // retry every 1.5s, up to 8 times (~12s)
+                } else {
+                    toast.warn("Documents may still be generating. Please try downloading in a moment.");
+                }
+            };
+            await poll();
         } catch (e) {
             toast.error("Failed to save schedule");
         } finally {
@@ -90,11 +110,17 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                 <h5 className="mb-0 text-primary">
                     <FaTruck className="me-2" /> Delivery Schedule
                 </h5>
-                <div className="d-flex gap-2">
-                    <Button variant="outline-danger" size="sm" onClick={() => downloadPdf('gatepass')} disabled={!data.id}>
+                <div className="d-flex gap-2 align-items-center">
+                    {loading && (
+                        <span className="text-muted small fst-italic me-1">
+                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Processing...
+                        </span>
+                    )}
+                    <Button variant="outline-danger" size="sm" onClick={() => downloadPdf('gatepass')} disabled={!data.id || loading}>
                         <FaFilePdf /> Gate Pass
                     </Button>
-                    <Button variant="outline-success" size="sm" onClick={() => downloadPdf('confirmation')} disabled={!data.id}>
+                    <Button variant="outline-success" size="sm" onClick={() => downloadPdf('confirmation')} disabled={!data.id || loading}>
                         <FaFilePdf /> Delivery Note
                     </Button>
                 </div>

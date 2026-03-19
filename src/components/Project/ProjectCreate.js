@@ -250,13 +250,18 @@ const ProjectForm = () => {
       <Container style={{ width: "80vw", maxWidth: "900px" }}>
         <div className="bg-white shadow rounded p-4" style={{ fontSize: "1rem" }}>
           <div className="d-flex justify-content-between align-items-center">
-            <h2 className="mb-4" style={{ fontSize: "1.5rem" }}>
-              {routeId
-                ? isEditMode
-                  ? "Edit Inquiry"
-                  : "View Inquiry"
-                : "Create New Inquiry"}
-            </h2>
+            <div className="d-flex align-items-center gap-2 mb-4">
+              <button type="button" className="btn btn-light" onClick={() => navigate(-1)} title="Go Back">
+                <ArrowLeft size={18} />
+              </button>
+              <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>
+                {routeId
+                  ? isEditMode
+                    ? "Edit Inquiry"
+                    : "View Inquiry"
+                  : "Create New Inquiry"}
+              </h2>
+            </div>
 
             {routeId && (
               <Button
@@ -366,7 +371,7 @@ const ProjectForm = () => {
                     name="workflowId"
                     value={projectData.workflowId || ""}
                     onChange={handleChange}
-                    disabled={!!routeId} // Workflow cannot be changed after creation (snapshot)
+                    disabled={!isEditMode} // Only editable when in edit mode
                   >
                     <option value="">Default (Active)</option>
                     {workflows.map((wf) => (
@@ -376,7 +381,7 @@ const ProjectForm = () => {
                     ))}
                   </Form.Select>
                   <Form.Text className="text-muted">
-                    {routeId ? "Workflow is locked for existing projects." : "Select the workflow logic for this inquiry."}
+                    {isEditMode ? "Changing the workflow will re-sync the project on save." : "Select the workflow logic for this inquiry."}
                   </Form.Text>
                 </Form.Group>
               </Col>
@@ -471,7 +476,13 @@ const ProjectForm = () => {
                             >
                               View
                             </a>
-                            <a className="btn btn-sm btn-success" href={url} download>
+                            <a
+                              className="btn btn-sm btn-success"
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={nameFromUrl}
+                            >
                               Download
                             </a>
                           </div>

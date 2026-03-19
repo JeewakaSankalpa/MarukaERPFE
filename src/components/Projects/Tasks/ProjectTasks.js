@@ -13,6 +13,7 @@ const ProjectTasks = ({ projectId }) => {
 
     // Form Data
     const [editingTask, setEditingTask] = useState(null);
+    const [submittingTask, setSubmittingTask] = useState(false);
     const [taskForm, setTaskForm] = useState({ name: "", description: "", assignedTo: "", status: "TODO", priority: "MEDIUM", estimatedHours: "", startDate: "", dueDate: "" });
 
     // Log Data
@@ -38,6 +39,7 @@ const ProjectTasks = ({ projectId }) => {
 
     const handleTaskSubmit = async (e) => {
         e.preventDefault();
+        setSubmittingTask(true);
         try {
             if (editingTask) {
                 await api.put(`/tasks/${editingTask.id}`, { ...taskForm, projectId });
@@ -49,6 +51,8 @@ const ProjectTasks = ({ projectId }) => {
             loadData();
         } catch (e) {
             toast.error("Failed to save task");
+        } finally {
+            setSubmittingTask(false);
         }
     };
 
@@ -97,7 +101,11 @@ const ProjectTasks = ({ projectId }) => {
         <div className="p-3">
             <div className="d-flex justify-content-between mb-3">
                 <h5 className="mb-0">Project Tasks</h5>
-                <Button onClick={() => { setEditingTask(null); setShowTaskModal(true); }}>+ Add Task</Button>
+                <Button onClick={() => { 
+                    setEditingTask(null); 
+                    setTaskForm({ name: "", description: "", assignedTo: "", status: "TODO", priority: "MEDIUM", estimatedHours: "", startDate: "", dueDate: "" });
+                    setShowTaskModal(true); 
+                }}>+ Add Task</Button>
             </div>
 
             <Table hover bordered>
@@ -180,7 +188,9 @@ const ProjectTasks = ({ projectId }) => {
                         </div>
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button type="submit">Save Task</Button>
+                        <Button type="submit" disabled={submittingTask}>
+                            {submittingTask ? "Saving..." : "Save Task"}
+                        </Button>
                     </Modal.Footer>
                 </Form>
             </Modal>

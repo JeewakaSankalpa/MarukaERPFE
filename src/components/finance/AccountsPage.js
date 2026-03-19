@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Badge, Tag, Row, Col, Statistic } from 'antd';
 import { PlusOutlined, BankOutlined, DollarOutlined, BookOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../../api/api';
 import AccountLedgerModal from './AccountLedgerModal';
 
 const { Option } = Select;
@@ -22,7 +22,7 @@ const AccountsPage = () => {
     const fetchAccounts = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('http://localhost:8080/api/finance/accounts');
+            const res = await api.get('/finance/accounts');
             setAccounts(res.data);
         } catch (error) {
             console.error("Failed to fetch accounts", error);
@@ -37,7 +37,7 @@ const AccountsPage = () => {
 
     const handleCreate = async (values) => {
         try {
-            await axios.post('http://localhost:8080/api/finance/accounts', {
+            await api.post('/finance/accounts', {
                 ...values,
                 // balance passed from form
                 isActive: true
