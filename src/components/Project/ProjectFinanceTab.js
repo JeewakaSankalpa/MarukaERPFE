@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select, Tag, Divider } from 'antd';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { DollarOutlined, BankOutlined, PlusOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
+import { DollarOutlined, BankOutlined, PlusOutlined, UploadOutlined, ArrowUpOutlined, ArrowDownOutlined, SwapOutlined, FileTextOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 import ProjectFinancialReport from '../finance/ProjectFinancialReport';
 
-
 const { TabPane } = Tabs;
+
+const fmtAmt = (val, cur = 'LKR') => {
+    const n = parseFloat(val) || 0;
+    return `${cur} ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const [account, setAccount] = useState(null);
@@ -33,8 +37,9 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     // Lists
     const [expenses, setExpenses] = useState([]);
     const [requests, setRequests] = useState([]);
+    const [inventoryItems, setInventoryItems] = useState([]);
 
-    const fetchAccount = async () => {
+    const fetchAccount = useCallback(async () => {
         setLoading(true);
         try {
             const res = await api.get(`/project-accounts/${projectId}`);
@@ -44,28 +49,34 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
 
-    const fetchExpenses = async () => {
+    const fetchExpenses = useCallback(async () => {
         try {
             const res = await api.get(`/finance/expenses/search?projectId=${projectId}`);
             setExpenses(res.data || []);
         } catch (e) {
             console.error("Failed to fetch expenses", e);
         }
-    };
+    }, [projectId]);
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         try {
             const res = await api.get(`/project-accounts/${projectId}/petty-cash/requests`);
             setRequests(res.data || []);
         } catch (e) { console.error(e); }
-    }
+    }, [projectId]);
+
+    const fetchInventory = useCallback(async () => {
+        try {
+            const res = await api.get(`/inventory/project/${projectId}`);
+            setInventoryItems(res.data || []);
+        } catch (e) { console.error("Failed to fetch inventory", e); }
+    }, [projectId]);
 
     const fetchBankAccounts = async () => {
         try {
             const res = await api.get('/finance/accounts');
-            // Allow returning funds to any Asset account
             setBankAccounts(res.data.filter(a => a.type === 'ASSET'));
         } catch (e) {
             console.error("Failed to fetch accounts", e);
@@ -77,8 +88,14 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             fetchAccount();
             fetchRequests();
             fetchExpenses();
+            fetchInventory();
         }
-    }, [projectId]);
+    }, [projectId, fetchAccount, fetchRequests, fetchExpenses, fetchInventory]);
+
+    // --- Derived totals ---
+    const totalPettyCashExpenses = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+    const totalConsumedValue = inventoryItems.reduce((s, i) => s + (parseFloat(i.totalConsumedValue) || 0), 0);
+    const totalProjectExpenses = totalPettyCashExpenses + totalConsumedValue;
 
     const handleRequestFunds = async (values) => {
         setRequestLoading(true);
@@ -105,7 +122,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             title: values.title,
             description: values.description,
             amount: values.amount,
-            category: 'Project Expense', // Fixed category for now
+            category: 'Project Expense',
             expenseDate: values.date ? values.date.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0]
         };
         formData.append('data', JSON.stringify(expenseData));
@@ -119,8 +136,8 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             setExpenseModalVisible(false);
             expenseForm.resetFields();
             setFileList([]);
-            fetchAccount(); // Update balance
-            fetchExpenses(); // Update expenses list
+            fetchAccount();
+            fetchExpenses();
         } catch (e) {
             const msg = e.response?.data?.message || e.message || 'Failed to add expense';
             toast.error(msg);
@@ -134,14 +151,15 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         try {
             await api.post(`/project-accounts/${projectId}/petty-cash/return`, {
                 amount: values.amount,
-                sourceAccountId: values.targetAccountId // Using same DTO field name for target
+                sourceAccountId: values.targetAccountId
             });
             toast.success('Funds returned successfully');
             setReturnModalVisible(false);
             returnForm.resetFields();
             fetchAccount();
         } catch (e) {
-            toast.error('Failed to return funds');
+            const msg = e.response?.data?.message || e.message || 'Failed to return funds';
+            toast.error(msg);
         } finally {
             setReturnLoading(false);
         }
@@ -149,88 +167,149 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
     return (
         <div className="mt-3">
-            {loading && <Spin />}
+            {loading && <div className="text-center p-3"><Spin /></div>}
 
+            {/* Summary Cards */}
             {!loading && account && (
-                <Row gutter={16} className="mb-4">
-                    <Col span={8}>
-                        <Card>
-                            <Statistic
-                                title="Total Project Value"
-                                value={account.totalAmount}
-                                precision={2}
-                                prefix={currency === 'USD' ? '$' : 'Rs.'}
-                            />
-                        </Card>
-                    </Col>
-                    <Col span={8}>
-                        <Card>
-                            <Statistic
-                                title="Total Received"
-                                value={account.paidAmount}
-                                precision={2}
-                                prefix={currency === 'USD' ? '$' : 'Rs.'}
-                                valueStyle={{ color: '#3f8600' }}
-                            />
-                        </Card>
-                    </Col>
-                    <Col span={8}>
-                        <Card>
-                            <Statistic
-                                title="Petty Cash Balance"
-                                value={account.pettyCashBalance}
-                                precision={2}
-                                prefix={<BankOutlined />}
-                                valueStyle={{ color: account.pettyCashBalance < 0 ? 'red' : '#1890ff' }}
-                            />
-                            <div className="d-flex gap-2 mt-2 flex-wrap">
-                                <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setRequestModalVisible(true)}>
-                                    Request Funds
-                                </Button>
-                                <Button size="small" icon={<DollarOutlined />} onClick={() => setExpenseModalVisible(true)}>
-                                    Add Expense
-                                </Button>
-                                <Button size="small" danger onClick={() => { fetchBankAccounts(); setReturnModalVisible(true); }}>
-                                    Return Excess
-                                </Button>
-                            </div>
-                        </Card>
-                    </Col>
-                </Row>
+                <>
+                    <Row gutter={[16, 16]} className="mb-4">
+                        <Col xs={24} sm={12} md={6}>
+                            <Card bordered={false} style={{ background: '#f6ffed', borderLeft: '4px solid #52c41a' }}>
+                                <Statistic
+                                    title="Total Project Value"
+                                    value={parseFloat(account.totalProjectValue) || 0}
+                                    precision={2}
+                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
+                                    valueStyle={{ color: '#3f8600', fontSize: 18 }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card bordered={false} style={{ background: '#e6f7ff', borderLeft: '4px solid #1890ff' }}>
+                                <Statistic
+                                    title="Total Received"
+                                    value={parseFloat(account.totalReceived) || 0}
+                                    precision={2}
+                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
+                                    valueStyle={{ color: '#1890ff', fontSize: 18 }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card bordered={false} style={{ background: '#fff7e6', borderLeft: '4px solid #fa8c16' }}>
+                                <Statistic
+                                    title={<span><BankOutlined /> Petty Cash Balance</span>}
+                                    value={parseFloat(account.pettyCashBalance) || 0}
+                                    precision={2}
+                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
+                                    valueStyle={{ color: (account.pettyCashBalance || 0) < 0 ? '#cf1322' : '#d46b08', fontSize: 18 }}
+                                />
+                                <div className="d-flex gap-2 mt-2 flex-wrap">
+                                    <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setRequestModalVisible(true)}>
+                                        Request Funds
+                                    </Button>
+                                    <Button size="small" icon={<DollarOutlined />} onClick={() => setExpenseModalVisible(true)}>
+                                        Add Expense
+                                    </Button>
+                                    <Button size="small" danger onClick={() => { fetchBankAccounts(); setReturnModalVisible(true); }}>
+                                        Return Excess
+                                    </Button>
+                                </div>
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card bordered={false} style={{ background: '#fff1f0', borderLeft: '4px solid #ff4d4f' }}>
+                                <Statistic
+                                    title="Total Expenses (Cash + Items)"
+                                    value={totalProjectExpenses}
+                                    precision={2}
+                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
+                                    valueStyle={{ color: '#cf1322', fontSize: 18 }}
+                                />
+                                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                                    Cash: {fmtAmt(totalPettyCashExpenses, currency)} &nbsp;|&nbsp; Items: {fmtAmt(totalConsumedValue, currency)}
+                                </div>
+                            </Card>
+                        </Col>
+                    </Row>
+                </>
             )}
 
             <Tabs defaultActiveKey="1">
+                {/* --- Fund Requests --- */}
                 <TabPane tab="Fund Requests" key="1">
                     <Table
                         dataSource={requests}
                         rowKey="id"
                         size="small"
+                        pagination={{ pageSize: 10 }}
                         columns={[
-                            { title: 'Date', dataIndex: 'createdAt', render: d => new Date(d).toLocaleDateString() },
-                            { title: 'Amount', dataIndex: 'amount', render: v => `${currency} ${v}` },
+                            { title: 'Date', dataIndex: 'createdAt', render: d => d ? new Date(d).toLocaleDateString() : '-' },
+                            { title: 'Amount', dataIndex: 'amount', render: v => fmtAmt(v, currency) },
                             { title: 'Reason', dataIndex: 'reason' },
-                            { title: 'Status', dataIndex: 'status', render: s => <Badge status={s === 'APPROVED' ? 'success' : s === 'REJECTED' ? 'error' : 'processing'} text={s} /> },
-                            { title: 'Requested By', dataIndex: 'requestedBy' }
+                            {
+                                title: 'Status', dataIndex: 'status', render: s => (
+                                    <Tag color={s === 'APPROVED' ? 'green' : s === 'REJECTED' ? 'red' : 'orange'}>
+                                        {s}
+                                    </Tag>
+                                )
+                            },
+                            { title: 'Requested By', dataIndex: 'requestedBy' },
+                            { title: 'Approved By', dataIndex: 'approvedBy', render: v => v || '-' }
                         ]}
                     />
                 </TabPane>
+
+                {/* --- Project Expenses (Petty Cash) --- */}
                 <TabPane tab="Project Expenses" key="4">
+                    <div className="mb-3 d-flex gap-3">
+                        <Tag color="red">Petty Cash Expenses: {fmtAmt(totalPettyCashExpenses, currency)}</Tag>
+                        <Tag color="purple">Consumed Items Value: {fmtAmt(totalConsumedValue, currency)}</Tag>
+                        <Tag color="volcano">Total: {fmtAmt(totalProjectExpenses, currency)}</Tag>
+                    </div>
+                    <Divider orientation="left" style={{ fontSize: 13 }}>Petty Cash Expenses</Divider>
                     <Table
                         dataSource={expenses}
                         rowKey="id"
                         size="small"
+                        pagination={{ pageSize: 8 }}
                         columns={[
-                            { title: 'Date', dataIndex: 'expenseDate', render: d => new Date(d).toLocaleDateString() },
+                            { title: 'Date', dataIndex: 'expenseDate', render: d => d ? new Date(d).toLocaleDateString() : '-' },
                             { title: 'Title', dataIndex: 'title' },
-                            { title: 'Amount', dataIndex: 'amount', render: v => <span style={{color: 'red'}}>{currency} {v}</span> },
-                            { title: 'Description', dataIndex: 'description' },
-                            { title: 'Attachment', dataIndex: 'attachmentUrl', render: url => url ? <a href={url} target="_blank" rel="noreferrer">View File</a> : 'None' }
+                            { title: 'Amount', dataIndex: 'amount', render: v => <span style={{ color: 'red', fontWeight: 600 }}>{fmtAmt(v, currency)}</span> },
+                            { title: 'Description', dataIndex: 'description', render: v => v || '-' },
+                            { title: 'Receipt', dataIndex: 'attachmentUrl', render: url => url ? <a href={url} target="_blank" rel="noreferrer">View</a> : 'None' }
                         ]}
                     />
+                    <Divider orientation="left" style={{ fontSize: 13, marginTop: 24 }}>Consumed Inventory Items</Divider>
+                    <Table
+                        dataSource={inventoryItems.filter(i => i.consumedQty > 0)}
+                        rowKey="productId"
+                        size="small"
+                        pagination={{ pageSize: 8 }}
+                        columns={[
+                            { title: 'Item', dataIndex: 'productName' },
+                            { title: 'Consumed Qty', dataIndex: 'consumedQty' },
+                            { title: 'Unit Cost', dataIndex: 'unitCost', render: v => fmtAmt(v, currency) },
+                            { title: 'Total Value', dataIndex: 'totalConsumedValue', render: v => <span style={{ color: '#7c3aed', fontWeight: 600 }}>{fmtAmt(v, currency)}</span> }
+                        ]}
+                        summary={data => (
+                            <Table.Summary.Row>
+                                <Table.Summary.Cell colSpan={3}><strong>Total Consumed Value</strong></Table.Summary.Cell>
+                                <Table.Summary.Cell>
+                                    <strong style={{ color: '#7c3aed' }}>{fmtAmt(totalConsumedValue, currency)}</strong>
+                                </Table.Summary.Cell>
+                            </Table.Summary.Row>
+                        )}
+                    />
                 </TabPane>
+
+                {/* --- Transaction History --- */}
                 <TabPane tab="Transaction History" key="2">
-                    <TransactionHistory projectId={projectId} />
+                    <TransactionHistory projectId={projectId} currency={currency} />
                 </TabPane>
+
+                {/* --- Financial Report --- */}
                 <TabPane tab="Financial Report" key="3">
                     <ProjectFinancialReport projectId={projectId} currency={currency} />
                 </TabPane>
@@ -267,10 +346,10 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                         <InputNumber style={{ width: '100%' }} prefix={currency} min={0} max={account?.pettyCashBalance} />
                     </Form.Item>
                     <Form.Item name="targetAccountId" label="Return To (Bank/Cash Account)" rules={[{ required: true }]}>
-                        <Select placeholder="Select Bank/Cash Account">
+                        <Select placeholder="Select Account">
                             {bankAccounts.map(acc => (
                                 <Select.Option key={acc.id} value={acc.id}>
-                                    {acc.name} ({acc.code})
+                                    {acc.name} ({acc.code}) — Bal: {fmtAmt(acc.balance, currency)}
                                 </Select.Option>
                             ))}
                         </Select>
@@ -288,7 +367,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             >
                 <Form form={expenseForm} layout="vertical" onFinish={handleAddExpense}>
                     <Form.Item name="title" label="Expense Title" rules={[{ required: true }]}>
-                        <Input placeholder="e.g., Lunch for team" />
+                        <Input placeholder="e.g., Transport, Lunch" />
                     </Form.Item>
                     <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
                         <InputNumber style={{ width: '100%' }} prefix={currency} min={0} />
@@ -296,7 +375,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                     <Form.Item name="description" label="Description">
                         <Input.TextArea rows={2} />
                     </Form.Item>
-                    <Form.Item label="Bill/Invoice (Optional)">
+                    <Form.Item label="Receipt/Invoice (Optional)">
                         <Upload
                             beforeUpload={file => { setFileList([file]); return false; }}
                             onRemove={() => setFileList([])}
@@ -313,7 +392,8 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     );
 };
 
-const TransactionHistory = ({ projectId }) => {
+// ─── Transaction History sub-component ────────────────────────────────────────
+const TransactionHistory = ({ projectId, currency = 'LKR' }) => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -329,18 +409,69 @@ const TransactionHistory = ({ projectId }) => {
         fetch();
     }, [projectId]);
 
+    const typeConfig = {
+        PAYMENT_RECEIVED: { color: 'green', icon: <ArrowDownOutlined />, label: 'Payment Received' },
+        PETTY_CASH_ALLOCATED: { color: 'blue', icon: <SwapOutlined />, label: 'Funds Allocated' },
+        PETTY_CASH_RETURNED: { color: 'orange', icon: <ArrowUpOutlined />, label: 'Funds Returned' },
+        EXPENSE_ADDED: { color: 'red', icon: <ArrowUpOutlined />, label: 'Expense' },
+    };
+
     const columns = [
-        { title: 'Date', dataIndex: 'at', render: d => new Date(d).toLocaleDateString() },
-        { title: 'Type', dataIndex: 'type' },
+        { title: 'Date', dataIndex: 'at', render: d => d ? new Date(d).toLocaleDateString() : '-', width: 100 },
         {
-            title: 'Amount Change', dataIndex: 'deltaPaid',
-            render: (val) => val ? <span style={{ color: val < 0 ? 'red' : 'green', fontWeight: 'bold' }}>{val}</span> : '-'
+            title: 'Type', dataIndex: 'type', width: 160,
+            render: t => {
+                const cfg = typeConfig[t] || { color: 'default', label: t };
+                return <Tag color={cfg.color}>{cfg.label || t}</Tag>;
+            }
         },
-        { title: 'Details', dataIndex: 'note' },
-        { title: 'Actor', dataIndex: 'actor' }
+        {
+            title: 'Amount', dataIndex: 'deltaPaid', width: 140,
+            render: val => {
+                if (val == null) return '-';
+                const n = parseFloat(val);
+                const color = n < 0 ? '#cf1322' : '#3f8600';
+                const sign = n > 0 ? '+' : '';
+                return <span style={{ color, fontWeight: 700 }}>{sign}{fmtAmt(Math.abs(n), currency)}</span>;
+            }
+        },
+        { title: 'Details', dataIndex: 'note', render: v => v || '-' },
+        { title: 'By', dataIndex: 'actor', render: v => v || 'system', width: 100 }
     ];
 
-    return <Table dataSource={transactions} columns={columns} rowKey="id" loading={loading} size="small" pagination={{ pageSize: 10 }} />;
+    const totalIn = transactions.filter(t => (parseFloat(t.deltaPaid) || 0) > 0).reduce((s, t) => s + (parseFloat(t.deltaPaid) || 0), 0);
+    const totalOut = transactions.filter(t => (parseFloat(t.deltaPaid) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.deltaPaid) || 0), 0);
+
+    return (
+        <div>
+            <Row gutter={16} className="mb-3">
+                <Col span={8}>
+                    <Card size="small" bordered={false} style={{ background: '#f6ffed' }}>
+                        <Statistic title="Total In" value={totalIn} precision={2} prefix="Rs." valueStyle={{ color: '#3f8600', fontSize: 16 }} />
+                    </Card>
+                </Col>
+                <Col span={8}>
+                    <Card size="small" bordered={false} style={{ background: '#fff1f0' }}>
+                        <Statistic title="Total Out" value={totalOut} precision={2} prefix="Rs." valueStyle={{ color: '#cf1322', fontSize: 16 }} />
+                    </Card>
+                </Col>
+                <Col span={8}>
+                    <Card size="small" bordered={false} style={{ background: '#e6f7ff' }}>
+                        <Statistic title="Net" value={totalIn - totalOut} precision={2} prefix="Rs."
+                            valueStyle={{ color: (totalIn - totalOut) >= 0 ? '#1890ff' : '#cf1322', fontSize: 16 }} />
+                    </Card>
+                </Col>
+            </Row>
+            <Table
+                dataSource={transactions}
+                columns={columns}
+                rowKey="id"
+                loading={loading}
+                size="small"
+                pagination={{ pageSize: 15 }}
+            />
+        </div>
+    );
 };
 
 export default ProjectFinanceTab;

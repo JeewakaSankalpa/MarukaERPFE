@@ -26,6 +26,7 @@ export default function ProjectInventoryCard({ projectId }) {
     const [selectedReturnSerials, setSelectedReturnSerials] = useState({}); // { batchId: Set(serials) }
 
     const [submitting, setSubmitting] = useState(false);
+    const [acceptingId, setAcceptingId] = useState(null); // track which transfer is being accepted
 
     const [pendingTransfers, setPendingTransfers] = useState([]);
 
@@ -74,12 +75,16 @@ export default function ProjectInventoryCard({ projectId }) {
     };
 
     const handleAcceptTransfer = async (id) => {
+        if (acceptingId) return; // already processing one
+        setAcceptingId(id);
         try {
             await api.patch(`/transfers/${id}/accept`);
             toast.success("Transfer accepted");
             load();
         } catch (e) {
             toast.error("Failed to accept transfer");
+        } finally {
+            setAcceptingId(null);
         }
     };
 
@@ -545,7 +550,17 @@ export default function ProjectInventoryCard({ projectId }) {
                                         })}
                                     </td>
                                     <td>
-                                        <Button size="sm" variant="success" className="me-1" onClick={() => handleAcceptTransfer(t.id)}>Accept</Button>
+                                        <Button
+                                            size="sm"
+                                            variant="success"
+                                            className="me-1"
+                                            disabled={acceptingId === t.id}
+                                            onClick={() => handleAcceptTransfer(t.id)}
+                                        >
+                                            {acceptingId === t.id ? (
+                                                <><Spinner animation="border" size="sm" className="me-1" />Accepting...</>
+                                            ) : 'Accept'}
+                                        </Button>
                                         <Button size="sm" variant="danger" onClick={() => handleRejectTransfer(t.id)}>Reject</Button>
                                     </td>
                                 </tr>

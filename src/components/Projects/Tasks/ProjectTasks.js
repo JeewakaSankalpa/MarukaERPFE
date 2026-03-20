@@ -99,6 +99,60 @@ const ProjectTasks = ({ projectId }) => {
 
     return (
         <div className="p-3">
+            {/* Summary Cards */}
+            <div className="row g-3 mb-3">
+                <div className="col-md-4">
+                    <div className="card border-0 shadow-sm h-100" style={{ background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)', borderLeft: '4px solid #0284c7' }}>
+                        <div className="card-body">
+                            <div className="text-muted small mb-1">📋 Total Tasks</div>
+                            <div className="fs-3 fw-bold text-primary">{tasks.length}</div>
+                            <div className="small text-muted mt-1">
+                                ✅ Done: {tasks.filter(t => t.status === 'DONE').length} &nbsp;|&nbsp;
+                                🔄 In Progress: {tasks.filter(t => t.status === 'IN_PROGRESS').length} &nbsp;|&nbsp;
+                                📌 Todo: {tasks.filter(t => t.status === 'TODO').length}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-md-4">
+                    <div className="card border-0 shadow-sm h-100" style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', borderLeft: '4px solid #d97706' }}>
+                        <div className="card-body">
+                            <div className="text-muted small mb-1">⏱ Total Estimated Time</div>
+                            <div className="fs-3 fw-bold text-warning" style={{ color: '#92400e' }}>
+                                {tasks.reduce((s, t) => s + (parseFloat(t.estimatedHours) || 0), 0).toFixed(1)} hrs
+                            </div>
+                            <div className="small text-muted mt-1">
+                                Across {tasks.filter(t => t.estimatedHours).length} task(s) with estimates
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-md-4">
+                    <div className="card border-0 shadow-sm h-100" style={{ background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', borderLeft: '4px solid #16a34a' }}>
+                        <div className="card-body">
+                            <div className="text-muted small mb-1">⏳ Total Time Taken</div>
+                            <div className="fs-3 fw-bold" style={{ color: '#166534' }}>
+                                {tasks.reduce((s, t) => s + (parseFloat(t.loggedHours) || 0), 0).toFixed(1)} hrs
+                            </div>
+                            {(() => {
+                                const est = tasks.reduce((s, t) => s + (parseFloat(t.estimatedHours) || 0), 0);
+                                const logged = tasks.reduce((s, t) => s + (parseFloat(t.loggedHours) || 0), 0);
+                                const pct = est > 0 ? Math.min((logged / est) * 100, 100) : 0;
+                                const over = est > 0 && logged > est;
+                                return (
+                                    <div className="small mt-1">
+                                        <div className={`progress mt-1`} style={{ height: 6 }}>
+                                            <div className={`progress-bar ${over ? 'bg-danger' : 'bg-success'}`} style={{ width: `${pct}%` }} />
+                                        </div>
+                                        <span className="text-muted">{pct.toFixed(0)}% of estimated{over ? ' ⚠️ Over budget' : ''}</span>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="d-flex justify-content-between mb-3">
                 <h5 className="mb-0">Project Tasks</h5>
                 <Button onClick={() => { 
