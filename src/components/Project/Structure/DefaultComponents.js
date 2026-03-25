@@ -12,7 +12,6 @@ const ProjectQuotationCard = React.lazy(() => import('../ProjectQuotationCard'))
 const DeliveryScheduleCard = React.lazy(() => import('../DeliveryScheduleCard'));
 const ProjectInventoryCard = React.lazy(() => import('../ProjectInventoryCard'));
 const TimelineCard = React.lazy(() => import('../TimelineCard'));
-const ProjectPaymentsCard = React.lazy(() => import('../ProjectPaymentsCard'));
 const ProjectRevisions = React.lazy(() => import('../ProjectRevisions'));
 const ProjectComments = React.lazy(() => import('../ProjectComments'));
 const ProjectWorkflowTab = React.lazy(() => import('../ProjectWorkflowTab'));
@@ -155,24 +154,6 @@ export const registerDefaultComponents = () => {
         zone: 'TAB',
         order: 20,
         render: (props) => <ProjectInventoryCard projectId={props.id} reloadKey={props.refreshKey} />
-    });
-
-    ProjectComponentRegistry.register({
-        id: COMPONENT_IDS.PAYMENTS,
-        label: 'Payments',
-        zone: 'TAB',
-        order: 30,
-        render: (props) => (
-            <div className="mt-3">
-                <ProjectPaymentsCard
-                    projectId={props.id}
-                    project={props.project}
-                    currency={props.project?.currency}
-                    onRefresh={props.refresh}
-                    reloadKey={props.refreshKey}
-                />
-            </div>
-        )
     });
 
     ProjectComponentRegistry.register({

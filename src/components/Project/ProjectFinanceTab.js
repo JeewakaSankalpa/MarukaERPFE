@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select } from 'antd';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -28,11 +29,18 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const [returnModalVisible, setReturnModalVisible] = useState(false);
     const [returnLoading, setReturnLoading] = useState(false);
     const [returnForm] = Form.useForm();
-    const [bankAccounts, setBankAccounts] = useState([]);
+
+    // Add Payment State
+    const [payModalVisible, setPayModalVisible] = useState(false);
+    const [payLoading, setPayLoading] = useState(false);
+    const [payForm] = Form.useForm();
+    const [payFileList, setPayFileList] = useState([]);
 
     // Lists
     const [expenses, setExpenses] = useState([]);
     const [requests, setRequests] = useState([]);
+    const [payments, setPayments] = useState([]);
+    const [bankAccounts, setBankAccounts] = useState([]);
 
     const fetchAccount = async () => {
         setLoading(true);
@@ -70,6 +78,13 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         } catch (e) { console.error(e); }
     }
 
+    const fetchPayments = async () => {
+        try {
+            const res = await api.get(`/project-accounts/${projectId}/payments`);
+            setPayments(res.data || []);
+        } catch (e) { console.error(e); }
+    };
+
     const fetchBankAccounts = async () => {
         try {
             const res = await api.get('/finance/accounts');
@@ -84,6 +99,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         if (projectId) {
             fetchAccount();
             fetchRequests();
+            fetchPayments();
         }
     }, [projectId]);
 
@@ -105,7 +121,40 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         }
     };
 
+    const handleAddPayment = async (values) => {
+        if (payFileList.length === 0) {
+            toast.warn('Please upload a payment slip');
+            return;
+        }
+        setPayLoading(true);
+        const formData = new FormData();
+        formData.append('amount', values.amount);
+        formData.append('paidAt', values.paidAt ? values.paidAt.format('YYYY-MM-DD') : new Date().toISOString());
+        formData.append('note', values.note || '');
+        formData.append('file', payFileList[0].originFileObj);
+
+        try {
+            await api.post(`/project-accounts/${projectId}/payments/upload`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success('Payment recorded successfully');
+            setPayModalVisible(false);
+            payForm.resetFields();
+            setPayFileList([]);
+            fetchAccount();
+            fetchPayments();
+        } catch (e) {
+            toast.error('Failed to record payment');
+        } finally {
+            setPayLoading(false);
+        }
+    };
+
     const handleAddExpense = async (values) => {
+        if (fileList.length === 0) {
+            toast.warn('Please upload a receipt or invoice');
+            return;
+        }
         setExpenseLoading(true);
         const formData = new FormData();
         const expenseData = {
@@ -160,45 +209,59 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
             {!loading && account && (
                 <Row gutter={16} className="mb-4">
-                    <Col span={8}>
+                    <Col span={6}>
                         <Card>
                             <Statistic
-                                title="Total Project Value"
-                                value={account.totalAmount}
+                                title="Project Value"
+                                value={account.totalProjectValue || account.totalAmount}
                                 precision={2}
                                 prefix={currency === 'USD' ? '$' : 'Rs.'}
                             />
                         </Card>
                     </Col>
-                    <Col span={8}>
+                    <Col span={6}>
                         <Card>
                             <Statistic
-                                title="Total Received"
-                                value={account.paidAmount}
+                                title="Received"
+                                value={account.totalReceived || account.paidAmount}
                                 precision={2}
                                 prefix={currency === 'USD' ? '$' : 'Rs.'}
                                 valueStyle={{ color: '#3f8600' }}
                             />
                         </Card>
                     </Col>
-                    <Col span={8}>
+                    <Col span={6}>
                         <Card>
                             <Statistic
-                                title="Petty Cash Balance"
+                                title="Balance Due"
+                                value={account.balance}
+                                precision={2}
+                                prefix={currency === 'USD' ? '$' : 'Rs.'}
+                                valueStyle={{ color: account.balance > 0 ? '#cf1322' : '#3f8600' }}
+                            />
+                            <Button className="mt-2" type="primary" block icon={<PlusOutlined />} onClick={() => setPayModalVisible(true)}>
+                                Add Payment
+                            </Button>
+                        </Card>
+                    </Col>
+                    <Col span={6}>
+                        <Card>
+                            <Statistic
+                                title="Petty Cash"
                                 value={account.pettyCashBalance}
                                 precision={2}
                                 prefix={<BankOutlined />}
                                 valueStyle={{ color: account.pettyCashBalance < 0 ? 'red' : '#1890ff' }}
                             />
-                            <div className="d-flex gap-2 mt-2 flex-wrap">
-                                <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setRequestModalVisible(true)}>
-                                    Request Funds
+                            <div className="d-flex gap-1 mt-2 flex-wrap">
+                                <Button type="link" size="small" onClick={() => setRequestModalVisible(true)}>
+                                    Request
                                 </Button>
-                                <Button size="small" icon={<DollarOutlined />} onClick={() => setExpenseModalVisible(true)}>
-                                    Add Expense
+                                <Button type="link" size="small" onClick={() => setExpenseModalVisible(true)}>
+                                    Expense
                                 </Button>
-                                <Button size="small" danger onClick={() => { fetchBankAccounts(); setReturnModalVisible(true); }}>
-                                    Return Excess
+                                <Button type="link" size="small" danger onClick={() => { fetchBankAccounts(); setReturnModalVisible(true); }}>
+                                    Return
                                 </Button>
                             </div>
                         </Card>
@@ -221,9 +284,24 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                         ]}
                     />
                 </TabPane>
-                import ProjectFinancialReport from '../finance/ProjectFinancialReport';
-
-                // ... (inside Tabs)
+                <TabPane tab="Payments (Income)" key="4">
+                    <Table
+                        dataSource={payments}
+                        rowKey="id"
+                        size="small"
+                        columns={[
+                            { title: 'Date', dataIndex: 'paidAt', render: d => new Date(d).toLocaleDateString() },
+                            { title: 'Amount', dataIndex: 'amount', render: v => `${currency} ${v.toLocaleString()}` },
+                            { title: 'Note', dataIndex: 'note' },
+                            {
+                                title: 'Slip', dataIndex: 'fileUrl', render: url => url ? (
+                                    <Button type="link" icon={<FileTextOutlined />} onClick={() => window.open(url, '_blank')}>View</Button>
+                                ) : '-'
+                            },
+                            { title: 'Added By', dataIndex: 'createdBy' }
+                        ]}
+                    />
+                </TabPane>
                 <TabPane tab="Transaction History" key="2">
                     <TransactionHistory projectId={projectId} />
                 </TabPane>
@@ -292,7 +370,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                     <Form.Item name="description" label="Description">
                         <Input.TextArea rows={2} />
                     </Form.Item>
-                    <Form.Item label="Bill/Invoice (Optional)">
+                    <Form.Item label="Bill/Invoice" required tooltip="Scan or photo of the receipt is mandatory">
                         <Upload
                             beforeUpload={file => { setFileList([file]); return false; }}
                             onRemove={() => setFileList([])}
@@ -300,6 +378,37 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                             maxCount={1}
                         >
                             <Button icon={<UploadOutlined />}>Click to Upload</Button>
+                        </Upload>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            {/* Add Payment Modal */}
+            <Modal
+                title="Record Customer Payment"
+                open={payModalVisible}
+                onCancel={() => setPayModalVisible(false)}
+                onOk={() => payForm.submit()}
+                confirmLoading={payLoading}
+            >
+                <Form form={payForm} layout="vertical" onFinish={handleAddPayment}>
+                    <Form.Item name="amount" label="Amount Received" rules={[{ required: true }]}>
+                        <InputNumber style={{ width: '100%' }} prefix={currency} min={0} />
+                    </Form.Item>
+                    <Form.Item name="paidAt" label="Payment Date" initialValue={dayjs()}>
+                        <Input type="date" />
+                    </Form.Item>
+                    <Form.Item name="note" label="Reference (Check No, Bank Ref, etc.)">
+                        <Input placeholder="e.g., Check #123456" />
+                    </Form.Item>
+                    <Form.Item label="Payment Slip" required>
+                        <Upload
+                            beforeUpload={file => { setPayFileList([file]); return false; }}
+                            onRemove={() => setPayFileList([])}
+                            fileList={payFileList}
+                            maxCount={1}
+                        >
+                            <Button icon={<UploadOutlined />}>Click to Upload Slip</Button>
                         </Upload>
                     </Form.Item>
                 </Form>
@@ -329,11 +438,19 @@ const TransactionHistory = ({ projectId }) => {
         { title: 'Date', dataIndex: 'at', render: d => new Date(d).toLocaleDateString() },
         { title: 'Type', dataIndex: 'type' },
         {
-            title: 'Amount Change', dataIndex: 'amountChange',
-            render: (val) => <span style={{ color: val < 0 ? 'red' : 'green', fontWeight: 'bold' }}>{val}</span>
+            title: 'Amount Change', dataIndex: 'deltaPaid',
+            render: (val, record) => {
+                const delta = val || record.deltaTotal || 0;
+                return <span style={{ color: delta < 0 ? 'red' : 'green', fontWeight: 'bold' }}>{delta > 0 ? `+${delta}` : delta}</span>
+            }
         },
-        { title: 'Details', dataIndex: 'details' },
-        { title: 'Actor', dataIndex: 'actor' }
+        { title: 'Details', dataIndex: 'note' },
+        { title: 'Actor', dataIndex: 'actor' },
+        {
+            title: 'Doc', dataIndex: 'fileUrl', render: url => url ? (
+                <Button type="link" icon={<FileTextOutlined />} onClick={() => window.open(url, '_blank')}>View</Button>
+            ) : '-'
+        }
     ];
 
     return <Table dataSource={transactions} columns={columns} rowKey="id" loading={loading} size="small" pagination={{ pageSize: 10 }} />;

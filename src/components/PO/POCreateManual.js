@@ -35,7 +35,6 @@ export default function POCreateManual({ onCreated }) {
     const [rows, setRows] = useState([]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     // Settings & Toggles
     const [globalSettings, setGlobalSettings] = useState({});
     const [enableVat, setEnableVat] = useState(false);

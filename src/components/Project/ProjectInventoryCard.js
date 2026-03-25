@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Table, Spinner } from 'react-bootstrap';
+import { Card, Button, Table, Spinner, Badge, Modal } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
@@ -274,7 +274,6 @@ export default function ProjectInventoryCard({ projectId }) {
                         batchId: batchId || '',
                         quantity: 1,
                         serials: serialNo ? serialNo : '',
-                        quantity: '', // Quantity will be derived from selectedReturnSerials or incremented
                         reason: prev.reason
                     };
                 }
@@ -380,30 +379,45 @@ export default function ProjectInventoryCard({ projectId }) {
                                 </div>
                                 <div className="modal-body">
                                     {selectedBatches.length === 0 ? <p>No batches found in this location.</p> : (
-                                        <div className="row g-3">
-                                            {selectedBatches.map(b => (
-                                                <div key={b.id} className="col-md-4">
-                                                    <div className="card h-100 p-2 text-center">
-                                                        <div className="mb-2 d-flex justify-content-center">
+                                        <Table size="sm" bordered hover responsive>
+                                            <thead>
+                                                <tr>
+                                                    <th className="text-center" style={{ width: '120px' }}>QR</th>
+                                                    <th>Batch Number</th>
+                                                    <th className="text-end">Qty</th>
+                                                    <th className="text-end">Cost</th>
+                                                    <th>Expiry</th>
+                                                    <th>Serials</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {selectedBatches.map(b => (
+                                                    <tr key={b.id}>
+                                                        <td className="text-center align-middle">
                                                             <QRCode
-                                                                value={`V1|${b.grnId || ''}|${b.productId || ''}|${b.id}|${b.batchNumber}||${b.expiryDate || ''}`}
-                                                                size={100}
+                                                                value={`V1|${b.grnId || ''}|${b.productId || ''}|${b.id}|${b.batchNumber || ''}||${b.expiryDate || ''}`}
+                                                                size={80}
                                                                 level={"M"}
                                                             />
-                                                        </div>
-                                                        <strong>{b.batchNumber}</strong>
-                                                        <div className="small">Qty: {b.quantity}</div>
-                                                        <div className="small text-muted">Cost: {b.costPrice ? Number(b.costPrice).toFixed(2) : '-'}</div>
-                                                        <div className="small text-muted">Exp: {b.expiryDate || '-'}</div>
-                                                        {b.serials && b.serials.length > 0 && (
-                                                            <div className="mt-1">
-                                                                {b.serials.map(s => <span key={s} className="badge bg-secondary me-1">{s}</span>)}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                        </td>
+                                                        <td className="align-middle">
+                                                            <div className="fw-bold">{b.batchNumber || '(No Batch #)'}</div>
+                                                            <div className="text-muted smallest">GRN: {b.grnId || '-'}</div>
+                                                        </td>
+                                                        <td className="text-end align-middle">{b.quantity}</td>
+                                                        <td className="text-end align-middle">{b.costPrice ? Number(b.costPrice).toFixed(2) : '-'}</td>
+                                                        <td className="align-middle">{b.expiryDate || '-'}</td>
+                                                        <td className="align-middle">
+                                                            {b.serials && b.serials.length > 0 ? (
+                                                                <div className="d-flex flex-wrap gap-1">
+                                                                    {b.serials.map(s => <Badge key={s} bg="secondary" style={{ fontSize: '0.7rem' }}>{s}</Badge>)}
+                                                                </div>
+                                                            ) : '-'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </Table>
                                     )}
                                 </div>
                                 <div className="modal-footer">
