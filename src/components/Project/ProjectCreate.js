@@ -11,6 +11,7 @@ import {
   ListGroup,
   Badge,
   Spinner,
+  Modal,
 } from "react-bootstrap";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
@@ -40,6 +41,66 @@ const ProjectForm = () => {
   const [validated, setValidated] = useState(false);
   const [isEditMode, setIsEditMode] = useState(!routeId); // create: editable, edit: view-only
   const [files, setFiles] = useState([]); // selected File[] before submit
+
+  // Quick Customer Add State
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [addingCustomer, setAddingCustomer] = useState(false);
+  const [quickCustomer, setQuickCustomer] = useState({
+    comName: "",
+    contactPersonName: "",
+    comContactNumber: ""
+  });
+
+  const handleQuickAddChange = (e) => {
+    const { name, value } = e.target;
+    setQuickCustomer(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleQuickAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!quickCustomer.comName || !quickCustomer.contactPersonName || !quickCustomer.comContactNumber) {
+      toast.warn("Please fill all fields for quick add");
+      return;
+    }
+    setAddingCustomer(true);
+    try {
+      const payload = {
+        comName: quickCustomer.comName,
+        comContactNumber: quickCustomer.comContactNumber,
+        contactPersonData: {
+          name: quickCustomer.contactPersonName,
+          contactNumber: quickCustomer.comContactNumber,
+          email: "temp@example.com"
+        },
+        comAddress: "To be updated",
+        comEmail: "temp@example.com",
+        businessRegNumber: "N/A",
+        currency: "LKR",
+        creditPeriod: "0",
+        vatType: "VAT",
+        vatNumber: "N/A"
+      };
+
+      const formData = new FormData();
+      formData.append("customer", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+      formData.append("password", "TestP");
+
+      const response = await api.post("/customer/add", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      const newCust = response.data;
+      setCustomers(prev => [...prev, newCust]);
+      setProjectData(prev => ({ ...prev, customerId: newCust.id }));
+      setShowQuickAdd(false);
+      setQuickCustomer({ comName: "", contactPersonName: "", comContactNumber: "" });
+      toast.success("Customer added successfully!");
+    } catch (error) {
+      toast.error("Failed to quick add customer: " + (error.response?.data?.message || error.message));
+    } finally {
+      setAddingCustomer(false);
+    }
+  };
 
   // load dropdown data
   useEffect(() => {
@@ -296,7 +357,14 @@ const ProjectForm = () => {
             <Row className="g-3">
               <Col xs={12} md={6}>
                 <Form.Group controlId="customerId">
-                  <Form.Label>Customer</Form.Label>
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <Form.Label className="m-0">Customer</Form.Label>
+                    {isEditMode && !routeId && (
+                      <Button variant="link" size="sm" className="p-0 text-decoration-none" onClick={() => setShowQuickAdd(true)}>
+                        + Quick Add
+                      </Button>
+                    )}
+                  </div>
                   <Form.Select
                     name="customerId"
                     value={projectData.customerId}
@@ -494,6 +562,60 @@ const ProjectForm = () => {
           </Form >
         </div >
       </Container >
+
+      {/* Quick Add Customer Modal */}
+      <Modal show={showQuickAdd} onHide={() => setShowQuickAdd(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Quick Add Customer</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleQuickAddSubmit}>
+          <Modal.Body>
+            <p className="text-muted small mb-3">
+              Use this to quickly create a customer for an inquiry without needing their full details.
+            </p>
+            <Form.Group className="mb-3">
+              <Form.Label>Company Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control
+                type="text"
+                name="comName"
+                value={quickCustomer.comName}
+                onChange={handleQuickAddChange}
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Contact Person Name <span className="text-danger">*</span></Form.Label>
+              <Form.Control
+                type="text"
+                name="contactPersonName"
+                value={quickCustomer.contactPersonName}
+                onChange={handleQuickAddChange}
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Contact Number <span className="text-danger">*</span></Form.Label>
+              <Form.Control
+                type="text"
+                name="comContactNumber"
+                value={quickCustomer.comContactNumber}
+                onChange={handleQuickAddChange}
+                placeholder="e.g. 0712345678"
+                required
+                pattern="^0\d{9}$"
+                title="Must be 10 digits starting with 0"
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowQuickAdd(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" disabled={addingCustomer}>
+              {addingCustomer ? <Spinner size="sm" /> : "Save Customer"}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
       <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
     </div >
   );
