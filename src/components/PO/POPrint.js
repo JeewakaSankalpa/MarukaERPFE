@@ -4,7 +4,7 @@ import api from "../../api/api";
 import { Button, Spinner, Table } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-// import logo from "../../assets/logo.jpeg"; // Unused
+import logo from "../../assets/logo.jpeg";
 
 const POPrint = () => {
     const { id } = useParams();
@@ -78,13 +78,8 @@ const POPrint = () => {
                         <div>Govt. UID VAT Reg: 174038295-7000</div>
                     </div>
                     <div className="text-end">
-                        {/* Use logo if available, else styled text */}
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            {/* Placeholder for SVG logo from common or asset */}
-                            <div style={{ textAlign: "left" }}>
-                                <h2 style={{ color: "#777", fontWeight: "300", letterSpacing: "1px", margin: 0 }}>MARUKA</h2>
-                                <h4 style={{ color: "#000", fontWeight: "bold", margin: 0 }}>Technologies</h4>
-                            </div>
+                            <img src={logo} alt="Maruka Technologies" style={{ height: "60px", width: "auto" }} />
                         </div>
                     </div>
                 </div>

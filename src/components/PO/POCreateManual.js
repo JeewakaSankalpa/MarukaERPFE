@@ -34,6 +34,8 @@ export default function POCreateManual({ onCreated }) {
     // Rows: { productId, name, sku, unit, qty, unitPrice, taxPercent, taxAmount, note }
     const [rows, setRows] = useState([]);
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     // Settings & Toggles
     const [globalSettings, setGlobalSettings] = useState({});
     const [enableVat, setEnableVat] = useState(false);
@@ -133,8 +135,10 @@ export default function POCreateManual({ onCreated }) {
     }, [rows, deliveryCharge, enableVat, enableOtherTax, globalSettings]);
 
     const save = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
-            if (!supplier?.id) { toast.warn("Select a supplier"); return; }
+            if (!supplier?.id) { toast.warn("Select a supplier"); setIsSubmitting(false); return; }
 
             const items = rows.filter(r => Number(r.qty) > 0).map(r => ({
                 productId: r.productId,
@@ -162,6 +166,8 @@ export default function POCreateManual({ onCreated }) {
             onCreated?.(po.id);
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to create PO");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -343,7 +349,9 @@ export default function POCreateManual({ onCreated }) {
                                     </tr>
                                 </tbody>
                             </Table>
-                            <Button className="w-100 mt-2" variant="success" size="lg" onClick={save}>Create PO</Button>
+                            <Button className="w-100 mt-2" variant="success" size="lg" onClick={save} disabled={isSubmitting}>
+                                {isSubmitting ? 'Creating...' : 'Create PO'}
+                            </Button>
                         </Col>
                     </Row>
                 </div>

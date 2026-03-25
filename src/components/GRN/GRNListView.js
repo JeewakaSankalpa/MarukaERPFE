@@ -219,8 +219,21 @@ function ItemsModal({ grn, onClose }) {
                                         <td>{item.productNameSnapshot || "-"}</td>
                                         <td>{item.sku || "-"}</td>
                                         <td className="text-end">{item.receivedQty} {item.unit}</td>
-                                        <td className="text-end">{item.unitCost?.toFixed(2)}</td>
-                                        <td className="text-end">{(item.receivedQty * (item.unitCost || 0)).toFixed(2)}</td>
+                                        <td className="text-end">
+                                            {(() => {
+                                                if (item.unitCost) return item.unitCost.toFixed(2);
+                                                if (!item.batches || item.batches.length === 0) return "-";
+                                                const totalBatchesCost = item.batches.reduce((sum, b) => sum + ((Number(b.qty)||0) * (Number(b.unitCost)||0)), 0);
+                                                return item.receivedQty > 0 ? (totalBatchesCost / item.receivedQty).toFixed(2) : "-";
+                                            })()}
+                                        </td>
+                                        <td className="text-end">
+                                            {(() => {
+                                                if (item.unitCost) return (item.receivedQty * (item.unitCost || 0)).toFixed(2);
+                                                if (!item.batches || item.batches.length === 0) return "0.00";
+                                                return item.batches.reduce((sum, b) => sum + ((Number(b.qty)||0) * (Number(b.unitCost)||0)), 0).toFixed(2);
+                                            })()}    
+                                        </td>
                                     </tr>
                                 ))
                             )}

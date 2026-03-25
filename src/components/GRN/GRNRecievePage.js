@@ -8,6 +8,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 
 /* ========== INLINE API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
+const searchPOs = async (q) => (await api.get(`/pos?q=${q}`)).data;
 const createGRN = async (payload) => (await api.post(`/grns`, payload)).data;
 
 export default function GRNReceivePage({ poId: initialPoId }) {
@@ -34,7 +35,16 @@ export default function GRNReceivePage({ poId: initialPoId }) {
         (async () => {
             if (!poId) { setPo(null); setRows([]); return; }
             try {
-                const d = await getPO(poId);
+                let actualId = poId;
+                if (poId.toUpperCase().startsWith("PO-") || poId.toUpperCase().startsWith("MIN-") || poId.toUpperCase().startsWith("MJN-")) {
+                    const searchRes = await searchPOs(poId);
+                    if (searchRes && searchRes.content && searchRes.content.length > 0) {
+                        const preciseMatch = searchRes.content.find(p => p.poNumber === poId.trim().toUpperCase() || p.jobNumber === poId.trim().toUpperCase());
+                        actualId = preciseMatch ? preciseMatch.id : searchRes.content[0].id;
+                    }
+                }
+                const d = await getPO(actualId);
+                setPoId(d.poNumber); // update the label with full number
                 setPo(d);
                 setRows((d.items || []).map(it => ({
                     productId: it.productId,
@@ -44,7 +54,9 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     orderedQty: it.orderedQty,
                     batches: []
                 })));
-            } catch { toast.error("Failed to load PO"); }
+                if (d.deliveryCharge) setDeliveryCharge(d.deliveryCharge);
+                if (d.vatAmount) setVatAmount(d.vatAmount);
+            } catch (e) { console.error(e); toast.error("Failed to load PO"); }
         })();
     }, [poId]);
 
@@ -165,8 +177,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                         <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Receive (GRN)</h2>
                     </div>
                     <div className="d-flex gap-2">
-                        <Form.Control placeholder="PO ID" value={poId} onChange={e => setPoId(e.target.value)} style={{ maxWidth: 280 }} />
-                        <Button variant="outline-secondary" onClick={() => setPoId(poId.trim())}>Load</Button>
+                        <Form.Control placeholder="PO Number" value={poId} onChange={e => setPoId(e.target.value)} style={{ maxWidth: 280 }} />
                     </div>
                 </div>
 
