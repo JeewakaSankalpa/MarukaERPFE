@@ -1,57 +1,17 @@
 import React, { useState } from 'react';
-import { Card, Form, Accordion, Badge, Button, ListGroup, Modal, Table } from 'react-bootstrap';
-import { Trash2, Eye, EyeOff } from 'lucide-react';
+import { Card, Form, Accordion, Badge, Button, Modal, Table } from 'react-bootstrap';
+import { Trash2 } from 'lucide-react';
 import { PROJECT_COMPONENTS } from '../Project/ComponentRegistry';
 
 export default function StagePropertyPanel({
     stage,
     flow,
     roles,
-    allStages,
     onUpdateFlow,
     onClose,
     onRemoveStage
 }) {
-    // stage: string (Stage Key)
-    // flow: current workflow object
-    // onUpdateFlow: (newFlow) => void
-
-    // Lazy import or prop for API to avoid circular deps if needed.
-    // Assuming we can import from workflowApi here.
     const [checkingUsage, setCheckingUsage] = useState(false);
-
-    // We need to fetch usage count.
-    const checkUsage = async (stageVal) => {
-        try {
-            // Need to verify this path is accessible or move to props
-            const res = await fetch(`/api/workflow/usage/${stageVal}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            if (res.ok) {
-                return await res.json();
-            }
-            return 0;
-        } catch (e) {
-            console.error("Usage check failed", e);
-            return 0; // Fail safe? Or block?
-        }
-    };
-
-    const handleDeleteClick = async () => {
-        setCheckingUsage(true);
-        const count = await checkUsage(stage);
-        setCheckingUsage(false);
-
-        let msg = `Are you sure you want to delete stage "${stage}"?`;
-        if (count > 0) {
-            msg = `WARNING: This stage is currently used by ${count} active PROJECT(S)!\n\nDeleting it may cause these projects to become stuck or invalid.\n\n${msg}`;
-        }
-
-        if (window.confirm(msg)) {
-            onRemoveStage(stage);
-        }
-    };
-
     const [showVisibilityModal, setShowVisibilityModal] = useState(false);
 
     if (!stage) return <div className="p-3 text-muted">Select a stage to edit properties.</div>;
@@ -81,10 +41,8 @@ export default function StagePropertyPanel({
         });
     };
 
-    // Helper
     const normalizeKey = (s) => s.trim().toUpperCase().replace(/[^A-Z0-9_]+/g, "_");
 
-    // File Rules Logic
     const addFileRule = () => {
         const rules = [...fileRules, { key: "NEW_DOC", label: "New Doc", required: true }];
         onUpdateFlow({
@@ -110,6 +68,23 @@ export default function StagePropertyPanel({
         });
     };
 
+    const checkUsage = async (stageVal) => {
+        try {
+            const res = await fetch(`/api/workflow/usage/${stageVal}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            return res.ok ? await res.json() : 0;
+        } catch (e) { return 0; }
+    };
+
+    const handleDeleteClick = async () => {
+        setCheckingUsage(true);
+        const count = await checkUsage(stage);
+        setCheckingUsage(false);
+        let msg = `Are you sure you want to delete stage "${stage}"?`;
+        if (count > 0) msg = `WARNING: This stage is used by ${count} projects!\n\n${msg}`;
+        if (window.confirm(msg)) onRemoveStage(stage);
+    };
 
     return (
         <Card className="h-100 border-start border-0 rounded-0" style={{ width: '320px', overflowY: 'auto' }}>
@@ -119,8 +94,6 @@ export default function StagePropertyPanel({
             </Card.Header>
             <Card.Body className="p-0">
                 <Accordion defaultActiveKey="0" flush alwaysOpen>
-
-                    {/* General Settings */}
                     <Accordion.Item eventKey="0">
                         <Accordion.Header>General</Accordion.Header>
                         <Accordion.Body>
@@ -128,62 +101,63 @@ export default function StagePropertyPanel({
                                 type="switch"
                                 label="Initial Stage"
                                 checked={isInitial}
-                                disabled={isInitial} // Cannot uncheck, must set another as initial
+                                disabled={isInitial}
                                 onChange={() => onUpdateFlow({ ...flow, initialStage: stage })}
                             />
                             {!isInitial && (
                                 <div className="mt-3">
-                                    <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        className="w-100"
-                                        onClick={handleDeleteClick}
-                                        disabled={checkingUsage}
-                                    >
+                                    <Button variant="outline-danger" size="sm" className="w-100" onClick={handleDeleteClick} disabled={checkingUsage}>
                                         <Trash2 size={14} className="me-2" />
-                                        {checkingUsage ? "Checking Usage..." : "Delete Stage"}
+                                        {checkingUsage ? "Checking..." : "Delete Stage"}
                                     </Button>
                                 </div>
                             )}
                         </Accordion.Body>
                     </Accordion.Item>
 
-                    {/* Approvals */}
                     <Accordion.Item eventKey="1">
                         <Accordion.Header>Required Approvals</Accordion.Header>
                         <Accordion.Body>
-                            {roles.length === 0 ? <small className="text-muted">No roles defined.</small> : (
-                                <div className="d-flex flex-wrap gap-2">
-                                    {roles.map(r => (
-                                        <Badge
-                                            key={r}
-                                            bg={approvals.includes(r) ? 'primary' : 'light'}
-                                            text={approvals.includes(r) ? 'white' : 'dark'}
-                                            className="cursor-pointer border"
-                                            style={{ cursor: 'pointer', userSelect: 'none' }}
-                                            onClick={() => toggleApproval(r)}
-                                        >
-                                            {r}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
+                            <div className="d-flex flex-wrap gap-2 mb-3">
+                                {roles.map(r => (
+                                    <Badge
+                                        key={r}
+                                        bg={approvals.includes(r) ? 'primary' : 'light'}
+                                        text={approvals.includes(r) ? 'white' : 'dark'}
+                                        className="border cursor-pointer"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => toggleApproval(r)}
+                                    >
+                                        {r}
+                                    </Badge>
+                                ))}
+                            </div>
+                            <Form.Group className="mt-2 pt-2 border-top">
+                                <Form.Label className="small fw-bold">Min Approvals Required</Form.Label>
+                                <Form.Control 
+                                    type="number" size="sm" min={0} max={approvals.length}
+                                    value={flow.minimumApprovals?.[stage] || 0}
+                                    onChange={(e) => onUpdateFlow({
+                                        ...flow,
+                                        minimumApprovals: { ...flow.minimumApprovals, [stage]: parseInt(e.target.value) || 0 }
+                                    })}
+                                />
+                                <Form.Text className="text-muted small">0 = Require ALL selected roles.</Form.Text>
+                            </Form.Group>
                         </Accordion.Body>
                     </Accordion.Item>
 
-                    {/* Notifications */}
                     <Accordion.Item eventKey="2">
                         <Accordion.Header>Notifications</Accordion.Header>
                         <Accordion.Body>
-                            <Form.Text muted>Notify these roles when entering this stage.</Form.Text>
-                            <div className="d-flex flex-wrap gap-2 mt-2">
+                            <div className="d-flex flex-wrap gap-2">
                                 {roles.map(r => (
                                     <Badge
                                         key={r}
                                         bg={notifications.includes(r) ? 'info' : 'light'}
                                         text={notifications.includes(r) ? 'white' : 'dark'}
-                                        className="cursor-pointer border"
-                                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                                        className="border cursor-pointer"
+                                        style={{ cursor: 'pointer' }}
                                         onClick={() => toggleNotification(r)}
                                     >
                                         {r}
@@ -193,44 +167,24 @@ export default function StagePropertyPanel({
                         </Accordion.Body>
                     </Accordion.Item>
 
-                    {/* Documents */}
                     <Accordion.Item eventKey="3">
                         <Accordion.Header>Required Documents ({fileRules.length})</Accordion.Header>
                         <Accordion.Body className="p-2">
-                            <Button size="sm" variant="outline-primary" className="w-100 mb-2" onClick={addFileRule}>+ Add Document Rule</Button>
+                            <Button size="sm" variant="outline-primary" className="w-100 mb-2" onClick={addFileRule}>+ Add Rule</Button>
                             {fileRules.map((rule, i) => (
                                 <Card key={i} className="mb-2 bg-light border-0">
                                     <Card.Body className="p-2">
-                                        <div className="mb-2">
-                                            <Form.Control
-                                                size="sm"
-                                                placeholder="Doc Name (e.g. BOQ)"
-                                                value={rule.label}
-                                                onChange={e => updateFileRule(i, {
-                                                    label: e.target.value,
-                                                    key: normalizeKey(e.target.value)
-                                                })}
-                                                className="mb-1 fw-bold"
-                                            />
-                                            <Form.Control
-                                                size="sm"
-                                                placeholder="Allowed Types (e.g. .pdf,.jpg)"
-                                                value={rule.accept || ''}
-                                                onChange={e => updateFileRule(i, { accept: e.target.value })}
-                                                style={{ fontSize: '0.85em' }}
-                                            />
-                                        </div>
+                                        <Form.Control
+                                            size="sm" value={rule.label}
+                                            onChange={e => updateFileRule(i, { label: e.target.value, key: normalizeKey(e.target.value) })}
+                                            className="mb-1 fw-bold"
+                                        />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <Form.Check
-                                                type="switch"
-                                                label="Required"
-                                                style={{ fontSize: '0.8rem' }}
-                                                checked={rule.required}
+                                            <Form.Check 
+                                                type="switch" label="Required" size="sm" checked={rule.required}
                                                 onChange={e => updateFileRule(i, { required: e.target.checked })}
                                             />
-                                            <Button variant="link" className="text-danger p-0 opacity-50 hover-opacity-100" size="sm" onClick={() => removeFileRule(i)}>
-                                                <Trash2 size={14} />
-                                            </Button>
+                                            <Button variant="link" className="text-danger p-0" onClick={() => removeFileRule(i)}><Trash2 size={14}/></Button>
                                         </div>
                                     </Card.Body>
                                 </Card>
@@ -238,130 +192,64 @@ export default function StagePropertyPanel({
                         </Accordion.Body>
                     </Accordion.Item>
 
-                    {/* Component Visibility */}
                     <Accordion.Item eventKey="4">
-                        <Accordion.Header>Visible Components</Accordion.Header>
-                        <Accordion.Body className="p-3 text-center">
-                            <div className="small text-muted mb-2">
-                                Configure which cards are visible to everyone or specific roles in this stage.
-                            </div>
-                            <Button variant="outline-primary" size="sm" onClick={() => setShowVisibilityModal(true)}>
-                                Configure Visibility
-                            </Button>
+                        <Accordion.Header>Visibility</Accordion.Header>
+                        <Accordion.Body className="text-center">
+                            <Button variant="outline-primary" size="sm" onClick={() => setShowVisibilityModal(true)}>Configure Visibility</Button>
                         </Accordion.Body>
                     </Accordion.Item>
-
                 </Accordion>
             </Card.Body>
 
-            {/* Visibility Matrix Modal */}
             <Modal show={showVisibilityModal} onHide={() => setShowVisibilityModal(false)} size="lg">
-                <Modal.Header closeButton>
-                    <Modal.Title>Component Visibility: {stage}</Modal.Title>
-                </Modal.Header>
+                <Modal.Header closeButton><Modal.Title>Visibility Matrix: {stage}</Modal.Title></Modal.Header>
                 <Modal.Body>
-                    <p className="small text-muted">
-                        Check "Everyone" to make a component visible to all users in this stage.<br />
-                        If "Everyone" is unchecked, choose specific roles to grant visibility.
-                    </p>
-                    <div className="table-responsive">
-                        <Table bordered hover size="sm" className="small">
-                            <thead className="bg-light">
-                                <tr>
-                                    <th style={{ minWidth: 150 }}>Component</th>
-                                    <th className="text-center" style={{ width: 80 }}>Everyone</th>
-                                    {roles.map(r => (
-                                        <th key={r} className="text-center" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>{r}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {PROJECT_COMPONENTS.map(comp => {
-                                    const rule = flow.visibility?.[stage] || {};
-
-                                    // "Everyone" logic: Is it in the base list?
-                                    // Note: If no rule exists at all, backend default applies (usually ALL).
-                                    // But here we are editing explicit rules. 
-                                    // If rule is totally missing, we assume "Everyone" is checked for ALL components to match default behavior.
-                                    const isGlobalRule = flow.visibility?.[stage] === undefined;
-                                    const currentGlobalList = rule.visibleComponents || (isGlobalRule ? PROJECT_COMPONENTS.map(c => c.id) : []);
-
-                                    const isVisibleAll = currentGlobalList.includes(comp.id);
-
-                                    return (
-                                        <tr key={comp.id}>
-                                            <td className="fw-bold">{comp.label}</td>
-                                            <td className="text-center bg-light">
-                                                <Form.Check
-                                                    type="checkbox"
-                                                    checked={isVisibleAll}
-                                                    onChange={(e) => {
-                                                        const checked = e.target.checked;
-                                                        let nextGlobal = [...currentGlobalList];
-                                                        if (checked) nextGlobal.push(comp.id);
-                                                        else nextGlobal = nextGlobal.filter(id => id !== comp.id);
-
-                                                        // Update Flow
-                                                        onUpdateFlow({
-                                                            ...flow,
-                                                            visibility: {
-                                                                ...flow.visibility,
-                                                                [stage]: {
-                                                                    ...rule,
-                                                                    visibleComponents: nextGlobal
-                                                                }
-                                                            }
-                                                        });
-                                                    }}
-                                                />
-                                            </td>
-                                            {roles.map(r => {
-                                                const roleMap = rule.roleVisibility || {};
-                                                const roleList = roleMap[r] || [];
-                                                const isVisibleRole = roleList.includes(comp.id);
-                                                const effectiveVisible = isVisibleAll || isVisibleRole;
-
-                                                return (
-                                                    <td key={r} className="text-center">
-                                                        <Form.Check
-                                                            type="checkbox"
-                                                            disabled={isVisibleAll} // If global, role is redundant
-                                                            checked={effectiveVisible}
-                                                            onChange={(e) => {
-                                                                const checked = e.target.checked;
-                                                                // We modify roleVisibility map
-                                                                const nextRoleList = checked
-                                                                    ? [...roleList, comp.id]
-                                                                    : roleList.filter(id => id !== comp.id);
-
-                                                                onUpdateFlow({
-                                                                    ...flow,
-                                                                    visibility: {
-                                                                        ...flow.visibility,
-                                                                        [stage]: {
-                                                                            ...rule,
-                                                                            roleVisibility: {
-                                                                                ...roleMap,
-                                                                                [r]: nextRoleList
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                });
-                                                            }}
-                                                        />
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </Table>
-                    </div>
+                    <Table bordered hover size="sm" className="small">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Everyone</th>
+                                {roles.map(r => <th key={r}>{r}</th>)}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {PROJECT_COMPONENTS.map(comp => {
+                                const rule = flow.visibility?.[stage] || {};
+                                const isGlobalList = rule.visibleComponents || PROJECT_COMPONENTS.map(c => c.id);
+                                const isVisibleAll = isGlobalList.includes(comp.id);
+                                return (
+                                    <tr key={comp.id}>
+                                        <td>{comp.label}</td>
+                                        <td>
+                                            <Form.Check 
+                                                type="checkbox" checked={isVisibleAll}
+                                                onChange={(e) => {
+                                                    const nextList = e.target.checked ? [...isGlobalList, comp.id] : isGlobalList.filter(id => id !== comp.id);
+                                                    onUpdateFlow({ ...flow, visibility: { ...flow.visibility, [stage]: { ...rule, visibleComponents: nextList } } });
+                                                }}
+                                            />
+                                        </td>
+                                        {roles.map(r => {
+                                            const roleMap = rule.roleVisibility || {};
+                                            const roleList = roleMap[r] || [];
+                                            return (
+                                                <td key={r}>
+                                                    <Form.Check 
+                                                        type="checkbox" disabled={isVisibleAll} checked={isVisibleAll || roleList.includes(comp.id)}
+                                                        onChange={(e) => {
+                                                            const nextRoleList = e.target.checked ? [...roleList, comp.id] : roleList.filter(id => id !== comp.id);
+                                                            onUpdateFlow({ ...flow, visibility: { ...flow.visibility, [stage]: { ...rule, roleVisibility: { ...roleMap, [r]: nextRoleList } } } });
+                                                        }}
+                                                    />
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </Table>
                 </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowVisibilityModal(false)}>Close</Button>
-                </Modal.Footer>
             </Modal>
         </Card>
     );

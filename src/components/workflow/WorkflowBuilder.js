@@ -35,6 +35,7 @@ const emptyFlow = {
     id: "",
     stages: [],
     requiredApprovals: {},
+    minimumApprovals: {},
     transitions: {},
     initialStage: "",
     version: 0,
@@ -146,6 +147,7 @@ export default function WorkflowBuilder() {
                     // Ensure arrays/objects generic
                     stages: wf?.stages || [],
                     requiredApprovals: wf?.requiredApprovals || {},
+                    minimumApprovals: wf?.minimumApprovals || {},
                     transitions: wf?.transitions || {},
                     initialStage: wf?.initialStage || (wf?.stages?.[0] || ""),
                     notifications: wf?.notifications || {},

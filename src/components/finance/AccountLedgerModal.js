@@ -43,7 +43,12 @@ const AccountLedgerModal = ({ accountId, open, onCancel }) => {
         { title: 'Reference', dataIndex: 'reference' },
         { title: 'Debit', dataIndex: 'debit', render: v => v > 0 ? v.toFixed(2) : '-' },
         { title: 'Credit', dataIndex: 'credit', render: v => v > 0 ? v.toFixed(2) : '-' },
-        { title: 'Balance', dataIndex: 'runningBalance', render: v => <strong style={{ color: v < 0 ? 'red' : 'green' }}>{v.toFixed(2)}</strong> }
+        { title: 'Balance', dataIndex: 'runningBalance', render: v => <strong style={{ color: v < 0 ? 'red' : 'green' }}>{v.toFixed(2)}</strong> },
+        { 
+            title: 'Doc', 
+            dataIndex: 'receiptUrl', 
+            render: v => v ? <Button size="small" type="link" onClick={() => window.open(v, '_blank')}>View</Button> : null 
+        }
     ];
 
     return (

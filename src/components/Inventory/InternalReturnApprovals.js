@@ -1,113 +1,109 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Spinner, Badge } from 'react-bootstrap';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
+import { Container, Card, Table, Button, Spinner } from 'react-bootstrap';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-export default function InternalReturnApprovals() {
+const InternalReturnApprovals = () => {
     const navigate = useNavigate();
     const [returns, setReturns] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => {
+        fetchReturns();
+    }, []);
 
-    const load = async () => {
+    const fetchReturns = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/inventory/returns/internal?status=PENDING');
-            setReturns(res.data.content || res.data || []);
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to load pending returns");
+            const response = await api.get('/inventory/returns?status=PENDING');
+            setReturns(response.data || []);
+        } catch (err) {
+            console.error("Error fetching returns:", err);
+            toast.error("Failed to load internal returns.");
         } finally {
             setLoading(false);
         }
     };
 
     const handleApprove = async (ret) => {
-        if (!window.confirm(`Approve return ${ret.returnNumber}? Stock will be moved to Store.`)) return;
+        setProcessingId(ret.id);
         try {
-            setProcessingId(ret.id);
-            await api.post(`/inventory/returns/internal/${ret.id}/approve`, []);
-            toast.success(`Return ${ret.returnNumber} approved`);
-            load();
-        } catch (e) {
-            console.error(e);
-            toast.error(e?.response?.data?.message || "Failed to approve return");
+            await api.post(`/inventory/returns/${ret.id}/approve`);
+            toast.success("Return approved successfully.");
+            fetchReturns();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to approve return.");
         } finally {
             setProcessingId(null);
         }
     };
 
-    // Note: Reject endpoint might not exist in controller yet (only approve was explicitly added/checked).
-    // InternalReturnService has no reject method exposed in controller?
-    // Let's check previously viewed files. Rejection usually just updates status.
-    // If not exposed, I will skip Reject button for now or implement it if I missed it.
-    // Controller only had create and approve.
-    // I will leave Reject out to avoid 404s unless I confirm backend support.
-    // Actually TransferService had reject, InternalReturnService logic I read had approve. 
-    // ReturnRequest model has REJECTED status.
-    // I'll stick to Approve for now as per user request "We need to allow the store to approve".
+    if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
 
     return (
-        <div className="container-fluid p-4">
+        <Container className="py-4">
             <div className="d-flex align-items-center mb-4">
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0">Internal Return Approvals</h2>
-                        </div>
-<Card>
-                <Card.Header>Pending Requests (Project to Store)</Card.Header>
+                <h3 className="mb-0">Internal Return Approvals</h3>
+            </div>
+
+            <Card className="shadow-sm">
                 <Card.Body>
-                    {loading && <div className="text-center p-3"><Spinner animation="border" /> Loading...</div>}
-                    {!loading && returns.length === 0 && <div className="text-muted text-center p-3">No pending returns found.</div>}
-                    {!loading && returns.length > 0 && (
-                        <Table responsive hover bordered>
-                            <thead>
-                                <tr>
-                                    <th>Return #</th>
-                                    <th>Project</th>
-                                    <th>Date</th>
-                                    <th>Items</th>
-                                    <th>Reason</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {returns.map(r => (
+                    <Table responsive hover bordered>
+                        <thead className="table-light">
+                            <tr>
+                                <th>Ref #</th>
+                                <th>Project</th>
+                                <th>Date</th>
+                                <th>Items</th>
+                                <th>Reason</th>
+                                <th style={{ width: 120 }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {returns.length === 0 ? (
+                                <tr><td colSpan="6" className="text-center text-muted">No pending returns found.</td></tr>
+                            ) : (
+                                returns.map(r => (
                                     <tr key={r.id}>
                                         <td>{r.returnNumber}</td>
                                         <td>{r.projectId}</td>
                                         <td>{new Date(r.createdAt).toLocaleDateString()}</td>
                                         <td>
-                                            <ul className="list-unstyled mb-0">
-                                                {r.items?.map((item, idx) => (
-                                                    <li key={idx}>
-                                                        <strong>{item.productId}</strong>: {item.quantity}
-                                                        {item.batchId && <span className="text-muted ms-1 small">(Batch: {item.batchId.substring(0, 8)}...)</span>}
-                                                    </li>
-                                                ))}
-                                            </ul>
+                                            {r.items?.map((item, idx) => (
+                                                <div key={idx} className="small border-bottom mb-1 pb-1">
+                                                    <strong>{item.productName || item.productId}</strong>
+                                                    <br/>
+                                                    Qty: {item.quantity} | Batch: {item.batchNumber || item.batchId}
+                                                </div>
+                                            ))}
                                         </td>
                                         <td>{r.items?.[0]?.reason || '-'}</td>
                                         <td>
-                                            <Button
-                                                variant="success"
-                                                size="sm"
+                                            <Button 
+                                                variant="success" 
+                                                size="sm" 
                                                 onClick={() => handleApprove(r)}
                                                 disabled={processingId === r.id}
                                             >
-                                                {processingId === r.id ? 'Processing...' : 'Approve'}
+                                                Approve
                                             </Button>
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </Table>
-                    )}
+                                ))
+                            )}
+                        </tbody>
+                    </Table>
                 </Card.Body>
             </Card>
-        </div>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
+        </Container>
     );
-}
+};
+
+export default InternalReturnApprovals;
