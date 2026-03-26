@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
@@ -11,9 +11,7 @@ export default function FinanceDashboard() {
     });
     const [data, setData] = useState(null);
 
-    useEffect(() => { loadData(); }, []);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             setLoading(true);
             const res = await api.get(`/finance/reports/summary?start=${range.start}&end=${range.end}`);
@@ -24,7 +22,11 @@ export default function FinanceDashboard() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [range]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     return (
         <Container className="py-4">

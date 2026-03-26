@@ -1,42 +1,55 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Table, Button, Modal, Form, Select, Input, Tag, Space, Spin, Card } from 'antd';
+import { Table, Button, Modal, Form, Select, Input, Tag, Card, Tabs } from 'antd';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import dayjs from 'dayjs';
 
+const { TabPane } = Tabs;
+
 const PettyCashApprovalPage = () => {
     const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
+    const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [accounts, setAccounts] = useState([]);
 
-    // Approval Modal
+    // Approval Modal for Requests
     const [approvalVisible, setApprovalVisible] = useState(false);
     const [currentRequest, setCurrentRequest] = useState(null);
     const [approvalLoading, setApprovalLoading] = useState(false);
     const [form] = Form.useForm();
 
-    useEffect(() => {
-        fetchRequests();
-        fetchAccounts();
-    }, []);
+    // Approval Modal for Expenses
+    const [expenseApprovalVisible, setExpenseApprovalVisible] = useState(false);
+    const [currentExpense, setCurrentExpense] = useState(null);
+    const [expenseApprovalLoading, setExpenseApprovalLoading] = useState(false);
+    const [expenseForm] = Form.useForm();
 
-    const fetchRequests = async () => {
+    const fetchRequestsAndExpenses = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/project-accounts/petty-cash/requests');
-            setRequests(res.data || []);
+            const [reqsRes, expRes] = await Promise.all([
+                api.get('/project-accounts/petty-cash/requests'),
+                api.get('/project-accounts/petty-cash/expenses/pending')
+            ]);
+            setRequests(reqsRes.data || []);
+            setExpenses(expRes.data || []);
         } catch (e) {
-            console.error("Petty cash fetch error:", e);
+            console.error("Fetch error:", e);
             if (e.response && e.response.status !== 404) {
-                toast.error("Failed to load petty cash requests");
+                toast.error("Failed to load petty cash data");
             }
         } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchRequestsAndExpenses();
+        fetchAccounts();
+    }, []);
 
     const fetchAccounts = async () => {
         try {
@@ -69,10 +82,10 @@ const PettyCashApprovalPage = () => {
             await api.post(`/project-accounts/petty-cash/requests/${currentRequest.id}/approve`, payload);
             toast.success("Request approved successfully");
             setApprovalVisible(false);
-            fetchRequests();
+            fetchRequestsAndExpenses();
         } catch (e) {
             console.error(e);
-            toast.error(e.response?.data || "Failed to approve request");
+            toast.error(e.response?.data?.message || e.response?.data || "Failed to approve request");
         } finally {
             setApprovalLoading(false);
         }
@@ -91,14 +104,49 @@ const PettyCashApprovalPage = () => {
                 approvalNotes: notes,
                 approvedBy: localStorage.getItem("username")
             };
-            await api.post(`/project-accounts/petty-cash/requests/${currentRequest.id}/approve`, payload);
+            await api.post(`/project-accounts/petty-cash/requests/${currentRequest.id}/reject`, payload);
             toast.success("Request rejected");
             setApprovalVisible(false);
-            fetchRequests();
+            fetchRequestsAndExpenses();
         } catch (e) {
             toast.error("Failed to reject request");
         } finally {
             setApprovalLoading(false);
+        }
+    };
+
+    const handleExpenseApproveClick = (record) => {
+        setCurrentExpense(record);
+        setExpenseApprovalVisible(true);
+    };
+
+    const onExpenseApprove = async () => {
+        try {
+            setExpenseApprovalLoading(true);
+            await api.post(`/project-accounts/petty-cash/expenses/${currentExpense.id}/approve`);
+            toast.success("Expense approved successfully");
+            setExpenseApprovalVisible(false);
+            fetchRequestsAndExpenses();
+        } catch (e) {
+            console.error(e);
+            toast.error(e.response?.data?.message || e.response?.data || "Failed to approve expense");
+        } finally {
+            setExpenseApprovalLoading(false);
+        }
+    };
+
+    const onExpenseReject = async () => {
+        try {
+            setExpenseApprovalLoading(true);
+            await api.post(`/project-accounts/petty-cash/expenses/${currentExpense.id}/reject`);
+            toast.success("Expense rejected");
+            setExpenseApprovalVisible(false);
+            fetchRequestsAndExpenses();
+        } catch (e) {
+            console.error(e);
+            toast.error(e.response?.data?.message || e.response?.data || "Failed to reject expense");
+        } finally {
+            setExpenseApprovalLoading(false);
         }
     };
 
@@ -150,33 +198,95 @@ const PettyCashApprovalPage = () => {
                 </Button>
             ) : <span className="text-muted small">No File</span>
         },
-        {
-            title: 'Actions',
-            key: 'actions',
-            render: (_, record) => record.status === 'PENDING' && (
-                <Button type="primary" size="small" onClick={() => handleApproveClick(record)}>
-                    Review
-                </Button>
-            )
-        }
-    ];
+            {
+                title: 'Actions',
+                key: 'actions',
+                render: (_, record) => record.status === 'PENDING' && (
+                    <Button type="primary" size="small" onClick={() => handleApproveClick(record)}>
+                        Review
+                    </Button>
+                )
+            }
+        ];
 
-    return (
-        <Container className="py-4">
-            <div className="d-flex align-items-center mb-4">
-                <Button type="text" icon={<ArrowLeft size={18} />} onClick={() => navigate(-1)} className="me-2" />
-                <h3 className="mb-0">Petty Cash Approvals</h3>
-            </div>
+        const expenseColumns = [
+            {
+                title: 'Date',
+                dataIndex: 'expenseDate',
+                key: 'date',
+                render: d => dayjs(d).format('YYYY-MM-DD')
+            },
+            {
+                title: 'Project ID',
+                dataIndex: 'projectId',
+                key: 'project',
+            },
+            {
+                title: 'Title',
+                dataIndex: 'title',
+                key: 'title',
+            },
+            {
+                title: 'Amount',
+                dataIndex: 'amount',
+                key: 'amount',
+                render: a => <span className="fw-bold">LKR {a?.toLocaleString()}</span>
+            },
+            {
+                title: 'Status',
+                dataIndex: 'status',
+                key: 'status',
+                render: s => <Tag color="orange">{s}</Tag>
+            },
+            {
+                title: 'Receipt',
+                key: 'receipt',
+                render: (_, record) => record.attachmentUrl ? (
+                    <Button size="small" icon={<ExternalLink size={14} />} onClick={() => window.open(record.attachmentUrl, '_blank')}>
+                        View
+                    </Button>
+                ) : <span className="text-muted small">No File</span>
+            },
+            {
+                title: 'Actions',
+                key: 'actions',
+                render: (_, record) => (
+                    <Button type="primary" size="small" onClick={() => handleExpenseApproveClick(record)}>
+                        Review
+                    </Button>
+                )
+            }
+        ];
 
-            <Card className="shadow-sm">
-                <Table 
-                    dataSource={requests} 
-                    columns={columns} 
-                    rowKey="id" 
-                    loading={loading}
-                    pagination={{ pageSize: 15 }}
-                />
-            </Card>
+        return (
+            <div className="container py-4">
+                <div className="d-flex align-items-center mb-4">
+                    <Button type="text" icon={<ArrowLeft size={18} />} onClick={() => navigate(-1)} className="me-2" />
+                    <h3 className="mb-0">Petty Cash Approvals</h3>
+                </div>
+
+                <Card className="shadow-sm">
+                    <Tabs defaultActiveKey="1">
+                        <TabPane tab="Fund Requests" key="1">
+                            <Table 
+                                dataSource={requests} 
+                                columns={columns} 
+                                rowKey="id" 
+                                loading={loading}
+                                pagination={{ pageSize: 15 }}
+                            />
+                        </TabPane>
+                        <TabPane tab="Pending Expenses" key="2">
+                            <Table 
+                                dataSource={expenses} 
+                                columns={expenseColumns} 
+                                rowKey="id" 
+                                loading={loading}
+                                pagination={{ pageSize: 15 }}
+                            />
+                        </TabPane>
+                    </Tabs>
+                </Card>
 
             <Modal
                 title="Review Petty Cash Request"
@@ -191,13 +301,13 @@ const PettyCashApprovalPage = () => {
                 </div>
 
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Group className="mb-3">
+                    <div className="mb-3">
                     <Form.Item name="accountId" label="Source Account (Cash/Bank)" rules={[{ required: true }]}>
                         <Select placeholder="Select from where to pay">
                             {accounts.map(a => <Select.Option key={a.id} value={a.id}>{a.name} (Bal: {a.balance})</Select.Option>)}
                         </Select>
                     </Form.Item>
-                    </Form.Group>
+                    </div>
 
                     <Form.Item name="approvedAmount" label="Approved Amount" rules={[{ required: true }]}>
                         <Input type="number" />
@@ -213,7 +323,33 @@ const PettyCashApprovalPage = () => {
                     </div>
                 </Form>
             </Modal>
-        </Container>
+
+            <Modal
+                title="Review Petty Cash Expense"
+                open={expenseApprovalVisible}
+                onCancel={() => setExpenseApprovalVisible(false)}
+                footer={null}
+                destroyOnClose
+            >
+                <div className="mb-4">
+                    <p><strong>Expense Title:</strong> {currentExpense?.title}</p>
+                    <p><strong>Description:</strong> {currentExpense?.description || 'N/A'}</p>
+                    <p><strong>Amount:</strong> LKR {currentExpense?.amount?.toLocaleString()}</p>
+                    {currentExpense?.attachmentUrl && (
+                        <p><strong>Receipt:</strong> <a href={currentExpense.attachmentUrl} target="_blank" rel="noreferrer">View File</a></p>
+                    )}
+                </div>
+
+                <div className="alert alert-info py-2">
+                    Approving this expense will post it to the ledger and reduce the Project's Petty Cash balance.
+                </div>
+
+                <div className="d-flex justify-content-end gap-2 mt-4">
+                    <Button onClick={onExpenseReject} danger loading={expenseApprovalLoading}>Reject Expense</Button>
+                    <Button type="primary" onClick={onExpenseApprove} loading={expenseApprovalLoading}>Approve & Post</Button>
+                </div>
+            </Modal>
+        </div>
     );
 };
 

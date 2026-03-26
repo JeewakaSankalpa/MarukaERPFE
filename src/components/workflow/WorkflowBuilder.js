@@ -5,7 +5,6 @@ import {
     Background,
     useNodesState,
     useEdgesState,
-    addEdge,
     MiniMap,
     Panel
 } from '@xyflow/react';
@@ -24,7 +23,6 @@ import StagePropertyPanel from "./StagePropertyPanel";
 import TransitionPropertyPanel from "./TransitionPropertyPanel";
 
 // Helpers
-const uniq = (arr) => Array.from(new Set(arr));
 const normalizeKey = (s) => s.trim().toUpperCase().replace(/\s+/g, "_");
 
 const nodeTypes = {

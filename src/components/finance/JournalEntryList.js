@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, DatePicker, Button, Row, Col } from 'antd';
+import { Card, Table, Tag, DatePicker, Button } from 'antd';
 import api from '../../api/api';
 import dayjs from 'dayjs';
 

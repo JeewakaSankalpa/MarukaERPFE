@@ -56,19 +56,11 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
     const fetchExpenses = async () => {
         try {
-            const res = await api.get(`/finance/expenses/search?category=PETTY_CASH`);
-            // The search endpoint might need projectId filtering. 
-            // Current ExpenseController.search doesn't support projectId.
-            // Temporary Workaround: Fetch all and filter client side OR better, assume we update backend later. 
-            // For now, let's just list 'events' which are basically cashbook.
-            // Actually, we want to see Expenses. 
-            // Let's use the 'listPayments' or similar if we stored them there?
-            // Wait, I implemented 'addProjectExpense' which saves to Expense collection.
-            // I should ideally add 'projectId' filter to ExpenseController. 
-            // For now, I will skip fetching specific "Expenses" list if API is missing and rely on "Transaction History" which shows balance changes.
-            // But the user wants to "view expenses". 
-            // I'll filter by projectId client side if getAll returns it, or just use TransactionHistory for now which logs deductions.
-        } catch (e) { }
+            const res = await api.get(`/project-accounts/${projectId}/petty-cash/expenses`);
+            setExpenses(res.data || []);
+        } catch (e) {
+            console.error("Failed to fetch project expenses", e);
+        }
     };
 
     const fetchRequests = async () => {
@@ -100,6 +92,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             fetchAccount();
             fetchRequests();
             fetchPayments();
+            fetchExpenses();
         }
     }, [projectId]);
 
@@ -131,7 +124,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         formData.append('amount', values.amount);
         formData.append('paidAt', values.paidAt ? values.paidAt.format('YYYY-MM-DD') : new Date().toISOString());
         formData.append('note', values.note || '');
-        formData.append('file', payFileList[0].originFileObj);
+        formData.append('file', payFileList[0].originFileObj || payFileList[0]);
 
         try {
             await api.post(`/project-accounts/${projectId}/payments/upload`, formData, {
@@ -166,7 +159,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         };
         formData.append('data', JSON.stringify(expenseData));
         if (fileList.length > 0) {
-            formData.append('file', fileList[0].originFileObj);
+            formData.append('file', fileList[0].originFileObj || fileList[0]);
         }
 
         try {
@@ -178,6 +171,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             expenseForm.resetFields();
             setFileList([]);
             fetchAccount(); // Update balance
+            fetchExpenses(); // Refresh expense list
         } catch (e) {
             toast.error('Failed to add expense');
         } finally {
@@ -281,6 +275,25 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                             { title: 'Reason', dataIndex: 'reason' },
                             { title: 'Status', dataIndex: 'status', render: s => <Badge status={s === 'APPROVED' ? 'success' : s === 'REJECTED' ? 'error' : 'processing'} text={s} /> },
                             { title: 'Requested By', dataIndex: 'requestedBy' }
+                        ]}
+                    />
+                </TabPane>
+                <TabPane tab="Petty Cash Expenses" key="5">
+                    <Table
+                        dataSource={expenses}
+                        rowKey="id"
+                        size="small"
+                        columns={[
+                            { title: 'Date', dataIndex: 'expenseDate', render: d => dayjs(d).format('YYYY-MM-DD') },
+                            { title: 'Title', dataIndex: 'title' },
+                            { title: 'Amount', dataIndex: 'amount', render: v => `${currency} ${v.toLocaleString()}` },
+                            { title: 'Description', dataIndex: 'description' },
+                            { title: 'Status', dataIndex: 'status', render: s => <Badge status={s === 'PENDING' ? 'warning' : s === 'PAID' ? 'success' : 'error'} text={s} /> },
+                            {
+                                title: 'Receipt', dataIndex: 'attachmentUrl', render: url => url ? (
+                                    <Button type="link" icon={<FileTextOutlined />} onClick={() => window.open(url, '_blank')}>View File</Button>
+                                ) : '-'
+                            }
                         ]}
                     />
                 </TabPane>

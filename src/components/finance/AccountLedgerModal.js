@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Table, message, Spin, Statistic, Card, Row, Col } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Modal, Table, message, Statistic, Card, Row, Col, Button } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 
@@ -8,24 +8,16 @@ const AccountLedgerModal = ({ accountId, open, onCancel }) => {
     const [loading, setLoading] = useState(false);
     const [summary, setSummary] = useState({ debit: 0, credit: 0, balance: 0 });
 
-    useEffect(() => {
-        if (open && accountId) {
-            fetchLedger();
-        }
-    }, [open, accountId]);
-
-    const fetchLedger = async () => {
+    const fetchLedger = useCallback(async () => {
         setLoading(true);
         try {
             const res = await api.get(`/finance/reports/accounts/${accountId}/ledger`);
             setTransactions(res.data || []);
 
-            // Calc summary from response (last row has current running balance)
             if (res.data && res.data.length > 0) {
                 const totalDebit = res.data.reduce((sum, row) => sum + row.debit, 0);
                 const totalCredit = res.data.reduce((sum, row) => sum + row.credit, 0);
                 const closingBalance = res.data[res.data.length - 1].runningBalance;
-
                 setSummary({ debit: totalDebit, credit: totalCredit, balance: closingBalance });
             } else {
                 setSummary({ debit: 0, credit: 0, balance: 0 });
@@ -35,10 +27,16 @@ const AccountLedgerModal = ({ accountId, open, onCancel }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [accountId]);
+
+    useEffect(() => {
+        if (open && accountId) {
+            fetchLedger();
+        }
+    }, [open, accountId, fetchLedger]);
 
     const columns = [
-        { title: 'Date', dataIndex: 'date', render: d => d }, // Backend sends yyyy-MM-dd
+        { title: 'Date', dataIndex: 'date' },
         { title: 'Description', dataIndex: 'description' },
         { title: 'Reference', dataIndex: 'reference' },
         { title: 'Debit', dataIndex: 'debit', render: v => v > 0 ? v.toFixed(2) : '-' },
@@ -81,7 +79,7 @@ const AccountLedgerModal = ({ accountId, open, onCancel }) => {
             <Table
                 dataSource={transactions}
                 columns={columns}
-                rowKey={(r) => r.date + r.description + r.runningBalance} // composite key as no ID returned
+                rowKey={(r) => r.date + r.description + r.runningBalance}
                 loading={loading}
                 size="small"
                 pagination={{ pageSize: 20 }}
