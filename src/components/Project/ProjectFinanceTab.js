@@ -197,6 +197,9 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         }
     };
 
+    const pendingExpensesSum = expenses.filter(e => e.status === 'PENDING').reduce((sum, e) => sum + (e.amount || 0), 0);
+    const availablePettyCash = (account?.pettyCashBalance || 0) - pendingExpensesSum;
+
     return (
         <div className="mt-3">
             {loading && <Spin />}
@@ -241,12 +244,17 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                     <Col span={6}>
                         <Card>
                             <Statistic
-                                title="Petty Cash"
-                                value={account.pettyCashBalance}
+                                title="Available Petty Cash"
+                                value={availablePettyCash}
                                 precision={2}
                                 prefix={<BankOutlined />}
-                                valueStyle={{ color: account.pettyCashBalance < 0 ? 'red' : '#1890ff' }}
+                                valueStyle={{ color: availablePettyCash < 0 ? 'red' : '#1890ff' }}
                             />
+                            {pendingExpensesSum > 0 && (
+                                <div className="text-muted small mt-1">
+                                    Includes {pendingExpensesSum.toLocaleString()} in pending expenses
+                                </div>
+                            )}
                             <div className="d-flex gap-1 mt-2 flex-wrap">
                                 <Button type="link" size="small" onClick={() => setRequestModalVisible(true)}>
                                     Request
