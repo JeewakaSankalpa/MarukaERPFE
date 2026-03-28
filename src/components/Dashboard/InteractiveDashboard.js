@@ -138,7 +138,7 @@ const InteractiveDashboard = () => {
                 <Col lg={4}>
                     <Card className="shadow-sm border-0 h-100">
                         <Card.Header className="bg-white fw-bold">Project Heatmap</Card.Header>
-                        <Card.Body style={{ height: 300 }}>
+                        <Card.Body style={{ height: 300, overflow: 'hidden' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie

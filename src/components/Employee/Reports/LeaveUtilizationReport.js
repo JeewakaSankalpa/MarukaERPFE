@@ -22,7 +22,11 @@ const LeaveUtilizationReport = () => {
             const res = await api.get(`/leave/reports/utilization?year=${year}`);
             setQuotas(res.data || []);
         } catch (error) {
-            toast.error("Failed to load leave data");
+            if (error.response?.status !== 404) {
+                toast.error("Failed to load leave data");
+            } else {
+                setQuotas([]);
+            }
         } finally {
             setLoading(false);
         }

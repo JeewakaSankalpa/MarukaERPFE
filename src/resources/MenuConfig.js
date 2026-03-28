@@ -129,7 +129,7 @@ export const MenuConfig = [
         subItems: [
             { id: "settings.notifications", title: "My Notification Preferences", path: "/my-notifications" },
             { id: "settings.rules", title: "Notification Logic (Admin)", path: "/admin/notification-rules", roles: ["ADMIN"] },
-            { id: "settings.roles", title: "Role Management", path: "/admin/roles", roles: ["ADMIN"] },
+            { id: "settings.roles", title: "Role Management", path: "/admin/roles", roles: ["ADMIN", "HR"] },
             { id: "settings.config", title: "System Config", path: "/admin/config", roles: ["ADMIN"] },
             { id: "settings.workflows", title: "Workflows", path: "/admin/workflows", roles: ["ADMIN"] },
             { id: "settings.estimation", title: "Estimation Settings", path: "/settings", roles: ["ADMIN", "MANAGER"] },

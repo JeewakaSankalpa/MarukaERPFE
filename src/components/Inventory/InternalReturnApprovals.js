@@ -77,7 +77,7 @@ const InternalReturnApprovals = () => {
                                         <td>
                                             {r.items?.map((item, idx) => (
                                                 <div key={idx} className="small border-bottom mb-1 pb-1">
-                                                    <strong>{item.productName || item.productId}</strong>
+                                                    <strong>{item.productNameSnapshot || item.productName || item.productId}</strong>
                                                     <br/>
                                                     Qty: {item.quantity} | Batch: {item.batchNumber || item.batchId}
                                                 </div>

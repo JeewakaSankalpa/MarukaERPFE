@@ -18,7 +18,9 @@ export default function FinanceDashboard() {
             setData(res.data);
         } catch (e) {
             console.error("Finance summary load error:", e);
-            toast.error("Failed to load finance data. Please check if report dates are valid.");
+            if (e.response && e.response.status !== 404) {
+                toast.error("Failed to load finance data. Please check if report dates are valid.");
+            }
         } finally {
             setLoading(false);
         }
