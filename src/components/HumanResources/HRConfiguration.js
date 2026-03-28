@@ -14,10 +14,10 @@ export default function HRConfiguration() {
             <div className="d-flex align-items-center mb-4">
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h3 className="mb-0">Global HR Configurations</h3>
-                        </div>
-<Card>
+            </div>
+            <Card className="shadow-sm border-0">
                 <Card.Body>
-                    <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-3">
+                    <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-3 custom-tabs">
                         <Tab eventKey="schedule" title="Working Schedule">
                             <ScheduleSettings />
                         </Tab>
@@ -33,6 +33,28 @@ export default function HRConfiguration() {
                         <Tab eventKey="tax" title="Taxation (PAYE)">
                             <TaxSettings />
                         </Tab>
+                        <Tab eventKey="roles" title="System Roles">
+                            <div className="p-3">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 className="mb-1">System Roles Management</h5>
+                                        <p className="text-muted small mb-0">Manage employee roles, access levels, and custom titles.</p>
+                                    </div>
+                                    <Button variant="primary" onClick={() => navigate('/admin/roles')}>
+                                        <i className="fa fa-external-link-alt me-2"></i> Open Role Manager
+                                    </Button>
+                                </div>
+                                <hr />
+                                <div className="bg-light p-4 rounded text-center border">
+                                    <i className="fa fa-users-cog text-muted mb-3" style={{ fontSize: '3rem' }}></i>
+                                    <h5>Dynamic Role Management</h5>
+                                    <p className="text-muted mx-auto" style={{maxWidth: '500px'}}>
+                                        Configure the roles available in the employee and payroll modules. 
+                                        Click the button above to add new roles like 'STORE_KEEPER', 'ACCOUNTANT', or 'SITE_SUPERVISOR'.
+                                    </p>
+                                </div>
+                            </div>
+                        </Tab>
                     </Tabs>
                 </Card.Body>
             </Card>
@@ -46,7 +68,6 @@ function ScheduleSettings() {
     const [showModal, setShowModal] = useState(false);
     const [editingPolicy, setEditingPolicy] = useState(null);
 
-    // Form State
     const [formData, setFormData] = useState({
         policyName: "",
         gracePeriodMinutes: 0,
@@ -69,7 +90,6 @@ function ScheduleSettings() {
     };
 
     const handleAddNew = () => {
-        // Initialize Default Empty Schedule
         const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
         const emptySchedule = days.map(d => ({
             day: d,
@@ -95,7 +115,7 @@ function ScheduleSettings() {
             isDefault: policy.isDefault,
             schedule: policy.schedule.map(d => ({
                 ...d,
-                startTime: d.startTime ? d.startTime.substring(0, 5) : "08:30", // Ensure HH:mm
+                startTime: d.startTime ? d.startTime.substring(0, 5) : "08:30",
                 endTime: d.endTime ? d.endTime.substring(0, 5) : "17:00"
             }))
         });
@@ -104,7 +124,7 @@ function ScheduleSettings() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure? This might affect employees assigned to this policy.")) return;
+        if (!window.confirm("Are you sure?")) return;
         try {
             await api.delete(`/hr/schedule/policies/${id}`);
             toast.success("Policy deleted");
@@ -119,7 +139,6 @@ function ScheduleSettings() {
             toast.error("Policy Name is required");
             return;
         }
-
         try {
             const payload = { ...formData };
             if (editingPolicy) {
@@ -141,10 +160,8 @@ function ScheduleSettings() {
                 <h5>Work Schedule Policies</h5>
                 <Button onClick={handleAddNew}>+ Add Policy</Button>
             </div>
-
             {loading && <Spinner size="sm" />}
-
-            <Table striped bordered hover>
+            <Table striped bordered hover responsive>
                 <thead>
                     <tr>
                         <th>Policy Name</th>
@@ -169,9 +186,8 @@ function ScheduleSettings() {
                 </tbody>
             </Table>
 
-            {/* Modal - Ideally fetch from Reusable or inline */}
             {showModal && (
-                <div className="border p-3 mt-4 bg-light rounded">
+                <div className="border p-4 bg-light rounded mt-4">
                     <h6>{editingPolicy ? "Edit Policy" : "New Policy"}</h6>
                     <Row className="mb-3">
                         <Col md={6}>
@@ -182,37 +198,25 @@ function ScheduleSettings() {
                         </Col>
                         <Col md={3}>
                             <Form.Group>
-                                <Form.Label>Grace Period</Form.Label>
+                                <Form.Label>Grace Period (mins)</Form.Label>
                                 <Form.Control type="number" value={formData.gracePeriodMinutes} onChange={e => setFormData({ ...formData, gracePeriodMinutes: parseInt(e.target.value) || 0 })} />
                             </Form.Group>
                         </Col>
                         <Col md={3} className="d-flex align-items-end">
-                            <Form.Check
-                                label="Is Default Policy?"
-                                checked={formData.isDefault}
-                                onChange={e => setFormData({ ...formData, isDefault: e.target.checked })}
-                            />
+                            <Form.Check label="Set as Default" checked={formData.isDefault} onChange={e => setFormData({ ...formData, isDefault: e.target.checked })} />
                         </Col>
                     </Row>
-
-                    <Table size="sm">
-                        <thead>
-                            <tr><th>Day</th><th>Work Day?</th><th>Start</th><th>End</th></tr>
-                        </thead>
+                    <Table size="sm" bordered>
+                        <thead className="table-light"><tr><th>Day</th><th>Work Day?</th><th>Start</th><th>End</th></tr></thead>
                         <tbody>
                             {formData.schedule.map((d, idx) => (
                                 <tr key={d.day}>
                                     <td>{d.day}</td>
-                                    <td>
-                                        <Form.Check
-                                            checked={d.isWorkDay}
-                                            onChange={e => {
-                                                const ns = [...formData.schedule];
-                                                ns[idx].isWorkDay = e.target.checked;
-                                                setFormData({ ...formData, schedule: ns });
-                                            }}
-                                        />
-                                    </td>
+                                    <td><Form.Check checked={d.isWorkDay} onChange={e => {
+                                        const ns = [...formData.schedule];
+                                        ns[idx].isWorkDay = e.target.checked;
+                                        setFormData({ ...formData, schedule: ns });
+                                    }} /></td>
                                     <td><Form.Control type="time" disabled={!d.isWorkDay} value={d.startTime} onChange={e => {
                                         const ns = [...formData.schedule];
                                         ns[idx].startTime = e.target.value;
@@ -227,7 +231,6 @@ function ScheduleSettings() {
                             ))}
                         </tbody>
                     </Table>
-
                     <div className="d-flex justify-content-end gap-2 mt-3">
                         <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
                         <Button variant="primary" onClick={handleSave}>Save Policy</Button>
@@ -243,20 +246,17 @@ function GlobalLeaveQuota() {
     const [loading, setLoading] = useState(false);
 
     const handleRun = async () => {
-        if (!window.confirm("Are you sure? This will update quotas for ALL employees.")) return;
+        if (!window.confirm("This will update quotas for ALL employees. Continue?")) return;
         try {
             setLoading(true);
             const res = await api.post('/leave/quota/global', form);
             toast.success(res.data);
-        } catch (e) {
-            toast.error("Failed to update quotas");
-        } finally {
-            setLoading(false);
-        }
+        } catch (e) { toast.error("Update failed"); }
+        finally { setLoading(false); }
     };
 
     return (
-        <div style={{ maxWidth: 500 }}>
+        <div style={{ maxWidth: 500 }} className="py-2">
             <h5 className="mb-3">Bulk Update Leave Quotas</h5>
             <Form.Group className="mb-2">
                 <Form.Label>Target Year</Form.Label>
@@ -267,13 +267,7 @@ function GlobalLeaveQuota() {
                 <Col><Form.Group className="mb-2"><Form.Label>Casual</Form.Label><Form.Control type="number" value={form.casual} onChange={e => setForm({ ...form, casual: parseInt(e.target.value) })} /></Form.Group></Col>
                 <Col><Form.Group className="mb-2"><Form.Label>Sick</Form.Label><Form.Control type="number" value={form.sick} onChange={e => setForm({ ...form, sick: parseInt(e.target.value) })} /></Form.Group></Col>
             </Row>
-            <Form.Check
-                type="checkbox"
-                label="Overwrite existing quotas? (Check to reset everyone)"
-                className="mb-3 text-danger"
-                checked={form.overwrite}
-                onChange={e => setForm({ ...form, overwrite: e.target.checked })}
-            />
+            <Form.Check type="checkbox" label="Overwrite existing quotas?" className="mb-3 text-danger" checked={form.overwrite} onChange={e => setForm({ ...form, overwrite: e.target.checked })} />
             <Button variant="danger" onClick={handleRun} disabled={loading}>{loading ? "Updating..." : "Apply to All Employees"}</Button>
         </div>
     );
@@ -287,14 +281,10 @@ function AttendanceAudit() {
     const loadLogs = async () => {
         try {
             setLoading(true);
-            const url = empId ? `/attendance/logs?employeeId=${empId}` : '/attendance/logs';
-            const res = await api.get(url);
+            const res = await api.get(empId ? `/attendance/logs?employeeId=${empId}` : '/attendance/logs');
             setLogs(res.data || []);
-        } catch (e) {
-            toast.error("Failed to load logs");
-        } finally {
-            setLoading(false);
-        }
+        } catch (e) { toast.error("Failed to load logs"); }
+        finally { setLoading(false); }
     };
 
     useEffect(() => { loadLogs(); }, []);
@@ -302,20 +292,12 @@ function AttendanceAudit() {
     return (
         <div>
             <div className="d-flex gap-2 mb-3">
-                <Form.Control placeholder="Filter by Employee ID" value={empId} onChange={e => setEmpId(e.target.value)} style={{ maxWidth: 200 }} />
+                <Form.Control placeholder="Employee ID..." value={empId} onChange={e => setEmpId(e.target.value)} style={{ maxWidth: 200 }} />
                 <Button variant="outline-primary" onClick={loadLogs}>Filter</Button>
             </div>
             {loading && <Spinner size="sm" />}
             <Table size="sm" bordered hover responsive>
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Admin</th>
-                        <th>Employee</th>
-                        <th>Changes</th>
-                        <th>Reason</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Time</th><th>Admin</th><th>Employee</th><th>Changes</th><th>Reason</th></tr></thead>
                 <tbody>
                     {logs.map(l => (
                         <tr key={l.id}>
@@ -329,7 +311,6 @@ function AttendanceAudit() {
                             <td>{l.reason}</td>
                         </tr>
                     ))}
-                    {!loading && logs.length === 0 && <tr><td colSpan={5} className="text-center text-muted">No logs found</td></tr>}
                 </tbody>
             </Table>
         </div>
@@ -352,82 +333,36 @@ function NotificationSettings() {
         try {
             setLoading(true);
             const res = await api.get('/admin/config');
-            if (res.data) {
-                setConfig(prev => ({ ...prev, ...res.data }));
-            }
-        } catch (e) {
-            toast.error("Failed to load notifications");
-        } finally {
-            setLoading(false);
-        }
+            if (res.data) setConfig(prev => ({ ...prev, ...res.data }));
+        } catch (e) { toast.error("Load failed"); }
+        finally { setLoading(false); }
     };
 
     const handleSave = async () => {
         try {
             await api.post('/admin/config', config);
-            toast.success("Notification settings saved");
-        } catch (e) {
-            toast.error("Failed to save settings");
-        }
+            toast.success("Settings saved");
+        } catch (e) { toast.error("Save failed"); }
     };
 
-    const toggle = (key) => {
-        setConfig(prev => ({
-            ...prev,
-            [key]: prev[key] === "true" ? "false" : "true"
-        }));
-    };
+    const toggle = (key) => setConfig(prev => ({ ...prev, [key]: prev[key] === "true" ? "false" : "true" }));
 
     if (loading) return <Spinner size="sm" />;
 
     return (
-        <div style={{ maxWidth: 600 }}>
-            <h5 className="mb-3">HR Email Notifications</h5>
-
+        <div style={{ maxWidth: 600 }} className="py-2">
+            <h5 className="mb-3">HR Notifications</h5>
             <Form.Group className="mb-3">
-                <Form.Label>HR Contact Email (for alerts)</Form.Label>
-                <Form.Control
-                    value={config["app.notification.hr.email"]}
-                    onChange={e => setConfig({ ...config, "app.notification.hr.email": e.target.value })}
-                    placeholder="hr@maruka.com"
-                />
+                <Form.Label>Contact Email</Form.Label>
+                <Form.Control value={config["app.notification.hr.email"]} onChange={e => setConfig({ ...config, "app.notification.hr.email": e.target.value })} />
             </Form.Group>
-
             <Card className="mb-3 p-3 bg-light border-0">
-                <Form.Check
-                    type="switch"
-                    id="n-leave"
-                    label="Leave Status Updates"
-                    checked={config["app.notification.enable.hr.leave"] === "true"}
-                    onChange={() => toggle("app.notification.enable.hr.leave")}
-                    className="mb-2"
-                />
-                <Form.Check
-                    type="switch"
-                    id="n-advance"
-                    label="Advance Salary Updates"
-                    checked={config["app.notification.enable.hr.advance"] === "true"}
-                    onChange={() => toggle("app.notification.enable.hr.advance")}
-                    className="mb-2"
-                />
-                <Form.Check
-                    type="switch"
-                    id="n-payslip"
-                    label="Monthly Payslip Emails"
-                    checked={config["app.notification.enable.hr.payslip"] === "true"}
-                    onChange={() => toggle("app.notification.enable.hr.payslip")}
-                    className="mb-2"
-                />
-                <Form.Check
-                    type="switch"
-                    id="n-attendance"
-                    label="Late Attendance Alerts"
-                    checked={config["app.notification.enable.hr.attendance"] === "true"}
-                    onChange={() => toggle("app.notification.enable.hr.attendance")}
-                />
+                <Form.Check type="switch" label="Leave Updates" checked={config["app.notification.enable.hr.leave"] === "true"} onChange={() => toggle("app.notification.enable.hr.leave")} className="mb-2" />
+                <Form.Check type="switch" label="Advance Salary Updates" checked={config["app.notification.enable.hr.advance"] === "true"} onChange={() => toggle("app.notification.enable.hr.advance")} className="mb-2" />
+                <Form.Check type="switch" label="Payslip Emails" checked={config["app.notification.enable.hr.payslip"] === "true"} onChange={() => toggle("app.notification.enable.hr.payslip")} className="mb-2" />
+                <Form.Check type="switch" label="Late Attendance Alerts" checked={config["app.notification.enable.hr.attendance"] === "true"} onChange={() => toggle("app.notification.enable.hr.attendance")} />
             </Card>
-
-            <Button onClick={handleSave}>Save Settings</Button>
+            <Button onClick={handleSave}>Save Notification Config</Button>
         </div>
     );
 }
@@ -443,7 +378,7 @@ function TaxSettings() {
             setLoading(true);
             const res = await api.get('/payroll-config');
             setConfig(res.data || { taxBrackets: [] });
-        } catch (e) { toast.error("Failed to load tax config"); }
+        } catch (e) { toast.error("Load failed"); }
         finally { setLoading(false); }
     };
 
@@ -451,14 +386,7 @@ function TaxSettings() {
         try {
             await api.post('/payroll-config', config);
             toast.success("Tax settings saved");
-        } catch (e) { toast.error("Failed to save"); }
-    };
-
-    const addBracket = () => {
-        setConfig({
-            ...config,
-            taxBrackets: [...(config.taxBrackets || []), { limit: 0, rate: 0 }]
-        });
+        } catch (e) { toast.error("Save failed"); }
     };
 
     const updateBracket = (index, field, value) => {
@@ -467,65 +395,26 @@ function TaxSettings() {
         setConfig({ ...config, taxBrackets: newBrackets });
     };
 
-    const removeBracket = (index) => {
-        const newBrackets = config.taxBrackets.filter((_, i) => i !== index);
-        setConfig({ ...config, taxBrackets: newBrackets });
-    };
-
     return (
         <div style={{ maxWidth: 800 }}>
             <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5>PAYE / APIT Tax Brackets (Monthly)</h5>
-                <Button onClick={handleSave}>Save Configuration</Button>
+                <h5>Monthly Tax Brackets</h5>
+                <Button onClick={handleSave}>Save Config</Button>
             </div>
-
-            <div className="alert alert-info small">
-                Define the tax slabs based on monthly income. <br />
-                For the final slab (infinite), set Limit to <b>0</b>.<br />
-                <strong>Example:</strong> First 100,000 @ 0%, Next 100,000 @ 6%, Remainder @ 12%
-            </div>
-
             <Table size="sm" bordered striped>
-                <thead>
-                    <tr>
-                        <th style={{ width: '60px' }}>#</th>
-                        <th>Bracket Limit (LKR)</th>
-                        <th>Tax Rate (0.06 = 6%)</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>#</th><th>Limit (LKR)</th><th>Rate (e.g. 0.06)</th><th>Action</th></tr></thead>
                 <tbody>
                     {(config.taxBrackets || []).map((b, i) => (
                         <tr key={i}>
                             <td>{i + 1}</td>
-                            <td>
-                                <Form.Control
-                                    type="number"
-                                    value={b.limit}
-                                    onChange={e => updateBracket(i, 'limit', e.target.value)}
-                                    placeholder="0 for Unlimited"
-                                />
-                                {b.limit === 0 && <small className="text-muted">Unlimited</small>}
-                            </td>
-                            <td>
-                                <div className="input-group">
-                                    <Form.Control
-                                        type="number"
-                                        step="0.01"
-                                        value={b.rate}
-                                        onChange={e => updateBracket(i, 'rate', e.target.value)}
-                                    />
-                                    <span className="input-group-text">{(b.rate * 100).toFixed(1)}%</span>
-                                </div>
-                            </td>
-                            <td>
-                                <Button size="sm" variant="danger" onClick={() => removeBracket(i)}>Remove</Button>
-                            </td>
+                            <td><Form.Control type="number" value={b.limit} onChange={e => updateBracket(i, 'limit', e.target.value)} /></td>
+                            <td><Form.Control type="number" step="0.01" value={b.rate} onChange={e => updateBracket(i, 'rate', e.target.value)} /></td>
+                            <td><Button size="sm" variant="danger" onClick={() => setConfig({...config, taxBrackets: config.taxBrackets.filter((_, idx) => idx !== i)})}>Remove</Button></td>
                         </tr>
                     ))}
                 </tbody>
             </Table>
-            <Button size="sm" variant="outline-primary" onClick={addBracket}>+ Add Tax Bracket</Button>
+            <Button size="sm" variant="outline-primary" onClick={() => setConfig({...config, taxBrackets: [...(config.taxBrackets || []), {limit:0, rate:0}]})}>+ Add Bracket</Button>
         </div>
     );
 }
