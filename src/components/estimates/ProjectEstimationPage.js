@@ -39,6 +39,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [available, setAvailable] = useState([]); // [{productId, availableQty}]
     const [employees, setEmployees] = useState([]); // Restored
     const [loading, setLoading] = useState(false); // Global loading state
+    const [isRefDataLoaded, setIsRefDataLoaded] = useState(false); // NEW: Track ref data load
     const { employeeId } = useAuth(); // Get real employee ID from context
 
     /* ------------ quick indexes ------------ */
@@ -152,6 +153,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     const found = projs.find(p => p.id === propProjectId);
                     if (found) setProjectOpt({ value: found.id, label: found.projectName || found.id });
                 }
+                setIsRefDataLoaded(true);
             } catch (e) {
                 toast.error(e?.response?.data?.message || "Failed to load reference data");
             } finally {
@@ -164,6 +166,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     /* ------------ load estimation when project changes ------------ */
     useEffect(() => {
+        if (!isRefDataLoaded) return;
         const pid = projectOpt?.value;
         if (!pid) {
             setComponents(["Component A"]);
@@ -317,7 +320,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setLoading(false);
             }
         })();
-    }, [projectOpt, productById, availMap, globalSettings]);
+    }, [projectOpt?.value, isRefDataLoaded]);
 
     /* ------------ helpers ------------ */
     const buildProductLabel = (p) => {
