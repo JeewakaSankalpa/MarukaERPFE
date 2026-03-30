@@ -428,7 +428,7 @@ export default function WorkflowBuilder() {
             const savedFlow = await saveWorkflow(payload, workflowIdInput);
 
             setLocalFlow(savedFlow); // direct update
-            toast.success("Workflow Saved Successfully");
+            toast.success("Workflow updated successfully.");
 
             if (isNew) {
                 navigate(`/admin/workflow/${workflowIdInput}`, { replace: true });
@@ -439,7 +439,8 @@ export default function WorkflowBuilder() {
                 toast.error("Version Conflict. Please refresh and try again.");
             } else if (e.response && e.response.data) {
                 // Show backend validation error
-                toast.error(`Error: ${e.response.data}`);
+                const msg = e.response.data.message || e.response.data;
+                toast.error(`Error: ${msg}`);
             } else {
                 toast.error("Failed to save workflow.");
             }
