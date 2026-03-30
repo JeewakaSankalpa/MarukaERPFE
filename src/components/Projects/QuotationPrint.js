@@ -55,7 +55,8 @@ const QuotationPrint = () => {
             navigate(`/invoices/${res.data.id}`);
         } catch (error) {
             console.error(error);
-            toast.error("Failed to generate invoice");
+            const msg = error.response?.data?.message || error.response?.data || "Failed to generate invoice";
+            toast.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
         }
     };
 

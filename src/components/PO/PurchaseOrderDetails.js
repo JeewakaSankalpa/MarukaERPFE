@@ -313,11 +313,21 @@ export default function PurchaseOrderDetails() {
                                             <td className="text-end text-muted">{(po.deliveryCharge || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         </tr>
                                         <tr>
-                                            <td className="text-end text-muted">VAT:</td>
+                                            <td className="text-end text-muted">
+                                                VAT
+                                                {po.vatAmount > 0 && (po.subTotal + (po.deliveryCharge || 0)) > 0
+                                                    ? ` (${((po.vatAmount / ((po.subTotal || 0) + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
+                                                    : ''}:
+                                            </td>
                                             <td className="text-end text-muted">{(po.vatAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         </tr>
                                         <tr>
-                                            <td className="text-end text-muted">Other Tax:</td>
+                                            <td className="text-end text-muted">
+                                                Other Tax
+                                                {po.otherTaxAmount > 0 && (po.subTotal + (po.deliveryCharge || 0)) > 0
+                                                    ? ` (${((po.otherTaxAmount / ((po.subTotal || 0) + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
+                                                    : ''}:
+                                            </td>
                                             <td className="text-end text-muted">{(po.otherTaxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         </tr>
                                         {(!po.vatAmount && !po.otherTaxAmount && po.taxTotal > 0) && (
@@ -420,10 +430,14 @@ export default function PurchaseOrderDetails() {
                 </Modal.Footer>
             </Modal>
 
-            {/* Edit Totals Modal */}
             <Modal show={showFinancialsModal} onHide={() => setShowFinancialsModal(false)}>
                 <Modal.Header closeButton><Modal.Title>Edit Totals</Modal.Title></Modal.Header>
                 <Modal.Body>
+                    {/* Live preview of current subtotal */}
+                    <div className="alert alert-info py-2 mb-3 small">
+                        <strong>Subtotal (items):</strong> {(po.subTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+
                     <Form.Group className="mb-3">
                         <Form.Label>Delivery Charge</Form.Label>
                         <Form.Control
@@ -433,26 +447,54 @@ export default function PurchaseOrderDetails() {
                             placeholder="0.00"
                         />
                     </Form.Group>
-                    <Form.Group className="mb-3">
-                        <Form.Label>VAT Percent (%)</Form.Label>
-                        <Form.Control
-                            type="number" min="0" step="0.01"
-                            value={financialsForm.vatRate}
-                            onChange={e => setFinancialsForm(f => ({ ...f, vatRate: e.target.value }))}
-                            placeholder="e.g. 18"
-                        />
-                        <Form.Text className="text-muted">Calculated Amount: {(((po?.subTotal || 0) + (Number(financialsForm.deliveryCharge) || 0)) * ((Number(financialsForm.vatRate) || 0) / 100)).toFixed(2)}</Form.Text>
-                    </Form.Group>
-                    <Form.Group className="mb-3">
-                        <Form.Label>Other Tax Percent (%)</Form.Label>
-                        <Form.Control
-                            type="number" min="0" step="0.01"
-                            value={financialsForm.otherTaxRate}
-                            onChange={e => setFinancialsForm(f => ({ ...f, otherTaxRate: e.target.value }))}
-                            placeholder="e.g. 2.5"
-                        />
-                        <Form.Text className="text-muted">Calculated Amount: {(((po?.subTotal || 0) + (Number(financialsForm.deliveryCharge) || 0)) * ((Number(financialsForm.otherTaxRate) || 0) / 100)).toFixed(2)}</Form.Text>
-                    </Form.Group>
+
+                    {/* Taxable base used for % calculations */}
+                    {(() => {
+                        const taxableBase = (po.subTotal || 0) + (Number(financialsForm.deliveryCharge) || 0);
+                        const vatAmt = (taxableBase * ((Number(financialsForm.vatRate) || 0) / 100));
+                        const otherTaxAmt = (taxableBase * ((Number(financialsForm.otherTaxRate) || 0) / 100));
+                        const grandTotal = taxableBase + vatAmt + otherTaxAmt;
+                        return (
+                            <>
+                                <Form.Group className="mb-1">
+                                    <Form.Label>VAT (%)</Form.Label>
+                                    <Form.Control
+                                        type="number" min="0" step="0.01"
+                                        value={financialsForm.vatRate}
+                                        onChange={e => setFinancialsForm(f => ({ ...f, vatRate: e.target.value }))}
+                                        placeholder="e.g. 18"
+                                    />
+                                </Form.Group>
+                                {financialsForm.vatRate !== '' && Number(financialsForm.vatRate) > 0 && (
+                                    <div className="alert alert-success py-1 px-2 mb-3 small">
+                                        {financialsForm.vatRate}% of {taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })} = <strong>{vatAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                                    </div>
+                                )}
+
+                                <Form.Group className="mb-1">
+                                    <Form.Label>Other Tax (%)</Form.Label>
+                                    <Form.Control
+                                        type="number" min="0" step="0.01"
+                                        value={financialsForm.otherTaxRate}
+                                        onChange={e => setFinancialsForm(f => ({ ...f, otherTaxRate: e.target.value }))}
+                                        placeholder="e.g. 2.5"
+                                    />
+                                </Form.Group>
+                                {financialsForm.otherTaxRate !== '' && Number(financialsForm.otherTaxRate) > 0 && (
+                                    <div className="alert alert-success py-1 px-2 mb-3 small">
+                                        {financialsForm.otherTaxRate}% of {taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })} = <strong>{otherTaxAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                                    </div>
+                                )}
+
+                                <div className="border-top pt-2 mt-2">
+                                    <div className="d-flex justify-content-between fw-bold">
+                                        <span>Grand Total Preview:</span>
+                                        <span>{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    })()}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowFinancialsModal(false)}>Cancel</Button>

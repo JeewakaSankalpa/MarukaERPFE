@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select, Tag, Divider } from 'antd';
+import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select, Tag, Divider, DatePicker } from 'antd';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { DollarOutlined, BankOutlined, PlusOutlined, UploadOutlined, ArrowUpOutlined, ArrowDownOutlined, SwapOutlined, FileTextOutlined } from '@ant-design/icons';
@@ -139,7 +139,11 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         setPayLoading(true);
         const formData = new FormData();
         formData.append('amount', values.amount);
-        formData.append('paidAt', values.paidAt ? values.paidAt.format('YYYY-MM-DD') : new Date().toISOString());
+        const paidAtVal = values.paidAt;
+        const paidAtStr = paidAtVal
+            ? (typeof paidAtVal.format === 'function' ? paidAtVal.format('YYYY-MM-DD') : paidAtVal)
+            : new Date().toISOString().split('T')[0];
+        formData.append('paidAt', paidAtStr);
         formData.append('note', values.note || '');
         formData.append('file', payFileList[0].originFileObj || payFileList[0]);
 
@@ -162,7 +166,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
     const handleAddExpense = async (values) => {
         if (fileList.length === 0) {
-            toast.warn('Please upload a receipt or invoice');
+            toast.error('Receipt/Invoice is required. Please upload a file before submitting.');
             return;
         }
         setExpenseLoading(true);
@@ -420,7 +424,9 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                     <Form.Item name="description" label="Description">
                         <Input.TextArea rows={2} />
                     </Form.Item>
-                    <Form.Item label="Receipt/Invoice (Optional)">
+                    <Form.Item label="Receipt/Invoice" required tooltip="A receipt or invoice file must be attached to record an expense."
+                        validateStatus={fileList.length === 0 ? '' : 'success'}
+                    >
                         <Upload
                             beforeUpload={file => { setFileList([file]); return false; }}
                             onRemove={() => setFileList([])}
@@ -446,7 +452,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                         <InputNumber style={{ width: '100%' }} prefix={currency} min={0} />
                     </Form.Item>
                     <Form.Item name="paidAt" label="Payment Date" initialValue={dayjs()}>
-                        <Input type="date" />
+                        <DatePicker style={{ width: '100%' }} />
                     </Form.Item>
                     <Form.Item name="note" label="Reference (Check No, Bank Ref, etc.)">
                         <Input placeholder="e.g., Check #123456" />
