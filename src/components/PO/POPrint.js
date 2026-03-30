@@ -5,6 +5,7 @@ import { Button, Spinner, Table } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
+import signature from "../../assets/signature.png";
 
 const POPrint = () => {
     const { id } = useParams();
@@ -229,22 +230,48 @@ const POPrint = () => {
                 </div>
 
                 {/* Signatures */}
-                <div style={{ marginTop: "100px" }}>
-                    <div className="row align-items-end mb-5">
-                        <div className="col-2">Approved By</div>
-                        <div className="col-10" style={{ borderBottom: "2px solid #000" }}></div>
+                {(po.approvalStatus === "APPROVED" || po.approvalStatus === "FINALIZED") && (
+                    <div style={{ marginTop: "100px" }}>
+                        <div className="row align-items-end mb-4">
+                            <div className="col-2 pb-2">Approved By</div>
+                            <div className="col-10" style={{ borderBottom: "2px solid #000", position: "relative", minHeight: "60px" }}>
+                                <img 
+                                    src={signature} 
+                                    alt="Authorized Signature" 
+                                    style={{ 
+                                        height: "80px", 
+                                        position: "absolute", 
+                                        bottom: "-10px", 
+                                        left: "20px" 
+                                    }} 
+                                />
+                            </div>
+                        </div>
+                        <div className="row align-items-end">
+                            <div className="col-2 pb-2">Date</div>
+                            <div className="col-10" style={{ borderBottom: "2px solid #000", position: "relative", minHeight: "30px" }}>
+                                {(() => {
+                                    const lastApp = (po.approvals || []).filter(a => a.status === "APPROVED").pop();
+                                    return lastApp ? (
+                                        <span style={{ position: "absolute", bottom: "5px", left: "20px", fontSize: "1.1rem" }}>
+                                            {new Date(lastApp.timestamp).toLocaleDateString('en-GB')}
+                                        </span>
+                                    ) : null;
+                                })()}
+                            </div>
+                        </div>
                     </div>
-                    <div className="row align-items-end">
-                        <div className="col-2">Date</div>
-                        <div className="col-10" style={{ borderBottom: "2px solid #000" }}></div>
-                    </div>
-                </div>
+                )}
 
             </div>
 
             <style>
                 {`
                     @media print {
+                        @page {
+                            size: A4 portrait;
+                            margin: 10mm;
+                        }
                         body * {
                             visibility: hidden;
                         }
@@ -255,9 +282,19 @@ const POPrint = () => {
                             position: absolute;
                             left: 0;
                             top: 0;
-                            width: 100%;
+                            width: 100% !important;
+                            max-width: none !important;
+                            margin: 0 !important;
+                            padding: 5mm !important;
                         }
-                        .no-print { display: none !important; }
+                        body {
+                            background: #fff !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .no-print {
+                            display: none !important;
+                        }
                     }
                 `}
             </style>
