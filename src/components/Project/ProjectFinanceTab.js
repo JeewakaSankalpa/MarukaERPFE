@@ -1,5 +1,4 @@
 import dayjs from 'dayjs';
-import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select } from 'antd';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select, Tag, Divider } from 'antd';
 import { toast, ToastContainer } from 'react-toastify';
@@ -67,7 +66,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         } catch (e) {
             console.error("Failed to fetch project expenses", e);
         }
-    };
+    }, [projectId]);
 
     const fetchRequests = useCallback(async () => {
         try {
@@ -83,21 +82,21 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         } catch (e) { console.error("Failed to fetch inventory", e); }
     }, [projectId]);
 
-    const fetchPayments = async () => {
+    const fetchPayments = useCallback(async () => {
         try {
             const res = await api.get(`/project-accounts/${projectId}/payments`);
             setPayments(res.data || []);
         } catch (e) { console.error(e); }
-    };
+    }, [projectId]);
 
-    const fetchBankAccounts = async () => {
+    const fetchBankAccounts = useCallback(async () => {
         try {
             const res = await api.get('/finance/accounts');
             setBankAccounts(res.data.filter(a => a.type === 'ASSET'));
         } catch (e) {
             console.error("Failed to fetch accounts", e);
         }
-    };
+    }, []);
 
     useEffect(() => {
         if (projectId) {
@@ -105,8 +104,9 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             fetchRequests();
             fetchPayments();
             fetchExpenses();
+            fetchInventory();
         }
-    }, [projectId, fetchAccount, fetchRequests, fetchExpenses, fetchInventory]);
+    }, [projectId, fetchAccount, fetchRequests, fetchExpenses, fetchInventory, fetchPayments]);
 
     // --- Derived totals ---
     const totalPettyCashExpenses = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
