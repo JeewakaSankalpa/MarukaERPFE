@@ -3,38 +3,50 @@ import { Table, Button, Badge, Modal, Form, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 
-export default function ProjectRevisions({ projectId, versions, stages, currentStageType, roleHeader, onRevise, onViewSnapshot }) {
+export default function ProjectRevisions({ projectId, versions, stages, workflowStages, currentStageType, roleHeader, onRevise, onViewSnapshot }) {
     const [showReviseModal, setShowReviseModal] = useState(false);
     const [reason, setReason] = useState('');
 
-    // Calculate unique past stages for the dropdown
-    const uniquePastStages = React.useMemo(() => {
-        if (!stages || !Array.isArray(stages)) return [];
+    // Fetch all available stages from the workflow, fallback to past stages if workflow not provided
+    const availableStages = React.useMemo(() => {
         const seen = new Set();
-        const past = [];
+        const available = [];
 
-        // Iterate through history
-        stages.forEach(s => {
-            // Exclude current stage type
-            if (s.stageType && s.stageType !== currentStageType) {
-                if (!seen.has(s.stageType)) {
-                    seen.add(s.stageType);
-                    past.push(s.stageType);
+        // If we have the exact workflow structure, use IT linearly
+        if (workflowStages && Array.isArray(workflowStages)) {
+            workflowStages.forEach(s => {
+                const type = typeof s === 'string' ? s : s.stageType;
+                if (type && type !== currentStageType && !seen.has(type)) {
+                    seen.add(type);
+                    available.push(type);
                 }
-            }
-        });
-        return past;
-    }, [stages, currentStageType]);
+            });
+            if (available.length > 0) return available;
+        }
+
+        // Fallback: Iterate through history instead
+        if (stages && Array.isArray(stages)) {
+            stages.forEach(s => {
+                if (s.stageType && s.stageType !== currentStageType) {
+                    if (!seen.has(s.stageType)) {
+                        seen.add(s.stageType);
+                        available.push(s.stageType);
+                    }
+                }
+            });
+        }
+        return available;
+    }, [stages, workflowStages, currentStageType]);
 
     // Default target to the first available past stage, or keep existing logic
-    const [targetStage, setTargetStage] = useState(uniquePastStages.length > 0 ? uniquePastStages[0] : '');
+    const [targetStage, setTargetStage] = useState(availableStages.length > 0 ? availableStages[0] : '');
 
     // Update targetStage when options change/modal opens
     React.useEffect(() => {
-        if (uniquePastStages.length > 0 && !targetStage) {
-            setTargetStage(uniquePastStages[0]);
+        if (availableStages.length > 0 && !targetStage) {
+            setTargetStage(availableStages[0]);
         }
-    }, [uniquePastStages, targetStage]);
+    }, [availableStages, targetStage]);
 
     const [submitting, setSubmitting] = useState(false);
 
@@ -151,8 +163,8 @@ export default function ProjectRevisions({ projectId, versions, stages, currentS
                     <Form.Group className="mb-3">
                         <Form.Label>Move Back To</Form.Label>
                         <Form.Select value={targetStage} onChange={e => setTargetStage(e.target.value)}>
-                            {uniquePastStages.length === 0 && <option value="">No past stages available</option>}
-                            {uniquePastStages.map(s => (
+                            {availableStages.length === 0 && <option value="">No past stages available</option>}
+                            {availableStages.map(s => (
                                 <option key={s} value={s}>{s}</option>
                             ))}
                         </Form.Select>

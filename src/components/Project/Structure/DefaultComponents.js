@@ -140,6 +140,7 @@ export const registerDefaultComponents = () => {
                 projectId={props.id}
                 versions={props.project?.versions}
                 stages={props.project?.stages}
+                workflowStages={props.project?.workflowSnapshot?.stages}
                 currentStageType={props.stageObj?.stageType}
                 roleHeader={props.roleHeader}
                 onRevise={props.refresh}
@@ -187,6 +188,8 @@ export const registerDefaultComponents = () => {
                 currentWorkflow={props.project?.workflowSnapshot}
                 currentStageId={props.project?.currentStageId}
                 onUpdate={props.refresh}
+                project={props.project}
+                setProcessingMessage={props.setProcessingMessage}
             />
         )
     });

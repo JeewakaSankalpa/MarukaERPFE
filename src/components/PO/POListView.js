@@ -60,7 +60,7 @@ export default function POListView({ onOpenGRN }) {
         } finally {
             setSending(false);
         }
-    }
+    };
 
     const openEta = (id) => { setEtaFor(id); setEtaDate(""); };
     const saveEta = async () => { await setEta(etaFor, etaDate); setEtaFor(null); toast.success("ETA updated"); load(); };
@@ -113,56 +113,59 @@ export default function POListView({ onOpenGRN }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {(data.content || []).map(po => (
-                            <tr key={po.id}>
-                                <td>{po.poNumber}</td>
-                                <td>{po.supplierNameSnapshot || po.supplierName}</td>
-                                <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
-                                </td>
-                                <td>
-                                    <Badge bg={
-                                        po.status === "FULLY_RECEIVED" ? "success" :
-                                            po.status === "PARTIALLY_RECEIVED" ? "info" :
-                                                po.status === "SENT_TO_SUPPLIER" ? "primary" : "secondary"
-                                    }>{po.status}</Badge>
-                                </td>
-                                <td>{approvalBadge(po.approvalStatus)}</td>
-                                <td className="text-end">
-                                    {po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                                </td>
-                                <td>{po.etaDate || "-"}</td>
-                                <td className="d-flex gap-1">
-                                    <Button size="sm" variant="info" onClick={() => navigate(`/pos/${po.id}`)}>View</Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline-primary"
-                                        onClick={() => openSendModal(po)}
-                                        disabled={po.approvalStatus !== 'APPROVED'}
-                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
-                                    >
-                                        Mark Sent
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline-secondary"
-                                        onClick={() => openEta(po.id)}
-                                        disabled={po.approvalStatus !== 'APPROVED'}
-                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
-                                    >
-                                        Set ETA
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => onOpenGRN?.(po.id)}
-                                        disabled={po.approvalStatus !== 'APPROVED' || po.status === 'FULLY_RECEIVED'}
-                                        title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : po.status === 'FULLY_RECEIVED' ? "Already fully received" : ""}
-                                    >
-                                        Receive (GRN)
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))}
+                        {(data.content || []).map(po => {
+                            return (
+                                <tr key={po.id}>
+                                    <td>{po.poNumber}</td>
+                                    <td>{po.supplierNameSnapshot || po.supplierName}</td>
+                                    <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
+                                    </td>
+                                    <td>
+                                        <Badge bg={
+                                            po.status === "FULLY_RECEIVED" ? "success" :
+                                                po.status === "PARTIALLY_RECEIVED" ? "info" :
+                                                    po.status === "SENT_TO_SUPPLIER" ? "primary" :
+                                                        po.status === "CANCELLED" ? "danger" : "secondary"
+                                        }>{po.status}</Badge>
+                                    </td>
+                                    <td>{approvalBadge(po.approvalStatus)}</td>
+                                    <td className="text-end">
+                                        {po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                    </td>
+                                    <td>{po.etaDate || "-"}</td>
+                                    <td className="d-flex gap-1 flex-wrap">
+                                        <Button size="sm" variant="info" onClick={() => navigate(`/pos/${po.id}`)}>View</Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline-primary"
+                                            onClick={() => openSendModal(po)}
+                                            disabled={po.approvalStatus !== 'APPROVED'}
+                                            title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                        >
+                                            Mark Sent
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline-secondary"
+                                            onClick={() => openEta(po.id)}
+                                            disabled={po.approvalStatus !== 'APPROVED'}
+                                            title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                        >
+                                            Set ETA
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => onOpenGRN?.(po.id)}
+                                            disabled={po.approvalStatus !== 'APPROVED' || po.status === 'FULLY_RECEIVED'}
+                                            title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : po.status === 'FULLY_RECEIVED' ? "Already fully received" : ""}
+                                        >
+                                            Receive (GRN)
+                                        </Button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </Table>
 
@@ -175,6 +178,7 @@ export default function POListView({ onOpenGRN }) {
                 </div>
             </div>
 
+            {/* ETA Modal */}
             <Modal show={!!etaFor} onHide={() => setEtaFor(null)}>
                 <Modal.Header closeButton><Modal.Title>Set ETA</Modal.Title></Modal.Header>
                 <Modal.Body>

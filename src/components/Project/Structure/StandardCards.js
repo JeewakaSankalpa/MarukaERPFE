@@ -56,46 +56,47 @@ export const OverviewCard = ({ id, project, stageObj, viewVersion, navigate, ope
     );
 };
 
-export const StatusCard = ({ id, project, stageObj, effectiveActions, viewVersion, comment, setComment }) => {
+export const StatusCard = ({ id, project, stageObj, effectiveActions }) => {
 
     return (
-        <Card className="h-100">
-            <Card.Header>Current Status & Actions</Card.Header>
+        <Card className="h-100 border-0 shadow-sm">
+            <Card.Header className="bg-white fw-bold">Current Status & Actions</Card.Header>
             <Card.Body style={{ overflowY: 'auto' }}>
-                <div className="mb-2">
-                    <strong>Stage:</strong> {stageObj?.stageType || '-'}
+                <div className="mb-3">
+                    <strong>Current Stage:</strong> <Badge bg="primary">{stageObj?.stageType || '-'}</Badge>
                 </div>
 
                 {effectiveActions ? (
                     <>
                         {effectiveActions?.missingFiles && effectiveActions.missingFiles.length > 0 ? (
-                            <div className="alert alert-warning py-2">
-                                <div className="fw-semibold mb-1">Required files missing for this stage:</div>
-                                <ul className="mb-0">
+                            <div className="alert alert-warning py-2 mb-3">
+                                <div className="fw-semibold mb-1">Required files missing:</div>
+                                <ul className="mb-0 px-3">
                                     {effectiveActions.missingFiles.map((m) => <li key={m}>{m}</li>)}
                                 </ul>
                             </div>
                         ) : (
-                            <div className="small text-success mb-2">All required files are present ✅</div>
+                            <div className="small text-success mb-3 fw-bold">
+                                All required files are present ✅
+                            </div>
                         )}
 
-                        <Form.Group className="mb-2">
-                            <Form.Label className="small">Approval comment</Form.Label>
-                            <Form.Control
-                                size="sm"
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                placeholder="Optional"
-                                disabled={!id || !project || !!viewVersion}
-                            />
-                        </Form.Group>
-
-                        <div className="text-muted small mb-2">
-                            <em>Use the Action Bar above to Approve, Reject, or Move stage.</em>
-                        </div>
+                        {effectiveActions.canApprove ? (
+                            <div className="alert alert-info py-2 mt-2">
+                                <strong>Approval Required:</strong> Please review the details and submit your approval in the Action Bar above.
+                            </div>
+                        ) : (effectiveActions.canMove && effectiveActions.canMove.length > 0) ? (
+                            <div className="alert alert-success py-2 mt-2">
+                                <strong>Ready for Next Stage!</strong> All requirements have been met. Use the Action Bar above to move the project forward.
+                            </div>
+                        ) : (
+                            <div className="alert alert-secondary py-2 mt-2 text-dark">
+                                <strong>Pending State:</strong> Waiting for other required approvals or missing tasks before you can proceed.
+                            </div>
+                        )}
                     </>
                 ) : (
-                    <div className="text-muted">
+                    <div className="text-muted small">
                         Actions are not loaded yet or unavailable.
                     </div>
                 )}

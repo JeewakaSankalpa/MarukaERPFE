@@ -27,6 +27,7 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
     // Add Payment State
     const [showPay, setShowPay] = useState(false);
     const [payData, setPayData] = useState({ amount: '', date: new Date().toISOString().substring(0, 10), reference: '' });
+    const [submitting, setSubmitting] = useState(false);
 
     const loadPayments = async () => {
         if (!projectId) return;
@@ -55,15 +56,16 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
     };
 
     const handleAddPayment = async () => {
-        if (!payData.amount || !payData.date) {
-            toast.warn("Amount and Date are required");
+        if (!payData.amount || !payData.date || !payData.reference?.trim()) {
+            toast.warn("Amount, Date, and Reference are all required");
             return;
         }
         try {
+            setSubmitting(true);
             await api.post(`/projects/${projectId}/payments`, {
                 amount: parseFloat(payData.amount),
                 date: payData.date,
-                reference: payData.reference
+                reference: payData.reference.trim()
             });
             toast.success("Payment added");
             setShowPay(false);
@@ -72,6 +74,8 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
             onRefresh?.();
         } catch (e) {
             toast.error("Failed to add payment");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -92,7 +96,7 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
                         <div className="text-muted small">Total Project Value</div>
                         <div className="d-flex align-items-center mb-4">
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h4 className="mb-0 mb-0 mb-0 text-primary">{currency} {project?.totalProjectValue?.toLocaleString() || '0.00'}</h4>
+                <h4 className="mb-0 text-primary">{currency} {project?.totalProjectValue?.toLocaleString() || '0.00'}</h4>
                         </div>
 </Col>
                     <Col>
@@ -146,26 +150,26 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
             </Modal>
 
             {/* Add Payment Modal */}
-            <Modal show={showPay} onHide={() => setShowPay(false)} centered>
-                <Modal.Header closeButton><Modal.Title>Add Payment</Modal.Title></Modal.Header>
+            <Modal show={showPay} onHide={() => { if (!submitting) setShowPay(false); }} centered>
+                <Modal.Header closeButton={!submitting}><Modal.Title>Add Payment</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <Form.Group className="mb-3">
-                        <Form.Label>Date</Form.Label>
-                        <Form.Control type="date" value={payData.date} onChange={e => setPayData({ ...payData, date: e.target.value })} />
+                        <Form.Label>Date <span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="date" value={payData.date} onChange={e => setPayData({ ...payData, date: e.target.value })} disabled={submitting} required />
                     </Form.Group>
                     <Form.Group className="mb-3">
-                        <Form.Label>Amount</Form.Label>
-                        <Form.Control type="number" value={payData.amount} onChange={e => setPayData({ ...payData, amount: e.target.value })} />
+                        <Form.Label>Amount <span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="number" value={payData.amount} onChange={e => setPayData({ ...payData, amount: e.target.value })} disabled={submitting} required />
                     </Form.Group>
                     <Form.Group className="mb-3">
-                        <Form.Label>Reference</Form.Label>
-                        <Form.Control type="text" placeholder="Check No, Bank Ref, etc." value={payData.reference} onChange={e => setPayData({ ...payData, reference: e.target.value })} />
+                        <Form.Label>Reference <span className="text-danger">*</span></Form.Label>
+                        <Form.Control type="text" placeholder="Check No, Bank Ref, etc." value={payData.reference} onChange={e => setPayData({ ...payData, reference: e.target.value })} disabled={submitting} required />
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowPay(false)}>Cancel</Button>
-                    <Button variant="success" onClick={handleAddPayment} disabled={loading}>
-                        {loading ? 'Adding...' : 'Add Payment'}
+                    <Button variant="secondary" onClick={() => setShowPay(false)} disabled={submitting}>Cancel</Button>
+                    <Button variant="success" onClick={handleAddPayment} disabled={submitting}>
+                        {submitting ? 'Adding...' : 'Add Payment'}
                     </Button>
                 </Modal.Footer>
             </Modal>

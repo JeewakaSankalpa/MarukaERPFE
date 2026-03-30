@@ -26,6 +26,7 @@ export default function ProjectInventoryCard({ projectId }) {
     const [selectedReturnSerials, setSelectedReturnSerials] = useState({}); // { batchId: Set(serials) }
 
     const [submitting, setSubmitting] = useState(false);
+    const [acceptingId, setAcceptingId] = useState(null); // track which transfer is being accepted
 
     const [pendingTransfers, setPendingTransfers] = useState([]);
 
@@ -74,12 +75,16 @@ export default function ProjectInventoryCard({ projectId }) {
     };
 
     const handleAcceptTransfer = async (id) => {
+        if (acceptingId) return; // already processing one
+        setAcceptingId(id);
         try {
             await api.patch(`/transfers/${id}/accept`);
             toast.success("Transfer accepted");
             load();
         } catch (e) {
             toast.error("Failed to accept transfer");
+        } finally {
+            setAcceptingId(null);
         }
     };
 
@@ -318,6 +323,41 @@ export default function ProjectInventoryCard({ projectId }) {
         }
     };
 
+    const handleCancelRow = async () => {
+        if (!cancelData.productId) return;
+        setSubmitting(true);
+        try {
+            await api.patch(`/inventory/project/${projectId}/cancel?productId=${encodeURIComponent(cancelData.productId)}`, {
+                reason: cancelData.reason
+            });
+            toast.success("Order cancelled successfully");
+            setShowCancelModal(false);
+            setCancelData({ productId: '', productName: '', reason: '' });
+            load();
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to cancel order");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleRowReturnClick = (item) => {
+        // Pre-fill the return modal with the clicked product
+        handleSelectReturnProduct(item.productId);
+        setShowReturn(true);
+    };
+
+    // State for Cancel Modal
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelData, setCancelData] = useState({ productId: '', productName: '', reason: '' });
+
+    const getReceiptStatusBadge = (status) => {
+        if (status === 'CANCELED') return <span className="badge bg-danger">CANCELED</span>;
+        if (status === 'FULLY_RECEIVED') return <span className="badge bg-success">Fully Received</span>;
+        if (status === 'PARTIALLY_RECEIVED') return <span className="badge bg-warning text-dark">Partially Received</span>;
+        return <span className="badge bg-secondary">Not Received</span>;
+    };
+
     return (
         <Card className="h-100 mt-3">
             <Card.Header className="d-flex justify-content-between align-items-center">
@@ -325,9 +365,6 @@ export default function ProjectInventoryCard({ projectId }) {
                 <div className="d-flex gap-2">
                     <Button size="sm" variant="outline-primary" onClick={() => window.location.href = `#/item/requests?projectId=${projectId}`} disabled={!projectId}>
                         Request Item
-                    </Button>
-                    <Button size="sm" variant="outline-danger" onClick={() => setShowReturn(true)} disabled={!projectId}>
-                        Return Items
                     </Button>
                     <Button size="sm" variant="primary" onClick={() => setShowConsume(true)} disabled={!projectId}>
                         Consume Items
@@ -346,26 +383,94 @@ export default function ProjectInventoryCard({ projectId }) {
                                 <th className="text-end">Received</th>
                                 <th className="text-end">Consumed</th>
                                 <th className="text-end">On Hand</th>
-                                <th className="text-center">QR</th>
+                                <th className="text-center">Order Status</th>
+                                <th className="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {inventory.map(i => (
-                                <tr key={i.productId}>
-                                    <td>{i.productName}</td>
-                                    <td className="text-end">{i.requestedQty}</td>
-                                    <td className="text-end">{i.receivedQty}</td>
-                                    <td className="text-end">{i.consumedQty}</td>
-                                    <td className="text-end fw-bold">{i.onHandQty}</td>
-                                    <td className="text-center">
-                                        <Button size="sm" variant="light" onClick={() => handleViewBatches(i)}>
-                                            <i className="bi bi-qr-code"></i> View
-                                        </Button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {inventory.map(i => {
+                                const isCancelled = i.isCancelled;
+                                const canCancel = !isCancelled && i.orderStatus === 'NOT_RECEIVED';
+                                const canReturn = !isCancelled && (i.orderStatus === 'FULLY_RECEIVED' || i.orderStatus === 'PARTIALLY_RECEIVED');
+
+                                return (
+                                    <tr key={i.productId} style={isCancelled ? { opacity: 0.65, background: '#f8f9fa' } : {}}>
+                                        <td>
+                                            {i.productName}
+                                            {isCancelled && <span className="badge bg-danger ms-2" style={{ fontSize: '0.7rem' }}>CANCELED</span>}
+                                        </td>
+                                        <td className="text-end">{i.requestedQty}</td>
+                                        <td className="text-end">{i.receivedQty}</td>
+                                        <td className="text-end">{i.consumedQty}</td>
+                                        <td className="text-end fw-bold">{i.onHandQty}</td>
+                                        <td className="text-center">
+                                            {getReceiptStatusBadge(i.orderStatus)}
+                                        </td>
+                                        <td className="text-center d-flex gap-1 justify-content-center flex-wrap">
+                                            <Button size="sm" variant="light" onClick={() => handleViewBatches(i)} title="View QR & Batches">
+                                                <i className="bi bi-qr-code"></i> View
+                                            </Button>
+
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline-danger" 
+                                                title={isCancelled ? "Already Canceled" : "Cancel Order"} 
+                                                disabled={isCancelled || i.orderStatus !== 'NOT_RECEIVED'}
+                                                style={{ display: (isCancelled || i.orderStatus === 'NOT_RECEIVED') ? 'inline-block' : 'none' }}
+                                                onClick={() => {
+                                                    setCancelData({ productId: i.productId, productName: i.productName, reason: '' });
+                                                    setShowCancelModal(true);
+                                                }}>
+                                                Cancel
+                                            </Button>
+
+                                            {canReturn && (
+                                                <Button size="sm" variant="outline-warning" title="Return" onClick={() => handleRowReturnClick(i)}>
+                                                    Return
+                                                </Button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </Table>
+                )}
+
+                {/* Cancel Modal */}
+                {showCancelModal && (
+                    <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
+                        <div className="modal-dialog">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title text-danger">Cancel Order: {cancelData.productName}</h5>
+                                    <button type="button" className="btn-close" onClick={() => setShowCancelModal(false)}></button>
+                                </div>
+                                <div className="modal-body">
+                                    <p className="text-muted">
+                                        This order has not been received yet. Canceling it will mark the request lines as <strong>CANCELED</strong>, 
+                                        but they will remain in the system for audit tracking.
+                                    </p>
+                                    <div className="mb-3">
+                                        <label className="form-label">Reason (Optional)</label>
+                                        <textarea
+                                            className="form-control"
+                                            rows="3"
+                                            value={cancelData.reason}
+                                            onChange={(e) => setCancelData({ ...cancelData, reason: e.target.value })}
+                                            placeholder="Why are you canceling this order?"
+                                        ></textarea>
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowCancelModal(false)}>Go Back</button>
+                                    <button type="button" className="btn btn-danger" onClick={handleCancelRow} disabled={submitting}>
+                                        {submitting ? 'Canceling...' : 'Confirm Cancellation'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* Batch/QR Modal */}
@@ -459,7 +564,17 @@ export default function ProjectInventoryCard({ projectId }) {
                                         })}
                                     </td>
                                     <td>
-                                        <Button size="sm" variant="success" className="me-1" onClick={() => handleAcceptTransfer(t.id)}>Accept</Button>
+                                        <Button
+                                            size="sm"
+                                            variant="success"
+                                            className="me-1"
+                                            disabled={acceptingId === t.id}
+                                            onClick={() => handleAcceptTransfer(t.id)}
+                                        >
+                                            {acceptingId === t.id ? (
+                                                <><Spinner animation="border" size="sm" className="me-1" />Accepting...</>
+                                            ) : 'Accept'}
+                                        </Button>
                                         <Button size="sm" variant="danger" onClick={() => handleRejectTransfer(t.id)}>Reject</Button>
                                     </td>
                                 </tr>

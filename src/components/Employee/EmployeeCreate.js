@@ -215,8 +215,26 @@ function EmployeeCreate({ mode }) {
 
     } catch (error) {
       console.error(error);
-      const errorMessage = error.response?.data || error.message || "Operation failed";
-      toast.error(typeof errorMessage === 'string' ? errorMessage : "Operation failed");
+      
+      let errorMessage = "Operation failed";
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+            errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+      } else if (error.message) {
+          errorMessage = error.message;
+      }
+      
+      // If it's a MongoDB duplicate key error, intercept it directly for user-friendliness
+      if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes("duplicate key") && errorMessage.toLowerCase().includes("username")) {
+          errorMessage = "This username is already taken. Please choose another username.";
+      }
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
