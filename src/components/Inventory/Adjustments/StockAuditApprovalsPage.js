@@ -9,13 +9,9 @@ import {
     Button,
     Accordion,
     Badge,
-    Alert,
     Spinner,
-    Modal,
-    Row,
-    Col
+    Modal
 } from 'react-bootstrap';
-import { FaChevronDown } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -34,7 +30,7 @@ const StockAuditApprovalsPage = () => {
         try {
             setLoading(true);
             const response = await api.get('/inventory/adjustments/audit');
-            const sorted = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const sorted = (response.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             setAudits(sorted);
         } catch (err) {
             console.error("Error fetching audits:", err);
@@ -49,16 +45,14 @@ const StockAuditApprovalsPage = () => {
 
         setApproving(true);
         try {
-            const user = "Manager"; // Replace with actual logged in user if auth is available
-            await api.post(`/inventory/adjustments/audit/${approveDialog.id}/approve`, null, {
-                params: { approver: user }
-            });
+            // Backend handles approver via Principal (JWT)
+            await api.post(`/inventory/adjustments/audit/${approveDialog.id}/approve`);
             toast.success("Audit approved and stock updated successfully.");
             setApproveDialog(null);
             fetchAudits(); // Refresh list
         } catch (err) {
             console.error("Error approving audit:", err);
-            toast.error("Failed to approve audit.");
+            toast.error(err.response?.data || "Failed to approve audit.");
         } finally {
             setApproving(false);
         }
@@ -71,10 +65,11 @@ const StockAuditApprovalsPage = () => {
             <div className="d-flex align-items-center mb-4">
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h3 className="mb-0">Stock Audit Approvals</h3>
-                        </div>
-{audits.length === 0 ? (
-                <Card className="text-center p-5 text-muted">
-                    <h5>No stock audits found.</h5>
+            </div>
+
+            {audits.length === 0 ? (
+                <Card className="text-center p-5 text-muted shadow-sm">
+                    <h5>No pending stock audits found.</h5>
                 </Card>
             ) : (
                 <Accordion defaultActiveKey="0">
@@ -83,9 +78,9 @@ const StockAuditApprovalsPage = () => {
                             <Accordion.Header>
                                 <div className="d-flex justify-content-between align-items-center w-100 pe-3">
                                     <div>
-                                        <span className="fw-bold me-2">{audit.title || 'Untitled Audit'}</span>
+                                        <span className="fw-bold me-2">{audit.title || 'Stock Adjustment Audit'}</span>
                                         <span className="text-secondary small">
-                                            Submitted on {new Date(audit.createdAt).toLocaleString()} by {audit.createdBy || 'Unknown'}
+                                            Submitted {new Date(audit.createdAt).toLocaleString()} by {audit.createdBy || 'System'}
                                         </span>
                                     </div>
                                     <Badge
@@ -95,17 +90,10 @@ const StockAuditApprovalsPage = () => {
                                         {audit.status}
                                     </Badge>
                                 </div>
-                                <div className="text-secondary small mt-1">
-                                    {audit.approverIds && audit.approverIds.length > 0 ? (
-                                        <span>Assigned to: <strong>{audit.approverIds.join(', ')}</strong></span>
-                                    ) : (
-                                        <span>No specific approver assigned</span>
-                                    )}
-                                </div>
                             </Accordion.Header>
                             <Accordion.Body>
-                                <Table size="sm" responsive>
-                                    <thead>
+                                <Table size="sm" responsive hover bordered>
+                                    <thead className="table-light">
                                         <tr>
                                             <th>Product</th>
                                             <th>Batch</th>
@@ -115,9 +103,9 @@ const StockAuditApprovalsPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {audit.items.map((item, idxx) => (
+                                        {audit.items?.map((item, idxx) => (
                                             <tr key={idxx}>
-                                                <td>{item.productName}</td>
+                                                <td>{item.productName || 'Unknown Product'}</td>
                                                 <td>{item.batchNo}</td>
                                                 <td className="text-end">{item.oldQuantity}</td>
                                                 <td className="text-end fw-bold">{item.newQuantity}</td>
@@ -132,7 +120,7 @@ const StockAuditApprovalsPage = () => {
                                 {audit.status === 'PENDING_APPROVAL' && (
                                     <div className="d-flex justify-content-end gap-2 mt-3">
                                         <Button variant="outline-danger">Reject</Button>
-                                        <Button variant="primary" onClick={() => setApproveDialog(audit)}>Approve</Button>
+                                        <Button variant="primary" onClick={() => setApproveDialog(audit)}>Approve & Apply</Button>
                                     </div>
                                 )}
 
@@ -147,17 +135,18 @@ const StockAuditApprovalsPage = () => {
                 </Accordion>
             )}
 
-            <Modal show={!!approveDialog} onHide={() => setApproveDialog(null)}>
+            <Modal show={!!approveDialog} onHide={() => setApproveDialog(null)} centered>
                 <Modal.Header closeButton>
-                    <Modal.Title>Confirm Approval</Modal.Title>
+                    <Modal.Title>Confirm Audit Approval</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    Are you sure you want to approve this stock audit? This will permanently update the stock levels for all items in this audit.
+                    Are you sure you want to approve this stock audit? 
+                    This will immediately update current stock levels in the system.
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setApproveDialog(null)}>Cancel</Button>
                     <Button variant="primary" onClick={handleApprove} disabled={approving}>
-                        {approving ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Confirm Approve'}
+                        {approving ? <Spinner as="span" animation="border" size="sm" /> : 'Confirm Approve'}
                     </Button>
                 </Modal.Footer>
             </Modal>

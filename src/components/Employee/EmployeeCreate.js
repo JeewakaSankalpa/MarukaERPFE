@@ -40,7 +40,8 @@ function EmployeeCreate({ mode }) {
   const [departments, setDepartments] = useState([]);
   const [managers, setManagers] = useState([]);
   const [projectWorkflowRoles, setProjectWorkflowRoles] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(true); // NEW: Track loading state specifically
+  const [systemRoles, setSystemRoles] = useState([]); // NEW: For dynamic roles
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [schedulePolicies, setSchedulePolicies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [autoPassword, setAutoPassword] = useState("");
@@ -58,7 +59,7 @@ function EmployeeCreate({ mode }) {
     const fetchDropdowns = async () => {
       try {
         const deptRes = await api.get("/departments");
-        setDepartments(deptRes.data?.content || []);
+        setDepartments(deptRes.data?.content || deptRes.data || []);
 
         const empRes = await api.get("/employee/all");
         const allEmps = empRes.data || [];
@@ -71,20 +72,27 @@ function EmployeeCreate({ mode }) {
           setSchedulePolicies(polRes.data || []);
         } catch (e) { console.error("Failed to load policies"); }
 
-        // Fetch Workflow Roles - FIXED ENDPOINT
+        // Fetch System Roles (NEW)
         try {
-          console.log("Fetching project workflow roles...");
+          const roleRes = await api.get("/roles");
+          setSystemRoles(roleRes.data || ["EMPLOYEE", "MANAGER", "HR", "ADMIN"]);
+        } catch (e) {
+          console.error("Failed to load system roles", e);
+          setSystemRoles(["EMPLOYEE", "MANAGER", "HR", "ADMIN"]);
+        }
+
+        // Fetch Workflow Roles
+        try {
           const wfRes = await api.get("/projects/workflow/roles");
-          console.log("Workflow roles response:", wfRes.data);
           setProjectWorkflowRoles(wfRes.data || []);
         } catch (e) {
-          console.error("Failed to fetch roles", e);
+          console.error("Failed to fetch workflow roles", e);
         } finally {
           setRolesLoading(false);
         }
       } catch (error) {
         console.error("Failed to fetch dropdown data", error);
-        toast.error("Failed to load dropdown data.");
+        toast.error("Failed to load organizational data.");
         setRolesLoading(false);
       }
     };
@@ -97,7 +105,6 @@ function EmployeeCreate({ mode }) {
         const rules = res.data || [];
         setNotificationRules(rules);
 
-        // Pre-fill subscriptions if in edit mode
         if (id) {
           const subscribed = rules
             .filter(r => r.targetEmployeeIds && r.targetEmployeeIds.includes(id))
@@ -107,7 +114,7 @@ function EmployeeCreate({ mode }) {
       } catch (e) { console.error("Failed to load generic rules"); }
     };
     fetchRules();
-  }, []);
+  }, [id]);
 
   // Fetch Data if Edit
   useEffect(() => {
@@ -117,7 +124,6 @@ function EmployeeCreate({ mode }) {
           const res = await api.get(`/employee/${id}`);
           if (res.data) {
             const d = res.data;
-            // Flat map for form
             setFormData({
               firstName: d.firstName || "",
               lastName: d.lastName || "",
@@ -129,7 +135,7 @@ function EmployeeCreate({ mode }) {
               moduleAccess: d.moduleAccess || [],
               projectRoles: d.projectRoles || [],
               userName: d.username || "",
-              password: "", // Don't show password on edit
+              password: "", 
               departmentId: d.departmentId || d.Department?.id || "",
               reportsToEmployeeId: d.reportsToEmployeeId || "",
               designation: d.designation || "",
@@ -148,7 +154,6 @@ function EmployeeCreate({ mode }) {
     }
   }, [isEditMode, id]);
 
-  // Auto-generate password logic
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
     let pass = "";
@@ -176,28 +181,20 @@ function EmployeeCreate({ mode }) {
         return;
       }
 
-      // Removed the separate /auth/register call because it causes partial failures (orphaned credentials) if employee profile creation fails.
-      // The backend EmployeeService automatically creates the AuthUser synchronously.
-
-      // Map frontend keys to backend expected DTO if needed.
-      // Backend expects: username, password (again, will be encoded again), etc.
       const employeePayload = {
         ...payload,
-        username: payload.userName // Map 'userName' to 'username'
+        username: payload.userName
       };
 
-      const creatorRole = localStorage.getItem("role") || "ADMIN"; // Current user's role
+      const creatorRole = localStorage.getItem("role") || "ADMIN";
 
       if (!isEditMode) {
         const createRes = await api.post(`/employee/register?creatorRole=${creatorRole}`, employeePayload);
         
-        // Backend currently returns a 200 OK string for errors like "Access Denied...".
-        // We must manually surface this as an error.
         if (typeof createRes.data === 'string' && !createRes.data.includes("successfully")) {
             throw new Error(createRes.data);
         }
 
-        // To fix the newEmpId for subscriptions: the backend now returns JSON with { message, id } OR string. Let's handle both.
         let newEmpId;
         if (typeof createRes.data === 'object' && createRes.data.id) {
             newEmpId = createRes.data.id;
@@ -211,9 +208,7 @@ function EmployeeCreate({ mode }) {
         navigate("/employee/list");
       } else {
         await api.post(`/employee/${id}`, employeePayload);
-        // Save Subscriptions
         await api.post(`/notification-rules/user/${id}/subscriptions`, subscribedRuleIds);
-
         toast.success("Employee updated successfully");
         navigate("/employee/list");
       }
@@ -248,10 +243,10 @@ function EmployeeCreate({ mode }) {
   return (
     <Container className="my-5">
       <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0 mb-0 text-center mb-0">{isEditMode ? 'Edit Employee' : 'Add New Employee'}</h2>
-                        </div>
-<Form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm bg-light">
+        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <h2 className="mb-0">{isEditMode ? 'Edit Employee' : 'Add New Employee'}</h2>
+      </div>
+      <Form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm bg-light">
         <Row>
           <Col md={6}>
             <Form.Group className="mb-3">
@@ -351,10 +346,9 @@ function EmployeeCreate({ mode }) {
             <Form.Group className="mb-3">
               <Form.Label>Role</Form.Label>
               <Form.Select name="role" value={formData.role} onChange={handleChange}>
-                <option value="EMPLOYEE">Employee</option>
-                <option value="MANAGER">Manager</option>
-                <option value="HR">HR</option>
-                <option value="ADMIN">Admin</option>
+                {systemRoles.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
               </Form.Select>
             </Form.Group>
           </Col>
@@ -399,17 +393,11 @@ function EmployeeCreate({ mode }) {
           </Col>
         </Row>
 
-        {/* Module Access - Granular */}
         <div className="mb-3">
           <Form.Label>System Access Control</Form.Label>
           <div className="border rounded p-3 bg-white" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            <div className="small text-muted mb-2">
-              Select the menus this user should have access to. Admin users have full access by default.
-            </div>
-
-            {MenuConfig.map(menu => ( /* Show all menus including Home */
+            {MenuConfig.map(menu => (
               <div key={menu.id} className="mb-3">
-                {/* Main Menu Checkbox */}
                 <Form.Check
                   type="checkbox"
                   id={`check-${menu.id}`}
@@ -419,7 +407,6 @@ function EmployeeCreate({ mode }) {
                     const checked = e.target.checked;
                     setFormData(prev => {
                       const current = new Set(prev.moduleAccess || []);
-
                       if (checked) {
                         current.add(menu.id);
                         menu.subItems.forEach(sub => current.add(sub.id));
@@ -427,13 +414,10 @@ function EmployeeCreate({ mode }) {
                         current.delete(menu.id);
                         menu.subItems.forEach(sub => current.delete(sub.id));
                       }
-
                       return { ...prev, moduleAccess: Array.from(current) };
                     });
                   }}
                 />
-
-                {/* Sub Menu Checkboxes */}
                 <div className="ms-4 mt-1 border-start ps-2">
                   {menu.subItems.map(sub => (
                     <Form.Check
@@ -463,16 +447,12 @@ function EmployeeCreate({ mode }) {
           </div>
         </div>
 
-        {/* Project Roles Access */}
         <div className="mb-3">
           <Form.Label>Project Workflow Roles</Form.Label>
           <div className="border rounded p-3 bg-white">
-            <div className="small text-muted mb-2">
-              Assign roles for Project Workflow Approvals (fetched from all defined workflows).
-            </div>
             <div className="d-flex flex-wrap gap-3">
               {rolesLoading && <span className="text-muted">Loading roles...</span>}
-              {!rolesLoading && projectWorkflowRoles.length === 0 && <span className="text-muted">No specific roles found in active workflow.</span>}
+              {!rolesLoading && projectWorkflowRoles.length === 0 && <span className="text-muted">No workflow roles found.</span>}
               {projectWorkflowRoles.map(role => (
                 <Form.Check
                   key={role}
@@ -495,15 +475,10 @@ function EmployeeCreate({ mode }) {
           </div>
         </div>
 
-        {/* Notification Subscriptions */}
         <div className="mb-3">
           <Form.Label>Notification Subscriptions</Form.Label>
           <div className="border rounded p-3 bg-white">
-            <div className="small text-muted mb-2">
-              Select which system notifications this user should receive directly.
-            </div>
             <div className="d-flex flex-column gap-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-              {notificationRules.length === 0 && <span className="text-muted">Loading rules...</span>}
               {notificationRules.map(rule => (
                 <Form.Check
                   key={rule.id}
@@ -525,28 +500,27 @@ function EmployeeCreate({ mode }) {
         </div>
 
         <hr />
-        <h5>Payroll</h5>
+        <h5>Payroll & Login</h5>
         <Row>
-          <Col md={6}>
+          <Col md={4}>
             <Form.Group className="mb-3">
               <Form.Label>Basic Salary</Form.Label>
               <Form.Control type="number" name="basicSalary" value={formData.basicSalary} onChange={handleChange} />
             </Form.Group>
           </Col>
-          <Col md={6}>
+          <Col md={4}>
             <Form.Group className="mb-3">
               <Form.Label>EPF Number</Form.Label>
               <Form.Control name="epfNo" value={formData.epfNo} onChange={handleChange} />
             </Form.Group>
           </Col>
+          <Col md={4}>
+             <Form.Group className="mb-3">
+              <Form.Label>Username</Form.Label>
+              <Form.Control name="userName" value={formData.userName} onChange={handleChange} required disabled={isEditMode} />
+            </Form.Group>
+          </Col>
         </Row>
-
-        <hr />
-        <h5>Login Credentials</h5>
-        <Form.Group className="mb-3">
-          <Form.Label>Username</Form.Label>
-          <Form.Control name="userName" value={formData.userName} onChange={handleChange} required disabled={isEditMode} />
-        </Form.Group>
 
         {!isEditMode && (
           <Form.Group className="mb-3">
@@ -562,19 +536,18 @@ function EmployeeCreate({ mode }) {
               />
               <Button variant="outline-secondary" onClick={generatePassword}>Generate</Button>
             </div>
-            {autoPassword && <Form.Text className="text-success">Generated: {autoPassword}</Form.Text>}
           </Form.Group>
         )}
 
         <div className="d-flex gap-2 justify-content-end mt-4">
           <Button variant="secondary" onClick={() => navigate("/employee/list")}>Cancel</Button>
           <Button variant="primary" type="submit" disabled={loading}>
-            {loading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}
-            {isEditMode ? "Update Employee" : "Save Employee"}
+            {loading ? <Spinner as="span" animation="border" size="sm" /> : null}
+            {isEditMode ? "Update" : "Save"}
           </Button>
         </div>
       </Form>
-    </Container >
+    </Container>
   );
 }
 

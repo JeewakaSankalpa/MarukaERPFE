@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, DatePicker, Button, Row, Col } from 'antd';
+import { Card, Table, Tag, DatePicker, Button } from 'antd';
 import api from '../../api/api';
 import dayjs from 'dayjs';
 
@@ -30,7 +30,15 @@ const JournalEntryList = () => {
         { title: 'Description', dataIndex: 'description' },
         { title: 'Status', dataIndex: 'status', render: s => <Tag color={s === 'POSTED' ? 'green' : 'orange'}>{s}</Tag> },
         { title: 'Debit', render: (_, r) => r.lines.reduce((acc, l) => acc + (l.debit || 0), 0).toFixed(2) },
-        { title: 'Credit', render: (_, r) => r.lines.reduce((acc, l) => acc + (l.credit || 0), 0).toFixed(2) }
+        { title: 'Credit', render: (_, r) => r.lines.reduce((acc, l) => acc + (l.credit || 0), 0).toFixed(2) },
+        { 
+            title: 'Doc', 
+            dataIndex: 'receiptUrl', 
+            render: (url, record) => {
+              const fileUrl = url || record.lines.find(l => l.receiptUrl)?.receiptUrl;
+              return fileUrl ? <Button size="small" type="link" onClick={() => window.open(fileUrl, '_blank')}>View</Button> : null;
+            }
+        }
     ];
 
     const expandedRowRender = (record) => {
@@ -38,7 +46,12 @@ const JournalEntryList = () => {
             { title: 'Account', dataIndex: 'accountName' },
             { title: 'Description', dataIndex: 'description' },
             { title: 'Debit', dataIndex: 'debit', render: v => v ? v.toFixed(2) : '' },
-            { title: 'Credit', dataIndex: 'credit', render: v => v ? v.toFixed(2) : '' }
+            { title: 'Credit', dataIndex: 'credit', render: v => v ? v.toFixed(2) : '' },
+            { 
+              title: 'Doc', 
+              dataIndex: 'receiptUrl', 
+              render: v => v ? <Button size="small" type="link" onClick={() => window.open(v, '_blank')}>File</Button> : null 
+            }
         ];
         return <Table columns={lineCols} dataSource={record.lines} pagination={false} size="small" rowKey="accountId" />;
     };

@@ -46,7 +46,7 @@ export default function PurchaseOrderDetails() {
 
     // Financials Modal
     const [showFinancialsModal, setShowFinancialsModal] = useState(false);
-    const [financialsForm, setFinancialsForm] = useState({ deliveryCharge: '', vatAmount: '', otherTaxAmount: '' });
+    const [financialsForm, setFinancialsForm] = useState({ deliveryCharge: '', vatRate: '', otherTaxRate: '' });
 
     const loadData = async () => {
         try {
@@ -128,10 +128,15 @@ export default function PurchaseOrderDetails() {
 
     const handleUpdateFinancials = async () => {
         try {
+            const deliveryCharge = financialsForm.deliveryCharge !== '' ? parseFloat(financialsForm.deliveryCharge) : 0;
+            const taxableBase = (po.subTotal || 0) + deliveryCharge;
+            const vatAmount = financialsForm.vatRate !== '' ? taxableBase * (parseFloat(financialsForm.vatRate) / 100) : 0;
+            const otherTaxAmount = financialsForm.otherTaxRate !== '' ? taxableBase * (parseFloat(financialsForm.otherTaxRate) / 100) : 0;
+            
             const payload = {
-                deliveryCharge: financialsForm.deliveryCharge !== '' ? parseFloat(financialsForm.deliveryCharge) : null,
-                vatAmount: financialsForm.vatAmount !== '' ? parseFloat(financialsForm.vatAmount) : null,
-                otherTaxAmount: financialsForm.otherTaxAmount !== '' ? parseFloat(financialsForm.otherTaxAmount) : null,
+                deliveryCharge: deliveryCharge > 0 ? deliveryCharge : null,
+                vatAmount: vatAmount > 0 ? vatAmount : null,
+                otherTaxAmount: otherTaxAmount > 0 ? otherTaxAmount : null,
             };
             const updated = await updateFinancialsAPI(id, payload);
             setShowFinancialsModal(false);
@@ -190,10 +195,13 @@ export default function PurchaseOrderDetails() {
                     {isDraft && (
                         <>
                             <Button variant="outline-secondary" onClick={() => {
+                                const taxableBase = (po.subTotal || 0) + (po.deliveryCharge || 0);
+                                const currentVatRate = taxableBase > 0 && po.vatAmount > 0 ? (po.vatAmount / taxableBase * 100).toFixed(2) : '';
+                                const currentOtherTaxRate = taxableBase > 0 && po.otherTaxAmount > 0 ? (po.otherTaxAmount / taxableBase * 100).toFixed(2) : '';
                                 setFinancialsForm({
                                     deliveryCharge: po.deliveryCharge ?? '',
-                                    vatAmount: po.vatAmount ?? '',
-                                    otherTaxAmount: po.otherTaxAmount ?? ''
+                                    vatRate: currentVatRate,
+                                    otherTaxRate: currentOtherTaxRate
                                 });
                                 setShowFinancialsModal(true);
                             }}>Edit Totals</Button>
@@ -426,22 +434,24 @@ export default function PurchaseOrderDetails() {
                         />
                     </Form.Group>
                     <Form.Group className="mb-3">
-                        <Form.Label>VAT Amount</Form.Label>
+                        <Form.Label>VAT Percent (%)</Form.Label>
                         <Form.Control
                             type="number" min="0" step="0.01"
-                            value={financialsForm.vatAmount}
-                            onChange={e => setFinancialsForm(f => ({ ...f, vatAmount: e.target.value }))}
-                            placeholder="0.00"
+                            value={financialsForm.vatRate}
+                            onChange={e => setFinancialsForm(f => ({ ...f, vatRate: e.target.value }))}
+                            placeholder="e.g. 18"
                         />
+                        <Form.Text className="text-muted">Calculated Amount: {(((po?.subTotal || 0) + (Number(financialsForm.deliveryCharge) || 0)) * ((Number(financialsForm.vatRate) || 0) / 100)).toFixed(2)}</Form.Text>
                     </Form.Group>
                     <Form.Group className="mb-3">
-                        <Form.Label>Other Tax (NBT / SSCL etc.)</Form.Label>
+                        <Form.Label>Other Tax Percent (%)</Form.Label>
                         <Form.Control
                             type="number" min="0" step="0.01"
-                            value={financialsForm.otherTaxAmount}
-                            onChange={e => setFinancialsForm(f => ({ ...f, otherTaxAmount: e.target.value }))}
-                            placeholder="0.00"
+                            value={financialsForm.otherTaxRate}
+                            onChange={e => setFinancialsForm(f => ({ ...f, otherTaxRate: e.target.value }))}
+                            placeholder="e.g. 2.5"
                         />
+                        <Form.Text className="text-muted">Calculated Amount: {(((po?.subTotal || 0) + (Number(financialsForm.deliveryCharge) || 0)) * ((Number(financialsForm.otherTaxRate) || 0) / 100)).toFixed(2)}</Form.Text>
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>

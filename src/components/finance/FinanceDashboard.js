@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
@@ -11,19 +11,24 @@ export default function FinanceDashboard() {
     });
     const [data, setData] = useState(null);
 
-    useEffect(() => { loadData(); }, []);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             setLoading(true);
             const res = await api.get(`/finance/reports/summary?start=${range.start}&end=${range.end}`);
             setData(res.data);
         } catch (e) {
-            toast.error("Failed to load finance data");
+            console.error("Finance summary load error:", e);
+            if (e.response && e.response.status !== 404) {
+                toast.error("Failed to load finance data. Please check if report dates are valid.");
+            }
         } finally {
             setLoading(false);
         }
-    };
+    }, [range]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     return (
         <Container className="py-4">
@@ -118,9 +123,10 @@ export default function FinanceDashboard() {
                         <Col>
                             <Card className="shadow-sm">
                                 <Card.Header>Quick Actions</Card.Header>
-                                <Card.Body className="d-flex gap-3">
+                                <Card.Body className="d-flex gap-3 flex-wrap">
                                     <Button variant="outline-primary" href="#/finance/expenses">Go to Expenses</Button>
                                     <Button variant="outline-primary" href="#/finance/accounts">Chart of Accounts</Button>
+                                    <Button variant="outline-warning" href="#/finance/petty-cash-approvals">Petty Cash Approvals</Button>
                                     <Button variant="outline-primary" href="#/salary">Go to Payroll</Button>
                                     <Button variant="outline-primary" href="#/assets">Go to Assets</Button>
                                     <Button variant="outline-primary" href="#/finance/loans">Loan Management</Button>

@@ -5,7 +5,6 @@ import {
     Background,
     useNodesState,
     useEdgesState,
-    addEdge,
     MiniMap,
     Panel
 } from '@xyflow/react';
@@ -24,7 +23,6 @@ import StagePropertyPanel from "./StagePropertyPanel";
 import TransitionPropertyPanel from "./TransitionPropertyPanel";
 
 // Helpers
-const uniq = (arr) => Array.from(new Set(arr));
 const normalizeKey = (s) => s.trim().toUpperCase().replace(/\s+/g, "_");
 
 const nodeTypes = {
@@ -35,6 +33,7 @@ const emptyFlow = {
     id: "",
     stages: [],
     requiredApprovals: {},
+    minimumApprovals: {},
     transitions: {},
     initialStage: "",
     version: 0,
@@ -146,6 +145,7 @@ export default function WorkflowBuilder() {
                     // Ensure arrays/objects generic
                     stages: wf?.stages || [],
                     requiredApprovals: wf?.requiredApprovals || {},
+                    minimumApprovals: wf?.minimumApprovals || {},
                     transitions: wf?.transitions || {},
                     initialStage: wf?.initialStage || (wf?.stages?.[0] || ""),
                     notifications: wf?.notifications || {},

@@ -2,17 +2,17 @@
 import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Row, Col, Card, Button, Badge, Table, Spinner, ProgressBar, Form, Modal
+    Row, Col, Card, Button, Badge, Spinner, Form, Modal
 } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
-import { getWorkflow, listWorkflows } from '../../services/workflowApi';
+import { getWorkflow } from '../../services/workflowApi';
 import { useAuth } from '../../context/AuthContext';
 import { COMPONENT_IDS, ProjectComponentRegistry } from './ComponentRegistry'; // Registry Import
 
 // Lazy load sub-components (Some might be unused if registry handles them, 
 // but we keep imports if they are used elsewhere or in registry definition to be safe if moved)
-const ProjectFiles = React.lazy(() => import('./ProjectFiles')); // Used in legacy check or registry? Registry handles it.
+// const ProjectFiles = React.lazy(() => import('./ProjectFiles'));
 const ProjectLifecycle = React.lazy(() => import('./ProjectLifecycle'));
 // Most others are now rendered via Registry logic, but we might need them if we reference them directly? 
 // Actually, Registry imports them. We can remove them here to clean up, 
@@ -37,9 +37,9 @@ export default function ProjectDetails() {
 
     // Access Check Helper
     const userModules = useMemo(() => JSON.parse(localStorage.getItem("moduleAccess") || "[]"), []);
-    const hasAccess = (id) => {
-        return userModules.includes(id);
-    };
+    // const hasAccess = (id) => {
+    //     return userModules.includes(id);
+    // };
 
     const [project, setProject] = useState(null);
     const [actions, setActions] = useState(null);
@@ -60,6 +60,11 @@ export default function ProjectDetails() {
     const [estimatedStart, setEstimatedStart] = useState('');
     const [estimatedEnd, setEstimatedEnd] = useState('');
     const [dueDate, setDueDate] = useState('');
+
+    // Acceptance state
+    const [showAcceptModal, setShowAcceptModal] = useState(false);
+    const [acceptFile, setAcceptFile] = useState(null);
+    const [accepting, setAccepting] = useState(false);
 
     // Email state
     const [showEmailModal, setShowEmailModal] = useState(false);
@@ -257,6 +262,31 @@ export default function ProjectDetails() {
         }
     };
 
+    const handleAcceptQuotation = async () => {
+        if (!acceptFile) {
+            toast.warn("Please upload the signed quotation document.");
+            return;
+        }
+        setAccepting(true);
+        const formData = new FormData();
+        formData.append("file", acceptFile);
+
+        try {
+            await api.post(`/projects/${id}/accept-quotation`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success("Quotation accepted! Job number generated.");
+            setShowAcceptModal(false);
+            setAcceptFile(null);
+            await refresh();
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to accept quotation: " + (e.response?.data?.message || e.message));
+        } finally {
+            setAccepting(false);
+        }
+    };
+
     const dueMeta = useMemo(() => {
         if (!project?.dueDate) return null;
         const now = new Date();
@@ -440,6 +470,11 @@ export default function ProjectDetails() {
                         </div>
 
                         <div className="d-flex gap-2 align-items-center mt-2 mt-md-0">
+                            {!project?.jobNumber && (
+                                <Button variant="outline-success" className="me-2" onClick={() => setShowAcceptModal(true)}>
+                                    Mark as Accepted by Customer
+                                </Button>
+                            )}
                             {effectiveActions.missingFiles && effectiveActions.missingFiles.length > 0 && (
                                 <div className="text-warning small me-3 fw-bold">
                                     ⚠️ Missing Required Files
@@ -619,6 +654,36 @@ export default function ProjectDetails() {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowDates(false)}>Cancel</Button>
                     <Button variant="primary" onClick={saveDates}>Save Changes</Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Accept Quotation Modal */}
+            <Modal show={showAcceptModal} onHide={() => { if (!accepting) setShowAcceptModal(false); }} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Accept Quotation</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>Marking this quotation as <strong>Accepted by Customer</strong> will generate a permanent Job Number (MJN).</p>
+                    <p className="text-danger small"><strong>Requirement:</strong> You must upload a scanned copy of the signed quotation from the customer.</p>
+
+                    <Form.Group className="mb-3">
+                        <Form.Label>Signed Quotation Document</Form.Label>
+                        <Form.Control
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            onChange={(e) => setAcceptFile(e.target.files[0])}
+                            disabled={accepting}
+                        />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowAcceptModal(false)} disabled={accepting}>
+                        Cancel
+                    </Button>
+                    <Button variant="success" onClick={handleAcceptQuotation} disabled={accepting || !acceptFile}>
+                        {accepting ? <Spinner size="sm" className="me-2" /> : null}
+                        Confirm Acceptance
+                    </Button>
                 </Modal.Footer>
             </Modal>
         </div>

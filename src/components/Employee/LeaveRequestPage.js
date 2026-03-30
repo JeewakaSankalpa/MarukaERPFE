@@ -70,10 +70,15 @@ function LeaveRequestPage() {
     const fetchMyLeaves = async () => {
         if (!currentEmployee) return;
         try {
-            // Fetch all leaves, then filter on render or optionally here
             const res = await api.get(`/leave/${currentEmployee.id}`);
             setMyLeaves(res.data || []);
-        } catch (e) { toast.error("Failed to fetch leaves"); }
+        } catch (e) { 
+            if (e.response?.status !== 404) {
+                toast.error("Failed to fetch leaves"); 
+            } else {
+                setMyLeaves([]);
+            }
+        }
     };
 
     const fetchQuota = async () => {
@@ -88,7 +93,13 @@ function LeaveRequestPage() {
         try {
             const res = await api.get(`/leave/pending`);
             setPendingLeaves(res.data || []);
-        } catch (e) { toast.error("Failed to fetch pending requests"); }
+        } catch (e) { 
+            if (e.response?.status !== 404) {
+                toast.error("Failed to fetch pending requests"); 
+            } else {
+                setPendingLeaves([]);
+            }
+        }
     };
 
     const handleApply = async () => {

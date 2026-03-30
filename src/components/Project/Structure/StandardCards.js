@@ -22,7 +22,8 @@ export const OverviewCard = ({ id, project, stageObj, viewVersion, navigate, ope
                 </div>
             </Card.Header>
             <Card.Body style={{ overflowY: 'auto' }}>
-                <div><strong>ID:</strong> {id || '-'}</div>
+                <div><strong>Inquiry ID:</strong> {id || '-'}</div>
+                {p.jobNumber && <div><strong>Job ID:</strong> <Badge bg="success">{p.jobNumber}</Badge></div>}
                 <div><strong>Name:</strong> {p.projectName || '-'}</div>
                 <div><strong>Client:</strong> {p.customerName || p.customerId || '-'}</div>
                 <div><strong>Sales Rep:</strong> {p.salesRepName || p.salesRep || '-'}</div>

@@ -95,6 +95,7 @@ import InvoiceView from "./components/Projects/InvoiceView";
 import SettingsPage from "./components/settings/SettingsPage";
 import MyNotificationsPage from "./components/settings/MyNotificationsPage";
 import NotificationRulesPage from "./components/settings/NotificationRulesPage";
+import RoleManagement from "./components/settings/RoleManagement";
 import SuperAdminPage from "./components/admin/SuperAdminPage";
 
 
@@ -313,6 +314,7 @@ function App() {
                         <Route path="/admin/super-admin" element={<SuperAdminPage />} />
                         <Route path="/admin/workflows" element={<WorkflowList />} />
                         <Route path="/admin/notification-rules" element={<NotificationRulesPage />} />
+                        <Route path="/admin/roles" element={<RoleManagement />} />
                         <Route path="/admin/workflow/new" element={<WorkflowBuilder />} />
                         <Route path="/admin/workflow/:id" element={<WorkflowBuilder />} />
                         <Route path="/departments" element={<DepartmentListRouteWrapper />} />

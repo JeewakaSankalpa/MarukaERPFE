@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select } from 'antd';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select, Tag, Divider } from 'antd';
 import { toast, ToastContainer } from 'react-toastify';
@@ -32,11 +34,18 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const [returnModalVisible, setReturnModalVisible] = useState(false);
     const [returnLoading, setReturnLoading] = useState(false);
     const [returnForm] = Form.useForm();
-    const [bankAccounts, setBankAccounts] = useState([]);
+
+    // Add Payment State
+    const [payModalVisible, setPayModalVisible] = useState(false);
+    const [payLoading, setPayLoading] = useState(false);
+    const [payForm] = Form.useForm();
+    const [payFileList, setPayFileList] = useState([]);
 
     // Lists
     const [expenses, setExpenses] = useState([]);
     const [requests, setRequests] = useState([]);
+    const [payments, setPayments] = useState([]);
+    const [bankAccounts, setBankAccounts] = useState([]);
     const [inventoryItems, setInventoryItems] = useState([]);
 
     const fetchAccount = useCallback(async () => {
@@ -53,12 +62,12 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
     const fetchExpenses = useCallback(async () => {
         try {
-            const res = await api.get(`/finance/expenses/search?projectId=${projectId}`);
+            const res = await api.get(`/project-accounts/${projectId}/petty-cash/expenses`);
             setExpenses(res.data || []);
         } catch (e) {
-            console.error("Failed to fetch expenses", e);
+            console.error("Failed to fetch project expenses", e);
         }
-    }, [projectId]);
+    };
 
     const fetchRequests = useCallback(async () => {
         try {
@@ -74,6 +83,13 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         } catch (e) { console.error("Failed to fetch inventory", e); }
     }, [projectId]);
 
+    const fetchPayments = async () => {
+        try {
+            const res = await api.get(`/project-accounts/${projectId}/payments`);
+            setPayments(res.data || []);
+        } catch (e) { console.error(e); }
+    };
+
     const fetchBankAccounts = async () => {
         try {
             const res = await api.get('/finance/accounts');
@@ -87,8 +103,8 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         if (projectId) {
             fetchAccount();
             fetchRequests();
+            fetchPayments();
             fetchExpenses();
-            fetchInventory();
         }
     }, [projectId, fetchAccount, fetchRequests, fetchExpenses, fetchInventory]);
 
@@ -115,7 +131,40 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         }
     };
 
+    const handleAddPayment = async (values) => {
+        if (payFileList.length === 0) {
+            toast.warn('Please upload a payment slip');
+            return;
+        }
+        setPayLoading(true);
+        const formData = new FormData();
+        formData.append('amount', values.amount);
+        formData.append('paidAt', values.paidAt ? values.paidAt.format('YYYY-MM-DD') : new Date().toISOString());
+        formData.append('note', values.note || '');
+        formData.append('file', payFileList[0].originFileObj || payFileList[0]);
+
+        try {
+            await api.post(`/project-accounts/${projectId}/payments/upload`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success('Payment recorded successfully');
+            setPayModalVisible(false);
+            payForm.resetFields();
+            setPayFileList([]);
+            fetchAccount();
+            fetchPayments();
+        } catch (e) {
+            toast.error('Failed to record payment');
+        } finally {
+            setPayLoading(false);
+        }
+    };
+
     const handleAddExpense = async (values) => {
+        if (fileList.length === 0) {
+            toast.warn('Please upload a receipt or invoice');
+            return;
+        }
         setExpenseLoading(true);
         const formData = new FormData();
         const expenseData = {
@@ -127,7 +176,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         };
         formData.append('data', JSON.stringify(expenseData));
         if (fileList.length > 0) {
-            formData.append('file', fileList[0].originFileObj);
+            formData.append('file', fileList[0].originFileObj || fileList[0]);
         }
 
         try {
@@ -136,8 +185,8 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             setExpenseModalVisible(false);
             expenseForm.resetFields();
             setFileList([]);
-            fetchAccount();
-            fetchExpenses();
+            fetchAccount(); // Update balance
+            fetchExpenses(); // Refresh expense list
         } catch (e) {
             const msg = e.response?.data?.message || e.message || 'Failed to add expense';
             toast.error(msg);
@@ -165,74 +214,79 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
         }
     };
 
+    const pendingExpensesSum = expenses.filter(e => e.status === 'PENDING').reduce((sum, e) => sum + (e.amount || 0), 0);
+    const availablePettyCash = (account?.pettyCashBalance || 0) - pendingExpensesSum;
+
     return (
         <div className="mt-3">
             {loading && <div className="text-center p-3"><Spin /></div>}
 
             {/* Summary Cards */}
             {!loading && account && (
-                <>
-                    <Row gutter={[16, 16]} className="mb-4">
-                        <Col xs={24} sm={12} md={6}>
-                            <Card bordered={false} style={{ background: '#f6ffed', borderLeft: '4px solid #52c41a' }}>
-                                <Statistic
-                                    title="Total Project Value"
-                                    value={parseFloat(account.totalProjectValue) || 0}
-                                    precision={2}
-                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
-                                    valueStyle={{ color: '#3f8600', fontSize: 18 }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                            <Card bordered={false} style={{ background: '#e6f7ff', borderLeft: '4px solid #1890ff' }}>
-                                <Statistic
-                                    title="Total Received"
-                                    value={parseFloat(account.totalReceived) || 0}
-                                    precision={2}
-                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
-                                    valueStyle={{ color: '#1890ff', fontSize: 18 }}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                            <Card bordered={false} style={{ background: '#fff7e6', borderLeft: '4px solid #fa8c16' }}>
-                                <Statistic
-                                    title={<span><BankOutlined /> Petty Cash Balance</span>}
-                                    value={parseFloat(account.pettyCashBalance) || 0}
-                                    precision={2}
-                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
-                                    valueStyle={{ color: (account.pettyCashBalance || 0) < 0 ? '#cf1322' : '#d46b08', fontSize: 18 }}
-                                />
-                                <div className="d-flex gap-2 mt-2 flex-wrap">
-                                    <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setRequestModalVisible(true)}>
-                                        Request Funds
-                                    </Button>
-                                    <Button size="small" icon={<DollarOutlined />} onClick={() => setExpenseModalVisible(true)}>
-                                        Add Expense
-                                    </Button>
-                                    <Button size="small" danger onClick={() => { fetchBankAccounts(); setReturnModalVisible(true); }}>
-                                        Return Excess
-                                    </Button>
+                <Row gutter={16} className="mb-4">
+                    <Col span={6}>
+                        <Card>
+                            <Statistic
+                                title="Project Value"
+                                value={account.totalProjectValue || account.totalAmount}
+                                precision={2}
+                                prefix={currency === 'USD' ? '$' : 'Rs.'}
+                            />
+                        </Card>
+                    </Col>
+                    <Col span={6}>
+                        <Card>
+                            <Statistic
+                                title="Received"
+                                value={account.totalReceived || account.paidAmount}
+                                precision={2}
+                                prefix={currency === 'USD' ? '$' : 'Rs.'}
+                                valueStyle={{ color: '#3f8600' }}
+                            />
+                        </Card>
+                    </Col>
+                    <Col span={6}>
+                        <Card>
+                            <Statistic
+                                title="Balance Due"
+                                value={account.balance}
+                                precision={2}
+                                prefix={currency === 'USD' ? '$' : 'Rs.'}
+                                valueStyle={{ color: account.balance > 0 ? '#cf1322' : '#3f8600' }}
+                            />
+                            <Button className="mt-2" type="primary" block icon={<PlusOutlined />} onClick={() => setPayModalVisible(true)}>
+                                Add Payment
+                            </Button>
+                        </Card>
+                    </Col>
+                    <Col span={6}>
+                        <Card>
+                            <Statistic
+                                title="Available Petty Cash"
+                                value={availablePettyCash}
+                                precision={2}
+                                prefix={<BankOutlined />}
+                                valueStyle={{ color: availablePettyCash < 0 ? 'red' : '#1890ff' }}
+                            />
+                            {pendingExpensesSum > 0 && (
+                                <div className="text-muted small mt-1">
+                                    Includes {pendingExpensesSum.toLocaleString()} in pending expenses
                                 </div>
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                            <Card bordered={false} style={{ background: '#fff1f0', borderLeft: '4px solid #ff4d4f' }}>
-                                <Statistic
-                                    title="Total Expenses (Cash + Items)"
-                                    value={totalProjectExpenses}
-                                    precision={2}
-                                    prefix={currency === 'USD' ? '$' : 'Rs.'}
-                                    valueStyle={{ color: '#cf1322', fontSize: 18 }}
-                                />
-                                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-                                    Cash: {fmtAmt(totalPettyCashExpenses, currency)} &nbsp;|&nbsp; Items: {fmtAmt(totalConsumedValue, currency)}
-                                </div>
-                            </Card>
-                        </Col>
-                    </Row>
-                </>
+                            )}
+                            <div className="d-flex gap-1 mt-2 flex-wrap">
+                                <Button type="link" size="small" onClick={() => setRequestModalVisible(true)}>
+                                    Request
+                                </Button>
+                                <Button type="link" size="small" onClick={() => setExpenseModalVisible(true)}>
+                                    Expense
+                                </Button>
+                                <Button type="link" size="small" danger onClick={() => { fetchBankAccounts(); setReturnModalVisible(true); }}>
+                                    Return
+                                </Button>
+                            </div>
+                        </Card>
+                    </Col>
+                </Row>
             )}
 
             <Tabs defaultActiveKey="1">
@@ -259,52 +313,43 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                         ]}
                     />
                 </TabPane>
-
-                {/* --- Project Expenses (Petty Cash) --- */}
-                <TabPane tab="Project Expenses" key="4">
-                    <div className="mb-3 d-flex gap-3">
-                        <Tag color="red">Petty Cash Expenses: {fmtAmt(totalPettyCashExpenses, currency)}</Tag>
-                        <Tag color="purple">Consumed Items Value: {fmtAmt(totalConsumedValue, currency)}</Tag>
-                        <Tag color="volcano">Total: {fmtAmt(totalProjectExpenses, currency)}</Tag>
-                    </div>
-                    <Divider orientation="left" style={{ fontSize: 13 }}>Petty Cash Expenses</Divider>
+                <TabPane tab="Petty Cash Expenses" key="5">
                     <Table
                         dataSource={expenses}
                         rowKey="id"
                         size="small"
-                        pagination={{ pageSize: 8 }}
                         columns={[
-                            { title: 'Date', dataIndex: 'expenseDate', render: d => d ? new Date(d).toLocaleDateString() : '-' },
+                            { title: 'Date', dataIndex: 'expenseDate', render: d => dayjs(d).format('YYYY-MM-DD') },
                             { title: 'Title', dataIndex: 'title' },
-                            { title: 'Amount', dataIndex: 'amount', render: v => <span style={{ color: 'red', fontWeight: 600 }}>{fmtAmt(v, currency)}</span> },
-                            { title: 'Description', dataIndex: 'description', render: v => v || '-' },
-                            { title: 'Receipt', dataIndex: 'attachmentUrl', render: url => url ? <a href={url} target="_blank" rel="noreferrer">View</a> : 'None' }
+                            { title: 'Amount', dataIndex: 'amount', render: v => `${currency} ${v.toLocaleString()}` },
+                            { title: 'Description', dataIndex: 'description' },
+                            { title: 'Status', dataIndex: 'status', render: s => <Badge status={s === 'PENDING' ? 'warning' : s === 'PAID' ? 'success' : 'error'} text={s} /> },
+                            {
+                                title: 'Receipt', dataIndex: 'attachmentUrl', render: url => url ? (
+                                    <Button type="link" icon={<FileTextOutlined />} onClick={() => window.open(url, '_blank')}>View File</Button>
+                                ) : '-'
+                            }
                         ]}
-                    />
-                    <Divider orientation="left" style={{ fontSize: 13, marginTop: 24 }}>Consumed Inventory Items</Divider>
-                    <Table
-                        dataSource={inventoryItems.filter(i => i.consumedQty > 0)}
-                        rowKey="productId"
-                        size="small"
-                        pagination={{ pageSize: 8 }}
-                        columns={[
-                            { title: 'Item', dataIndex: 'productName' },
-                            { title: 'Consumed Qty', dataIndex: 'consumedQty' },
-                            { title: 'Unit Cost', dataIndex: 'unitCost', render: v => fmtAmt(v, currency) },
-                            { title: 'Total Value', dataIndex: 'totalConsumedValue', render: v => <span style={{ color: '#7c3aed', fontWeight: 600 }}>{fmtAmt(v, currency)}</span> }
-                        ]}
-                        summary={data => (
-                            <Table.Summary.Row>
-                                <Table.Summary.Cell colSpan={3}><strong>Total Consumed Value</strong></Table.Summary.Cell>
-                                <Table.Summary.Cell>
-                                    <strong style={{ color: '#7c3aed' }}>{fmtAmt(totalConsumedValue, currency)}</strong>
-                                </Table.Summary.Cell>
-                            </Table.Summary.Row>
-                        )}
                     />
                 </TabPane>
-
-                {/* --- Transaction History --- */}
+                <TabPane tab="Payments (Income)" key="4">
+                    <Table
+                        dataSource={payments}
+                        rowKey="id"
+                        size="small"
+                        columns={[
+                            { title: 'Date', dataIndex: 'paidAt', render: d => new Date(d).toLocaleDateString() },
+                            { title: 'Amount', dataIndex: 'amount', render: v => `${currency} ${v.toLocaleString()}` },
+                            { title: 'Note', dataIndex: 'note' },
+                            {
+                                title: 'Slip', dataIndex: 'fileUrl', render: url => url ? (
+                                    <Button type="link" icon={<FileTextOutlined />} onClick={() => window.open(url, '_blank')}>View</Button>
+                                ) : '-'
+                            },
+                            { title: 'Added By', dataIndex: 'createdBy' }
+                        ]}
+                    />
+                </TabPane>
                 <TabPane tab="Transaction History" key="2">
                     <TransactionHistory projectId={projectId} currency={currency} />
                 </TabPane>
@@ -383,6 +428,37 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                             maxCount={1}
                         >
                             <Button icon={<UploadOutlined />}>Click to Upload</Button>
+                        </Upload>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            {/* Add Payment Modal */}
+            <Modal
+                title="Record Customer Payment"
+                open={payModalVisible}
+                onCancel={() => setPayModalVisible(false)}
+                onOk={() => payForm.submit()}
+                confirmLoading={payLoading}
+            >
+                <Form form={payForm} layout="vertical" onFinish={handleAddPayment}>
+                    <Form.Item name="amount" label="Amount Received" rules={[{ required: true }]}>
+                        <InputNumber style={{ width: '100%' }} prefix={currency} min={0} />
+                    </Form.Item>
+                    <Form.Item name="paidAt" label="Payment Date" initialValue={dayjs()}>
+                        <Input type="date" />
+                    </Form.Item>
+                    <Form.Item name="note" label="Reference (Check No, Bank Ref, etc.)">
+                        <Input placeholder="e.g., Check #123456" />
+                    </Form.Item>
+                    <Form.Item label="Payment Slip" required>
+                        <Upload
+                            beforeUpload={file => { setPayFileList([file]); return false; }}
+                            onRemove={() => setPayFileList([])}
+                            fileList={payFileList}
+                            maxCount={1}
+                        >
+                            <Button icon={<UploadOutlined />}>Click to Upload Slip</Button>
                         </Upload>
                     </Form.Item>
                 </Form>

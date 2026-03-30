@@ -40,8 +40,6 @@ export default function SettingsPage() {
             setSettings(settings.map(s => s.key === key ? { ...s, value: val } : s));
         } else {
             console.warn("Setting not found:", key);
-            // Optional: Create if not exists logic, but usually fixed keys.
-            // For now, we assume seed data or just pushing new obj if key is known.
             setSettings([...settings, { key, value: val }]);
         }
     };
@@ -76,7 +74,6 @@ export default function SettingsPage() {
         }
     };
 
-    // Sub-components for Library Tables
     const LibraryTable = ({ items, type }) => {
         const [newItem, setNewItem] = useState({ type, title: '', content: '' });
 
@@ -142,10 +139,11 @@ export default function SettingsPage() {
             <div className="d-flex align-items-center mb-4">
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h3 className="mb-0">System Settings</h3>
-                        </div>
-<Tabs defaultActiveKey="global" className="mb-3">
+            </div>
+            
+            <Tabs defaultActiveKey="global" className="mb-4 shadow-sm border rounded p-2">
                 <Tab eventKey="global" title="Global Variables">
-                    <Card>
+                    <Card className="border-0">
                         <Card.Body>
                             <Form>
                                 <Form.Group as={Row} className="mb-3">
@@ -174,21 +172,40 @@ export default function SettingsPage() {
                     </Card>
                 </Tab>
                 <Tab eventKey="terms" title="Terms & Conditions Library">
-                    <Card>
+                    <Card className="border-0">
                         <Card.Body>
                             <LibraryTable items={terms} type="TERM" />
                         </Card.Body>
                     </Card>
                 </Tab>
                 <Tab eventKey="notes" title="Notes Library">
-                    <Card>
+                    <Card className="border-0">
                         <Card.Body>
                             <LibraryTable items={notes} type="NOTE" />
                         </Card.Body>
                     </Card>
                 </Tab>
-
             </Tabs>
+
+            <Row className="mt-4">
+                <Col md={12} className="mb-3">
+                    <h5 className="text-secondary border-bottom pb-2">Admin Tools</h5>
+                </Col>
+                <Col md={4} sm={6}>
+                    <Card className="h-100 shadow-sm border-0 bg-light" onClick={() => navigate('/admin/roles')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
+                        <Card.Body className="d-flex align-items-center p-4">
+                            <div className="bg-primary bg-opacity-10 p-3 rounded-3 me-3">
+                                <i className="fa fa-users-cog text-primary" style={{ fontSize: '1.5rem' }}></i>
+                            </div>
+                            <div>
+                                <h6 className="mb-1">Role Management</h6>
+                                <p className="text-muted small mb-0">Manage system roles & access levels.</p>
+                            </div>
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
