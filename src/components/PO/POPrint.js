@@ -268,6 +268,10 @@ const POPrint = () => {
             <style>
                 {`
                     @media print {
+                        @page {
+                            size: A4 portrait;
+                            margin: 10mm;
+                        }
                         body * {
                             visibility: hidden;
                         }
@@ -278,9 +282,19 @@ const POPrint = () => {
                             position: absolute;
                             left: 0;
                             top: 0;
-                            width: 100%;
+                            width: 100% !important;
+                            max-width: none !important;
+                            margin: 0 !important;
+                            padding: 5mm !important;
                         }
-                        .no-print { display: none !important; }
+                        body {
+                            background: #fff !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .no-print {
+                            display: none !important;
+                        }
                     }
                 `}
             </style>
