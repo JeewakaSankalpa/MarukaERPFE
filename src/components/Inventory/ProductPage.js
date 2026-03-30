@@ -197,8 +197,9 @@ function ProductForm({ id, onClose, onSaved }) {
             }
             onSaved?.();
             onClose?.();
-        } catch {
-            toast.error("Save failed");
+        } catch (err) {
+            const serverMsg = err.response?.data?.message || "Save failed";
+            toast.error(serverMsg);
         }
     };
 

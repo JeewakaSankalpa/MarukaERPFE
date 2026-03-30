@@ -44,7 +44,6 @@ export const MenuConfig = [
             { id: "inventory.fulfil", title: "Fulfil Requests", path: "/stores/fulfil-requests" },
             { id: "inventory.return", title: "Returns", path: "/inventory/return" },
             { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
-            { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
         ]
     },
     {
