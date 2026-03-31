@@ -26,10 +26,14 @@ api.defaults.paramsSerializer = (params) => {
     return usp.toString();
 };
 
-// ---- Attach JWT if present ----
+// ---- Attach JWT and Username if present ----
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    const username = localStorage.getItem('username');
+    if (username) config.headers['X-User'] = username;
+
     return config;
 });
 
