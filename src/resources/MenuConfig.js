@@ -43,7 +43,8 @@ export const MenuConfig = [
             { id: "inventory.my_requests", title: "My Requests", path: "/item/my-requests" }, // NEW
             { id: "inventory.fulfil", title: "Fulfil Requests", path: "/stores/fulfil-requests" },
             { id: "inventory.return", title: "Returns", path: "/inventory/return" },
-            { id: "inventory.approvals", title: "Return Approvals", path: "/inventory/returns/approvals" },
+            { id: "inventory.approvals", title: "Internal Return Approvals", path: "/inventory/returns/approvals" },
+            { id: "inventory.supplier_approvals", title: "Supplier Return Approvals", path: "/inventory/supplier-returns/approvals" },
         ]
     },
     {

@@ -166,12 +166,24 @@ export default function ExpensesPage() {
                         <Card.Body style={{ height: 200 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#82ca9d" paddingAngle={5} dataKey="value">
+                                    <Pie 
+                                        data={pieChartData} 
+                                        cx="50%" 
+                                        cy="45%" 
+                                        innerRadius={35} 
+                                        outerRadius={55} 
+                                        fill="#82ca9d" 
+                                        paddingAngle={5} 
+                                        dataKey="value"
+                                        nameKey="name"
+                                        label={({ value }) => value}
+                                    >
                                         {pieChartData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip formatter={(val, name) => [val, name]} />
+                                    <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
                         </Card.Body>

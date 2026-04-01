@@ -402,7 +402,7 @@ export default function IRFulfilmentPage() {
     }, [irs, fDept, fProj, fRequester]);
 
     return (
-        <Container style={{ width: "95vw", maxWidth: 1400, paddingTop: 24 }}>
+        <Container fluid style={{ maxWidth: 1600, paddingTop: 24, paddingLeft: 24, paddingRight: 24 }}>
             <Row className="g-3">
                 {/* -------- Left: List & Filters -------- */}
                 <Col md={5}>

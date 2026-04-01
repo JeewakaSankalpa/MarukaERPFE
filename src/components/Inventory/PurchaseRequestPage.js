@@ -278,7 +278,17 @@ function PRView({ id, onBack }) {
     const printHtml = () => {
         if (!printRef.current) return;
         const content = printRef.current.innerHTML;
-        const win = window.open("", "printWindow", "width=900,height=700");
+
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        document.body.appendChild(iframe);
+
+        const win = iframe.contentWindow;
         win.document.open();
         win.document.write(`
       <html>
@@ -296,12 +306,21 @@ function PRView({ id, onBack }) {
             .footer { margin-top:24px; font-size: 12px; color:#666; }
           </style>
         </head>
-        <body onload="window.print(); window.close();">
+        <body>
           ${content}
         </body>
       </html>
     `);
         win.document.close();
+
+        // Give images a moment to load before triggering print
+        setTimeout(() => {
+            win.focus();
+            win.print();
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 1000);
+        }, 500);
     };
 
     if (!pr) return (
@@ -313,19 +332,19 @@ function PRView({ id, onBack }) {
     return (
         <Container style={{ width: "80vw", maxWidth: 980, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center">
-                    <h2 style={{ fontSize: "1.5rem" }}>Purchase Request</h2>
+                <div className="d-flex justify-content-between align-items-center mb-4 no-print">
+                    <h2 style={{ fontSize: "1.5rem" }} className="mb-0">Purchase Request</h2>
                     <div className="d-flex gap-2">
                         <Button variant="outline-secondary" onClick={onBack}>Back</Button>
-                        <Button variant="outline-primary" onClick={downloadPdf}>Download PDF</Button>
-                        <Button variant="success" onClick={printHtml}>Print</Button>
+                        <Button variant="outline-primary" onClick={downloadPdf}>Download Data Array</Button>
+                        <Button variant="success" onClick={printHtml}>Print PR</Button>
                     </div>
                 </div>
 
                 {/* Printable content */}
                 <div ref={printRef}>
                     <div className="header">
-                        <img src="/logo-maruka.png" alt="Maruka" className="logo" />
+                        <img src={`${window.location.origin}/logo-maruka.png`} alt="Maruka" className="logo" />
                         <div style={{ textAlign: "right" }}>
                             <h1>Purchase Request</h1>
                             <div className="meta">

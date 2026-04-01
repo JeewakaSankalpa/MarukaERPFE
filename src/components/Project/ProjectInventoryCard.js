@@ -374,8 +374,10 @@ export default function ProjectInventoryCard({ projectId }) {
             <Card.Body>
                 {loading && <div className="text-muted small"><Spinner size="sm" /> Loading...</div>}
                 {!loading && inventory.length === 0 && <div className="text-muted">No inventory records found.</div>}
-                {!loading && inventory.length > 0 && (
-                    <Table size="sm" bordered hover responsive>
+                
+                {!loading && inventory.filter(i => !i.isCancelled).length > 0 && (
+                    <div className="mb-4">
+                        <Table size="sm" bordered hover responsive>
                         <thead>
                             <tr>
                                 <th>Product</th>
@@ -388,17 +390,13 @@ export default function ProjectInventoryCard({ projectId }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {inventory.map(i => {
-                                const isCancelled = i.isCancelled;
-                                const canCancel = !isCancelled && i.orderStatus === 'NOT_RECEIVED';
-                                const canReturn = !isCancelled && (i.orderStatus === 'FULLY_RECEIVED' || i.orderStatus === 'PARTIALLY_RECEIVED');
+                            {inventory.filter(i => !i.isCancelled).map((i, idx) => {
+                                const canCancel = i.orderStatus === 'NOT_RECEIVED';
+                                const canReturn = (i.orderStatus === 'FULLY_RECEIVED' || i.orderStatus === 'PARTIALLY_RECEIVED');
 
                                 return (
-                                    <tr key={i.productId} style={isCancelled ? { opacity: 0.65, background: '#f8f9fa' } : {}}>
-                                        <td>
-                                            {i.productName}
-                                            {isCancelled && <span className="badge bg-danger ms-2" style={{ fontSize: '0.7rem' }}>CANCELED</span>}
-                                        </td>
+                                    <tr key={`${i.productId}-active-${idx}`}>
+                                        <td>{i.productName}</td>
                                         <td className="text-end">{i.requestedQty}</td>
                                         <td className="text-end">{i.receivedQty}</td>
                                         <td className="text-end">{i.consumedQty}</td>
@@ -414,9 +412,9 @@ export default function ProjectInventoryCard({ projectId }) {
                                             <Button 
                                                 size="sm" 
                                                 variant="outline-danger" 
-                                                title={isCancelled ? "Already Canceled" : "Cancel Order"} 
-                                                disabled={isCancelled || i.orderStatus !== 'NOT_RECEIVED'}
-                                                style={{ display: (isCancelled || i.orderStatus === 'NOT_RECEIVED') ? 'inline-block' : 'none' }}
+                                                title="Cancel Order" 
+                                                disabled={!canCancel}
+                                                style={{ display: canCancel ? 'inline-block' : 'none' }}
                                                 onClick={() => {
                                                     setCancelData({ productId: i.productId, productName: i.productName, reason: '' });
                                                     setShowCancelModal(true);
@@ -435,6 +433,34 @@ export default function ProjectInventoryCard({ projectId }) {
                             })}
                         </tbody>
                     </Table>
+                    </div>
+                )}
+
+                {/* Cancelled Inventory Table */}
+                {!loading && inventory.filter(i => i.isCancelled).length > 0 && (
+                    <div className="mb-4 mt-2">
+                        <h6 className="text-danger fw-bold border-bottom pb-2 mb-3">Cancelled Requests</h6>
+                        <Table size="sm" bordered hover responsive className="table-light">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th className="text-end" style={{ width: '120px' }}>Requested Qty</th>
+                                    <th className="text-center" style={{ width: '150px' }}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {inventory.filter(i => i.isCancelled).map((i, idx) => (
+                                    <tr key={`${i.productId}-cancelled-${idx}`} style={{ opacity: 0.7 }}>
+                                        <td>{i.productName}</td>
+                                        <td className="text-end text-danger fw-bold">{i.requestedQty}</td>
+                                        <td className="text-center">
+                                            <span className="badge bg-danger">CANCELED</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </div>
                 )}
 
                 {/* Cancel Modal */}

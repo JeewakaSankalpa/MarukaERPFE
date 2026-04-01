@@ -90,8 +90,9 @@ export default function NotificationBell() {
 
     const fetchNotifications = async () => {
         try {
-            const res = await api.get('/notifications?page=0&size=5');
-            setNotifications(res.data.content || []);
+            const res = await api.get('/notifications');
+            // Support raw array directly, fallback for pagination wrapper if used in future
+            setNotifications(Array.isArray(res.data) ? res.data : (res.data?.content || []));
         } catch (e) {
             console.error("Failed to fetch notifications", e);
         }
@@ -115,8 +116,8 @@ export default function NotificationBell() {
                 toast.error("Failed to mark notification as read");
             }
         }
-        if (n.link) {
-            navigate(n.link);
+        if (n.relatedLink) {
+            navigate(n.relatedLink);
             document.body.click(); // Close popover hack
         }
     };

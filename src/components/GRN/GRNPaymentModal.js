@@ -9,14 +9,19 @@ export default function GRNPaymentModal({ grn, onClose }) {
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
     const [ref, setRef] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const doPay = async () => {
         if (!amount || Number(amount) <= 0) { toast.warn("Enter valid amount"); return; }
+        setIsSubmitting(true);
         try {
             await addPayment(grn.id, { amount: Number(amount), date, reference: ref });
             toast.success("Payment added");
             onClose();
-        } catch (e) { toast.error("Failed to add payment"); }
+        } catch (e) { 
+            toast.error("Failed to add payment"); 
+            setIsSubmitting(false);
+        }
     };
 
     const history = grn.paymentHistory || [];
@@ -67,7 +72,9 @@ export default function GRNPaymentModal({ grn, onClose }) {
                             <Form.Control value={ref} onChange={e => setRef(e.target.value)} />
                         </Col>
                         <Col md={2}>
-                            <Button className="w-100" onClick={doPay}>Add</Button>
+                            <Button className="w-100" onClick={doPay} disabled={isSubmitting}>
+                                {isSubmitting ? "Adding..." : "Add"}
+                            </Button>
                         </Col>
                     </Row>
                 </div>

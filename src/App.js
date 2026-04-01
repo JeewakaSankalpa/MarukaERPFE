@@ -25,6 +25,7 @@ import NewSideBar from "./components/ReusableComponents/NewSideBar";
 import InventoryReturn from "./components/Inventory/InventoryReturn";
 import ReturnToInventory from "./components/Project/ReturnToInventory";
 import InternalReturnApprovals from "./components/Inventory/InternalReturnApprovals";
+import SupplierReturnApprovals from "./components/Inventory/SupplierReturnApprovals";
 import UserCreate from "./components/Users/UserCreate";
 import UserSearch from "./components/Users/UserSearch";
 import CustomerCreate from "./components/Customer/CustomerCreate";
@@ -239,6 +240,7 @@ function App() {
                         <Route path="/inventory/return" element={<InventoryReturn />} />
                         <Route path="/inventory/return-to-inventory" element={<ReturnToInventory />} />
                         <Route path="/inventory/returns/approvals" element={<InternalReturnApprovals />} />
+                        <Route path="/inventory/supplier-returns/approvals" element={<SupplierReturnApprovals />} />
                         <Route path="/inventory/stock-taking" element={<StockTakingPage />} />
                         <Route path="/inventory/audit-approvals" element={<StockAuditApprovalsPage />} />
                         <Route path="/product/create" element={<ProductCreate />} />
