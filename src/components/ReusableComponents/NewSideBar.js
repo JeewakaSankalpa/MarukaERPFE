@@ -40,6 +40,9 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
     // Exact Match
     if (userModules.includes(item.id)) return true;
 
+    // Role inheritance for newly appended menus not yet seeded in DB
+    if (item.id === "inventory.supplier_approvals" && userModules.includes("inventory.approvals")) return true;
+
     return false;
   };
 

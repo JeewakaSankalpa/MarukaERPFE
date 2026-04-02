@@ -454,7 +454,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                     <Form.Item name="paidAt" label="Payment Date" initialValue={dayjs()}>
                         <DatePicker style={{ width: '100%' }} />
                     </Form.Item>
-                    <Form.Item name="note" label="Reference (Check No, Bank Ref, etc.)">
+                    <Form.Item name="note" label="Reference (Check No, Bank Ref, etc.)" rules={[{ required: true, message: 'Please provide a reference number' }]}>
                         <Input placeholder="e.g., Check #123456" />
                     </Form.Item>
                     <Form.Item label="Payment Slip" required>

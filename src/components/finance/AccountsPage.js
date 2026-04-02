@@ -76,6 +76,14 @@ const AccountsPage = () => {
             title: 'Type',
             dataIndex: 'type',
             key: 'type',
+            filters: [
+                { text: 'Asset', value: 'ASSET' },
+                { text: 'Liability', value: 'LIABILITY' },
+                { text: 'Equity', value: 'EQUITY' },
+                { text: 'Revenue', value: 'REVENUE' },
+                { text: 'Expense', value: 'EXPENSE' },
+            ],
+            onFilter: (value, record) => record.type === value,
             render: type => {
                 let color = 'default';
                 if (type === 'ASSET') color = 'green';
@@ -94,6 +102,17 @@ const AccountsPage = () => {
                 const amount = parseFloat(val).toLocaleString('en-US', { style: 'currency', currency: record.currency || 'LKR' });
                 return <span style={{ fontWeight: 'bold' }}>{amount}</span>;
             }
+        },
+        {
+            title: 'Last Txn',
+            dataIndex: 'lastTransactionDate',
+            key: 'lastTransactionDate',
+            sorter: (a, b) => {
+                const dateA = a.lastTransactionDate ? new Date(a.lastTransactionDate).getTime() : 0;
+                const dateB = b.lastTransactionDate ? new Date(b.lastTransactionDate).getTime() : 0;
+                return dateA - dateB;
+            },
+            render: val => val ? new Date(val).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'
         },
         {
             title: 'Status',

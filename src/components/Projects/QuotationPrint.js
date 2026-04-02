@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
-import { Button, Spinner, Table, Alert } from "react-bootstrap";
+import { Button, Spinner, Table, Alert, Modal } from "react-bootstrap";
 import ReportLayout from "../ReusableComponents/ReportLayout";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -13,6 +13,8 @@ const QuotationPrint = () => {
     const [estimation, setEstimation] = useState(null);
     const [project, setProject] = useState(null);
     const [customer, setCustomer] = useState(null);
+    const [invoices, setInvoices] = useState([]);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -25,6 +27,13 @@ const QuotationPrint = () => {
             if (projRes.data.customerId) {
                 const custRes = await api.get(`/customer/${projRes.data.customerId}`);
                 setCustomer(custRes.data);
+            }
+
+            try {
+                const invRes = await api.get(`/invoices/by-project/${projectId}`);
+                setInvoices(invRes.data || []);
+            } catch (invErr) {
+                console.warn("Could not fetch invoices", invErr);
             }
         } catch (error) {
             console.error("Failed to load data", error);
@@ -50,13 +59,17 @@ const QuotationPrint = () => {
 
     const handleGenerateInvoice = async () => {
         if (!window.confirm("Generate a new Invoice from this Quotation?")) return;
+        setIsGenerating(true);
         try {
-            const res = await api.post(`/invoices/generate-from-estimation/${estimation.id}`);
-            navigate(`/invoices/${res.data.id}`);
+            await api.post(`/invoices/generate-from-estimation/${estimation.id}`);
+            toast.success("Invoice generated successfully!");
+            fetchData();
         } catch (error) {
             console.error(error);
             const msg = error.response?.data?.message || error.response?.data || "Failed to generate invoice";
             toast.error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -66,9 +79,18 @@ const QuotationPrint = () => {
     if (!estimation) return <div className="text-center p-5">No estimation found for this project.</div>;
 
     const isFinalized = estimation.status === "FINALIZED";
+    const hasActiveInvoice = invoices.some(inv => inv.status !== "CANCELLED");
 
     return (
         <div className="bg-white min-vh-100 p-4">
+            {/* Processing Modal */}
+            <Modal show={isGenerating} backdrop="static" keyboard={false} centered>
+                <Modal.Body className="text-center p-5">
+                    <Spinner animation="border" variant="primary" className="mb-3" />
+                    <h5>Generating Invoice...</h5>
+                    <p className="text-muted mb-0">Please wait while the invoice is being created.</p>
+                </Modal.Body>
+            </Modal>
             {/* Controls */}
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
@@ -76,8 +98,11 @@ const QuotationPrint = () => {
                     {!isFinalized && (
                         <Button variant="success" onClick={handleFinalize}>Finalize Quote</Button>
                     )}
-                    {isFinalized && (
+                    {isFinalized && !hasActiveInvoice && (
                         <Button variant="warning" onClick={handleGenerateInvoice}>Generate Invoice</Button>
+                    )}
+                    {isFinalized && hasActiveInvoice && invoices.length > 0 && (
+                        <Button variant="success" onClick={() => navigate(`/invoices/${invoices.find(i => i.status !== 'CANCELLED').id}`)}>View Proforma Invoice</Button>
                     )}
                     <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
                 </div>

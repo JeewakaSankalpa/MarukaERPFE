@@ -38,7 +38,7 @@ export default function NotificationsPage() {
 
     const handleItemClick = async (n) => {
         // Mark as read first
-        if (!n.isRead) {
+        if (!n.read) {
             try {
                 await api.put(`/notifications/${n.id}/read`);
             } catch (e) { /* ignore */ }
@@ -73,7 +73,7 @@ export default function NotificationsPage() {
                                     key={n.id}
                                     action
                                     onClick={() => handleItemClick(n)}
-                                    className={!n.isRead ? "bg-light fw-semibold" : ""}
+                                    className={!n.read ? "bg-light fw-semibold" : ""}
                                 >
                                     <div className="d-flex justify-content-between align-items-start">
                                         <div>
@@ -83,7 +83,7 @@ export default function NotificationsPage() {
                                                 {n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}
                                             </small>
                                         </div>
-                                        {!n.isRead && <Badge bg="primary" pill className="ms-2">•</Badge>}
+                                        {!n.read && <Badge bg="primary" pill className="ms-2">•</Badge>}
                                     </div>
                                 </ListGroup.Item>
                             ))}

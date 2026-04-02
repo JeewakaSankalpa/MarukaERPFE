@@ -304,42 +304,57 @@ export default function PurchaseOrderDetails() {
                             <div style={{ width: 320 }}>
                                 <Table size="sm" borderless className="mb-0">
                                     <tbody>
-                                        <tr>
-                                            <td className="text-end"><strong>Subtotal:</strong></td>
-                                            <td className="text-end">{(po.subTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="text-end text-muted">Delivery:</td>
-                                            <td className="text-end text-muted">{(po.deliveryCharge || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="text-end text-muted">
-                                                VAT
-                                                {po.vatAmount > 0 && (po.subTotal + (po.deliveryCharge || 0)) > 0
-                                                    ? ` (${((po.vatAmount / ((po.subTotal || 0) + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
-                                                    : ''}:
-                                            </td>
-                                            <td className="text-end text-muted">{(po.vatAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="text-end text-muted">
-                                                Other Tax
-                                                {po.otherTaxAmount > 0 && (po.subTotal + (po.deliveryCharge || 0)) > 0
-                                                    ? ` (${((po.otherTaxAmount / ((po.subTotal || 0) + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
-                                                    : ''}:
-                                            </td>
-                                            <td className="text-end text-muted">{(po.otherTaxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        </tr>
-                                        {(!po.vatAmount && !po.otherTaxAmount && po.taxTotal > 0) && (
-                                            <tr>
-                                                <td className="text-end text-muted">Tax (legacy):</td>
-                                                <td className="text-end text-muted">{po.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                            </tr>
-                                        )}
-                                        <tr className="border-top">
-                                            <td className="text-end fs-5"><strong>Grand Total:</strong></td>
-                                            <td className="text-end fs-5"><strong>{(po.grandTotal || po.subTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-                                        </tr>
+                                        {(() => {
+                                            const computedSubTotal = (po.subTotal && po.subTotal > 0) ? po.subTotal : (po.items || []).reduce((sum, item) => sum + ((item.orderedQty || 0) * (item.unitPrice || 0)), 0);
+                                            const computedGrandTotal = po.grandTotal || (computedSubTotal + (po.deliveryCharge || 0) + (po.vatAmount || 0) + (po.otherTaxAmount || 0) + (po.taxTotal || 0));
+                                            
+                                            return (
+                                                <>
+                                                    <tr>
+                                                        <td className="text-end"><strong>Subtotal:</strong></td>
+                                                        <td className="text-end">{computedSubTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    </tr>
+                                                    {(po.deliveryCharge > 0) && (
+                                                        <tr>
+                                                            <td className="text-end text-muted">Delivery:</td>
+                                                            <td className="text-end text-muted">{po.deliveryCharge.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                        </tr>
+                                                    )}
+                                                    {(po.vatAmount > 0) && (
+                                                        <tr>
+                                                            <td className="text-end text-muted">
+                                                                VAT
+                                                                {(computedSubTotal + (po.deliveryCharge || 0)) > 0
+                                                                    ? ` (${((po.vatAmount / (computedSubTotal + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
+                                                                    : ''}:
+                                                            </td>
+                                                            <td className="text-end text-muted">{po.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                        </tr>
+                                                    )}
+                                                    {(po.otherTaxAmount > 0) && (
+                                                        <tr>
+                                                            <td className="text-end text-muted">
+                                                                Other Tax
+                                                                {(computedSubTotal + (po.deliveryCharge || 0)) > 0
+                                                                    ? ` (${((po.otherTaxAmount / (computedSubTotal + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
+                                                                    : ''}:
+                                                            </td>
+                                                            <td className="text-end text-muted">{po.otherTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                        </tr>
+                                                    )}
+                                                    {(!po.vatAmount && !po.otherTaxAmount && po.taxTotal > 0) && (
+                                                        <tr>
+                                                            <td className="text-end text-muted">Tax (legacy):</td>
+                                                            <td className="text-end text-muted">{po.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                        </tr>
+                                                    )}
+                                                    <tr className="border-top mt-2">
+                                                        <td className="text-end fs-5 pt-2"><strong>Grand Total:</strong></td>
+                                                        <td className="text-end fs-5 pt-2"><strong>{computedGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+                                                    </tr>
+                                                </>
+                                            );
+                                        })()}
                                     </tbody>
                                 </Table>
                             </div>

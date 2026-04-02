@@ -226,13 +226,14 @@ const renderCustomerView = (metrics) => {
                                     <Pie
                                         data={metrics.projectStatus}
                                         cx="50%"
-                                        cy="50%"
+                                        cy="45%"
                                         innerRadius={60}
                                         outerRadius={80}
                                         fill="#8884d8"
                                         paddingAngle={5}
                                         dataKey="count"
-                                        label
+                                        nameKey="name"
+                                        label={({ count }) => count}
                                     >
                                         {metrics.projectStatus.map((entry, index) => (
                                             <Cell
@@ -241,7 +242,8 @@ const renderCustomerView = (metrics) => {
                                             />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip formatter={(val, name) => [val, name]} />
+                                    <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -375,13 +377,14 @@ const renderSupplierView = (metrics) => {
                                     <Pie
                                         data={metrics.poStatus}
                                         cx="50%"
-                                        cy="50%"
+                                        cy="45%"
                                         innerRadius={60}
                                         outerRadius={80}
                                         fill="#82ca9d"
                                         paddingAngle={5}
                                         dataKey="count"
-                                        label
+                                        nameKey="name"
+                                        label={({ count }) => count}
                                     >
                                         {metrics.poStatus.map((entry, index) => (
                                             <Cell
@@ -390,7 +393,8 @@ const renderSupplierView = (metrics) => {
                                             />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip formatter={(val, name) => [val, name]} />
+                                    <Legend />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>

@@ -11,6 +11,7 @@ const InvoiceView = () => {
     const [invoice, setInvoice] = useState(null);
     const [project, setProject] = useState(null);
     const [customer, setCustomer] = useState(null);
+    const [payments, setPayments] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,6 +26,13 @@ const InvoiceView = () => {
                     if (projRes.data.customerId) {
                         const custRes = await api.get(`/customer/${projRes.data.customerId}`);
                         setCustomer(custRes.data);
+                    }
+
+                    try {
+                        const payRes = await api.get(`/project-accounts/${invRes.data.projectId}/payments`);
+                        setPayments(payRes.data || []);
+                    } catch (payErr) {
+                        console.warn("Could not fetch payments for project", payErr);
                     }
                 }
             } catch (error) {
@@ -50,6 +58,9 @@ const InvoiceView = () => {
         }
     };
 
+    const totalReceived = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const balanceDue = (invoice.totalAmount || 0) - totalReceived;
+
     return (
         <div className="bg-white min-vh-100 p-4">
             <div className="d-flex justify-content-between mb-4 no-print">
@@ -61,7 +72,7 @@ const InvoiceView = () => {
             </div>
 
             <ReportLayout
-                title="TAX INVOICE"
+                title="PROFORMA INVOICE"
                 orientation="portrait"
                 subtitle={`Invoice #: ${invoice.invoiceNumber}`}
             >
@@ -127,6 +138,59 @@ const InvoiceView = () => {
                         </tr>
                     </tfoot>
                 </Table>
+
+                {/* Payments Section */}
+                {payments.length > 0 && (
+                    <div className="mt-4">
+                        <h6 className="fw-bold text-uppercase mb-3">Payments Received</h6>
+                        <Table bordered size="sm">
+                            <thead className="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Reference Number</th>
+                                    <th>Payment Slip</th>
+                                    <th className="text-end">Amount Received</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {payments.map((p, idx) => (
+                                    <tr key={idx}>
+                                        <td>{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '-'}</td>
+                                        <td>{p.note || '-'}</td>
+                                        <td>
+                                            {p.fileUrl ? (
+                                                <a href={p.fileUrl} target="_blank" rel="noopener noreferrer">View Slip</a>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="text-end text-success">
+                                            {parseFloat(p.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colSpan="3" className="text-end fw-bold">TOTAL PAYABLE</td>
+                                    <td className="text-end fw-bold text-primary">
+                                        {invoice.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colSpan="3" className="text-end fw-bold">TOTAL PAID</td>
+                                    <td className="text-end fw-bold text-success">
+                                        {totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                </tr>
+                                <tr className="table-active">
+                                    <td colSpan="3" className="text-end fw-bold">BALANCE DUE</td>
+                                    <td className="text-end fw-bold text-danger fs-6">
+                                        {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </Table>
+                    </div>
+                )}
 
                 <div className="mt-5">
                     <strong>Payment Terms:</strong>

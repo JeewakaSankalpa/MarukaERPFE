@@ -19,8 +19,8 @@ const InternalReturnApprovals = () => {
     const fetchReturns = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/inventory/returns?status=PENDING');
-            setReturns(response.data || []);
+            const response = await api.get('/inventory/returns/internal?status=PENDING');
+            setReturns(response.data?.content || response.data || []);
         } catch (err) {
             console.error("Error fetching returns:", err);
             toast.error("Failed to load internal returns.");
@@ -32,7 +32,7 @@ const InternalReturnApprovals = () => {
     const handleApprove = async (ret) => {
         setProcessingId(ret.id);
         try {
-            await api.post(`/inventory/returns/${ret.id}/approve`);
+            await api.post(`/inventory/returns/internal/${ret.id}/approve`);
             toast.success("Return approved successfully.");
             fetchReturns();
         } catch (err) {

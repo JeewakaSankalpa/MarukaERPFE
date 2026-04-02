@@ -83,14 +83,20 @@ export default function TransfersInbox() {
     };
 
     return (
-        <Container style={{ width: "90vw", maxWidth: 1200, paddingTop: 24 }}>
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Transfers Inbox</h2>
-                        </div>
-<input value={toLocationId} onChange={e => setToLocationId(e.target.value)} className="form-control" style={{ maxWidth: 280 }} />
+        <Container fluid className="py-4 px-3 px-md-4">
+            <div className="bg-white shadow rounded p-3 p-md-4" style={{ overflowX: 'hidden' }}>
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div className="d-flex align-items-center gap-2">
+                        <button type="button" className="btn btn-light" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                        <h2 className="mb-0" style={{ fontSize: "1.4rem" }}>Transfers Inbox</h2>
+                    </div>
+                    <input
+                        value={toLocationId}
+                        onChange={e => setToLocationId(e.target.value)}
+                        className="form-control"
+                        style={{ maxWidth: 260 }}
+                        placeholder="Location ID"
+                    />
                 </div>
 
                 <Table hover responsive>
