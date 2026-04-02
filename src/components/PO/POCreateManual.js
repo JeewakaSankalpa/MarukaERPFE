@@ -173,9 +173,12 @@ export default function POCreateManual({ onCreated }) {
     return (
         <Container className="py-4">
             <div className="bg-white shadow rounded p-4">
-                <div className="d-flex align-items-center mb-4">
-                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
+                <div className="d-flex align-items-center justify-content-between mb-4">
+                    <div className="d-flex align-items-center">
+                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
+                    </div>
+                    <Badge bg="info" className="p-2">Format: MT/PO-{new Date().getFullYear().toString().slice(-2)}-MM-XXXXXX</Badge>
                 </div>
                 {/* Supplier select */}
                 <Row className="g-3">

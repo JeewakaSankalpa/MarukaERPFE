@@ -36,7 +36,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             if (!poId) { setPo(null); setRows([]); return; }
             try {
                 let actualId = poId;
-                if (poId.toUpperCase().startsWith("PO-") || poId.toUpperCase().startsWith("MIN-") || poId.toUpperCase().startsWith("MJN-")) {
+                if (poId.toUpperCase().startsWith("MT/PO-") || poId.toUpperCase().startsWith("PO-") || poId.toUpperCase().startsWith("MIN-") || poId.toUpperCase().startsWith("MJN-")) {
                     const searchRes = await searchPOs(poId);
                     if (searchRes && searchRes.content && searchRes.content.length > 0) {
                         const preciseMatch = searchRes.content.find(p => p.poNumber === poId.trim().toUpperCase() || p.jobNumber === poId.trim().toUpperCase());
