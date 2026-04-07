@@ -40,10 +40,11 @@ export default function GRNListView() {
                     </div>
                     <div className="d-flex gap-2 align-items-center flex-wrap">
                         <Form.Control
-                            placeholder="Search GRN / Supplier"
+                            placeholder="Search GRN / PO Number / Supplier"
                             value={q}
                             onChange={e => setQ(e.target.value)}
-                            style={{ maxWidth: 220 }}
+                            onKeyDown={e => { if (e.key === 'Enter') { setPage(0); load(); } }}
+                            style={{ maxWidth: 260 }}
                         />
                         <Form.Select
                             value={statusFilter}

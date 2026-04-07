@@ -13,7 +13,8 @@ const createGRN = async (payload) => (await api.post(`/grns`, payload)).data;
 
 export default function GRNReceivePage({ poId: initialPoId }) {
     const navigate = useNavigate();
-    const [poId, setPoId] = useState(initialPoId || "");
+    const [poInput, setPoInput] = useState(initialPoId || "");  // what the user types
+    const [poId, setPoId] = useState(initialPoId || "");         // triggers the fetch
     const [po, setPo] = useState(null);
     const [locationId, setLocationId] = useState("LOC_STORES_MAIN");
     const [rows, setRows] = useState([]); // {productId, productName, sku, unit, orderedQty, batches:[]}
@@ -41,10 +42,14 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     if (searchRes && searchRes.content && searchRes.content.length > 0) {
                         const preciseMatch = searchRes.content.find(p => p.poNumber === poId.trim().toUpperCase() || p.jobNumber === poId.trim().toUpperCase());
                         actualId = preciseMatch ? preciseMatch.id : searchRes.content[0].id;
+                    } else {
+                        toast.error(`No PO found matching "${poId.trim()}"`);
+                        setPoId("");
+                        return;
                     }
                 }
                 const d = await getPO(actualId);
-                setPoId(d.poNumber); // update the label with full number
+                setPoInput(d.poNumber); // update the label with full number
                 setPo(d);
                 setRows((d.items || []).map(it => ({
                     productId: it.productId,
@@ -56,7 +61,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 })));
                 if (d.deliveryCharge) setDeliveryCharge(d.deliveryCharge);
                 if (d.vatAmount) setVatAmount(d.vatAmount);
-            } catch (e) { console.error(e); toast.error("Failed to load PO"); }
+            } catch (e) { console.error(e); toast.error(e?.response?.data?.message || e?.message || "Failed to load PO"); }
         })();
     }, [poId]);
 
@@ -116,7 +121,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             toast.success(`GRN ${res.grnNumber} posted`);
 
             // Reset form
-            setPoId(""); setPo(null); setRows([]);
+            setPoInput(""); setPoId(""); setPo(null); setRows([]);
             setSupplierInvoiceNo(""); setSupplierInvoiceDate("");
             setCreditPeriodDays(""); setInitialPaymentAmount(""); setInitialPaymentRef("");
 
@@ -177,7 +182,14 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                         <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Receive (GRN)</h2>
                     </div>
                     <div className="d-flex gap-2">
-                        <Form.Control placeholder="PO Number" value={poId} onChange={e => setPoId(e.target.value)} style={{ maxWidth: 280 }} />
+                        <Form.Control
+                            placeholder="PO Number"
+                            value={poInput}
+                            onChange={e => setPoInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') setPoId(poInput.trim()); }}
+                            style={{ maxWidth: 200 }}
+                        />
+                        <Button variant="outline-primary" onClick={() => setPoId(poInput.trim())}>Load</Button>
                     </div>
                 </div>
 

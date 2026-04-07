@@ -14,7 +14,7 @@ const getEstimation = async (projectId) => (await api.get(`/estimations/by-proje
 const listTemplates = async () => (await api.get(`/component-templates`)).data;
 const listProductsAPI = async () => (await api.get(`/products`, { params: { page: 0, size: 1000, sort: "name,asc" } })).data?.content ?? [];
 const listAvailableAPI = async () => (await api.get(`/inventory/available-quantities`)).data;
-const listProjectsAPI = async () => (await api.get(`/projects`, { params: { page: 0, size: 1000, sort: "projectName,asc" } })).data?.content ?? [];
+const listProjectsAPI = async () => (await api.get(`/projects`, { params: { page: 0, size: 1000, sort: "createdAt,desc" } })).data?.content ?? [];
 const getAvailOneAPI = async (productId) => (await api.get(`/inventory/available-quantities/${productId}`)).data; // optional
 // OPTIONAL fallback for cost if your product doesn’t carry it:
 const getLastCostAPI = async (productId) => (await api.get(`/products/${productId}/last-cost`)).data; // {unitCost:number}
@@ -345,7 +345,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     };
 
     const projectOptions = useMemo(
-        () => projects.map(p => ({ value: p.id, label: p.projectName || p.id })),
+        () => [...projects]
+            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+            .map(p => ({ value: p.id, label: p.projectName || p.id })),
         [projects]
     );
 

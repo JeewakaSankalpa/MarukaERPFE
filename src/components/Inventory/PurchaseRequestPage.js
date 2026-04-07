@@ -7,6 +7,7 @@ import {
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import logo from "../../assets/logo.jpeg";
 
 /* ================== Inline API helpers ================== */
 const qp = (o = {}) => {
@@ -261,17 +262,18 @@ function PRView({ id, onBack }) {
         })();
     }, [id]);
 
-    const downloadPdf = async () => {
+    const downloadData = async () => {
         try {
             const blob = await fetchPRPdfBlob(id);
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = `${pr?.prNumber || "PR"}.pdf`;
+            a.download = `${pr?.prNumber || "PR"}.txt`;
             a.click();
             URL.revokeObjectURL(url);
-        } catch {
-            toast.error("Failed to download PDF");
+        } catch (err) {
+            toast.error("Failed to download data");
+            console.error(err);
         }
     };
 
@@ -336,7 +338,7 @@ function PRView({ id, onBack }) {
                     <h2 style={{ fontSize: "1.5rem" }} className="mb-0">Purchase Request</h2>
                     <div className="d-flex gap-2">
                         <Button variant="outline-secondary" onClick={onBack}>Back</Button>
-                        <Button variant="outline-primary" onClick={downloadPdf}>Download Data Array</Button>
+                        <Button variant="outline-primary" onClick={downloadData}>Download TXT Data</Button>
                         <Button variant="success" onClick={printHtml}>Print PR</Button>
                     </div>
                 </div>
@@ -344,7 +346,7 @@ function PRView({ id, onBack }) {
                 {/* Printable content */}
                 <div ref={printRef}>
                     <div className="header">
-                        <img src={`${window.location.origin}/logo-maruka.png`} alt="Maruka" className="logo" />
+                        <img src={logo} alt="Maruka" style={{ height: "60px", width: "auto" }} />
                         <div style={{ textAlign: "right" }}>
                             <h1>Purchase Request</h1>
                             <div className="meta">

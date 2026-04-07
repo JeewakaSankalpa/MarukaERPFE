@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Row, Col, Form, Button, Table } from "react-bootstrap";
+import { Container, Row, Col, Form, Button, Table, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
