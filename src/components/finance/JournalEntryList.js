@@ -15,8 +15,9 @@ const JournalEntryList = () => {
     const fetchJournals = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/finance/journals?page=0&size=100');
-            setEntries(res.data.content || []);
+            const res = await api.get('/finance/journals?page=0&size=500');
+            const sorted = (res.data.content || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+            setEntries(sorted);
         } catch (e) {
             console.error("Failed to load journals", e);
         } finally {

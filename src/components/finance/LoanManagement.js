@@ -1,9 +1,11 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Modal, Form, Badge, Row, Col, Card } from 'react-bootstrap';
+import { Container, Table, Button, Modal, Form, Badge, Row, Col, Card, Alert } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
+import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
+import OverdraftConfirmModal from '../ReusableComponents/OverdraftConfirmModal';
 
 export default function LoanManagement() {
     const navigate = useNavigate();
@@ -27,10 +29,26 @@ export default function LoanManagement() {
     const [repayment, setRepayment] = useState({
         amount: '',
         date: new Date().toISOString().split('T')[0],
-        reference: ''
+        reference: '',
+        paymentAccountId: '',
+        paymentAccountName: '',
+        paymentAccountType: ''
     });
 
+    const [showOverdraftModal, setShowOverdraftModal] = useState(false);
+    const [accountBalance, setAccountBalance] = useState(null);
+
     useEffect(() => { loadLoans(); }, []);
+
+    useEffect(() => {
+        if (repayment.paymentAccountId) {
+            api.get(`/finance/accounts/${repayment.paymentAccountId}`)
+                .then(res => setAccountBalance(Number(res.data.balance) || 0))
+                .catch(() => setAccountBalance(null));
+        } else {
+            setAccountBalance(null);
+        }
+    }, [repayment.paymentAccountId]);
 
     const loadLoans = async () => {
         try {
@@ -50,8 +68,24 @@ export default function LoanManagement() {
 
     const handleRepay = async () => {
         if (!selectedLoan) return;
+        if (!repayment.paymentAccountId) { toast.warn('Please select a payment account'); return; }
+        if (!repayment.paymentMethod) { toast.warn('Please explicitly select a Payment Method (e.g. Card, Cash)'); return; }
+        const maxRepay = Number(selectedLoan.outstandingBalance) || 0;
+        if (Number(repayment.amount) > maxRepay) {
+            toast.error(`Repayment cannot exceed outstanding balance: Rs. ${maxRepay.toFixed(2)}`);
+            return;
+        }
+        // Check overdraft
+        if (accountBalance !== null && Number(repayment.amount) > accountBalance) {
+            setShowOverdraftModal(true);
+            return;
+        }
+        await submitRepay(false);
+    };
+
+    const submitRepay = async (allowOverdraft = false) => {
         try {
-            await api.post(`/finance/loans/${selectedLoan.id}/repay`, repayment);
+            await api.post(`/finance/loans/${selectedLoan.id}/repay`, { ...repayment, allowOverdraft });
             toast.success("Repayment Added");
             setShowRepay(false);
             loadLoans();
@@ -59,6 +93,7 @@ export default function LoanManagement() {
     };
 
     return (
+        <>
         <Container className="py-4">
             <div className="d-flex justify-content-between mb-4">
                 <div className="d-flex align-items-center mb-4">
@@ -154,9 +189,36 @@ export default function LoanManagement() {
                 <Modal.Header closeButton><Modal.Title>Record Repayment - {selectedLoan?.bankName}</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <Form>
+                        <div className="mb-3">
+                            <PaymentAccountPicker
+                                required
+                                value={repayment.paymentAccountId}
+                                onChange={info => setRepayment({ ...repayment, ...info })}
+                            />
+                        </div>
                         <Form.Group className="mb-2">
-                            <Form.Label>Repayment Amount</Form.Label>
-                            <Form.Control type="number" value={repayment.amount} onChange={e => setRepayment({ ...repayment, amount: e.target.value })} />
+                            <Form.Label>Repayment Amount <small className="text-muted">(max: Rs. {(Number(selectedLoan?.outstandingBalance) || 0).toFixed(2)})</small></Form.Label>
+                            <Form.Control
+                                type="number"
+                                max={selectedLoan?.outstandingBalance}
+                                value={repayment.amount}
+                                onChange={e => {
+                                    const val = Number(e.target.value);
+                                    const max = Number(selectedLoan?.outstandingBalance) || 0;
+                                    if (val > max) {
+                                        toast.warn(`Cannot exceed outstanding balance: Rs. ${max.toFixed(2)}`);
+                                        setRepayment({ ...repayment, amount: max.toString() });
+                                    } else {
+                                        setRepayment({ ...repayment, amount: e.target.value });
+                                    }
+                                }}
+                            />
+                            {accountBalance !== null && (
+                                <small className={`mt-1 d-block ${accountBalance < Number(repayment.amount || 0) ? 'text-danger fw-bold' : 'text-muted'}`}>
+                                    Account balance: Rs. {accountBalance.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+                                    {accountBalance < Number(repayment.amount || 0) && ' ⚠️ Insufficient — overdraft will apply'}
+                                </small>
+                            )}
                         </Form.Group>
                         <Form.Group className="mb-2">
                             <Form.Label>Date Paid</Form.Label>
@@ -174,5 +236,15 @@ export default function LoanManagement() {
                 </Modal.Footer>
             </Modal>
         </Container>
+
+        <OverdraftConfirmModal
+            show={showOverdraftModal}
+            amount={repayment.amount}
+            balance={accountBalance}
+            accountName={repayment.paymentAccountName}
+            onConfirm={() => { setShowOverdraftModal(false); submitRepay(true); }}
+            onCancel={() => setShowOverdraftModal(false)}
+        />
+        </>
     );
 }

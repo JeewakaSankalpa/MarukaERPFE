@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { DollarOutlined, BankOutlined, PlusOutlined, UploadOutlined, ArrowUpOutlined, ArrowDownOutlined, SwapOutlined, FileTextOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 import ProjectFinancialReport from '../finance/ProjectFinancialReport';
+import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 
 const { TabPane } = Tabs;
 
@@ -39,6 +40,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const [payLoading, setPayLoading] = useState(false);
     const [payForm] = Form.useForm();
     const [payFileList, setPayFileList] = useState([]);
+    const [selectedPaymentAccount, setSelectedPaymentAccount] = useState(null);
 
     // Lists
     const [expenses, setExpenses] = useState([]);
@@ -136,6 +138,10 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             toast.warn('Please upload a payment slip');
             return;
         }
+        if (!selectedPaymentAccount) {
+            toast.warn('Please select a payment account');
+            return;
+        }
         setPayLoading(true);
         const formData = new FormData();
         formData.append('amount', values.amount);
@@ -145,6 +151,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             : new Date().toISOString().split('T')[0];
         formData.append('paidAt', paidAtStr);
         formData.append('note', values.note || '');
+        formData.append('paymentAccountId', selectedPaymentAccount.id);
         formData.append('file', payFileList[0].originFileObj || payFileList[0]);
 
         try {
@@ -155,6 +162,7 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             setPayModalVisible(false);
             payForm.resetFields();
             setPayFileList([]);
+            setSelectedPaymentAccount(null);
             fetchAccount();
             fetchPayments();
         } catch (e) {
@@ -448,6 +456,19 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                 confirmLoading={payLoading}
             >
                 <Form form={payForm} layout="vertical" onFinish={handleAddPayment}>
+                    <Form.Item style={{ marginBottom: '12px' }}>
+                        <PaymentAccountPicker
+                            required={true}
+                            onChange={(details) => {
+                                setSelectedPaymentAccount({
+                                    id: details.paymentAccountId,
+                                    name: details.paymentAccountName,
+                                    type: details.paymentAccountType
+                                });
+                            }}
+                        />
+                        {!selectedPaymentAccount && <div style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "4px" }}>* Please select an account.</div>}
+                    </Form.Item>
                     <Form.Item name="amount" label="Amount Received" rules={[{ required: true }]}>
                         <InputNumber style={{ width: '100%' }} prefix={currency} min={0} />
                     </Form.Item>

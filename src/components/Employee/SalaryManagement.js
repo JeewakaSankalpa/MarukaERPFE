@@ -4,14 +4,16 @@ import { Container, Tabs, Tab, Form, Button, Table, Row, Col, Card, Alert, Spinn
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { toast } from "react-toastify";
+import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 
 function SalaryManagement() {
     const [key, setKey] = useState("processing");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    // -- Processing State --
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const [paymentInfo, setPaymentInfo] = useState({ paymentAccountId: '', paymentAccountName: '', paymentAccountType: '', paymentMethod: '' });
+    const [showBulkPayModal, setShowBulkPayModal] = useState(false);
     const [salaries, setSalaries] = useState([]);
     const [processedRun, setProcessedRun] = useState(null); // The details of the run status
     const [employees, setEmployees] = useState({}); // Map ID -> Name
@@ -214,17 +216,9 @@ function SalaryManagement() {
                                 )}
 
                                 {processedRun?.status === 'APPROVED' && (
-                                    <>
-                                        <Button variant="success" className="me-2" onClick={async () => {
-                                            if (window.confirm("Mark ALL salaries for this month as PAID?")) {
-                                                try {
-                                                    await api.post(`/salary/pay/${selectedMonth}`);
-                                                    toast.success("All Marked as Paid");
-                                                    fetchSalaries();
-                                                } catch (e) { toast.error("Failed"); }
-                                            }
-                                        }}>💰 Mark Month as Paid</Button>
-                                    </>
+                                        <Button variant="success" className="me-2" onClick={() => setShowBulkPayModal(true)}>
+                                            💰 Mark Month as Paid
+                                        </Button>
                                 )}
 
                                 <Button variant="outline-dark" onClick={() => navigate(`/salary/print-batch/${selectedMonth}`)}>
@@ -265,13 +259,7 @@ function SalaryManagement() {
                                             {s.status !== 'PAID' && processedRun?.status === 'APPROVED' && (
                                                 <Button size="sm" variant="success" onClick={async (e) => {
                                                     e.stopPropagation();
-                                                    if (window.confirm("Mark as Paid?")) {
-                                                        try {
-                                                            await api.post(`/salary/pay/single/${s.id}`);
-                                                            toast.success("Paid");
-                                                            fetchSalaries();
-                                                        } catch (e) { toast.error("Failed"); }
-                                                    }
+                                                    setViewingSalary(s); // Open modal to pay individually
                                                 }}>Pay</Button>
                                             )}
                                         </td>
@@ -352,14 +340,25 @@ function SalaryManagement() {
                                             <h5>Payment Status: <Badge bg={viewingSalary.status === 'PAID' ? 'success' : 'warning'}>{viewingSalary.status || 'PENDING'}</Badge></h5>
                                             {viewingSalary.status !== 'PAID' ? (
                                                 processedRun?.status === 'APPROVED' ? (
-                                                    <Button variant="success" onClick={async () => {
-                                                        try {
-                                                            await api.patch(`/salary/${viewingSalary.id}/status`, { status: "PAID", paidDate: new Date().toISOString() });
-                                                            toast.success("Marked as PAID");
-                                                            setViewingSalary(null);
-                                                            fetchSalaries();
-                                                        } catch (e) { toast.error("Failed to update status"); }
-                                                    }}>Mark as PAID</Button>
+                                                    <Form className="mt-3 bg-light p-2 border rounded">
+                                                        <h6 className="mb-2">Select Payment Source:</h6>
+                                                        <PaymentAccountPicker
+                                                            value={paymentInfo.paymentAccountId}
+                                                            onChange={(details) => setPaymentInfo(details)}
+                                                        />
+                                                        <Button variant="success" className="mt-2 w-100" onClick={async () => {
+                                                            if (!paymentInfo.paymentAccountId) {
+                                                                toast.warn("Please select a payment account map");
+                                                                return;
+                                                            }
+                                                            try {
+                                                                await api.post(`/salary/pay/single/${viewingSalary.id}`, paymentInfo);
+                                                                toast.success("Marked as PAID");
+                                                                setViewingSalary(null);
+                                                                fetchSalaries();
+                                                            } catch (e) { toast.error("Failed to update status"); }
+                                                        }}>Confirm & Mark as PAID</Button>
+                                                    </Form>
                                                 ) : <div className="text-danger small">Payroll must be APPROVED to mark as paid.</div>
                                             ) : (
                                                 <div className="text-muted">Paid on: {viewingSalary.paidDate ? new Date(viewingSalary.paidDate).toLocaleDateString() : '-'}</div>
@@ -539,6 +538,39 @@ function SalaryManagement() {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
                     <Button variant="primary" onClick={handleEditAttendance}>Save Changes</Button>
+                </Modal.Footer>
+            </Modal>
+            {/* Bulk Pay Modal */}
+            <Modal show={showBulkPayModal} onHide={() => setShowBulkPayModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Process Monthly Payroll Payment</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>Mark ALL salaries for <b>{selectedMonth}</b> as PAID and post totals to the ledger?</p>
+                    <Form.Group className="mt-3">
+                        <Form.Label>Select Payment Account</Form.Label>
+                        <PaymentAccountPicker
+                            required
+                            value={paymentInfo.paymentAccountId}
+                            onChange={(details) => setPaymentInfo(details)}
+                        />
+                        <Form.Text className="text-muted">
+                            This updates the dashboard records by linking the entire batch to the selected account/method.
+                        </Form.Text>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowBulkPayModal(false)}>Cancel</Button>
+                    <Button variant="success" onClick={async () => {
+                        if (!paymentInfo.paymentAccountId) { toast.warn("Select a payment account"); return; }
+                        try {
+                            await api.post(`/salary/pay/${selectedMonth}`, paymentInfo);
+                            toast.success("All Marked as Paid");
+                            setShowBulkPayModal(false);
+                            fetchSalaries();
+                            fetchRunStatus();
+                        } catch (e) { toast.error("Failed"); }
+                    }}>Confirm Batch Payment</Button>
                 </Modal.Footer>
             </Modal>
         </Container>

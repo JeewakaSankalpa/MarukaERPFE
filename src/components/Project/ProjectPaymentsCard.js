@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Button, Row, Col, Table, Modal, Form } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
+import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 
 /**
  * Component to display project financial summary and payments.
@@ -26,7 +27,14 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
 
     // Add Payment State
     const [showPay, setShowPay] = useState(false);
-    const [payData, setPayData] = useState({ amount: '', date: new Date().toISOString().substring(0, 10), reference: '' });
+    const [payData, setPayData] = useState({ 
+        amount: '', 
+        date: new Date().toISOString().substring(0, 10), 
+        reference: '',
+        paymentAccountId: '',
+        paymentAccountName: '',
+        paymentAccountType: ''
+    });
     const [submitting, setSubmitting] = useState(false);
 
     const loadPayments = async () => {
@@ -60,12 +68,24 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
             toast.warn("Amount, Date, and Reference are all required");
             return;
         }
+        if (!payData.paymentAccountId) {
+            toast.warn("Please select a payment account");
+            return;
+        }
+        if (!payData.paymentMethod) {
+            toast.warn("Please explicitly select a Payment Method (e.g. Card, Cash)");
+            return;
+        }
         try {
             setSubmitting(true);
             await api.post(`/projects/${projectId}/payments`, {
                 amount: parseFloat(payData.amount),
                 date: payData.date,
-                reference: payData.reference.trim()
+                reference: payData.reference.trim(),
+                paymentAccountId: payData.paymentAccountId,
+                paymentAccountName: payData.paymentAccountName,
+                paymentAccountType: payData.paymentAccountType,
+                paymentMethod: payData.paymentMethod
             });
             toast.success("Payment added");
             setShowPay(false);
@@ -153,6 +173,13 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
             <Modal show={showPay} onHide={() => { if (!submitting) setShowPay(false); }} centered>
                 <Modal.Header closeButton={!submitting}><Modal.Title>Add Payment</Modal.Title></Modal.Header>
                 <Modal.Body>
+                    <div className="mb-3">
+                        <PaymentAccountPicker
+                            required
+                            value={payData.paymentAccountId}
+                            onChange={info => setPayData(d => ({ ...d, ...info }))}
+                        />
+                    </div>
                     <Form.Group className="mb-3">
                         <Form.Label>Date <span className="text-danger">*</span></Form.Label>
                         <Form.Control type="date" value={payData.date} onChange={e => setPayData({ ...payData, date: e.target.value })} disabled={submitting} required />

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Badge, Container, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
-
+import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 
 const AssetRegister = () => {
     const navigate = useNavigate();
@@ -18,7 +18,11 @@ const AssetRegister = () => {
         purchaseDate: "",
         purchaseCost: "",
         depreciationRate: "20",
-        location: ""
+        location: "",
+        paymentAccountId: "",
+        paymentAccountName: "",
+        paymentAccountType: "",
+        paymentMethod: ""
     });
 
     const [maintenance, setMaintenance] = useState([]);
@@ -55,7 +59,20 @@ const AssetRegister = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const payload = { ...formData, id: editing ? editing.id : null, maintenanceHistory: maintenance, attachments: attachments };
+            if (formData.paymentAccountId && !formData.paymentMethod) {
+                toast.warn("Please explicitly select a Payment Method for the specified account");
+                return;
+            }
+            const currentPayments = formData.paymentAccountId ? [{
+                id: null,
+                date: formData.purchaseDate,
+                amount: formData.purchaseCost,
+                method: formData.paymentMethod,
+                paymentAccountId: formData.paymentAccountId,
+                paymentAccountName: formData.paymentAccountName,
+                paymentAccountType: formData.paymentAccountType
+            }] : [];
+            const payload = { ...formData, payments: currentPayments, id: editing ? editing.id : null, maintenanceHistory: maintenance, attachments: attachments };
             await api.post("/assets", payload);
             toast.success("Asset saved");
             setShowModal(false);
@@ -74,7 +91,11 @@ const AssetRegister = () => {
             purchaseDate: asset.purchaseDate,
             purchaseCost: asset.purchaseCost,
             depreciationRate: asset.depreciationRate,
-            location: asset.location
+            location: asset.location,
+            paymentAccountId: asset.payments?.[0]?.paymentAccountId || "",
+            paymentAccountName: asset.payments?.[0]?.paymentAccountName || "",
+            paymentAccountType: asset.payments?.[0]?.paymentAccountType || "",
+            paymentMethod: asset.payments?.[0]?.method || ""
         });
         setMaintenance(asset.maintenanceHistory || []);
         setAttachments(asset.attachments || []);
@@ -180,6 +201,18 @@ const AssetRegister = () => {
                                 <Form.Group className="mb-3">
                                     <Form.Label>Cost</Form.Label>
                                     <Form.Control type="number" required value={formData.purchaseCost} onChange={e => setFormData({ ...formData, purchaseCost: e.target.value })} />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={12}>
+                                <Form.Group className="mb-3 border p-3 rounded bg-light">
+                                    <Form.Label className="fw-bold">Asset Payment Details (Optional)</Form.Label>
+                                    <PaymentAccountPicker
+                                        value={formData.paymentAccountId}
+                                        onChange={(details) => setFormData({ ...formData, ...details })}
+                                    />
+                                    <small className="text-muted d-block mt-1">If provided, this purchase will be tracked under the selected Payment Method dashboard.</small>
                                 </Form.Group>
                             </Col>
                         </Row>
