@@ -140,7 +140,8 @@ export default function FinanceReportsPage() {
 
             {loading && <div className="text-center py-5"><Spinner animation="border" /> Loading...</div>}
 
-            {!loading && activeTab === 'PL' && plData && (
+            <div id="printable-area">
+                {!loading && activeTab === 'PL' && plData && (
                 <Card className="shadow-sm print-border">
                     <Card.Body>
                         <div className="text-center mb-4">
@@ -339,12 +340,28 @@ export default function FinanceReportsPage() {
                     </Card.Body>
                 </Card>
             )}
+            </div>
 
             <style>
                 {`
                     @media print {
+                        body * {
+                            visibility: hidden;
+                        }
+                        #printable-area, #printable-area * {
+                            visibility: visible;
+                        }
+                        #printable-area {
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 100%;
+                            padding: 20px;
+                        }
                         .noprint { display: none !important; }
                         .print-border { border: none !important; box-shadow: none !important; }
+                        @page { size: auto; margin: 1cm; }
+                        .table-responsive { overflow: visible !important; }
                     }
                 `}
             </style>
