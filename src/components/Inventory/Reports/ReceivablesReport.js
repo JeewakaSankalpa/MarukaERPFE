@@ -10,6 +10,7 @@ const ReceivablesReport = () => {
     const [data, setData] = useState([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [customerName, setCustomerName] = useState("");
     const navigate = useNavigate();
 
     const fetchReport = async () => {
@@ -18,6 +19,7 @@ const ReceivablesReport = () => {
             const params = {};
             if (startDate) params.startDate = startDate;
             if (endDate) params.endDate = endDate;
+            if (customerName) params.customerName = customerName;
 
             const res = await api.get("/reports/receivables", { params });
             setData(res.data || []);
@@ -58,11 +60,17 @@ const ReceivablesReport = () => {
                             <Form.Control type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                         </Form.Group>
                     </Col>
-                    <Col md={2}>
-                        <Button variant="info" className="w-100" onClick={fetchReport}>Filter</Button>
+                    <Col md={3}>
+                        <Form.Group>
+                            <Form.Label>Customer Name</Form.Label>
+                            <Form.Control type="text" placeholder="Search by customer..." value={customerName} onChange={e => setCustomerName(e.target.value)} />
+                        </Form.Group>
                     </Col>
-                    <Col md={2}>
-                        <Button variant="outline-secondary" className="w-100" onClick={() => { setStartDate(""); setEndDate(""); fetchReport(); }}>Clear</Button>
+                    <Col md={3}>
+                        <div className="d-flex w-100 gap-2">
+                            <Button variant="info" className="flex-grow-1" onClick={fetchReport}>Filter</Button>
+                            <Button variant="outline-secondary" className="flex-grow-1" onClick={() => { setStartDate(""); setEndDate(""); setCustomerName(""); }}>Clear</Button>
+                        </div>
                     </Col>
                 </Row>
             </div>
@@ -76,8 +84,9 @@ const ReceivablesReport = () => {
                         <thead className="table-light">
                             <tr>
                                 <th>Invoice #</th>
-                                <th>Project / Customer</th>
-                                <th>Due Date</th>
+                                <th>Customer Name</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
                                 <th className="text-end">Total Amt</th>
                                 <th className="text-end">Paid</th>
                                 <th className="text-end">Balance Due</th>
@@ -85,13 +94,14 @@ const ReceivablesReport = () => {
                         </thead>
                         <tbody>
                             {data.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center">No records found</td></tr>
+                                <tr><td colSpan="7" className="text-center">No records found</td></tr>
                             ) : (
                                 data.map((item, i) => (
                                     <tr key={i}>
                                         <td>{item.invoiceNumber}</td>
-                                        <td>{item.projectId}</td> {/* Enhanced logic could fetch project name */}
-                                        <td>{item.dueDate}</td>
+                                        <td>{item.customerName}</td>
+                                        <td>{item.startDate}</td>
+                                        <td>{item.endDate}</td>
                                         <td className="text-end">{item.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="text-end">{item.paidAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="text-end fw-bold text-success">{item.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -99,7 +109,7 @@ const ReceivablesReport = () => {
                                 ))
                             )}
                             <tr className="table-light fw-bold border-top border-dark">
-                                <td colSpan="5" className="text-end">GRAND TOTAL COMPLETED</td>
+                                <td colSpan="6" className="text-end">GRAND TOTAL</td>
                                 <td className="text-end text-success" style={{ fontSize: "1.2em" }}>{totalReceivable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                             </tr>
                         </tbody>

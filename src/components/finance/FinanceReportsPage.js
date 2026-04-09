@@ -17,6 +17,7 @@ export default function FinanceReportsPage() {
     const [loading, setLoading] = useState(false);
     const [plData, setPlData] = useState(null);
     const [bsData, setBsData] = useState(null);
+    const [tbData, setTbData] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -26,11 +27,13 @@ export default function FinanceReportsPage() {
     useEffect(() => {
         if (activeTab === 'PL') loadPL();
         if (activeTab === 'BS') loadBS();
+        if (activeTab === 'TB') loadTB();
     }, [startDate, endDate, asOfDate]);
 
     const loadData = () => {
         if (activeTab === 'PL') loadPL();
         if (activeTab === 'BS') loadBS();
+        if (activeTab === 'TB') loadTB();
     };
 
     const loadPL = async () => {
@@ -54,6 +57,19 @@ export default function FinanceReportsPage() {
         } catch (e) {
             console.error(e);
             toast.error("Failed to load Balance Sheet");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadTB = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get(`/finance/reports/trial-balance?start=${startDate}&end=${endDate}`);
+            setTbData(res.data);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to load Trial Balance");
         } finally {
             setLoading(false);
         }
@@ -99,6 +115,18 @@ export default function FinanceReportsPage() {
                                     </Form.Group>
                                 </div>
                             )}
+                            {activeTab === 'TB' && (
+                                <div className="d-flex gap-3">
+                                    <Form.Group>
+                                        <Form.Label>From</Form.Label>
+                                        <Form.Control type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                    </Form.Group>
+                                    <Form.Group>
+                                        <Form.Label>To</Form.Label>
+                                        <Form.Control type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                    </Form.Group>
+                                </div>
+                            )}
                         </Col>
                     </Row>
                 </Card.Body>
@@ -107,6 +135,7 @@ export default function FinanceReportsPage() {
             <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k)} className="mb-4 noprint">
                 <Tab eventKey="PL" title="Income Statement (P&L)" />
                 <Tab eventKey="BS" title="Balance Sheet" />
+                <Tab eventKey="TB" title="Trial Balance" />
             </Tabs>
 
             {loading && <div className="text-center py-5"><Spinner animation="border" /> Loading...</div>}
@@ -228,6 +257,85 @@ export default function FinanceReportsPage() {
                                 </div>
                             </Col>
                         </Row>
+                    </Card.Body>
+                </Card>
+            )}
+
+            {!loading && activeTab === 'TB' && tbData && (
+                <Card className="shadow-sm print-border">
+                    <Card.Body>
+                        <div className="text-center mb-4">
+                            <h4>Trial Balance</h4>
+                            <p className="text-muted">For the period {tbData.startDate} to {tbData.endDate}</p>
+                        </div>
+
+                        {tbData.isBalanced === false && (
+                            <Alert variant="danger" className="noprint">
+                                ⚠️ <strong>Out of Balance!</strong> Total Debits do not equal Total Credits. Please review unposted or incomplete journal entries.
+                            </Alert>
+                        )}
+                        {tbData.isBalanced === true && (
+                            <Alert variant="success" className="noprint">
+                                ✅ Trial Balance is <strong>balanced</strong> — Total Debits = Total Credits.
+                            </Alert>
+                        )}
+
+                        <div className="table-responsive">
+                            <Table bordered hover size="sm">
+                                <thead className="table-dark">
+                                    <tr>
+                                        <th style={{width:'80px'}}>Code</th>
+                                        <th>Account Name</th>
+                                        <th style={{width:'110px'}}>Type</th>
+                                        <th className="text-end" style={{width:'160px'}}>Total Debit</th>
+                                        <th className="text-end" style={{width:'160px'}}>Total Credit</th>
+                                        <th className="text-end" style={{width:'170px'}}>Closing Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(!tbData.lines || tbData.lines.length === 0) ? (
+                                        <tr><td colSpan="6" className="text-center text-muted py-4">No transactions found for the selected period.</td></tr>
+                                    ) : (
+                                        tbData.lines.map((row, i) => {
+                                            const typeBadgeMap = {
+                                                ASSET:     'primary',
+                                                LIABILITY: 'warning',
+                                                EQUITY:    'info',
+                                                REVENUE:   'success',
+                                                EXPENSE:   'danger',
+                                            };
+                                            const variant = typeBadgeMap[row.accountType] || 'secondary';
+                                            return (
+                                                <tr key={row.accountId || i}>
+                                                    <td className="text-muted">{row.code}</td>
+                                                    <td>{row.accountName}</td>
+                                                    <td><span className={`badge bg-${variant}`}>{row.accountType}</span></td>
+                                                    <td className="text-end">{row.totalDebit > 0 ? formatCurrency(row.totalDebit) : '—'}</td>
+                                                    <td className="text-end">{row.totalCredit > 0 ? formatCurrency(row.totalCredit) : '—'}</td>
+                                                    <td className={`text-end fw-semibold ${row.closingBalance < 0 ? 'text-danger' : ''}`}>
+                                                        {formatCurrency(Math.abs(row.closingBalance))}
+                                                        {row.closingBalance < 0 ? ' (Cr)' : ' (Dr)'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                                <tfoot className="table-secondary fw-bold">
+                                    <tr>
+                                        <td colSpan="3" className="text-end">GRAND TOTAL</td>
+                                        <td className="text-end text-primary fs-6">{formatCurrency(tbData.totalDebit)}</td>
+                                        <td className="text-end text-primary fs-6">{formatCurrency(tbData.totalCredit)}</td>
+                                        <td className="text-end">
+                                            {tbData.isBalanced
+                                                ? <span className="text-success">✓ Balanced</span>
+                                                : <span className="text-danger">✗ Unbalanced</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </Table>
+                        </div>
                     </Card.Body>
                 </Card>
             )}
