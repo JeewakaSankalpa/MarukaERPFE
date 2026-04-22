@@ -328,18 +328,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return `${p?.name || p?.id}${sku}`;
     };
 
-    // prefer last purchase price → lastCost → standard → average → unit → cost → price
     const deriveSuggestedCost = (p) => {
         if (!p) return undefined;
-        const cands = [
-            p.lastPurchasePrice,
-            p.lastCost,
-            p.standardCost,
-            p.averageCost,
-            p.unitCost,
-            p.cost,
-            p.price,
-        ];
+        const cands = [p.defaultSellingPrice];
         const n = cands.find(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
         return n !== undefined ? Number(n) : undefined;
     };

@@ -128,8 +128,8 @@ const StockTakingPage = () => {
 
     // Filter logic
     const filteredBatches = batches.filter(batch => {
-        const matchSearch = batch.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            batch.batchNumber.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchSearch = (batch.product?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (batch.batchNumber || '').toLowerCase().includes(searchQuery.toLowerCase());
 
         if (activeTab === 'CHANGED') {
             const physicalQty = adjustments[batch.id];

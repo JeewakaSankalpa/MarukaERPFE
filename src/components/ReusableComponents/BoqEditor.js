@@ -95,8 +95,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
 
     const deriveSuggestedCost = (p) => {
         if (!p) return undefined;
-        // prefer last purchase price -> lastCost -> standard -> average -> unit -> cost -> price
-        const cands = [p.lastPurchasePrice, p.lastCost, p.standardCost, p.averageCost, p.unitCost, p.cost, p.price];
+        const cands = [p.defaultSellingPrice];
         const n = cands.find(v => v !== null && v !== undefined && !Number.isNaN(Number(v)));
         return n !== undefined ? Number(n) : undefined;
     };

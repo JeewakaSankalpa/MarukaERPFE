@@ -35,7 +35,8 @@
     "react-toastify": "^11.0.3",
     "recharts": "^3.6.0",
     "sockjs-client": "^1.6.1",
-    "web-vitals": "^4.2.4"
+    "web-vitals": "^4.2.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",

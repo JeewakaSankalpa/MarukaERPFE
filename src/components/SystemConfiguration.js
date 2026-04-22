@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Container, Card, Form, Button, Row, Col, Spinner } from "react-bootstrap";
+import React, { useState, useEffect, useRef } from "react";
+import { Container, Card, Form, Button, Row, Col, Spinner, Table, Badge, Alert } from "react-bootstrap";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from "../api/api";
 import CryptoJS from "crypto-js";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, Download, CheckCircle, XCircle, SkipForward } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // Must match backend key
 const SECRET_KEY = "MarukaERP_Secret";
@@ -39,15 +40,107 @@ export default function SystemConfiguration() {
     const [mappingRoles, setMappingRoles] = useState([]);
     const [mappingLoading, setMappingLoading] = useState(false);
 
+    // ---- Bulk Import State ----
+    const fileInputRef = useRef(null);
+    const [importFile, setImportFile] = useState(null);
+    const [importPreview, setImportPreview] = useState([]);   // parsed rows for preview
+    const [locations, setLocations] = useState([]);
+    const [selectedLocation, setSelectedLocation] = useState("LOC_STORES_MAIN");
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState(null);   // BulkImportResultDTO
+
     useEffect(() => {
         loadConfig();
         loadMappingRoles();
+        loadLocations();
     }, []);
+
+    const loadLocations = async () => {
+        try {
+            const res = await api.get("/store/all");
+            const locs = (res.data || []).map(l => ({ id: l.code || l.id || l.name, label: l.name }));
+            setLocations(locs);
+            if (locs.length > 0 && !selectedLocation) setSelectedLocation(locs[0].id);
+        } catch (e) {
+            // Non-fatal: default location already set
+        }
+    };
+
+    // Download a blank Excel template
+    const handleDownloadTemplate = () => {
+        const headers = [["Product / Service Name", "Sales Description", "SKU", "Type", "Sales Price / Rate", "Tax on Sales", "Price / Rate Includes Tax", "Income Account", "Purchase Description", "Purchase Cost", "Tax on Purchase", "Purchase Cost Includes Tax", "Expense Account", "Quantity on hand", "Reorder point", "Inventory asset account", "Quantity as of date"]];
+        const ws = XLSX.utils.aoa_to_sheet(headers);
+        // Set column widths
+        ws["!cols"] = [30, 20, 15, 12, 15, 12, 12, 15, 20, 15, 12, 12, 15, 15, 15, 15, 15].map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+        XLSX.writeFile(wb, "inventory_import_template.xlsx");
+    };
+
+    // Parse the selected file and populate preview rows
+    const handleFileChange = (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        setImportFile(f);
+        setImportResult(null);
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const wb = XLSX.read(evt.target.result, { type: "binary" });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+            // data[0] = headers, data[1..] = rows
+            const rows = data.slice(1).filter(r => r.some(c => String(c).trim() !== "")).map((r, i) => ({
+                rowNum: i + 2,
+                name: String(r[0] || "").trim(),
+                sku: String(r[2] || "").trim() || String(i + 1).padStart(3, '0'),
+                sellingPrice: r[4] !== undefined ? r[4] : "",
+                costPrice: r[9] !== undefined ? r[9] : "",
+                openingQty: r[13] !== undefined ? r[13] : "",
+            }));
+            setImportPreview(rows);
+        };
+        reader.readAsBinaryString(f);
+    };
+
+    // Submit the file to the backend
+    const handleImport = async () => {
+        if (!importFile) { toast.warn("Please select an Excel file first."); return; }
+        if (!selectedLocation) { toast.warn("Please select a target location."); return; }
+        setImporting(true);
+        setImportResult(null);
+        try {
+            const formData = new FormData();
+            formData.append("file", importFile);
+            formData.append("locationId", selectedLocation);
+            const res = await api.post("/admin/import/inventory", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            setImportResult(res.data);
+            const { productsCreated, productsSkipped, errors, grnNumber } = res.data;
+            if (errors === 0) {
+                toast.success(`Import complete! ${productsCreated} created, ${productsSkipped} skipped. GRN: ${grnNumber}`);
+            } else {
+                toast.warn(`Import finished with ${errors} error(s). Check the results below.`);
+            }
+        } catch (err) {
+            toast.error("Import failed: " + (err?.response?.data?.message || err.message));
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const resetImport = () => {
+        setImportFile(null);
+        setImportPreview([]);
+        setImportResult(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
 
     const loadMappingRoles = async () => {
         setMappingLoading(true);
         try {
-            const res = await api.get("/api/finance/account-mappings/roles");
+            const res = await api.get("/finance/account-mappings/roles");
             setMappingRoles(res.data || []);
         } catch (error) {
             console.error("Failed to load mapping roles", error);
@@ -291,6 +384,213 @@ export default function SystemConfiguration() {
                 </Card.Body>
             </Card>
 
+            {/* ============================================================
+                  INVENTORY BULK IMPORT
+             ============================================================ */}
+            <Card className="shadow-sm mb-4 border-0" style={{ overflow: "hidden" }}>
+                <Card.Header className="py-3" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)" }}>
+                    <div className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-2">
+                            <div style={{ background: "rgba(99,179,237,0.15)", borderRadius: 8, padding: "6px 10px" }}>
+                                <Upload size={18} color="#63b3ed" />
+                            </div>
+                            <div>
+                                <h5 className="mb-0 text-white">Inventory Bulk Import</h5>
+                                <small style={{ color: "#a0aec0" }}>Upload an Excel file to create products and load opening stock</small>
+                            </div>
+                        </div>
+                        <Button
+                            variant="outline-light"
+                            size="sm"
+                            onClick={handleDownloadTemplate}
+                            className="d-flex align-items-center gap-1"
+                            id="btn-download-import-template"
+                        >
+                            <Download size={14} /> Template
+                        </Button>
+                    </div>
+                </Card.Header>
+
+                <Card.Body className="p-4">
+                    {/* Step 1: Column guide */}
+                    <div className="mb-4 p-3 rounded" style={{ background: "#f8f9ff", border: "1px solid #e2e8f0" }}>
+                        <p className="mb-2 fw-semibold small text-secondary">Expected Excel columns (1 to 17):</p>
+                        <div className="d-flex flex-wrap gap-2">
+                            {[
+                                { col: "1", label: "Product / Service Name *" },
+                                { col: "2", label: "Sales Description" },
+                                { col: "3", label: "SKU" },
+                                { col: "4", label: "Type" },
+                                { col: "5", label: "Sales Price / Rate *" },
+                                { col: "6", label: "Tax on Sales" },
+                                { col: "7", label: "Price / Rate Includes Tax" },
+                                { col: "8", label: "Income Account" },
+                                { col: "9", label: "Purchase Description" },
+                                { col: "10", label: "Purchase Cost" },
+                                { col: "11", label: "Tax on Purchase" },
+                                { col: "12", label: "Purchase Cost Includes Tax" },
+                                { col: "13", label: "Expense Account" },
+                                { col: "14", label: "Quantity on hand *" },
+                                { col: "15", label: "Reorder point" },
+                                { col: "16", label: "Inventory asset account" },
+                                { col: "17", label: "Quantity as of date" },
+                            ].map(({ col, label }) => (
+                                <span key={col} className="badge d-flex align-items-center gap-1"
+                                    style={{ background: "#edf2f7", color: "#2d3748", fontWeight: 500, fontSize: 12 }}>
+                                    <span style={{ background: "#4299e1", color: "#fff", borderRadius: 4, padding: "1px 6px", fontWeight: 700 }}>{col}</span>
+                                    {label}
+                                </span>
+                            ))}
+                        </div>
+                        <p className="mb-0 mt-2 text-muted" style={{ fontSize: 12 }}>* Product Name, Sales Price, and Quantity are required. SKU is auto-generated if left blank. Other fields use system defaults if empty.</p>
+                    </div>
+
+                    <Row className="g-3 align-items-end mb-3">
+                        {/* File picker */}
+                        <Col md={6}>
+                            <Form.Label className="fw-semibold">Select Excel File (.xlsx)</Form.Label>
+                            <Form.Control
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".xlsx,.xls"
+                                onChange={handleFileChange}
+                                id="inventory-import-file"
+                            />
+                            {importFile && (
+                                <small className="text-success mt-1 d-block">
+                                    ✓ {importFile.name} — {importPreview.length} data row(s) detected
+                                </small>
+                            )}
+                        </Col>
+
+                        {/* Location selector */}
+                        <Col md={4}>
+                            <Form.Label className="fw-semibold">Target Location (Store)</Form.Label>
+                            <Form.Select
+                                value={selectedLocation}
+                                onChange={e => setSelectedLocation(e.target.value)}
+                                id="import-location-select"
+                            >
+                                {locations.length > 0
+                                    ? locations.map(l => <option key={l.id} value={l.id}>{l.label}</option>)
+                                    : <option value="LOC_STORES_MAIN">Main Stores</option>
+                                }
+                            </Form.Select>
+                        </Col>
+
+                        {/* Action buttons */}
+                        <Col md={2} className="d-flex gap-2">
+                            <Button
+                                variant="primary"
+                                onClick={handleImport}
+                                disabled={importing || !importFile}
+                                className="w-100"
+                                id="btn-run-inventory-import"
+                            >
+                                {importing ? <><Spinner size="sm" className="me-1" />Importing...</> : <><Upload size={14} className="me-1" />Import</>}
+                            </Button>
+                        </Col>
+                    </Row>
+
+                    {/* Preview Table */}
+                    {importPreview.length > 0 && !importResult && (
+                        <div>
+                            <div className="d-flex align-items-center justify-content-between mb-2">
+                                <span className="fw-semibold text-secondary small">Preview ({importPreview.length} rows)</span>
+                                <Button variant="link" size="sm" className="text-danger p-0" onClick={resetImport}>✕ Clear</Button>
+                            </div>
+                            <div className="table-responsive" style={{ maxHeight: 280, overflowY: "auto", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                                <Table size="sm" hover className="mb-0" style={{ fontSize: 13 }}>
+                                    <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Item Name</th>
+                                            <th>SKU</th>
+                                            <th>Cost</th>
+                                            <th>Sell</th>
+                                            <th>Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {importPreview.map(r => (
+                                            <tr key={r.rowNum} className={(!r.name || r.sellingPrice === "" || r.openingQty === "") ? "table-warning" : ""}>
+                                                <td className="text-muted">{r.rowNum}</td>
+                                                <td>{r.name || <span className="text-danger">—</span>}</td>
+                                                <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
+                                                <td>{r.costPrice}</td>
+                                                <td>{r.sellingPrice === "" ? <span className="text-danger">—</span> : r.sellingPrice}</td>
+                                                <td><strong>{r.openingQty === "" ? <span className="text-danger">—</span> : r.openingQty}</strong></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                            <p className="text-muted mt-1 mb-0" style={{ fontSize: 11 }}>
+                                Rows highlighted in yellow are missing required fields and will be skipped.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Import Result Panel */}
+                    {importResult && (
+                        <div className="mt-3">
+                            <Alert variant={importResult.errors > 0 ? "warning" : "success"} className="mb-3">
+                                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <strong>Import Complete</strong>
+                                        {importResult.grnNumber && (
+                                            <span className="ms-2 text-muted small">Opening Stock GRN: <strong>{importResult.grnNumber}</strong></span>
+                                        )}
+                                    </div>
+                                    <div className="d-flex gap-3">
+                                        <span className="text-success fw-bold"><CheckCircle size={14} className="me-1" />{importResult.productsCreated} Created</span>
+                                        <span className="text-secondary fw-bold"><SkipForward size={14} className="me-1" />{importResult.productsSkipped} Skipped</span>
+                                        <span className="text-danger fw-bold"><XCircle size={14} className="me-1" />{importResult.errors} Errors</span>
+                                    </div>
+                                </div>
+                            </Alert>
+
+                            <div className="table-responsive" style={{ maxHeight: 300, overflowY: "auto", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                                <Table size="sm" hover className="mb-0" style={{ fontSize: 13 }}>
+                                    <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>SKU</th>
+                                            <th>Item Name</th>
+                                            <th>Status</th>
+                                            <th>Message</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(importResult.rows || []).map(r => (
+                                            <tr key={r.rowNum}>
+                                                <td className="text-muted">{r.rowNum}</td>
+                                                <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
+                                                <td>{r.name}</td>
+                                                <td>
+                                                    <Badge bg={r.status === "CREATED" ? "success" : r.status === "SKIPPED" ? "secondary" : "danger"}>
+                                                        {r.status}
+                                                    </Badge>
+                                                </td>
+                                                <td className="text-muted small">{r.message}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                            <div className="mt-2 text-end">
+                                <Button variant="link" size="sm" className="p-0 text-secondary" onClick={resetImport}>
+                                    ✕ Clear &amp; Import Another File
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </Card.Body>
+            </Card>
+
+            {/* ============================================================
+                  EMAIL CONFIGURATION (existing)
+             ============================================================ */}
             <Card className="shadow-sm">
                 <Card.Header className="bg-white py-3">
                     <h5 className="mb-0 text-primary">Email Configuration</h5>

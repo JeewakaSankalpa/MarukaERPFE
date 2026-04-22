@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
-import { Container, Button, Form, Table, Badge, Row, Col } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
@@ -119,6 +119,22 @@ function ProductForm({ id, onClose, onSaved }) {
     const [supplierOptions, setSupplierOptions] = useState([]);
     const [validated, setValidated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(!id);
+    const [activeTab, setActiveTab] = useState("details");
+    const [stockBatches, setStockBatches] = useState([]);
+
+    const loadStockBatches = async () => {
+        if (!id) return;
+        try {
+            const res = await api.get(`/inventory/available-batches?productId=${id}`);
+            setStockBatches(res.data || []);
+        } catch {
+            toast.error("Failed to load stock details");
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "stock" && id) loadStockBatches();
+    }, [activeTab, id]);
 
     useEffect(() => {
         (async () => {
@@ -207,9 +223,12 @@ function ProductForm({ id, onClose, onSaved }) {
         <Container style={{ width: "80vw", maxWidth: 900, paddingTop: 24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center">
-                    <h2 style={{ fontSize: "1.5rem" }}>
-                        {id ? (isEditMode ? "Edit Product" : "View Product") : "Create Product"}
-                    </h2>
+                    <div className="d-flex align-items-center">
+                        <button type="button" className="btn btn-light me-3" onClick={onClose}><ArrowLeft size={18} /></button>
+                        <h2 style={{ fontSize: "1.5rem" }} className="mb-0">
+                            {id ? (isEditMode ? "Edit Product" : "View Product") : "Create Product"}
+                        </h2>
+                    </div>
                     {id && (
                         <Button size="sm" variant={isEditMode ? "secondary" : "primary"} onClick={() => setIsEditMode(v => !v)}>
                             {isEditMode ? "Cancel Edit" : "Edit"}
@@ -217,9 +236,11 @@ function ProductForm({ id, onClose, onSaved }) {
                     )}
                 </div>
 
-                <Form noValidate validated={validated} onSubmit={save} className="mt-3">
-                    {!isEdit && (
-                        <Form.Group className="mb-3">
+                <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mt-3 mb-3">
+                    <Tab eventKey="details" title="View Product details">
+                        <Form noValidate validated={validated} onSubmit={save}>
+                            {!isEdit && (
+                                <Form.Group className="mb-3">
                             <Form.Label>SKU *</Form.Label>
                             <Form.Control required isInvalid={validated && !form.sku}
                                           value={form.sku} onChange={bind("sku")} disabled={!isEditMode} />
@@ -270,16 +291,10 @@ function ProductForm({ id, onClose, onSaved }) {
                     <Row className="g-3 mt-1">
                         <Col md={6}>
                             <Form.Group>
-                                <Form.Label>Original Cost Price *</Form.Label>
-                                <Form.Control required isInvalid={validated && !form.originalCostPrice}
-                                              value={form.originalCostPrice} onChange={bind("originalCostPrice")} disabled={!isEditMode} />
-                                <Form.Control.Feedback type="invalid">Cost price is required.</Form.Control.Feedback>
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group>
-                                <Form.Label>Default Selling Price</Form.Label>
-                                <Form.Control value={form.defaultSellingPrice} onChange={bind("defaultSellingPrice")} disabled={!isEditMode} />
+                                <Form.Label>Default Selling Price *</Form.Label>
+                                <Form.Control required isInvalid={validated && !form.defaultSellingPrice}
+                                              value={form.defaultSellingPrice} onChange={bind("defaultSellingPrice")} disabled={!isEditMode} />
+                                <Form.Control.Feedback type="invalid">Selling price is required.</Form.Control.Feedback>
                             </Form.Group>
                         </Col>
                     </Row>
@@ -338,10 +353,47 @@ function ProductForm({ id, onClose, onSaved }) {
                         ))}
                     </div>
 
-                    {(isEditMode || !id) && (
-                        <Button type="submit" className="w-100 mt-3">{id ? "Update Product" : "Save Product"}</Button>
+                            {(isEditMode || !id) && (
+                                <Button type="submit" className="w-100 mt-3">{id ? "Update Product" : "Save Product"}</Button>
+                            )}
+                        </Form>
+                    </Tab>
+                    
+                    {id && (
+                        <Tab eventKey="stock" title="Stock details">
+                            <div className="mt-3 border rounded p-3 bg-light">
+                                <h5 className="mb-3 text-secondary">Non-zero Stock Batches</h5>
+                                <Table size="sm" hover responsive className="mb-0 bg-white shadow-sm rounded">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Batch No</th>
+                                            <th>Location</th>
+                                            <th>Unit Cost</th>
+                                            <th>Retail Price</th>
+                                            <th>Expiry</th>
+                                            <th className="text-end">Qty Left</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {stockBatches.map(b => (
+                                            <tr key={b.id}>
+                                                <td><code style={{ fontSize: 13 }}>{b.batchNumber}</code></td>
+                                                <td>{b.locationId === "LOC_STORES_MAIN" ? "Main Store" : b.locationId}</td>
+                                                <td>{b.costPrice || "-"}</td>
+                                                <td>{b.retailPrice || "-"}</td>
+                                                <td>{b.expiryDate ? new Date(b.expiryDate).toLocaleDateString() : "-"}</td>
+                                                <td className="text-end fw-bold">{b.quantity}</td>
+                                            </tr>
+                                        ))}
+                                        {stockBatches.length === 0 && (
+                                            <tr><td colSpan={7} className="text-center text-muted py-4">No active stock found for this product.</td></tr>
+                                        )}
+                                    </tbody>
+                                </Table>
+                            </div>
+                        </Tab>
                     )}
-                </Form>
+                </Tabs>
             </div>
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
