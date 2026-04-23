@@ -18,10 +18,48 @@ function ProjectSearch() {
     const [status, setStatus] = useState(''); // optional
     const [mjnStatus, setMjnStatus] = useState(''); // '', 'WITH_MJN', 'WITHOUT_MJN'
 
+    // Sort and Display
+    const [sortField, setSortField] = useState('id');
+    const [sortDirection, setSortDirection] = useState('desc');
+    const [columnMode, setColumnMode] = useState(0); // 0: Both, 1: Inquiry Only, 2: Job Only
+    const [availableStatuses, setAvailableStatuses] = useState([]);
+
     useEffect(() => {
-        fetchRows(); // initial load with no filters
+        api.get('/workflow/stages').then(res => setAvailableStatuses(res.data || [])).catch(() => {});
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            fetchRows();
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId, customerName, salesRepName, status, mjnStatus]);
+
+    const cycleColumnMode = () => setColumnMode((prev) => (prev + 1) % 3);
+
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('desc');
+        }
+    };
+
+    const sortedRows = React.useMemo(() => {
+        return [...rows].sort((a, b) => {
+            let valA = a[sortField] || '';
+            let valB = b[sortField] || '';
+            if (sortDirection === 'asc') {
+                return valA.localeCompare(valB, undefined, { numeric: true });
+            } else {
+                return valB.localeCompare(valA, undefined, { numeric: true });
+            }
+        });
+    }, [rows, sortField, sortDirection]);
 
     const fetchRows = async () => {
         try {
@@ -51,16 +89,8 @@ function ProjectSearch() {
         setSalesRepName('');
         setStatus('');
         setMjnStatus('');
-        // We'll call fetchRows after state updates (or use a useEffect if desired, but here we just call manually)
-        // Actually, setStates are async, so let's call fetchRows with empty params
-        setLoading(true);
-        api.get('/projects/search').then(res => {
-            setRows(res.data || []);
-            setLoading(false);
-        }).catch(() => {
-            setLoading(false);
-            toast.error('Failed to load projects');
-        });
+        setSortField('id');
+        setSortDirection('desc');
     };
 
     return (
@@ -101,11 +131,9 @@ function ProjectSearch() {
                     <Col md={2}>
                         <Form.Select value={status} onChange={(e) => setStatus(e.target.value)}>
                             <option value="">Status (any)</option>
-                            <option value="INQUIRY">INQUIRY</option>
-                            <option value="APPROVAL">APPROVAL</option>
-                            <option value="IN_PROGRESS">IN_PROGRESS</option>
-                            <option value="COMPLETED">COMPLETED</option>
-                            <option value="CANCELLED">CANCELLED</option>
+                            {availableStatuses.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
                         </Form.Select>
                     </Col>
                     <Col md={2}>
@@ -116,18 +144,31 @@ function ProjectSearch() {
                         </Form.Select>
                     </Col>
                     <Col md={2} className="d-flex gap-2">
-                        <Button variant="primary" onClick={fetchRows} className="w-100">Go</Button>
-                        <Button variant="outline-secondary" onClick={clearFilters}>Reset</Button>
+                        <Button variant="outline-secondary" onClick={clearFilters} className="w-100">Reset Filters</Button>
                     </Col>
                 </Row>
             </Form>
 
-            <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <div className="d-flex justify-content-end mb-2">
+                <Button variant="outline-secondary" size="sm" onClick={cycleColumnMode}>
+                    Toggle ID Columns: {columnMode === 0 ? "Both" : columnMode === 1 ? "Inquiry Only" : "Job Only"}
+                </Button>
+            </div>
+
+            <div>
                 <Table bordered hover responsive className="text-center align-middle">
                     <thead className="table-primary">
                         <tr>
-                            <th>Inquiry #</th>
-                            <th>Job Number</th>
+                            {columnMode !== 2 && (
+                                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('id')}>
+                                    Inquiry # {sortField === 'id' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                                </th>
+                            )}
+                            {columnMode !== 1 && (
+                                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('jobNumber')}>
+                                    Job Number {sortField === 'jobNumber' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                                </th>
+                            )}
                             <th>Project Name</th>
                             <th>Client</th>
                             <th>Sales Rep</th>
@@ -138,18 +179,20 @@ function ProjectSearch() {
                     <tbody>
                         {loading ? (
                             <tr><td colSpan={7}><Spinner animation="border" size="sm" /> Loading...</td></tr>
-                        ) : rows.length === 0 ? (
+                        ) : sortedRows.length === 0 ? (
                             <tr><td colSpan={7}>No projects found</td></tr>
-                        ) : rows.map(r => (
+                        ) : sortedRows.map(r => (
                             <tr key={r.id}>
-                                <td><small className="text-muted">{r.id}</small></td>
-                                <td>
-                                    {r.jobNumber ? (
-                                        <Badge bg="success" style={{ fontSize: '0.9rem' }}>{r.jobNumber}</Badge>
-                                    ) : (
-                                        <Badge bg="secondary">MIN Only</Badge>
-                                    )}
-                                </td>
+                                {columnMode !== 2 && <td><small className="text-muted">{r.id}</small></td>}
+                                {columnMode !== 1 && (
+                                    <td>
+                                        {r.jobNumber ? (
+                                            <Badge bg="success" style={{ fontSize: '0.9rem' }}>{r.jobNumber}</Badge>
+                                        ) : (
+                                            <Badge bg="secondary">MIN Only</Badge>
+                                        )}
+                                    </td>
+                                )}
                                 <td>{r.projectName || '-'}</td>
                                 <td>{r.customerName || '-'}</td>
                                 <td>{r.salesRepName || '-'}</td>

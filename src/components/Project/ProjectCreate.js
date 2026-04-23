@@ -17,6 +17,7 @@ import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { listWorkflows } from "../../services/workflowApi";
+import Select from "react-select";
 
 const ProjectForm = () => {
   const { id: routeId } = useParams();
@@ -41,6 +42,9 @@ const ProjectForm = () => {
   const [validated, setValidated] = useState(false);
   const [isEditMode, setIsEditMode] = useState(!routeId); // create: editable, edit: view-only
   const [files, setFiles] = useState([]); // selected File[] before submit
+
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [employeeSearch, setEmployeeSearch] = useState("");
 
   // Quick Customer Add State
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -297,6 +301,41 @@ const ProjectForm = () => {
     }
   };
 
+  const sortOptionsBySearch = (options, search) => {
+    if (!search) return options;
+    const lowerSearch = search.toLowerCase();
+    return [...options].sort((a, b) => {
+      const aLower = a.label.toLowerCase();
+      const bLower = b.label.toLowerCase();
+      const aStarts = aLower.startsWith(lowerSearch);
+      const bStarts = bLower.startsWith(lowerSearch);
+      
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return a.label.localeCompare(b.label);
+    });
+  };
+
+  const customerOptions = sortOptionsBySearch(
+    customers
+      .map(cust => ({
+        value: cust.id,
+        label: cust.comName || cust.name || "Unnamed Customer"
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    customerSearch
+  );
+
+  const employeeOptions = sortOptionsBySearch(
+    employees
+      .map(emp => ({
+        value: emp.id,
+        label: `${emp.firstName} ${emp.lastName}`
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    employeeSearch
+  );
+
   return (
     <div
       style={{
@@ -370,48 +409,58 @@ const ProjectForm = () => {
                       </Button>
                     )}
                   </div>
-                  <Form.Select
-                    name="customerId"
-                    value={projectData.customerId}
-                    onChange={handleChange}
-                    disabled={!isEditMode}
-                    required
-                    isInvalid={validated && !projectData.customerId}
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map((cust) => (
-                      <option key={cust.id} value={cust.id}>
-                        {cust.comName || cust.name || "Unnamed Customer"}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Control.Feedback type="invalid">
-                    Please select a customer.
-                  </Form.Control.Feedback>
+                  <Select
+                    options={customerOptions}
+                    value={customerOptions.find(opt => opt.value === projectData.customerId) || null}
+                    onChange={(selected) => setProjectData(prev => ({ ...prev, customerId: selected ? selected.value : "" }))}
+                    onInputChange={(val, { action }) => {
+                      if (action === 'input-change') setCustomerSearch(val);
+                      if (action === 'menu-close') setCustomerSearch('');
+                    }}
+                    isDisabled={!isEditMode}
+                    isSearchable
+                    placeholder="Select Customer"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderColor: validated && !projectData.customerId ? '#dc3545' : base.borderColor,
+                      })
+                    }}
+                  />
+                  {validated && !projectData.customerId && (
+                    <div className="invalid-feedback" style={{ display: 'block' }}>
+                      Please select a customer.
+                    </div>
+                  )}
                 </Form.Group>
               </Col>
 
               <Col xs={12} md={6}>
                 <Form.Group controlId="salesRep">
                   <Form.Label>Sales Representative</Form.Label>
-                  <Form.Select
-                    name="salesRep"
-                    value={projectData.salesRep}
-                    onChange={handleChange}
-                    disabled={!isEditMode}
-                    required
-                    isInvalid={validated && !projectData.salesRep}
-                  >
-                    <option value="">Select Employee</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Control.Feedback type="invalid">
-                    Please select a sales representative.
-                  </Form.Control.Feedback>
+                  <Select
+                    options={employeeOptions}
+                    value={employeeOptions.find(opt => opt.value === projectData.salesRep) || null}
+                    onChange={(selected) => setProjectData(prev => ({ ...prev, salesRep: selected ? selected.value : "" }))}
+                    onInputChange={(val, { action }) => {
+                      if (action === 'input-change') setEmployeeSearch(val);
+                      if (action === 'menu-close') setEmployeeSearch('');
+                    }}
+                    isDisabled={!isEditMode}
+                    isSearchable
+                    placeholder="Select Employee"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderColor: validated && !projectData.salesRep ? '#dc3545' : base.borderColor,
+                      })
+                    }}
+                  />
+                  {validated && !projectData.salesRep && (
+                    <div className="invalid-feedback" style={{ display: 'block' }}>
+                      Please select a sales representative.
+                    </div>
+                  )}
                 </Form.Group>
               </Col>
             </Row>
