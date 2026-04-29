@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import api from "../../api/api";
 import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 import OverdraftConfirmModal from "../ReusableComponents/OverdraftConfirmModal";
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 const addPayment = async (id, payload) => (await api.post(`/grns/${id}/payments`, payload)).data;
 
@@ -134,7 +135,7 @@ export default function GRNPaymentModal({ grn, onClose }) {
                                 <Row className="g-2 align-items-end">
                                     <Col md={3}>
                                         <Form.Label>Date</Form.Label>
-                                        <Form.Control type="date" value={date} onChange={e => setDate(e.target.value)} />
+                                        <SafeDatePicker name="date" value={date} onChange={e => setDate(e.target.value)} />
                                     </Col>
                                     <Col md={3}>
                                         <Form.Label>Amount <small className="text-muted">(max: {maxPayable.toFixed(2)})</small></Form.Label>

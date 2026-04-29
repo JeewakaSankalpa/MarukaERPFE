@@ -5,6 +5,7 @@ import api from "../../api/api";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 function CustomerCreate() {
   const navigate = useNavigate();
@@ -256,18 +257,16 @@ function CustomerCreate() {
 
               <Form.Group controlId="currency" className="mb-3">
                 <Form.Label>Currency</Form.Label>
-                <Form.Select
+                <SafeSelect
                   name="currency"
                   value={companyData.currency}
                   onChange={handleChange}
-                  isInvalid={!!errors.currency}
-                  isValid={validated && !errors.currency}
                   required
                 >
                   <option value="">-- Select --</option>
                   <option value="LKR">Rupees</option>
                   <option value="USD">USD</option>
-                </Form.Select>
+                </SafeSelect>
               </Form.Group>
 
               <Form.Group controlId="creditPeriod" className="mb-3">
@@ -338,7 +337,7 @@ function CustomerCreate() {
               <Row>
                 <Form.Group controlId="vatType" className="mb-3">
                   <Form.Label>VAT Type</Form.Label>
-                  <Form.Select
+                  <SafeSelect
                     name="vatType"
                     value={companyData.vatType}
                     onChange={handleChange}
@@ -347,7 +346,7 @@ function CustomerCreate() {
                     <option value="">-- Select --</option>
                     <option value="VAT">VAT</option>
                     <option value="SVAT">SVAT</option>
-                  </Form.Select>
+                  </SafeSelect>
                 </Form.Group>
 
                 {companyData.vatType && (

@@ -362,9 +362,15 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         setCompMargin(s => ({ ...s, [name]: defMargin }));
     };
 
-    const renameComponent = (idx, name) => {
-        const oldName = components[idx];
-        const newName = name?.trim() || oldName;
+    // Called on every keystroke — allows empty string so user can freely delete all characters
+    const renameComponentLive = (idx, rawValue) => {
+        setComponents(cols => cols.map((c, i) => (i === idx ? rawValue : c)));
+    };
+
+    // Called on blur — migrates all keyed state from oldName to newName,
+    // and falls back to oldName if the user left the field empty
+    const renameComponentCommit = (idx, rawValue, oldName) => {
+        const newName = rawValue.trim() || oldName;
         setComponents(cols => cols.map((c, i) => (i === idx ? newName : c)));
         if (oldName !== newName) {
             setRows(rs => rs.map(r => {
@@ -908,6 +914,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         placeholder="Select a project…"
                                         isClearable
                                         isDisabled={isLocked || !!propProjectId} // Lock if accessed via Project context
+                                        className="modern-select-container"
+                                        classNamePrefix="modern-select"
                                     />
                                 </div>
                             </div>
@@ -944,7 +952,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             <div className="d-flex gap-1 align-items-center">
                                                 <Form.Control
                                                     value={c}
-                                                    onChange={(e) => renameComponent(idx, e.target.value)}
+                                                    onChange={(e) => renameComponentLive(idx, e.target.value)}
+                                                    onBlur={(e) => renameComponentCommit(idx, e.target.value, components[idx])}
                                                     disabled={isLocked}
                                                 />
                                                 {!isLocked && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>}
@@ -983,6 +992,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     filterOption={(option, input) =>
                                                         option.label.toLowerCase().includes(input.toLowerCase())
                                                     }
+                                                    className="modern-select-container"
+                                                    classNamePrefix="modern-select"
                                                 />
                                                 <div className="small text-muted mt-1">
                                                     {r.productId ? <>ID: {r.productId}</> : <>Not selected</>}
@@ -1185,7 +1196,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         if (opt) setTerms([...terms, { label: opt.value.title, value: opt.value.content }]);
                                                     }}
                                                     placeholder="Load a Term..."
-                                                    className="flex-grow-1"
+                                                    className="flex-grow-1 modern-select-container"
+                                                    classNamePrefix="modern-select"
                                                 />
                                                 {!isLocked && <Button size="sm" variant="outline-primary" onClick={() => setTerms([...terms, { label: "", value: "" }])}>
                                                     + Custom
@@ -1241,7 +1253,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         if (opt) setCustomNote(prev => (prev ? prev + "\n" : "") + opt.value.content);
                                                     }}
                                                     placeholder="Append Note Template..."
-                                                    className="flex-grow-1"
+                                                    className="flex-grow-1 modern-select-container"
+                                                    classNamePrefix="modern-select"
                                                 />
                                             </div>
                                             <Form.Control

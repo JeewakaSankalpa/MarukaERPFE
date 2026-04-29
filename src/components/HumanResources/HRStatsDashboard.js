@@ -14,6 +14,7 @@ import {
     Cell,
 } from "recharts";
 import { Users, UserCheck, UserMinus, Clock, Briefcase } from "lucide-react";
+import SafeSelect from "../ReusableComponents/SafeSelect";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658"];
 
@@ -105,16 +106,16 @@ const HRStatsDashboard = () => {
                         <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                             <h6 className="m-0 font-weight-bold text-primary">Attendance Trends</h6>
                             <div className="d-flex gap-2">
-                                <select name="month" className="form-select form-select-sm" value={trendFilter.month} onChange={handleFilterChange}>
+                                <SafeSelect name="month" size="sm" value={trendFilter.month} onChange={handleFilterChange}>
                                     {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                                         <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('default', { month: 'short' })}</option>
                                     ))}
-                                </select>
-                                <select name="year" className="form-select form-select-sm" value={trendFilter.year} onChange={handleFilterChange}>
+                                </SafeSelect>
+                                <SafeSelect name="year" size="sm" value={trendFilter.year} onChange={handleFilterChange}>
                                     {[2024, 2025, 2026].map(y => (
                                         <option key={y} value={y}>{y}</option>
                                     ))}
-                                </select>
+                                </SafeSelect>
                             </div>
                         </div>
                         <div className="card-body">

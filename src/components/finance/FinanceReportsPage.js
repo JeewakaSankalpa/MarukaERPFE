@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Tabs, Tab, Table, Card, Form, Button, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 export default function FinanceReportsPage() {
     const navigate = useNavigate();
@@ -99,11 +100,11 @@ export default function FinanceReportsPage() {
                                 <div className="d-flex gap-3">
                                     <Form.Group>
                                         <Form.Label>From</Form.Label>
-                                        <Form.Control type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                        <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
                                     </Form.Group>
                                     <Form.Group>
                                         <Form.Label>To</Form.Label>
-                                        <Form.Control type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                        <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
                                     </Form.Group>
                                 </div>
                             )}
@@ -111,7 +112,7 @@ export default function FinanceReportsPage() {
                                 <div className="d-flex gap-3">
                                     <Form.Group>
                                         <Form.Label>As of Date</Form.Label>
-                                        <Form.Control type="date" value={asOfDate} onChange={e => setAsOfDate(e.target.value)} />
+                                        <SafeDatePicker name="asOfDate" value={asOfDate} onChange={e => setAsOfDate(e.target.value)} />
                                     </Form.Group>
                                 </div>
                             )}
@@ -119,11 +120,11 @@ export default function FinanceReportsPage() {
                                 <div className="d-flex gap-3">
                                     <Form.Group>
                                         <Form.Label>From</Form.Label>
-                                        <Form.Control type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                        <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
                                     </Form.Group>
                                     <Form.Group>
                                         <Form.Label>To</Form.Label>
-                                        <Form.Control type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                        <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
                                     </Form.Group>
                                 </div>
                             )}

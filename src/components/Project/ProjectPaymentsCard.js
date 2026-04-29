@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Button, Row, Col, Table, Modal, Form } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 
 /**
@@ -182,7 +183,7 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
                     </div>
                     <Form.Group className="mb-3">
                         <Form.Label>Date <span className="text-danger">*</span></Form.Label>
-                        <Form.Control type="date" value={payData.date} onChange={e => setPayData({ ...payData, date: e.target.value })} disabled={submitting} required />
+                        <SafeDatePicker name="date" value={payData.date} onChange={e => setPayData({ ...payData, date: e.target.value })} disabled={submitting} required />
                     </Form.Group>
                     <Form.Group className="mb-3">
                         <Form.Label>Amount <span className="text-danger">*</span></Form.Label>

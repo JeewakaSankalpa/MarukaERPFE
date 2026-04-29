@@ -5,6 +5,7 @@ import { Container, Row, Col, Form, Button, Table, Badge } from "react-bootstrap
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -218,7 +219,7 @@ export default function POCreateManual({ onCreated }) {
                                 <Col md={6}>
                                     <Form.Group className="mb-2">
                                         <Form.Label>ETA Date</Form.Label>
-                                        <Form.Control type="date" value={etaDate} onChange={e => setEtaDate(e.target.value)} />
+                                        <SafeDatePicker name="etaDate" value={etaDate} onChange={e => setEtaDate(e.target.value)} />
                                     </Form.Group>
                                 </Col>
                                 <Col md={6}>

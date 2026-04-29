@@ -5,6 +5,7 @@ import { Container, Button, Form, Table, Badge, Row, Col, Spinner } from "react-
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 /* ================== Inline API helpers (same file) ================== */
 const qp = (o = {}) => {
@@ -62,11 +63,11 @@ function SupplierList({ onOpen }) {
 
                 <div className="d-flex gap-2 mb-3">
                     <Form.Control placeholder="Search name/code" value={q} onChange={e => setQ(e.target.value)} />
-                    <Form.Select value={status} onChange={e => setStatus(e.target.value)} style={{ maxWidth: 200 }}>
+                    <SafeSelect value={status} onChange={e => setStatus(e.target.value)} style={{ maxWidth: 200 }}>
                         <option value="">All</option>
                         <option value="ACTIVE">Active</option>
                         <option value="INACTIVE">Inactive</option>
-                    </Form.Select>
+                    </SafeSelect>
                     <Button variant="outline-secondary" onClick={onSearch}>Search</Button>
                 </div>
 
@@ -219,10 +220,10 @@ function SupplierForm({ id, onClose, onSaved }) {
                         <Col md={6}>
                             <Form.Group>
                                 <Form.Label>Status</Form.Label>
-                                <Form.Select value={form.status} onChange={bind("status")} disabled={!isEditMode}>
+                                <SafeSelect value={form.status} onChange={bind("status")} disabled={!isEditMode}>
                                     <option value="ACTIVE">ACTIVE</option>
                                     <option value="INACTIVE">INACTIVE</option>
-                                </Form.Select>
+                                </SafeSelect>
                             </Form.Group>
                         </Col>
                         <Col md={6}>

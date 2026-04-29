@@ -8,6 +8,7 @@ import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
+import SafeSelect from "../ReusableComponents/SafeSelect";
 
 /* ================== Inline API helpers ================== */
 const qp = (o = {}) => {
@@ -156,7 +157,7 @@ function PRForm({ onSaved }) {
                         <Col md={6}>
                             <Form.Group>
                                 <Form.Label>Supplier *</Form.Label>
-                                <Form.Select
+                                <SafeSelect
                                     value={supplierId}
                                     onChange={(e) => setSupplierId(e.target.value)}
                                     required
@@ -164,7 +165,7 @@ function PRForm({ onSaved }) {
                                 >
                                     <option value="">Select supplier</option>
                                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </Form.Select>
+                                </SafeSelect>
                                 <Form.Control.Feedback type="invalid">Please select a supplier.</Form.Control.Feedback>
                             </Form.Group>
                         </Col>

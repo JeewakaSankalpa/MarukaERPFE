@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Table, Button, Badge, Modal, Form, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 export default function ProjectRevisions({ projectId, versions, stages, workflowStages, currentStageType, roleHeader, onRevise, onViewSnapshot }) {
     const [showReviseModal, setShowReviseModal] = useState(false);
@@ -162,12 +163,12 @@ export default function ProjectRevisions({ projectId, versions, stages, workflow
                     </Form.Group>
                     <Form.Group className="mb-3">
                         <Form.Label>Move Back To</Form.Label>
-                        <Form.Select value={targetStage} onChange={e => setTargetStage(e.target.value)}>
+                        <SafeSelect value={targetStage} onChange={e => setTargetStage(e.target.value)}>
                             {availableStages.length === 0 && <option value="">No past stages available</option>}
                             {availableStages.map(s => (
                                 <option key={s} value={s}>{s}</option>
                             ))}
-                        </Form.Select>
+                        </SafeSelect>
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>

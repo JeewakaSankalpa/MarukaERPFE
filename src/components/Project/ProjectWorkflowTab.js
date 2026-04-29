@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Form, Alert, Spinner, Table, Badge } from 'react-bootstrap';
+import { Card, Button, Form, Alert, Spinner, Table, Badge, Modal } from 'react-bootstrap';
 import { listWorkflows } from '../../services/workflowApi';
 import api from '../../api/api';
+import SafeSelect from '../ReusableComponents/SafeSelect';
 import { toast } from 'react-toastify';
 
 export default function ProjectWorkflowTab({ projectId, currentWorkflow, currentStageId, onUpdate, project, setProcessingMessage }) {
@@ -9,6 +10,8 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
     const [loading, setLoading] = useState(false);
     const [switching, setSwitching] = useState(false);
     const [selectedWorkflowId, setSelectedWorkflowId] = useState('');
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [confirmData, setConfirmData] = useState(null);
 
     // Resolve the actual active workflow ID from either the snapshot or the project field
     const activeWorkflowId = currentWorkflow?.id || project?.workflowId || 'active';
@@ -30,22 +33,31 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
         }
     };
 
-    const handleSync = async (targetId) => {
+    const confirmSync = (targetId) => {
         if (!targetId) return;
 
         const isSame = targetId === activeWorkflowId;
         
+        let message = '';
+        let title = '';
         if (!isSame) {
             const target = workflows.find(w => w.id === targetId);
             if (!target) return;
-            if (!window.confirm(`Are you sure you want to switch this project to workflow "${target.id}" (v${target.version || 0})?\n\nThis will create a backup snapshot of the current state.`)) {
-                return;
-            }
+            title = 'Confirm Workflow Switch';
+            message = `Are you sure you want to switch this project to workflow "${target.id}" (v${target.version || 0})?\n\nThis will create a backup snapshot of the current state.`;
         } else {
-            if (!window.confirm(`Sync the latest global updates from the "${targetId}" workflow to this project?\n\nThis will create a backup snapshot of the current state.`)) {
-                return;
-            }
+            title = 'Confirm Workflow Sync';
+            message = `Sync the latest global updates from the "${targetId}" workflow to this project?\n\nThis will create a backup snapshot of the current state.`;
         }
+
+        setConfirmData({ targetId, isSame, message, title });
+        setShowConfirmModal(true);
+    };
+
+    const proceedWithSync = async () => {
+        if (!confirmData) return;
+        const { targetId, isSame } = confirmData;
+        setShowConfirmModal(false);
 
         setSwitching(true);
         if (setProcessingMessage) {
@@ -116,7 +128,7 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
                             <Button 
                                 variant="primary" 
                                 disabled={switching} 
-                                onClick={() => handleSync(activeWorkflowId)}
+                                onClick={() => confirmSync(activeWorkflowId)}
                             >
                                 {switching ? <Spinner size="sm" /> : 'Sync Latest Workflow Updates'}
                             </Button>
@@ -128,24 +140,23 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
                         <div className="d-flex gap-3 align-items-end">
                             <Form.Group style={{ minWidth: '300px' }}>
                                 <Form.Label>Select Target Workflow</Form.Label>
-                                <Form.Select
+                                <SafeSelect
                                     value={selectedWorkflowId}
                                     onChange={e => setSelectedWorkflowId(e.target.value)}
                                 >
-                                    <option value="">-- Choose Workflow --</option>
                                     {workflows.map(w => (
                                         <option key={w.id} value={w.id}>
                                             {w.id === 'active' ? 'Active (Default)' : w.id}
                                             {w.version ? ` (v${w.version})` : ''}
-                                            {activeWorkflowId === w.id && ' ✓ Current'}
+                                            {activeWorkflowId === w.id && ' ★ Current'}
                                         </option>
                                     ))}
-                                </Form.Select>
+                                </SafeSelect>
                             </Form.Group>
                             <Button
                                 variant="warning"
                                 disabled={!selectedWorkflowId || switching || selectedWorkflowId === activeWorkflowId}
-                                onClick={() => handleSync(selectedWorkflowId)}
+                                onClick={() => confirmSync(selectedWorkflowId)}
                             >
                                 {switching ? <Spinner size="sm" /> : 'Switch Workflow'}
                             </Button>
@@ -153,6 +164,21 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
                     </>
                 )}
             </Card.Body>
+
+            <Modal show={showConfirmModal} onHide={() => setShowConfirmModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>{confirmData?.title}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p style={{ whiteSpace: 'pre-wrap' }} className="mb-0">{confirmData?.message}</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>Cancel</Button>
+                    <Button variant={confirmData?.isSame ? "primary" : "warning"} onClick={proceedWithSync}>
+                        {confirmData?.isSame ? "Confirm Sync" : "Confirm Switch"}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Card>
     );
 }

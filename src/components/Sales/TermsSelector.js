@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Form, Row, Col, InputGroup } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 const CATEGORIES = ["Validity", "Warranty", "Payment", "Transport"];
 
@@ -50,8 +51,7 @@ export default function TermsSelector({ value = [], onChange }) {
                             <Form.Label className="fw-bold">{cat}</Form.Label>
                             <Row>
                                 <Col md={4}>
-                                    <Form.Select
-                                        size="sm"
+                                    <SafeSelect
                                         className="mb-2"
                                         onChange={(e) => {
                                             if (e.target.value) handleChange(cat, e.target.value);
@@ -64,7 +64,7 @@ export default function TermsSelector({ value = [], onChange }) {
                                                 {t.content.substring(0, 40)}...
                                             </option>
                                         ))}
-                                    </Form.Select>
+                                    </SafeSelect>
                                 </Col>
                                 <Col md={8}>
                                     <InputGroup>

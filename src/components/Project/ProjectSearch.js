@@ -5,6 +5,7 @@ import { Table, Button, Container, Form, Row, Col, Spinner, Badge } from 'react-
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import Select from 'react-select';
 
 
 function ProjectSearch() {
@@ -129,19 +130,37 @@ function ProjectSearch() {
                         />
                     </Col>
                     <Col md={2}>
-                        <Form.Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                            <option value="">Status (any)</option>
-                            {availableStatuses.map(s => (
-                                <option key={s} value={s}>{s}</option>
-                            ))}
-                        </Form.Select>
+                        <Select
+                            options={[
+                                { value: '', label: 'Status (any)' },
+                                ...availableStatuses.map(s => ({ value: s, label: s }))
+                            ]}
+                            value={{ value: status, label: status || 'Status (any)' }}
+                            onChange={(opt) => setStatus(opt ? opt.value : '')}
+                            placeholder="Status (any)"
+                            isSearchable
+                            className="modern-select-container"
+                            classNamePrefix="modern-select"
+                        />
                     </Col>
                     <Col md={2}>
-                        <Form.Select value={mjnStatus} onChange={(e) => setMjnStatus(e.target.value)}>
-                            <option value="">Job Status (any)</option>
-                            <option value="WITH_MJN">With MJN</option>
-                            <option value="WITHOUT_MJN">Inquiries Only</option>
-                        </Form.Select>
+                        <Select
+                            options={[
+                                { value: '', label: 'Job Status (any)' },
+                                { value: 'WITH_MJN', label: 'With MJN' },
+                                { value: 'WITHOUT_MJN', label: 'Inquiries Only' }
+                            ]}
+                            value={[
+                                { value: '', label: 'Job Status (any)' },
+                                { value: 'WITH_MJN', label: 'With MJN' },
+                                { value: 'WITHOUT_MJN', label: 'Inquiries Only' }
+                            ].find(opt => opt.value === mjnStatus)}
+                            onChange={(opt) => setMjnStatus(opt ? opt.value : '')}
+                            placeholder="Job Status (any)"
+                            isSearchable
+                            className="modern-select-container"
+                            classNamePrefix="modern-select"
+                        />
                     </Col>
                     <Col md={2} className="d-flex gap-2">
                         <Button variant="outline-secondary" onClick={clearFilters} className="w-100">Reset Filters</Button>

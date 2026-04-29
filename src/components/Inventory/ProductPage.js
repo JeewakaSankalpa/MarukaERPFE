@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
+import Select from "react-select";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -64,11 +65,23 @@ function ProductList({ onOpen }) {
 
                 <div className="d-flex gap-2 mb-3">
                     <Form.Control placeholder="Search name/SKU/barcode" value={q} onChange={e => setQ(e.target.value)} />
-                    <Form.Select value={status} onChange={e => setStatus(e.target.value)} style={{ maxWidth: 200 }}>
-                        <option value="">All</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                    </Form.Select>
+                    <Select
+                        options={[
+                            { value: '', label: 'All' },
+                            { value: 'ACTIVE', label: 'Active' },
+                            { value: 'INACTIVE', label: 'Inactive' }
+                        ]}
+                        value={[
+                            { value: '', label: 'All' },
+                            { value: 'ACTIVE', label: 'Active' },
+                            { value: 'INACTIVE', label: 'Inactive' }
+                        ].find(o => o.value === status) || { value: '', label: 'All' }}
+                        onChange={opt => setStatus(opt ? opt.value : '')}
+                        isSearchable
+                        className="modern-select-container"
+                        classNamePrefix="modern-select"
+                        styles={{ container: base => ({ ...base, width: 200 }) }}
+                    />
                     <Button variant="outline-secondary" onClick={onSearch}>Search</Button>
                 </div>
 
@@ -181,7 +194,7 @@ function ProductForm({ id, onClose, onSaved }) {
         e.preventDefault();
         setValidated(true);
         if (!form.sku && !isEdit) return;
-        if (!form.name || !form.originalCostPrice) return;
+        if (!form.name || !form.defaultSellingPrice) return;
 
         const payload = {
             sku: form.sku,
@@ -190,8 +203,7 @@ function ProductForm({ id, onClose, onSaved }) {
             categoryId: form.categoryId || undefined,
             unit: form.unit || undefined,
             status: form.status,
-            originalCostPrice: form.originalCostPrice,
-            defaultSellingPrice: form.defaultSellingPrice || undefined,
+            defaultSellingPrice: form.defaultSellingPrice,
             suppliers: (form.suppliers || []).map(s => ({
                 supplierId: s.supplierId,
                 supplierItemCode: s.supplierItemCode || undefined,
@@ -258,10 +270,18 @@ function ProductForm({ id, onClose, onSaved }) {
                         <Col md={6}>
                             <Form.Group>
                                 <Form.Label>Status</Form.Label>
-                                <Form.Select value={form.status} onChange={bind("status")} disabled={!isEditMode}>
-                                    <option value="ACTIVE">ACTIVE</option>
-                                    <option value="INACTIVE">INACTIVE</option>
-                                </Form.Select>
+                                <Select
+                                    options={[
+                                        { value: 'ACTIVE', label: 'ACTIVE' },
+                                        { value: 'INACTIVE', label: 'INACTIVE' }
+                                    ]}
+                                    value={{ value: form.status, label: form.status }}
+                                    onChange={opt => bind("status")({ target: { value: opt ? opt.value : 'ACTIVE' } })}
+                                    isDisabled={!isEditMode}
+                                    isSearchable
+                                    className="modern-select-container"
+                                    classNamePrefix="modern-select"
+                                />
                             </Form.Group>
                         </Col>
                     </Row>
@@ -312,10 +332,22 @@ function ProductForm({ id, onClose, onSaved }) {
                                 <Col md={4}>
                                     <Form.Group>
                                         <Form.Label>Supplier *</Form.Label>
-                                        <Form.Select value={sl.supplierId || ""} onChange={updSupplierLink(i, "supplierId")} disabled={!isEditMode}>
-                                            <option value="">Select…</option>
-                                            {supplierOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </Form.Select>
+                                        <Select
+                                            options={[
+                                                { value: '', label: 'Select…' },
+                                                ...supplierOptions.map(s => ({ value: s.id, label: s.name }))
+                                            ]}
+                                            value={
+                                                sl.supplierId
+                                                    ? { value: sl.supplierId, label: supplierOptions.find(s => s.id === sl.supplierId)?.name || sl.supplierId }
+                                                    : { value: '', label: 'Select…' }
+                                            }
+                                            onChange={opt => updSupplierLink(i, "supplierId")({ target: { value: opt ? opt.value : '' } })}
+                                            isDisabled={!isEditMode}
+                                            isSearchable
+                                            className="modern-select-container"
+                                            classNamePrefix="modern-select"
+                                        />
                                     </Form.Group>
                                 </Col>
                                 <Col md={2}>

@@ -14,6 +14,7 @@ import {
     Cell,
 } from "recharts";
 import { DollarSign, Users, Briefcase, Truck, ShoppingCart } from "lucide-react";
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 // Helper for formatted currency
 const formatCurrency = (val) => {
@@ -111,19 +112,17 @@ const SupplierCustomerDashboard = () => {
                     {/* Date Picker */}
                     <div className="d-flex align-items-center me-3 bg-white p-2 border rounded shadow-sm">
                         <span className="me-2 text-gray-600 small font-weight-bold">Period:</span>
-                        <input
-                            type="date"
-                            className="form-control form-control-sm me-2"
+                        <div className="me-2"><SafeDatePicker
+                            name="startDate"
                             value={dateRange.startDate}
                             onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                        />
+                        /></div>
                         <span className="me-2">-</span>
-                        <input
-                            type="date"
-                            className="form-control form-control-sm"
+                        <div><SafeDatePicker
+                            name="endDate"
                             value={dateRange.endDate}
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                        />
+                        /></div>
                     </div>
 
                     <div>

@@ -1,6 +1,6 @@
 // src/components/projects/ProjectDetails.js
 import React, { useEffect, useMemo, useState, Suspense } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Row, Col, Card, Button, Badge, Spinner, Form, Modal
 } from 'react-bootstrap';
@@ -118,9 +118,16 @@ export default function ProjectDetails() {
         setSelectedAttachments(next);
     };
 
-    // Tabs state
-    const [activeTab, setActiveTab] = useState(COMPONENT_IDS.DASHBOARD);
-    // const [taskSubTab, setTaskSubTab] = useState('list'); // Moved to Tasks Component ideally, or kept if Tasks uses it
+    // Tabs state from URL query params
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || COMPONENT_IDS.DASHBOARD;
+
+    const handleTabChange = (tabId) => {
+        setSearchParams(prev => {
+            prev.set('tab', tabId);
+            return prev;
+        });
+    };
 
     useEffect(() => {
         let alive = true;
@@ -318,7 +325,7 @@ export default function ProjectDetails() {
                     files: v.filesSnapshot,
                     meta: v
                 });
-                setActiveTab('dashboard');
+                handleTabChange('DASHBOARD');
                 toast.info(`Viewing Revision v${v.revisionNumber}`);
             }
         } catch (e) {
@@ -527,7 +534,7 @@ export default function ProjectDetails() {
                             <li className="nav-item" key={comp.id}>
                                 <button
                                     className={`nav-link ${activeTab === comp.id ? 'active' : ''}`}
-                                    onClick={() => setActiveTab(comp.id)}
+                                    onClick={() => handleTabChange(comp.id)}
                                 >
                                     {comp.label}
                                     {comp.id === 'REVISIONS' && project?.revisionCount > 0 && (

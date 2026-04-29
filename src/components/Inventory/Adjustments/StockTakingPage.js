@@ -15,6 +15,7 @@ import {
     Badge
 } from 'react-bootstrap';
 import { toast, ToastContainer } from 'react-toastify';
+import Select from 'react-select';
 import 'react-toastify/dist/ReactToastify.css';
 
 const StockTakingPage = () => {
@@ -164,17 +165,21 @@ const StockTakingPage = () => {
                         <Col md={3}>
                             <Form.Group>
                                 <Form.Label>Assign Approver (Optional)</Form.Label>
-                                <Form.Select
-                                    value={selectedApprover}
-                                    onChange={(e) => setSelectedApprover(e.target.value)}
-                                >
-                                    <option value="">Auto-Assign (Workflow)</option>
-                                    {approvers.map(u => (
-                                        <option key={u.id} value={u.id}>
-                                            {u.firstName} {u.lastName} ({u.accessLevel})
-                                        </option>
-                                    ))}
-                                </Form.Select>
+                                <Select
+                                    options={[
+                                        { value: '', label: 'Auto-Assign (Workflow)' },
+                                        ...approvers.map(u => ({ value: u.id, label: `${u.firstName} ${u.lastName} (${u.accessLevel})` }))
+                                    ]}
+                                    value={
+                                        selectedApprover
+                                            ? { value: selectedApprover, label: approvers.find(u => u.id === selectedApprover) ? `${approvers.find(u => u.id === selectedApprover).firstName} ${approvers.find(u => u.id === selectedApprover).lastName} (${approvers.find(u => u.id === selectedApprover).accessLevel})` : selectedApprover }
+                                            : { value: '', label: 'Auto-Assign (Workflow)' }
+                                    }
+                                    onChange={(opt) => setSelectedApprover(opt ? opt.value : '')}
+                                    isSearchable
+                                    className="modern-select-container"
+                                    classNamePrefix="modern-select"
+                                />
                                 <Form.Text className="text-muted">
                                     Leave blank to use configured workflow roles.
                                 </Form.Text>

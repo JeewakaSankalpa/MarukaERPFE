@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { Container, Tabs, Tab, Table, Button, Form, Badge, Modal, Row, Col } from "react-bootstrap";
 import api from "../../api/api";
 import { toast } from "react-toastify";
+import SafeSelect from '../ReusableComponents/SafeSelect';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 function LeaveRequestPage() {
     const navigate = useNavigate();
@@ -179,7 +181,7 @@ function LeaveRequestPage() {
                 <h2 className="mb-0">Leave Management</h2>
                         </div>
 <div className="d-flex gap-2">
-                    <Form.Select
+                    <SafeSelect
                         style={{ width: 120 }}
                         value={selectedYear}
                         onChange={e => setSelectedYear(parseInt(e.target.value))}
@@ -187,7 +189,7 @@ function LeaveRequestPage() {
                         {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
                             <option key={y} value={y}>{y}</option>
                         ))}
-                    </Form.Select>
+                    </SafeSelect>
                     <Button variant="primary" onClick={() => setShowApplyModal(true)}>+ Apply Leave</Button>
                 </div>
             </div>
@@ -312,7 +314,7 @@ function LeaveRequestPage() {
                     <Form>
                         <Form.Group className="mb-3">
                             <Form.Label>Leave Type</Form.Label>
-                            <Form.Select
+                            <SafeSelect
                                 value={leaveForm.leaveType || ""}
                                 onChange={e => setLeaveForm({ ...leaveForm, leaveType: e.target.value })}
                             >
@@ -320,7 +322,7 @@ function LeaveRequestPage() {
                                 <option value="ANNUAL">Annual</option>
                                 <option value="CASUAL">Casual</option>
                                 <option value="SICK">Sick</option>
-                            </Form.Select>
+                            </SafeSelect>
                             {/* LIVE QUOTA HINT */}
                             {leaveForm.leaveType && quotas && (
                                 <div className="mt-1 small">
@@ -330,11 +332,11 @@ function LeaveRequestPage() {
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Start Date</Form.Label>
-                            <Form.Control type="date" value={leaveForm.startDate} onChange={e => setLeaveForm({ ...leaveForm, startDate: e.target.value })} />
+                            <SafeDatePicker name="startDate" value={leaveForm.startDate} onChange={e => setLeaveForm({ ...leaveForm, startDate: e.target.value })} />
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>End Date</Form.Label>
-                            <Form.Control type="date" value={leaveForm.endDate} onChange={e => setLeaveForm({ ...leaveForm, endDate: e.target.value })} />
+                            <SafeDatePicker name="endDate" value={leaveForm.endDate} onChange={e => setLeaveForm({ ...leaveForm, endDate: e.target.value })} />
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Reason</Form.Label>

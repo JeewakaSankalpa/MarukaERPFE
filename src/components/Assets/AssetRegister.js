@@ -5,6 +5,8 @@ import { Table, Button, Modal, Form, Badge, Container, Row, Col } from "react-bo
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
+import SafeSelect from "../ReusableComponents/SafeSelect";
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 const AssetRegister = () => {
     const navigate = useNavigate();
@@ -174,12 +176,12 @@ const AssetRegister = () => {
                             <Col md={6}>
                                 <Form.Group className="mb-3">
                                     <Form.Label>Category</Form.Label>
-                                    <Form.Select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                    <SafeSelect value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
                                         <option value="PC">IT / Computer</option>
                                         <option value="VEHICLE">Vehicle</option>
                                         <option value="MACHINERY">Machinery</option>
                                         <option value="FURNITURE">Furniture</option>
-                                    </Form.Select>
+                                    </SafeSelect>
                                 </Form.Group>
                             </Col>
                         </Row>
@@ -194,7 +196,7 @@ const AssetRegister = () => {
                             <Col md={4}>
                                 <Form.Group className="mb-3">
                                     <Form.Label>Purchase Date</Form.Label>
-                                    <Form.Control type="date" required value={formData.purchaseDate} onChange={e => setFormData({ ...formData, purchaseDate: e.target.value })} />
+                                    <SafeDatePicker name="purchaseDate" required value={formData.purchaseDate} onChange={e => setFormData({ ...formData, purchaseDate: e.target.value })} />
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
@@ -235,7 +237,7 @@ const AssetRegister = () => {
                         <h5>Maintenance History</h5>
                         <div className="bg-light p-2 mb-3 rounded">
                             <Row className="g-2">
-                                <Col md={3}><Form.Control type="date" value={mForm.date} onChange={e => setMForm({ ...mForm, date: e.target.value })} /></Col>
+                                <Col md={3}><SafeDatePicker name="date" value={mForm.date} onChange={e => setMForm({ ...mForm, date: e.target.value })} /></Col>
                                 <Col md={4}><Form.Control placeholder="Description" value={mForm.description} onChange={e => setMForm({ ...mForm, description: e.target.value })} /></Col>
                                 <Col md={3}><Form.Control type="number" placeholder="Cost" value={mForm.cost} onChange={e => setMForm({ ...mForm, cost: e.target.value })} /></Col>
                                 <Col md={2}><Button variant="secondary" size="sm" onClick={addMaintenance}>Add</Button></Col>

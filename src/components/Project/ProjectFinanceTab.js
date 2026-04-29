@@ -399,8 +399,29 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                 confirmLoading={returnLoading}
             >
                 <Form form={returnForm} layout="vertical" onFinish={handleReturnFunds}>
-                    <Form.Item name="amount" label="Amount to Return" rules={[{ required: true }]}>
-                        <InputNumber style={{ width: '100%' }} prefix={currency} min={0} max={account?.pettyCashBalance} />
+                    <Form.Item 
+                        name="amount" 
+                        label="Amount to Return" 
+                        rules={[
+                            { required: true, message: 'Amount is required' },
+                            () => ({
+                                validator(_, value) {
+                                    const bal = account?.pettyCashBalance || 0;
+                                    if (value <= 0) {
+                                        return Promise.reject(new Error('Return amount must be greater than zero'));
+                                    }
+                                    if (bal <= 0) {
+                                        return Promise.reject(new Error('No adequate balance in petty cash'));
+                                    }
+                                    if (value > bal) {
+                                        return Promise.reject(new Error(`Cannot return more than balance (${bal})`));
+                                    }
+                                    return Promise.resolve();
+                                }
+                            })
+                        ]}
+                    >
+                        <InputNumber style={{ width: '100%' }} prefix={currency} min={0} />
                     </Form.Item>
                     <Form.Item name="targetAccountId" label="Return To (Bank/Cash Account)" rules={[{ required: true }]}>
                         <Select placeholder="Select Account">
@@ -426,7 +447,27 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                     <Form.Item name="title" label="Expense Title" rules={[{ required: true }]}>
                         <Input placeholder="e.g., Transport, Lunch" />
                     </Form.Item>
-                    <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
+                    <Form.Item 
+                        name="amount" 
+                        label="Amount" 
+                        rules={[
+                            { required: true, message: 'Amount is required' },
+                            () => ({
+                                validator(_, value) {
+                                    if (value <= 0) {
+                                        return Promise.reject(new Error('Expense amount must be greater than zero'));
+                                    }
+                                    if (availablePettyCash <= 0) {
+                                        return Promise.reject(new Error('No adequate balance in petty cash'));
+                                    }
+                                    if (value > availablePettyCash) {
+                                        return Promise.reject(new Error(`Amount cannot exceed available balance (${availablePettyCash})`));
+                                    }
+                                    return Promise.resolve();
+                                }
+                            })
+                        ]}
+                    >
                         <InputNumber style={{ width: '100%' }} prefix={currency} min={0} />
                     </Form.Item>
                     <Form.Item name="description" label="Description">

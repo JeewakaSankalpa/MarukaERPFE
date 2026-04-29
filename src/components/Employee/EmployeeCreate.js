@@ -4,6 +4,7 @@ import { Form, Button, Container, Row, Col, Alert, Spinner } from "react-bootstr
 import api from "../../api/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 import { ModuleList } from "../../resources/ModuleConstants";
 import { MenuConfig } from "../../resources/MenuConfig";
 import { DatePicker, ConfigProvider } from "antd";
@@ -327,29 +328,29 @@ function EmployeeCreate({ mode }) {
           <Col md={4}>
             <Form.Group className="mb-3">
               <Form.Label>Department</Form.Label>
-              <Form.Select name="departmentId" value={formData.departmentId} onChange={handleChange}>
+              <SafeSelect name="departmentId" value={formData.departmentId} onChange={handleChange}>
                 <option value="">-- Select --</option>
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </Form.Select>
+              </SafeSelect>
             </Form.Group>
           </Col>
           <Col md={4}>
             <Form.Group className="mb-3">
               <Form.Label>Reports To</Form.Label>
-              <Form.Select name="reportsToEmployeeId" value={formData.reportsToEmployeeId} onChange={handleChange}>
+              <SafeSelect name="reportsToEmployeeId" value={formData.reportsToEmployeeId} onChange={handleChange}>
                 <option value="">-- Select Manager --</option>
                 {managers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName} ({m.designation})</option>)}
-              </Form.Select>
+              </SafeSelect>
             </Form.Group>
           </Col>
           <Col md={4}>
             <Form.Group className="mb-3">
               <Form.Label>Role</Form.Label>
-              <Form.Select name="role" value={formData.role} onChange={handleChange}>
+              <SafeSelect name="role" value={formData.role} onChange={handleChange}>
                 {systemRoles.map(r => (
                   <option key={r} value={r}>{r}</option>
                 ))}
-              </Form.Select>
+              </SafeSelect>
             </Form.Group>
           </Col>
         </Row>
@@ -382,12 +383,12 @@ function EmployeeCreate({ mode }) {
           <Col md={6}>
             <Form.Group className="mb-3">
               <Form.Label>Work Schedule Policy</Form.Label>
-              <Form.Select name="workSchedulePolicyId" value={formData.workSchedulePolicyId || ""} onChange={handleChange}>
+              <SafeSelect name="workSchedulePolicyId" value={formData.workSchedulePolicyId || ""} onChange={handleChange}>
                 <option value="">-- Default --</option>
                 {schedulePolicies.map(p => (
                   <option key={p.id} value={p.id}>{p.policyName} {p.isDefault ? "(Default)" : ""}</option>
                 ))}
-              </Form.Select>
+              </SafeSelect>
               <Form.Text className="text-muted">Select working schedule policy</Form.Text>
             </Form.Group>
           </Col>

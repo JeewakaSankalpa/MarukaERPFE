@@ -4,14 +4,16 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from "../api/api";
 import CryptoJS from "crypto-js";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, Download, CheckCircle, XCircle, SkipForward } from "lucide-react";
 import * as XLSX from "xlsx";
+import SafeSelect from "./ReusableComponents/SafeSelect";
 
 // Must match backend key
 const SECRET_KEY = "MarukaERP_Secret";
 
 export default function SystemConfiguration() {
+    const navigate = useNavigate();
     const [config, setConfig] = useState({
         "spring.mail.host": "smtp.gmail.com",
         "spring.mail.port": "587",
@@ -218,7 +220,7 @@ export default function SystemConfiguration() {
     return (
         <Container className="py-4">
             <div className="d-flex align-items-center mb-4">
-                <Link to="/admin" className="btn btn-light me-3"><ArrowLeft size={18} /></Link>
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h2 className="mb-0">System Configuration</h2>
             </div>
 
@@ -466,7 +468,7 @@ export default function SystemConfiguration() {
                         {/* Location selector */}
                         <Col md={4}>
                             <Form.Label className="fw-semibold">Target Location (Store)</Form.Label>
-                            <Form.Select
+                            <SafeSelect
                                 value={selectedLocation}
                                 onChange={e => setSelectedLocation(e.target.value)}
                                 id="import-location-select"
@@ -475,7 +477,7 @@ export default function SystemConfiguration() {
                                     ? locations.map(l => <option key={l.id} value={l.id}>{l.label}</option>)
                                     : <option value="LOC_STORES_MAIN">Main Stores</option>
                                 }
-                            </Form.Select>
+                            </SafeSelect>
                         </Col>
 
                         {/* Action buttons */}
@@ -599,15 +601,14 @@ export default function SystemConfiguration() {
                     <Form onSubmit={handleSave}>
                         <div className="mb-4">
                             <label className="form-label fw-bold">Email Provider</label>
-                            <select
-                                className="form-select"
+                            <SafeSelect
                                 value={config['app.email.provider'] || 'SMTP'}
                                 onChange={(e) => setConfig({ ...config, 'app.email.provider': e.target.value })}
                             >
                                 <option value="SMTP">SMTP (Standard)</option>
                                 <option value="GMAIL">Gmail API (Recommended for Render)</option>
                                 <option value="BREVO">Brevo API (Free Tier)</option>
-                            </select>
+                            </SafeSelect>
                             <small className="text-muted">
                                 Select "Gmail API" if your hosting provider blocks SMTP ports (e.g. Render Free Tier).
                             </small>

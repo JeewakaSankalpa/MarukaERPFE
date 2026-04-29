@@ -11,6 +11,8 @@ import api from '../../api/api';
 import GRNPaymentModal from '../GRN/GRNPaymentModal';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 import OverdraftConfirmModal from '../ReusableComponents/OverdraftConfirmModal';
+import SafeSelect from '../ReusableComponents/SafeSelect';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF6666'];
 
@@ -294,7 +296,7 @@ export default function ExpensesPage() {
                             <Form.Control type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} title="Filter ALL modules by Month" />
                         </Col>
                         <Col md={3}>
-                            <Form.Select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} title="Filter the Manual Expenses list">
+                            <SafeSelect value={filterCategory} onChange={e => setFilterCategory(e.target.value)} title="Filter the Manual Expenses list">
                                 <option value="ALL">All Categories</option>
                                 <option value="OPERATIONAL">Operational</option>
                                 <option value="UTILITIES">Utilities</option>
@@ -302,7 +304,7 @@ export default function ExpensesPage() {
                                 <option value="MAINTENANCE">Maintenance</option>
                                 <option value="SUPPLIER_PAYMENT">Supplier Payment</option>
                                 <option value="OTHER">Other</option>
-                            </Form.Select>
+                            </SafeSelect>
                         </Col>
                         <Col className="text-end">
                             {filterMonth && <Badge bg="primary" className="py-2 px-3 fs-6">Showing: {filterMonth}</Badge>}
@@ -527,16 +529,16 @@ export default function ExpensesPage() {
                     <Row className="g-3">
                         <Col md={6}><Form.Group><Form.Label>Title *</Form.Label><Form.Control value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} /></Form.Group></Col>
                         <Col md={6}><Form.Group><Form.Label>Category</Form.Label>
-                            <Form.Select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                            <SafeSelect value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
                                 <option value="OPERATIONAL">Operational</option>
                                 <option value="UTILITIES">Utilities</option>
                                 <option value="RENT">Rent</option>
                                 <option value="MAINTENANCE">Maintenance</option>
                                 <option value="OTHER">Other</option>
-                            </Form.Select>
+                            </SafeSelect>
                         </Form.Group></Col>
                         <Col md={6}><Form.Group><Form.Label>Amount *</Form.Label><Form.Control type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} /></Form.Group></Col>
-                        <Col md={6}><Form.Group><Form.Label>Date</Form.Label><Form.Control type="date" value={formData.expenseDate} onChange={e => setFormData({ ...formData, expenseDate: e.target.value })} /></Form.Group></Col>
+                        <Col md={6}><Form.Group><Form.Label>Date</Form.Label><SafeDatePicker name="expenseDate" value={formData.expenseDate} onChange={e => setFormData({ ...formData, expenseDate: e.target.value })} /></Form.Group></Col>
                         <Col md={12}>
                             <PaymentAccountPicker 
                                 required={true}

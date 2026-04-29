@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Form, Table, Badge } from 'react-bootstrap';
+import { Button, Form, Table, Badge, Modal } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 /* ---------- Helpers ---------- */
 const extractFileName = (urlOrName) => {
@@ -64,6 +65,10 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
     const [docType, setDocType] = useState('');
     const [uploading, setUploading] = useState(false);
     const [uploadPct, setUploadPct] = useState(0);
+
+    // Confirmation Modal state
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [confirmData, setConfirmData] = useState(null);
 
     const stageType = stageObj?.stageType;
 
@@ -205,14 +210,32 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                 toast.error('Preview failed: no names returned');
                 return;
             }
-            const previewText = previews.map(p => `• ${p.originalName} → ${p.previewName}`).join('\n');
-            const ok = window.confirm(
-                `File Type (docType): ${docType}\nStage: ${stage}\n\nThese files will be renamed as:\n\n${previewText}\n\nContinue?`
-            );
-            if (!ok) { toast.info('Upload cancelled'); return; }
+            const previewText = previews.map(p => `• ${p.originalName} → ${p.previewName}`);
+            
+            setConfirmData({
+                picked,
+                stage,
+                docType,
+                previewText
+            });
+            setShowConfirmModal(true);
+            
+        } catch (err) {
+            console.error(err);
+            const msg = err?.response?.data?.message || err?.message || 'Failed to preview files';
+            toast.error(msg);
+        }
+    };
 
-            setUploading(true);
-            setUploadPct(0);
+    const proceedWithUpload = async () => {
+        if (!confirmData) return;
+        const { picked, stage, docType } = confirmData;
+        
+        setShowConfirmModal(false);
+        setUploading(true);
+        setUploadPct(0);
+        
+        try {
             const form = new FormData();
             picked.forEach(f => form.append('files', f, f.name));
 
@@ -237,15 +260,23 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
         } finally {
             setUploading(false);
             setUploadPct(0);
+            setConfirmData(null);
         }
+    };
+
+    const cancelUpload = () => {
+        setShowConfirmModal(false);
+        setConfirmData(null);
+        toast.info('Upload cancelled');
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     return (
         <>
             {uploading && <UploadOverlay text={`Uploading… ${uploadPct}%`} />}
 
-            <div className="d-flex gap-2 align-items-center mb-2">
-                <Form.Select
+            <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <SafeSelect
                     size="sm"
                     value={docType === '__custom__' || (docType && !ruleOptions.find(o => o.value === docType)) ? '__custom__' : docType}
                     onChange={(e) => {
@@ -265,7 +296,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                         </optgroup>
                     )}
                     <option value="__custom__">-- Other / New --</option>
-                </Form.Select>
+                </SafeSelect>
 
                 {(docType === '' || !ruleOptions.find(o => o.value === docType)) && (
                     <Form.Control
@@ -344,6 +375,27 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     </tbody>
                 </Table>
             )}
+            
+            <Modal show={showConfirmModal} onHide={cancelUpload} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm File Upload</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p><strong>Stage:</strong> {confirmData?.stage}</p>
+                    <p><strong>File Type:</strong> {confirmData?.docType}</p>
+                    <p>These files will be renamed to follow system conventions:</p>
+                    <ul className="text-muted small">
+                        {confirmData?.previewText?.map((txt, i) => (
+                            <li key={i}>{txt}</li>
+                        ))}
+                    </ul>
+                    <p className="mb-0">Are you sure you want to continue?</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={cancelUpload}>Cancel</Button>
+                    <Button variant="primary" onClick={proceedWithUpload}>Confirm Upload</Button>
+                </Modal.Footer>
+            </Modal>
         </>
     );
 }

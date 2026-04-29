@@ -4,6 +4,7 @@ import { Button, Form, Table, Spinner, Row, Col } from "react-bootstrap";
 import ReportLayout from "../../ReusableComponents/ReportLayout";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import SafeDatePicker from '../../ReusableComponents/SafeDatePicker';
 
 const PayablesReport = () => {
     const [loading, setLoading] = useState(false);
@@ -49,13 +50,13 @@ const PayablesReport = () => {
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Start Due Date</Form.Label>
-                            <Form.Control type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                            <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>End Due Date</Form.Label>
-                            <Form.Control type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                            <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={2}>

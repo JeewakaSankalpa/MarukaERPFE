@@ -6,6 +6,7 @@ import { Container, Button, Form, Table, Row, Col, Badge, InputGroup, Spinner } 
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -174,11 +175,9 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center">
                     <div className="d-flex align-items-center gap-2">
-                        {urlProjectId && (
-                            <Button variant="light" size="sm" onClick={() => navigate(`/projects/manage/${urlProjectId}`)} title="Back to Project Dashboard">
-                                <ArrowLeft size={20} />
-                            </Button>
-                        )}
+                        <button type="button" className="btn btn-light me-2" onClick={() => navigate(-1)} title="Go Back">
+                            <ArrowLeft size={20} />
+                        </button>
                         <h2 style={{ fontSize: "1.5rem", margin: 0 }}>
                             {routeId ? (isEditMode ? "Edit Item Request" : "View Item Request") : "Create Item Request"}
                         </h2>
@@ -195,7 +194,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         <Col md={6}>
                             <Form.Group>
                                 <Form.Label>Department</Form.Label>
-                                <Form.Select
+                                <SafeSelect
                                     value={departmentId}
                                     onChange={e => setDepartmentId(e.target.value)}
                                     disabled={!isEditMode || !!urlProjectId}
@@ -206,13 +205,13 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                             {d.name}{d.description ? ` — ${d.description}` : ""}
                                         </option>
                                     ))}
-                                </Form.Select>
+                                </SafeSelect>
                             </Form.Group>
                         </Col>
                         <Col md={6}>
                             <Form.Group>
                                 <Form.Label>Project (incomplete)</Form.Label>
-                                <Form.Select
+                                <SafeSelect
                                     value={projectId}
                                     onChange={e => setProjectId(e.target.value)}
                                     disabled={!isEditMode || !!urlProjectId}
@@ -223,7 +222,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                             {p.projectName || p.name || p.id}
                                         </option>
                                     ))}
-                                </Form.Select>
+                                </SafeSelect>
                             </Form.Group>
                         </Col>
                     </Row>

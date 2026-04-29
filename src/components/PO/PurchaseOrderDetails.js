@@ -6,6 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 /* ========== API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -523,7 +524,7 @@ export default function PurchaseOrderDetails() {
                 <Modal.Body>
                     <Form.Group className="mb-3">
                         <Form.Label>Select Saved Address (Optional)</Form.Label>
-                        <Form.Select
+                        <SafeSelect
                             value={useSavedAddressId}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -540,7 +541,7 @@ export default function PurchaseOrderDetails() {
                             {savedAddresses.map(sa => (
                                 <option key={sa.id} value={sa.id}>{sa.name} - {sa.address?.line1}</option>
                             ))}
-                        </Form.Select>
+                        </SafeSelect>
                     </Form.Group>
                     <h6 className="mt-4 border-bottom pb-2">Address Details</h6>
                     <Row>

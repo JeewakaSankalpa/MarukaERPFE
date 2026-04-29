@@ -5,6 +5,7 @@ import { Container, Button, Form, Table, Row, Col, Badge } from "react-bootstrap
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import { QRCodeSVG as QRCode } from 'qrcode.react';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 /* ========== INLINE API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -209,7 +210,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Invoice Date</Form.Label>
-                            <Form.Control type="date" value={supplierInvoiceDate} onChange={e => setSupplierInvoiceDate(e.target.value)} />
+                            <SafeDatePicker name="supplierInvoiceDate" value={supplierInvoiceDate} onChange={e => setSupplierInvoiceDate(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={3}>
@@ -287,8 +288,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                                         onChange={e => setBatch(i, bi, "batchNo", e.target.value)}
                                                                         style={{ maxWidth: 160 }}
                                                                     />
-                                                                    <Form.Control
-                                                                        type="date"
+                                                                    <SafeDatePicker
+                                                                        name="expiryDate"
                                                                         value={b.expiryDate}
                                                                         onChange={e => setBatch(i, bi, "expiryDate", e.target.value)}
                                                                         style={{ maxWidth: 150 }}

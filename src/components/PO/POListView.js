@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
+import SafeSelect from '../ReusableComponents/SafeSelect';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -85,7 +87,7 @@ export default function POListView({ onOpenGRN }) {
                         <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Purchase Orders</h2>
                     </div>
                     <div className="d-flex gap-2">
-                        <Form.Select value={status} onChange={e => setStatus(e.target.value)} style={{ maxWidth: 220 }}>
+                        <SafeSelect value={status} onChange={e => setStatus(e.target.value)} style={{ maxWidth: 220 }}>
                             <option value="">All Statuses</option>
                             <option value="CREATED">CREATED</option>
                             <option value="SENT_TO_SUPPLIER">SENT_TO_SUPPLIER</option>
@@ -93,7 +95,7 @@ export default function POListView({ onOpenGRN }) {
                             <option value="FULLY_RECEIVED">FULLY_RECEIVED</option>
                             <option value="CONFIRMED">CONFIRMED</option>
                             <option value="CANCELLED">CANCELLED</option>
-                        </Form.Select>
+                        </SafeSelect>
                         <Form.Control placeholder="Search PO# / Supplier" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>
@@ -182,7 +184,7 @@ export default function POListView({ onOpenGRN }) {
             <Modal show={!!etaFor} onHide={() => setEtaFor(null)}>
                 <Modal.Header closeButton><Modal.Title>Set ETA</Modal.Title></Modal.Header>
                 <Modal.Body>
-                    <Form.Control type="date" value={etaDate} onChange={e => setEtaDate(e.target.value)} />
+                    <SafeDatePicker name="etaDate" value={etaDate} onChange={e => setEtaDate(e.target.value)} />
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setEtaFor(null)}>Cancel</Button>

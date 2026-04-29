@@ -6,6 +6,7 @@ import api from '../../api/api';
 import { toast } from 'react-toastify';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 import OverdraftConfirmModal from '../ReusableComponents/OverdraftConfirmModal';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 export default function LoanManagement() {
     const navigate = useNavigate();
@@ -166,7 +167,7 @@ export default function LoanManagement() {
                             <Col>
                                 <Form.Group className="mb-2">
                                     <Form.Label>Start Date</Form.Label>
-                                    <Form.Control type="date" value={newLoan.startDate} onChange={e => setNewLoan({ ...newLoan, startDate: e.target.value })} />
+                                    <SafeDatePicker name="startDate" value={newLoan.startDate} onChange={e => setNewLoan({ ...newLoan, startDate: e.target.value })} />
                                 </Form.Group>
                             </Col>
                             <Col>
@@ -222,7 +223,7 @@ export default function LoanManagement() {
                         </Form.Group>
                         <Form.Group className="mb-2">
                             <Form.Label>Date Paid</Form.Label>
-                            <Form.Control type="date" value={repayment.date} onChange={e => setRepayment({ ...repayment, date: e.target.value })} />
+                            <SafeDatePicker name="date" value={repayment.date} onChange={e => setRepayment({ ...repayment, date: e.target.value })} />
                         </Form.Group>
                         <Form.Group className="mb-2">
                             <Form.Label>Reference / Confirmation</Form.Label>

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal, Row, Col, Alert } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 import GRNPaymentModal from "./GRNPaymentModal";
 import GRNReturnModal from "./GRNReturnModal";
 import { QRCodeSVG as QRCode } from 'qrcode.react';
@@ -46,7 +47,7 @@ export default function GRNListView() {
                             onKeyDown={e => { if (e.key === 'Enter') { setPage(0); load(); } }}
                             style={{ maxWidth: 260 }}
                         />
-                        <Form.Select
+                        <SafeSelect
                             value={statusFilter}
                             onChange={e => { setStatusFilter(e.target.value); setPage(0); }}
                             style={{ maxWidth: 180 }}
@@ -56,7 +57,7 @@ export default function GRNListView() {
                             <option value="INVOICED">Invoiced</option>
                             <option value="PARTIALLY_PAID">Partially Paid</option>
                             <option value="PAID">Paid</option>
-                        </Form.Select>
+                        </SafeSelect>
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>
                 </div>

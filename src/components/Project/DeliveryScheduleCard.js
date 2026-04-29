@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Form, Row, Col, Button } from 'react-bootstrap';
 import api from '../../api/api';
+import SafeSelect from '../ReusableComponents/SafeSelect';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import { toast } from 'react-toastify';
 import { FaTruck, FaFilePdf, FaSave } from 'react-icons/fa';
 
@@ -131,8 +133,7 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                         <Col md={6}>
                             <Form.Group>
                                 <Form.Label>Scheduled Date</Form.Label>
-                                <Form.Control
-                                    type="date"
+                                <SafeDatePicker
                                     name="scheduledDate"
                                     value={data.scheduledDate || ''}
                                     onChange={handleChange}
@@ -168,7 +169,7 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                         <Col md={6}>
                             <Form.Group>
                                 <Form.Label>Responsible Person</Form.Label>
-                                <Form.Select
+                                <SafeSelect
                                     name="responsibleEmployeeId"
                                     value={data.responsibleEmployeeId || ''}
                                     onChange={handleChange}
@@ -179,7 +180,7 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                                             {e.firstName} {e.lastName} ({e.role})
                                         </option>
                                     ))}
-                                </Form.Select>
+                                </SafeSelect>
                             </Form.Group>
                         </Col>
                     </Row>

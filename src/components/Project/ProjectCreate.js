@@ -18,6 +18,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { listWorkflows } from "../../services/workflowApi";
 import Select from "react-select";
+import SafeSelect from "../ReusableComponents/SafeSelect";
 
 const ProjectForm = () => {
   const { id: routeId } = useParams();
@@ -420,6 +421,8 @@ const ProjectForm = () => {
                     isDisabled={!isEditMode}
                     isSearchable
                     placeholder="Select Customer"
+                    className="modern-select-container"
+                    classNamePrefix="modern-select"
                     styles={{
                       control: (base) => ({
                         ...base,
@@ -449,6 +452,8 @@ const ProjectForm = () => {
                     isDisabled={!isEditMode}
                     isSearchable
                     placeholder="Select Employee"
+                    className="modern-select-container"
+                    classNamePrefix="modern-select"
                     styles={{
                       control: (base) => ({
                         ...base,
@@ -470,7 +475,7 @@ const ProjectForm = () => {
               <Col xs={12} md={6}>
                 <Form.Group controlId="currency">
                   <Form.Label>Currency</Form.Label>
-                  <Form.Select
+                  <SafeSelect
                     name="currency"
                     value={projectData.currency || "LKR"}
                     onChange={handleChange}
@@ -478,17 +483,17 @@ const ProjectForm = () => {
                   >
                     <option value="LKR">LKR (Rupees)</option>
                     <option value="USD">USD (Dollars)</option>
-                  </Form.Select>
+                  </SafeSelect>
                 </Form.Group>
               </Col>
               <Col xs={12} md={6}>
                 <Form.Group controlId="workflowId">
                   <Form.Label>Workflow Template</Form.Label>
-                  <Form.Select
+                  <SafeSelect
                     name="workflowId"
                     value={projectData.workflowId || ""}
                     onChange={handleChange}
-                    disabled={!isEditMode} // Only editable when in edit mode
+                    disabled={!isEditMode}
                   >
                     <option value="">Default (Active)</option>
                     {workflows.map((wf) => (
@@ -496,7 +501,7 @@ const ProjectForm = () => {
                         {wf.id} (v{wf.version})
                       </option>
                     ))}
-                  </Form.Select>
+                  </SafeSelect>
                   <Form.Text className="text-muted">
                     {isEditMode ? "Changing the workflow will re-sync the project on save." : "Select the workflow logic for this inquiry."}
                   </Form.Text>

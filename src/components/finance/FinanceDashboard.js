@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 export default function FinanceDashboard() {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [range, setRange] = useState({
         start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -35,9 +38,9 @@ export default function FinanceDashboard() {
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2>Finance Dashboard</h2>
                 <div className="d-flex gap-2">
-                    <Form.Control type="date" value={range.start} onChange={e => setRange({ ...range, start: e.target.value })} />
+                    <SafeDatePicker name="start" value={range.start} onChange={e => setRange({ ...range, start: e.target.value })} />
                     <span className="align-self-center">to</span>
-                    <Form.Control type="date" value={range.end} onChange={e => setRange({ ...range, end: e.target.value })} />
+                    <SafeDatePicker name="end" value={range.end} onChange={e => setRange({ ...range, end: e.target.value })} />
                     <Button onClick={loadData} disabled={loading}>{loading ? '...' : 'Refresh'}</Button>
                 </div>
             </div>
@@ -124,12 +127,12 @@ export default function FinanceDashboard() {
                             <Card className="shadow-sm">
                                 <Card.Header>Quick Actions</Card.Header>
                                 <Card.Body className="d-flex gap-3 flex-wrap">
-                                    <Button variant="outline-primary" href="#/finance/expenses">Go to Expenses</Button>
-                                    <Button variant="outline-primary" href="#/finance/accounts">Chart of Accounts</Button>
-                                    <Button variant="outline-warning" href="#/finance/petty-cash-approvals">Petty Cash Approvals</Button>
-                                    <Button variant="outline-primary" href="#/salary">Go to Payroll</Button>
-                                    <Button variant="outline-primary" href="#/assets">Go to Assets</Button>
-                                    <Button variant="outline-primary" href="#/finance/loans">Loan Management</Button>
+                                    <Button variant="outline-primary" onClick={() => navigate('/finance/expenses')}>Go to Expenses</Button>
+                                    <Button variant="outline-primary" onClick={() => navigate('/finance/accounts')}>Chart of Accounts</Button>
+                                    <Button variant="outline-warning" onClick={() => navigate('/finance/petty-cash-approvals')}>Petty Cash Approvals</Button>
+                                    <Button variant="outline-primary" onClick={() => navigate('/salary')}>Go to Payroll</Button>
+                                    <Button variant="outline-primary" onClick={() => navigate('/assets')}>Go to Assets</Button>
+                                    <Button variant="outline-primary" onClick={() => navigate('/finance/loans')}>Loan Management</Button>
                                 </Card.Body>
                             </Card>
                         </Col>

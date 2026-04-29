@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Button, Table, Spinner, Badge, Modal } from 'react-bootstrap';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 /**
  * Component to display project inventory, consumption, and transfers.
@@ -12,6 +14,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
  * @param {string} props.projectId - Project ID
  */
 export default function ProjectInventoryCard({ projectId }) {
+    const navigate = useNavigate();
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -363,7 +366,7 @@ export default function ProjectInventoryCard({ projectId }) {
             <Card.Header className="d-flex justify-content-between align-items-center">
                 <span>Project Inventory</span>
                 <div className="d-flex gap-2">
-                    <Button size="sm" variant="outline-primary" onClick={() => window.location.href = `#/item/requests?projectId=${projectId}`} disabled={!projectId}>
+                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/item/requests?projectId=${projectId}`)} disabled={!projectId}>
                         Request Item
                     </Button>
                     <Button size="sm" variant="primary" onClick={() => setShowConsume(true)} disabled={!projectId}>
@@ -640,8 +643,7 @@ export default function ProjectInventoryCard({ projectId }) {
                                 <form>
                                     <div className="mb-3">
                                         <label className="form-label">Product</label>
-                                        <select
-                                            className="form-select"
+                                        <SafeSelect
                                             value={consumeData.productId}
                                             onChange={(e) => {
                                                 setConsumeData({ ...consumeData, productId: e.target.value });
@@ -651,7 +653,7 @@ export default function ProjectInventoryCard({ projectId }) {
                                             {inventory.map(i => (
                                                 <option key={i.productId} value={i.productId}>{i.productName} (Avail: {i.onHandQty})</option>
                                             ))}
-                                        </select>
+                                        </SafeSelect>
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label">Quantity</label>
@@ -725,8 +727,7 @@ export default function ProjectInventoryCard({ projectId }) {
                                 <form>
                                     <div className="mb-3">
                                         <label className="form-label">Product</label>
-                                        <select
-                                            className="form-select"
+                                        <SafeSelect
                                             value={returnData.productId}
                                             onChange={(e) => handleSelectReturnProduct(e.target.value)}
                                         >
@@ -734,12 +735,11 @@ export default function ProjectInventoryCard({ projectId }) {
                                             {inventory.map(i => (
                                                 <option key={i.productId} value={i.productId}>{i.productName} (Avail: {i.onHandQty})</option>
                                             ))}
-                                        </select>
+                                        </SafeSelect>
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label">Batch / Serial No</label>
-                                        <select
-                                            className="form-select"
+                                        <SafeSelect
                                             value={returnData.batchId}
                                             onChange={(e) => setReturnData({ ...returnData, batchId: e.target.value })}
                                             disabled={!returnData.productId}
@@ -750,7 +750,7 @@ export default function ProjectInventoryCard({ projectId }) {
                                                     {b.batchNumber ? b.batchNumber : '(No Batch No)'} - Qty: {b.quantity} {b.costPrice ? `($${Number(b.costPrice).toFixed(2)})` : ''}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </SafeSelect>
                                     </div>
 
                                     {/* Multi-Select Serials (New Feature) */}

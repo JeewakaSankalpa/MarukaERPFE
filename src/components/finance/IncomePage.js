@@ -8,6 +8,7 @@ import {
     PieChart, Pie, Cell
 } from 'recharts';
 import api from '../../api/api';
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
 
@@ -203,13 +204,13 @@ export default function IncomePage() {
                             />
                         </Col>
                         <Col md={3}>
-                            <Form.Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                            <SafeSelect value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                                 <option value="ALL">All Statuses</option>
                                 <option value="PAID">Paid</option>
                                 <option value="PENDING">Pending</option>
                                 <option value="PARTIALLY_PAID">Partially Paid</option>
                                 <option value="CANCELLED">Cancelled</option>
-                            </Form.Select>
+                            </SafeSelect>
                         </Col>
                         <Col className="text-end">
                             <small className="text-muted">Showing {filteredInvoices.length} invoices</small>

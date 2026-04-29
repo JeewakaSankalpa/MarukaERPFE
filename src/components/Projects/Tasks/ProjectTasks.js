@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Badge, ProgressBar } from "react-bootstrap";
 import api from "../../../api/api";
 import { toast } from "react-toastify";
+import SafeSelect from '../../ReusableComponents/SafeSelect';
+import SafeDatePicker from '../../ReusableComponents/SafeDatePicker';
 
 const ProjectTasks = ({ projectId }) => {
     const [tasks, setTasks] = useState([]);
@@ -212,19 +214,19 @@ const ProjectTasks = ({ projectId }) => {
                         </Form.Group>
                         <Form.Group className="mb-2">
                             <Form.Label>Assign To</Form.Label>
-                            <Form.Select value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })}>
+                            <SafeSelect value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })}>
                                 <option value="">Unassigned</option>
                                 {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                            </Form.Select>
+                            </SafeSelect>
                         </Form.Group>
                         <Form.Group className="mb-2">
                             <Form.Label>Status</Form.Label>
-                            <Form.Select value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value })}>
+                            <SafeSelect value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value })}>
                                 <option>TODO</option>
                                 <option>IN_PROGRESS</option>
                                 <option>REVIEW</option>
                                 <option>DONE</option>
-                            </Form.Select>
+                            </SafeSelect>
                         </Form.Group>
                         <div className="d-flex gap-2">
                             <div className="flex-grow-1">
@@ -233,11 +235,11 @@ const ProjectTasks = ({ projectId }) => {
                             </div>
                             <div className="flex-grow-1">
                                 <Form.Label>Start Date</Form.Label>
-                                <Form.Control type="date" value={taskForm.startDate} onChange={e => setTaskForm({ ...taskForm, startDate: e.target.value })} />
+                                <SafeDatePicker name="startDate" value={taskForm.startDate} onChange={e => setTaskForm({ ...taskForm, startDate: e.target.value })} />
                             </div>
                             <div className="flex-grow-1">
                                 <Form.Label>Due Date</Form.Label>
-                                <Form.Control type="date" value={taskForm.dueDate} onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
+                                <SafeDatePicker name="dueDate" value={taskForm.dueDate} onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
                             </div>
                         </div>
                     </Modal.Body>

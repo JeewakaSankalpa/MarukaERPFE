@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Form, Row, Col } from 'react-bootstrap';
 import api from '../../api/api';
+import SafeSelect from './SafeSelect';
 
 
 
@@ -99,7 +100,7 @@ export default function PaymentAccountPicker({ onChange, value, required = false
                     <Form.Label>
                         Payment Account {required && <span className="text-danger">*</span>}
                     </Form.Label>
-                    <Form.Select
+                    <SafeSelect
                         value={currentParentId || ''}
                         onChange={e => handleParentChange(e.target.value)}
                         disabled={disabled || loading}
@@ -111,7 +112,7 @@ export default function PaymentAccountPicker({ onChange, value, required = false
                                 {acc.name} ({acc.code})
                             </option>
                         ))}
-                    </Form.Select>
+                    </SafeSelect>
                 </Form.Group>
             </Col>
 
@@ -119,7 +120,7 @@ export default function PaymentAccountPicker({ onChange, value, required = false
                 <Col md={6}>
                     <Form.Group>
                         <Form.Label>Sub-Account <small className="text-muted">(optional)</small></Form.Label>
-                        <Form.Select
+                        <SafeSelect
                             value={selectedSubId}
                             onChange={e => handleSubChange(e.target.value)}
                             disabled={disabled}
@@ -130,7 +131,7 @@ export default function PaymentAccountPicker({ onChange, value, required = false
                                     {sub.name} ({sub.code}) — Bal: {Number(sub.balance || 0).toLocaleString()}
                                 </option>
                             ))}
-                        </Form.Select>
+                        </SafeSelect>
                         <small className="text-muted">Select specific sub-account for this payment</small>
                     </Form.Group>
                 </Col>

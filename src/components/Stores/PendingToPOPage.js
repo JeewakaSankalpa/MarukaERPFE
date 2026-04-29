@@ -5,6 +5,7 @@ import { Container, Button, Form, Table, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 /* ========== INLINE API HELPERS ========== */
 const getLatestPending = async () => (await api.get(`/stores/pending-purchase/latest`)).data; // implement endpoint to return latest plan
@@ -16,6 +17,7 @@ export default function PendingToPOPage() {
     const navigate = useNavigate();
     const [plan, setPlan] = useState(null); // {id, lines:[{productId, productNameSnapshot, shortageQty, suppliers:[...] }]}
     const [choices, setChoices] = useState({}); // productId -> { supplierId, qty, unitPrice, taxPercent }
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -43,9 +45,11 @@ export default function PendingToPOPage() {
     }, [choices]);
 
     const createPOs = async () => {
+        if (isSubmitting) return;
         try {
             if (!plan?.id) return;
             if (Object.keys(groupedAllocation).length === 0) { toast.info("No supplier allocation selected"); return; }
+            setIsSubmitting(true);
             const res = await createPOsFromPending(plan.id, groupedAllocation);
             toast.success(`Created ${res.length} PO(s)`);
             // refresh
@@ -54,6 +58,8 @@ export default function PendingToPOPage() {
             setChoices(Object.fromEntries((p?.lines||[]).map(l => [l.productId, { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to create POs");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -94,14 +100,14 @@ export default function PendingToPOPage() {
                                 </td>
                                 <td className="text-end">{l.shortageQty}</td>
                                 <td>
-                                    <Form.Select value={c.supplierId || ""} onChange={e=>setChoices(s=>({ ...s, [l.productId]: { ...c, supplierId: e.target.value } }))}>
+                                    <SafeSelect value={c.supplierId || ""} onChange={e=>setChoices(s=>({ ...s, [l.productId]: { ...c, supplierId: e.target.value } }))}>
                                         <option value="">Select supplier</option>
                                         {(l.suppliers||[]).filter(s=>s.active!==false).map(s =>
                                             <option key={s.supplierId} value={s.supplierId}>
-                                                {s.supplierName}{s.lastPurchasePrice?` — ${s.lastPurchasePrice}`:""}
+                                                {s.supplierName}{s.lastPurchasePrice?` - ${s.lastPurchasePrice}`:""}
                                             </option>
                                         )}
-                                    </Form.Select>
+                                    </SafeSelect>
                                 </td>
                                 <td>
                                     <Form.Control type="number" min="0" value={c.qty||""}
@@ -122,7 +128,9 @@ export default function PendingToPOPage() {
                 </Table>
 
                 <div className="d-flex justify-content-end gap-2">
-                    <Button onClick={createPOs}>Create POs (per supplier)</Button>
+                    <Button onClick={createPOs} disabled={isSubmitting}>
+                        {isSubmitting ? 'Creating POs...' : 'Create POs (per supplier)'}
+                    </Button>
                 </div>
             </div>
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />

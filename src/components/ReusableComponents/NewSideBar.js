@@ -46,6 +46,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
     return false;
   };
 
+
   const iconMap = {
     "FaHome": <FaHome size={18} />,
     "FaProjectDiagram": <FaProjectDiagram size={18} />,

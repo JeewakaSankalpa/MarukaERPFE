@@ -101,6 +101,8 @@ const ProjectMaterialReport = () => {
                                     onChange={setSelectedProject}
                                     placeholder="Search Project..."
                                     isClearable
+                                    className="modern-select-container"
+                                    classNamePrefix="modern-select"
                                 />
                             </Form.Group>
                         </Col>

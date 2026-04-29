@@ -318,6 +318,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                                         onChange={opt => onPickProduct(i, opt)}
                                         isDisabled={readOnly}
                                         placeholder="Search..."
+                                        className="modern-select-container"
+                                        classNamePrefix="modern-select"
                                     />
                                 </td>
                                 <td>

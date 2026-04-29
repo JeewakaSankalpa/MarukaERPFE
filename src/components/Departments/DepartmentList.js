@@ -5,6 +5,7 @@ import { Container, Table, Form, Button, Badge, Modal } from "react-bootstrap";
 import { ToastContainer, toast } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 /* ---------- inline API helpers ---------- */
 const qp = (o={}) => { const u=new URLSearchParams(); Object.entries(o).forEach(([k,v])=> (v||v===0)&&v!==""&&u.set(k,v)); return u.toString(); };
@@ -51,11 +52,11 @@ export default function DepartmentList({ onOpenForm }) {
                 <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Departments</h2>
                         </div>
 <div className="d-flex gap-2">
-                        <Form.Select value={status} onChange={e=>{ setStatus(e.target.value); setPage(0); }} style={{ maxWidth: 200 }}>
+                        <SafeSelect value={status} onChange={e=>{ setStatus(e.target.value); setPage(0); }} style={{ maxWidth: 200 }}>
                             <option value="">All</option>
                             <option value="ACTIVE">ACTIVE</option>
                             <option value="INACTIVE">INACTIVE</option>
-                        </Form.Select>
+                        </SafeSelect>
                         <Form.Control placeholder="Search name/description" value={q} onChange={e=>setQ(e.target.value)} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={()=>{ setPage(0); load(); }}>Search</Button>
                         <Button onClick={()=>onOpenForm?.()}>+ New Department</Button>

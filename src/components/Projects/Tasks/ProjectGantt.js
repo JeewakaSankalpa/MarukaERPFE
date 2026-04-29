@@ -4,6 +4,7 @@ import "gantt-task-react/dist/index.css";
 import { Form, Spinner } from 'react-bootstrap';
 import api from '../../../api/api';
 import { toast } from 'react-toastify';
+import SafeSelect from '../../ReusableComponents/SafeSelect';
 
 const ProjectGantt = ({ projectId, reloadKey }) => {
     const [tasks, setTasks] = useState([]);
@@ -89,7 +90,7 @@ const ProjectGantt = ({ projectId, reloadKey }) => {
     return (
         <div className="bg-white p-3 rounded shadow-sm overflow-hidden">
             <div className="d-flex justify-content-end mb-3 gap-2">
-                <Form.Select
+                <SafeSelect
                     style={{ width: 'auto' }}
                     value={viewMode}
                     onChange={e => setViewMode(e.target.value)}
@@ -98,7 +99,7 @@ const ProjectGantt = ({ projectId, reloadKey }) => {
                     <option value={ViewMode.Day}>Day</option>
                     <option value={ViewMode.Week}>Week</option>
                     <option value={ViewMode.Month}>Month</option>
-                </Form.Select>
+                </SafeSelect>
             </div>
 
             <div style={{ overflowX: 'auto' }}>

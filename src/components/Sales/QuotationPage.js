@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import api from "../../api/api";
 import BoqEditor from "../ReusableComponents/BoqEditor";
 import TermsSelector from "./TermsSelector"; // New
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 
 export default function QuotationPage() {
@@ -155,8 +156,8 @@ export default function QuotationPage() {
                                 <Col md={2}>
                                     <Form.Group>
                                         <Form.Label>Expiry Date</Form.Label>
-                                        <Form.Control
-                                            type="date"
+                                        <SafeDatePicker
+                                            name="expiryDate"
                                             value={quote.expiryDate || ""}
                                             onChange={e => setQuote({ ...quote, expiryDate: e.target.value })}
                                         />

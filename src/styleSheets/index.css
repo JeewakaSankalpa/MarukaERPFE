@@ -166,3 +166,110 @@ body {
         display: block;
     }
 }
+
+/* ==========================================================================
+   GLOBAL FORM STYLES (Modern, Clean, Premium)
+   Primary Focus Color: Indigo 600 (#4f46e5)
+   ========================================================================== */
+
+/* Bootstrap Form Inputs, Textareas, and Native Selects */
+.form-control, .form-select, .ant-picker, .ant-select-selector {
+    padding: 0.6rem 1rem !important;
+    font-size: 0.95rem !important;
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+    transition: all 0.2s ease-in-out !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+    color: #334155 !important;
+}
+
+/* Hover States */
+.form-control:hover, .form-select:hover, .ant-picker:hover, .ant-select-selector:hover {
+    border-color: #94a3b8 !important;
+}
+
+/* Focus States */
+.form-control:focus, .form-select:focus, .ant-picker-focused, .ant-select-focused .ant-select-selector {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15) !important;
+    outline: none !important;
+}
+
+/* Form Labels */
+.form-label {
+    font-weight: 500 !important;
+    color: #475569 !important;
+    margin-bottom: 0.4rem !important;
+    font-size: 0.9rem !important;
+}
+
+/* Textarea specific adjustments */
+textarea.form-control {
+    min-height: 100px;
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   REACT-SELECT CUSTOM STYLES (.modern-select)
+   ========================================================================== */
+.modern-select-container {
+    font-size: 0.95rem;
+}
+
+.modern-select__control {
+    padding: 0.2rem 0.5rem !important; /* React-select adds its own inner padding */
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+    transition: all 0.2s ease-in-out !important;
+    background-color: #ffffff !important;
+    min-height: 42px !important;
+}
+
+.modern-select__control:hover {
+    border-color: #94a3b8 !important;
+}
+
+.modern-select__control--is-focused {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15) !important;
+    outline: none !important;
+}
+
+/* React Select Menu Dropdown */
+.modern-select__menu {
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e2e8f0 !important;
+    overflow: hidden !important;
+    z-index: 9999 !important;
+}
+
+/* Fix react-select menu width to fit text without horizontal scrolling */
+.modern-select__menu {
+    width: max-content !important;
+    min-width: 100% !important;
+}
+
+/* React Select Option */
+.modern-select__option {
+    padding: 0.6rem 1rem !important;
+    cursor: pointer !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.modern-select__option--is-focused {
+    background-color: #e0e7ff !important; /* Light indigo */
+    color: #4f46e5 !important;
+}
+
+.modern-select__option--is-selected {
+    background-color: #4f46e5 !important;
+    color: #ffffff !important;
+}
+
+/* AntD Date Picker Overrides */
+.ant-picker, .ant-select {
+    width: 100%; /* Make it behave like form-control */
+}

@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Spinner, Button, Form, Table, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
+import SafeSelect from '../ReusableComponents/SafeSelect';
 
 // expects [{productId, productName?, availableQty}]
 const fetchMainAvail = async () => {
@@ -57,6 +58,8 @@ export default function IRFulfilmentPage() {
     // Loading
     const [loadingList, setLoadingList] = useState(false);
     const [loadingDetail, setLoadingDetail] = useState(false);
+    const [isAddingShortages, setIsAddingShortages] = useState(false);
+    const [isIssuing, setIsIssuing] = useState(false);
 
     // Initial Load
     useEffect(() => {
@@ -121,11 +124,14 @@ export default function IRFulfilmentPage() {
             return;
         }
 
+        setIsAddingShortages(true);
         try {
             await api.post("/stores/pending-purchase", shortages);
             toast.success("Shortages added to Pending Purchase Plan");
         } catch (e) {
             toast.error("Failed to add shortages");
+        } finally {
+            setIsAddingShortages(false);
         }
     };
 
@@ -378,6 +384,7 @@ export default function IRFulfilmentPage() {
                 return;
             }
 
+            setIsIssuing(true);
             const updated = await fulfilIR(selected.id, payload);
             setSelected(updated);
             setAllocations({}); // clear allocations on success
@@ -388,6 +395,8 @@ export default function IRFulfilmentPage() {
             toast.success("Issued items successfully");
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to issue items");
+        } finally {
+            setIsIssuing(false);
         }
     };
 
@@ -415,8 +424,7 @@ export default function IRFulfilmentPage() {
                         <div className="mb-3">
                             <Form.Group>
                                 <Form.Label className="small fw-bold">Filter by Status</Form.Label>
-                                <Form.Select
-                                    size="sm"
+                                <SafeSelect
                                     value={statusFilter}
                                     onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
                                 >
@@ -428,7 +436,7 @@ export default function IRFulfilmentPage() {
                                     <option value="CANCELLED">Cancelled</option>
                                     <option value="CLOSED">Closed</option>
                                     <option value="DRAFT">Draft</option>
-                                </Form.Select>
+                                </SafeSelect>
                             </Form.Group>
                         </div>
                         {/* Other Filters (Keep existing) */}
@@ -436,23 +444,23 @@ export default function IRFulfilmentPage() {
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small">Department</Form.Label>
-                                    <Form.Select value={fDept} onChange={(e) => setFDept(e.target.value)}>
+                                    <SafeSelect value={fDept} onChange={(e) => setFDept(e.target.value)}>
                                         <option value="">All</option>
                                         {Object.entries(deptMap).map(([id, name]) => (
                                             <option key={id} value={id}>{name}</option>
                                         ))}
-                                    </Form.Select>
+                                    </SafeSelect>
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small">Project</Form.Label>
-                                    <Form.Select value={fProj} onChange={(e) => setFProj(e.target.value)}>
+                                    <SafeSelect value={fProj} onChange={(e) => setFProj(e.target.value)}>
                                         <option value="">All</option>
                                         {Object.entries(projMap).map(([id, name]) => (
                                             <option key={id} value={id}>{name}</option>
                                         ))}
-                                    </Form.Select>
+                                    </SafeSelect>
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
@@ -611,10 +619,12 @@ export default function IRFulfilmentPage() {
                                 </Table>
 
                                 <div className="d-flex justify-content-end gap-2 mt-3">
-                                    <Button variant="outline-primary" onClick={addShortagesForIR}>
-                                        Add Shortages to Pending
+                                    <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected}>
+                                        {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : "Add Shortages to Pending"}
                                     </Button>
-                                    <Button onClick={doIssue} disabled={!selected}>Issue from Main Store</Button>
+                                    <Button onClick={doIssue} disabled={!selected || isIssuing || isAddingShortages}>
+                                        {isIssuing ? <><Spinner size="sm" animation="border" className="me-2" />Issuing...</> : "Issue from Main Store"}
+                                    </Button>
                                 </div>
                             </>
                         )}

@@ -5,6 +5,7 @@ import { Container, Form, Button, Row, Col } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
 function InventoryAdd() {
   const navigate = useNavigate();
@@ -128,8 +129,7 @@ function InventoryAdd() {
           <Col md={6}>
             <Form.Group controlId="expiryDate" className="mb-3">
               <Form.Label>Expiry Date</Form.Label>
-              <Form.Control
-                type="date"
+              <SafeDatePicker
                 name="expiryDate"
                 value={inventoryData.expiryDate}
                 onChange={handleChange}
