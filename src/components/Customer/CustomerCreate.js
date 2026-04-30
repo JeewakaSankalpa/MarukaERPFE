@@ -81,7 +81,7 @@ function CustomerCreate() {
 
   const validateForm = () => {
     const newErrors = {};
-    const mobileRegex = /^0\d{9}$/;
+    const mobileRegex = /^[+]?[0-9 ()-]{7,20}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!companyData.comName) newErrors.comName = "Company Name is required";
@@ -96,7 +96,7 @@ function CustomerCreate() {
     if (!companyData.comContactNumber) {
       newErrors.comContactNumber = "Company Contact Number is required";
     } else if (!mobileRegex.test(companyData.comContactNumber)) {
-      newErrors.comContactNumber = "Contact Number must be 10 digits and start with 0";
+      newErrors.comContactNumber = "Please enter a valid phone number (e.g., +94 71 234 5678)";
     }
 
     if (!companyData.businessRegNumber) newErrors.businessRegNumber = "BR Number is required";
@@ -107,7 +107,7 @@ function CustomerCreate() {
     if (!companyData.contactPersonData.contactNumber) {
       newErrors.contactPersonData_contactNumber = "Contact Person Mobile is required";
     } else if (!mobileRegex.test(companyData.contactPersonData.contactNumber)) {
-      newErrors.contactPersonData_contactNumber = "Mobile Number must be 10 digits and start with 0";
+      newErrors.contactPersonData_contactNumber = "Please enter a valid phone number (e.g., +94 71 234 5678)";
     }
 
     if (!companyData.contactPersonData.email) {

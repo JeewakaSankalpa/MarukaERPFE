@@ -203,7 +203,7 @@ const InventoryDashboard = () => {
                 <FaArrowRight className="text-muted" />
               </Button>
 
-              <Button variant="light" className="d-flex align-items-center justify-content-between p-3 border" onClick={() => navigate('/employee/view')}>
+              <Button variant="light" className="d-flex align-items-center justify-content-between p-3 border" onClick={() => navigate('/reports/project-material')}>
                 <div className="d-flex align-items-center gap-3">
                   <div className="bg-success bg-opacity-10 p-2 rounded text-success">
                     <FaBoxes />

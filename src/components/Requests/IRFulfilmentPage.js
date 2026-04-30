@@ -619,8 +619,8 @@ export default function IRFulfilmentPage() {
                                 </Table>
 
                                 <div className="d-flex justify-content-end gap-2 mt-3">
-                                    <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected}>
-                                        {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : "Add Shortages to Pending"}
+                                    <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected || selected.status === "PENDING_PURCHASE"}>
+                                        {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : selected?.status === "PENDING_PURCHASE" ? "Shortages Already Added" : "Add Shortages to Pending"}
                                     </Button>
                                     <Button onClick={doIssue} disabled={!selected || isIssuing || isAddingShortages}>
                                         {isIssuing ? <><Spinner size="sm" animation="border" className="me-2" />Issuing...</> : "Issue from Main Store"}

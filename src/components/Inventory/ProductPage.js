@@ -127,7 +127,7 @@ function ProductForm({ id, onClose, onSaved }) {
     const isEdit = Boolean(id);
     const [form, setForm] = useState({
         sku: "", barcode: "", name: "", categoryId: "", unit: "", status: "ACTIVE",
-        originalCostPrice: "", defaultSellingPrice: "", suppliers: []
+        originalCostPrice: "", defaultSellingPrice: "", reorderLevel: "", suppliers: []
     });
     const [supplierOptions, setSupplierOptions] = useState([]);
     const [validated, setValidated] = useState(false);
@@ -166,6 +166,7 @@ function ProductForm({ id, onClose, onSaved }) {
                     status: d.status || "ACTIVE",
                     originalCostPrice: d.originalCostPrice || "",
                     defaultSellingPrice: d.defaultSellingPrice || "",
+                    reorderLevel: d.reorderLevel || "",
                     suppliers: d.suppliers || [],
                 });
                 setIsEditMode(false);
@@ -204,6 +205,7 @@ function ProductForm({ id, onClose, onSaved }) {
             unit: form.unit || undefined,
             status: form.status,
             defaultSellingPrice: form.defaultSellingPrice,
+            reorderLevel: form.reorderLevel !== "" && form.reorderLevel !== undefined ? Number(form.reorderLevel) : undefined,
             suppliers: (form.suppliers || []).map(s => ({
                 supplierId: s.supplierId,
                 supplierItemCode: s.supplierItemCode || undefined,
@@ -315,6 +317,13 @@ function ProductForm({ id, onClose, onSaved }) {
                                 <Form.Control required isInvalid={validated && !form.defaultSellingPrice}
                                               value={form.defaultSellingPrice} onChange={bind("defaultSellingPrice")} disabled={!isEditMode} />
                                 <Form.Control.Feedback type="invalid">Selling price is required.</Form.Control.Feedback>
+                            </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                            <Form.Group>
+                                <Form.Label>Reorder Level (Low Stock Alert)</Form.Label>
+                                <Form.Control type="number" min="0" value={form.reorderLevel} onChange={bind("reorderLevel")} disabled={!isEditMode} />
+                                <Form.Text className="text-muted">Triggers alert when stock drops below this.</Form.Text>
                             </Form.Group>
                         </Col>
                     </Row>

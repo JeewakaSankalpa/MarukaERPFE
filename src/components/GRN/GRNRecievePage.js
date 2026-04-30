@@ -86,16 +86,25 @@ export default function GRNReceivePage({ poId: initialPoId }) {
         try {
             if (!po?.id) { toast.warn("Select a PO"); return; }
             const items = rows.map(r => {
-                const totalQty = (r.batches || []).reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+                const activeBatches = (r.batches || []).filter(b => Number(b.qty) > 0);
+                
+                // Validate Unit Cost for each active batch
+                for (const b of activeBatches) {
+                    if (!b.unitCost || isNaN(Number(b.unitCost)) || Number(b.unitCost) <= 0) {
+                        throw new Error(`Unit Cost is required and must be greater than zero for product: ${r.productName}`);
+                    }
+                }
+
+                const totalQty = activeBatches.reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
                 return {
                     productId: r.productId,
                     unit: r.unit,
                     receivedQty: totalQty,
-                    batches: (r.batches || []).filter(b => Number(b.qty) > 0).map(b => ({
+                    batches: activeBatches.map(b => ({
                         batchNo: b.batchNo || undefined,
                         expiryDate: b.expiryDate || undefined,
                         qty: Number(b.qty),
-                        unitCost: b.unitCost ? String(b.unitCost) : undefined,
+                        unitCost: String(b.unitCost),
                         serials: []
                     })),
                     serials: []
@@ -301,10 +310,10 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                                         style={{ maxWidth: 80 }}
                                                                     />
                                                                     <Form.Control
-                                                                        type="number" min="0" placeholder="Unit Cost"
+                                                                        type="number" min="0" step="0.01" placeholder="Unit Cost *"
                                                                         value={b.unitCost}
                                                                         onChange={e => setBatch(i, bi, "unitCost", e.target.value)}
-                                                                        style={{ maxWidth: 110 }}
+                                                                        style={{ maxWidth: 110, borderColor: (!b.unitCost && b.qty > 0) ? 'red' : undefined }}
                                                                     />
                                                                     <Button size="sm" variant="outline-danger" onClick={() => rmBatch(i, bi)}>✕</Button>
                                                                 </div>

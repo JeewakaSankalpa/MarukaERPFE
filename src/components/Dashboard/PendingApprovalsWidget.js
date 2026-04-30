@@ -29,12 +29,12 @@ export default function PendingApprovalsWidget() {
                 setProjectApprovals(res.data || []);
             } else {
                 // Fetch PO Approvals
-                // POStatus enum: DRAFT, CREATED, SENT_TO_SUPPLIER...
-                // CREATED means ready for review/sending.
-                const res = await api.get("/pos", {
-                    params: { status: "CREATED", page: 0, size: 5 }
+                // Use the new pending-approvals endpoint which filters by approverId
+                const empId = localStorage.getItem("employeeId");
+                const res = await api.get("/pos/pending-approvals", {
+                    params: { employeeId: empId }
                 });
-                setPoApprovals(res.data?.content || []);
+                setPoApprovals(res.data || []);
             }
         } catch (error) {
             console.error("Failed to load approvals", error);
@@ -78,7 +78,7 @@ export default function PendingApprovalsWidget() {
                                                 </td>
                                                 <td><Badge bg="info">{p.stageType}</Badge></td>
                                                 <td>
-                                                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/projects/details/${p.projectId}`)}>
+                                                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/projects/manage/${p.projectId}`)}>
                                                         Review
                                                     </Button>
                                                 </td>
@@ -111,7 +111,7 @@ export default function PendingApprovalsWidget() {
                                                 </td>
                                                 <td>{po.createdAt ? new Date(po.createdAt).toLocaleDateString() : '-'}</td>
                                                 <td>
-                                                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/pos/view/${po.id}`)}>
+                                                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/pos/${po.id}`)}>
                                                         Review
                                                     </Button>
                                                 </td>

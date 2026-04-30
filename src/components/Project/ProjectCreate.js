@@ -665,10 +665,10 @@ const ProjectForm = () => {
                 name="comContactNumber"
                 value={quickCustomer.comContactNumber}
                 onChange={handleQuickAddChange}
-                placeholder="e.g. 0712345678"
+                placeholder="e.g. +94 71 234 5678"
                 required
-                pattern="^0\d{9}$"
-                title="Must be 10 digits starting with 0"
+                pattern="^[+]?[0-9 ()-]{7,20}$"
+                title="Please enter a valid phone number (e.g., +94 71 234 5678)"
               />
             </Form.Group>
           </Modal.Body>
