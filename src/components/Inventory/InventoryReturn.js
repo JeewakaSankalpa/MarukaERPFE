@@ -53,7 +53,7 @@ function InventoryReturn() {
                 const data = res.data || [];
                 // Only allow returning from Main Store
                 const mainBatches = data.filter(b => b.locationId === "LOC_STORES_MAIN" && b.quantity > 0);
-                
+
                 setBatches(mainBatches.map(b => ({
                     value: b.id,
                     label: `Batch: ${b.batchNumber} (Available: ${b.quantity})`,
@@ -113,7 +113,7 @@ function InventoryReturn() {
 
             await api.post('/inventory/returns/supplier', payload);
             toast.success("Supplier Return Request created successfully! Sent for approval.");
-            
+
             // Reset form
             setSelectedProduct('');
             setSelectedBatch('');
@@ -253,9 +253,9 @@ function InventoryReturn() {
 
                         <div className="d-flex justify-content-end gap-2 mt-4">
                             <Button variant="light" onClick={() => navigate(-1)}>Cancel</Button>
-                            <Button 
-                                type="submit" 
-                                variant="primary" 
+                            <Button
+                                type="submit"
+                                variant="primary"
                                 disabled={isSubmitting || !selectedProduct || !selectedBatch || !returnQty}
                             >
                                 {isSubmitting ? 'Submitting...' : 'Submit Return Request'}
