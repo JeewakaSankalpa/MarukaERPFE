@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Table, Badge, Button, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Form } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { FaBoxes, FaExclamationTriangle, FaBoxOpen, FaClipboardList, FaArrowRight, FaPlus } from "react-icons/fa";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -26,6 +26,7 @@ const InventoryDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     fetchStats();
@@ -40,6 +41,47 @@ const InventoryDashboard = () => {
       console.error("Failed to load stats", err);
       setError("Failed to load dashboard data");
       setLoading(false);
+    }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedItems(stats?.lowStockItems || []);
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleSelectItem = (item) => {
+    setSelectedItems(prev => {
+      const isSelected = prev.some(i => i.productId === item.productId);
+      if (isSelected) {
+        return prev.filter(i => i.productId !== item.productId);
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleCreatePO = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const shortages = {};
+      selectedItems.forEach(item => {
+        shortages[item.productId] = Math.max(1, item.reorderLevel - item.currentQty);
+      });
+      // Push items to the pending purchase queue
+      await api.post('/stores/pending-purchase', shortages);
+      // Navigate directly to the Pending -> PO conversion screen
+      navigate('/stores/pending-to-po');
+    } catch (err) {
+      console.error("Failed to push to pending purchases", err);
+      alert("Failed to process items. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -145,11 +187,13 @@ const InventoryDashboard = () => {
           <Card className="shadow-sm border-0 h-100">
             <Card.Header className="bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
               <h5 className="mb-0 fw-bold text-danger">Low Stock Alerts</h5>
-              {stats?.lowStockCount > 5 && (
-                <Button variant="link" size="sm" onClick={() => navigate('/inventory/view')}>View All</Button>
+              {selectedItems.length > 0 && (
+                <Button variant="primary" size="sm" onClick={handleCreatePO} disabled={isSubmitting}>
+                  {isSubmitting ? 'Processing...' : `Send to Pending Purchase (${selectedItems.length})`}
+                </Button>
               )}
             </Card.Header>
-            <Card.Body className="p-0">
+            <Card.Body className="p-0" style={{ maxHeight: '400px', overflowY: 'auto' }}>
               {stats?.lowStockItems?.length === 0 ? (
                 <div className="text-center py-5 text-muted">
                   <FaClipboardList size={48} className="mb-3 opacity-25" />
@@ -157,18 +201,32 @@ const InventoryDashboard = () => {
                 </div>
               ) : (
                 <Table hover responsive className="mb-0 align-middle">
-                  <thead className="bg-light text-muted">
+                  <thead className="bg-light text-muted" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                     <tr>
-                      <th className="ps-4">Product Name</th>
-                      <th className="text-center">Current Qty</th>
+                      <th style={{ width: '40px' }} className="ps-4">
+                        <Form.Check 
+                          type="checkbox" 
+                          onChange={handleSelectAll} 
+                          checked={stats?.lowStockItems?.length > 0 && selectedItems.length === stats?.lowStockItems?.length} 
+                        />
+                      </th>
+                      <th>Product Name</th>
+                      <th className="text-center">Main Store Qty</th>
                       <th className="text-center">Reorder Level</th>
                       <th className="text-end pe-4">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(stats?.lowStockItems || []).slice(0, 5).map((item) => (
-                      <tr key={item.productId}>
-                        <td className="ps-4 fw-medium">{item.productName}</td>
+                    {(stats?.lowStockItems || []).map((item) => (
+                      <tr key={item.productId} onClick={() => handleSelectItem(item)} style={{ cursor: 'pointer' }}>
+                        <td className="ps-4" onClick={(e) => e.stopPropagation()}>
+                          <Form.Check 
+                            type="checkbox" 
+                            onChange={() => handleSelectItem(item)} 
+                            checked={selectedItems.some(i => i.productId === item.productId)} 
+                          />
+                        </td>
+                        <td className="fw-medium">{item.productName}</td>
                         <td className="text-center fw-bold">{item.currentQty}</td>
                         <td className="text-center text-muted">{item.reorderLevel}</td>
                         <td className="text-end pe-4">

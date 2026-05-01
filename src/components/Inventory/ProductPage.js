@@ -217,8 +217,10 @@ function ProductForm({ id, onClose, onSaved }) {
         };
 
         try {
+            console.log("Saving payload:", payload);
             if (isEdit) {
                 const { sku, ...upd } = payload;
+                console.log("Update payload:", upd);
                 await updateProduct(id, upd);
                 toast.success("Product updated");
             } else {
