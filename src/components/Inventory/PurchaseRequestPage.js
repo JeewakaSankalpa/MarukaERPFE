@@ -358,7 +358,7 @@ function PRView({ id, onBack }) {
                     </div>
 
                     <div className="meta" style={{ marginBottom: 8 }}>
-                        <div><strong>Supplier:</strong> {pr.supplierName} ({pr.supplierCode || "-"})</div>
+                        <div><strong>Supplier:</strong> {pr.supplierNameSnapshot || pr.supplierName || "-"}</div>
                         <div><strong>Comment:</strong> {pr.comment || "-"}</div>
                     </div>
 
@@ -375,11 +375,11 @@ function PRView({ id, onBack }) {
                         <tbody>
                         {(pr.items || []).map((it, idx) => (
                             <tr key={idx}>
-                                <td>{it.productName}</td>
-                                <td>{it.sku}</td>
+                                <td>{it.productNameSnapshot || it.productName || "-"}</td>
+                                <td>{it.sku || "-"}</td>
                                 <td>{it.unit || "pcs"}</td>
-                                <td style={{ textAlign: "right" }}>{fmtNum(it.quantity)}</td>
-                                <td>{it.note || ""}</td>
+                                <td style={{ textAlign: "right" }}>{fmtNum(it.requestedQty ?? it.quantity)}</td>
+                                <td>{it.note || "-"}</td>
                             </tr>
                         ))}
                         </tbody>
