@@ -112,7 +112,7 @@ function SupplierList({ onOpen }) {
 /* ================== Form ================== */
 function SupplierForm({ id, onClose, onSaved }) {
     const isEdit = Boolean(id);
-    const [form, setForm] = useState({ supplierCode: "", name: "", status: "ACTIVE", email: "", phone: "", taxId: "", address: {} });
+    const [form, setForm] = useState({ supplierCode: "", name: "", status: "ACTIVE", email: "", phone: "", taxId: "", contactPerson: "", address: {} });
     const [validated, setValidated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(!id);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,6 +129,7 @@ function SupplierForm({ id, onClose, onSaved }) {
                     email: d.email || "",
                     phone: d.phone || "",
                     taxId: d.taxId || "",
+                    contactPerson: d.contactPerson || "",
                     address: d.address || {},
                 });
                 setIsEditMode(false);
@@ -172,6 +173,7 @@ function SupplierForm({ id, onClose, onSaved }) {
                 email: form.email || undefined,
                 phone: form.phone || undefined,
                 taxId: form.taxId || undefined,
+                contactPerson: form.contactPerson || undefined,
                 address: form.address,
                 ...(isEdit ? {} : { supplierCode: form.supplierCode || undefined }),
             };
@@ -230,6 +232,15 @@ function SupplierForm({ id, onClose, onSaved }) {
                             <Form.Group>
                                 <Form.Label>Tax ID</Form.Label>
                                 <Form.Control value={form.taxId} onChange={bind("taxId")} disabled={!isEditMode} />
+                            </Form.Group>
+                        </Col>
+                    </Row>
+
+                    <Row className="g-3 mt-1">
+                        <Col md={12}>
+                            <Form.Group>
+                                <Form.Label>Contact Person Name</Form.Label>
+                                <Form.Control value={form.contactPerson} onChange={bind("contactPerson")} disabled={!isEditMode} />
                             </Form.Group>
                         </Col>
                     </Row>

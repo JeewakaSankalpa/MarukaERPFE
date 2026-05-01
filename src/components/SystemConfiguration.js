@@ -42,14 +42,21 @@ export default function SystemConfiguration() {
     const [mappingRoles, setMappingRoles] = useState([]);
     const [mappingLoading, setMappingLoading] = useState(false);
 
-    // ---- Bulk Import State ----
+    // ---- Inventory Bulk Import State ----
     const fileInputRef = useRef(null);
     const [importFile, setImportFile] = useState(null);
-    const [importPreview, setImportPreview] = useState([]);   // parsed rows for preview
+    const [importPreview, setImportPreview] = useState([]);
     const [locations, setLocations] = useState([]);
     const [selectedLocation, setSelectedLocation] = useState("LOC_STORES_MAIN");
     const [importing, setImporting] = useState(false);
-    const [importResult, setImportResult] = useState(null);   // BulkImportResultDTO
+    const [importResult, setImportResult] = useState(null);
+
+    // ---- Supplier Bulk Import State ----
+    const supplierFileInputRef = useRef(null);
+    const [supplierImportFile, setSupplierImportFile] = useState(null);
+    const [supplierImportPreview, setSupplierImportPreview] = useState([]);
+    const [supplierImporting, setSupplierImporting] = useState(false);
+    const [supplierImportResult, setSupplierImportResult] = useState(null);
 
     useEffect(() => {
         loadConfig();
@@ -136,6 +143,74 @@ export default function SystemConfiguration() {
         setImportPreview([]);
         setImportResult(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    // ---- Supplier Bulk Import Handlers ----
+    const handleDownloadSupplierTemplate = () => {
+        const ws = XLSX.utils.aoa_to_sheet([
+            ["S.No", "Supplier Name", "Contact Details", "Products"],
+            [1, "Example Supplier Ltd", "John Perera - +94771234567", "Cement, Steel Bars"],
+            [2, "Another Corp Pvt Ltd", "Mary Silva - 0112345678", "Paint, Tiles"],
+        ]);
+        ws["!cols"] = [8, 30, 35, 25].map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Suppliers");
+        XLSX.writeFile(wb, "supplier_import_template.xlsx");
+    };
+
+    const handleSupplierFileChange = (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        setSupplierImportFile(f);
+        setSupplierImportResult(null);
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const wb = XLSX.read(evt.target.result, { type: "binary" });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+            const rows = data.slice(1)
+                .filter(r => r.some(c => String(c).trim() !== ""))
+                .map((r, i) => ({
+                    rowNum: i + 2,
+                    sno: r[0] !== undefined ? r[0] : i + 1,
+                    name: String(r[1] || "").trim(),
+                    contactDetails: String(r[2] || "").trim(),
+                    products: String(r[3] || "").trim(),
+                }));
+            setSupplierImportPreview(rows);
+        };
+        reader.readAsBinaryString(f);
+    };
+
+    const handleSupplierImport = async () => {
+        if (!supplierImportFile) { toast.warn("Please select an Excel file first."); return; }
+        setSupplierImporting(true);
+        setSupplierImportResult(null);
+        try {
+            const formData = new FormData();
+            formData.append("file", supplierImportFile);
+            const res = await api.post("/admin/import/suppliers", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            setSupplierImportResult(res.data);
+            const { productsCreated, productsSkipped, errors } = res.data;
+            if (errors === 0) {
+                toast.success(`Import complete! ${productsCreated} created, ${productsSkipped} skipped.`);
+            } else {
+                toast.warn(`Import finished with ${errors} error(s). Check the results below.`);
+            }
+        } catch (err) {
+            toast.error("Import failed: " + (err?.response?.data?.message || err.message));
+        } finally {
+            setSupplierImporting(false);
+        }
+    };
+
+    const resetSupplierImport = () => {
+        setSupplierImportFile(null);
+        setSupplierImportPreview([]);
+        setSupplierImportResult(null);
+        if (supplierFileInputRef.current) supplierFileInputRef.current.value = "";
     };
 
 
@@ -582,6 +657,170 @@ export default function SystemConfiguration() {
                             </div>
                             <div className="mt-2 text-end">
                                 <Button variant="link" size="sm" className="p-0 text-secondary" onClick={resetImport}>
+                                    ✕ Clear &amp; Import Another File
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </Card.Body>
+            </Card>
+
+            {/* ============================================================
+                  SUPPLIER BULK IMPORT
+             ============================================================ */}
+            <Card className="shadow-sm mb-4 border-0" style={{ overflow: "hidden" }}>
+                <Card.Header className="py-3" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)" }}>
+                    <div className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-2">
+                            <div style={{ background: "rgba(72,187,120,0.15)", borderRadius: 8, padding: "6px 10px" }}>
+                                <Upload size={18} color="#48bb78" />
+                            </div>
+                            <div>
+                                <h5 className="mb-0 text-white">Supplier Bulk Import</h5>
+                                <small style={{ color: "#a0aec0" }}>Upload an Excel file to create suppliers</small>
+                            </div>
+                        </div>
+                        <Button
+                            variant="outline-light"
+                            size="sm"
+                            onClick={handleDownloadSupplierTemplate}
+                            className="d-flex align-items-center gap-1"
+                        >
+                            <Download size={14} /> Template
+                        </Button>
+                    </div>
+                </Card.Header>
+
+                <Card.Body className="p-4">
+                    {/* Step 1: Column guide */}
+                    <div className="mb-4 p-3 rounded" style={{ background: "#f8f9ff", border: "1px solid #e2e8f0" }}>
+                        <p className="mb-2 fw-semibold small text-secondary">Expected Excel columns (1 to 4):</p>
+                        <div className="d-flex flex-wrap gap-2">
+                            {[
+                                { col: "1", label: "S.No" },
+                                { col: "2", label: "Supplier Name *" },
+                                { col: "3", label: "Contact Details (Person - Number)" },
+                                { col: "4", label: "Products" },
+                            ].map(({ col, label }) => (
+                                <span key={col} className="badge d-flex align-items-center gap-1"
+                                    style={{ background: "#edf2f7", color: "#2d3748", fontWeight: 500, fontSize: 12 }}>
+                                    <span style={{ background: "#48bb78", color: "#fff", borderRadius: 4, padding: "1px 6px", fontWeight: 700 }}>{col}</span>
+                                    {label}
+                                </span>
+                            ))}
+                        </div>
+                        <p className="mb-0 mt-2 text-muted" style={{ fontSize: 12 }}>* Supplier Name is required. If a supplier with the same name already exists, it will be skipped.</p>
+                    </div>
+
+                    <Row className="g-3 align-items-end mb-3">
+                        {/* File picker */}
+                        <Col md={10}>
+                            <Form.Label className="fw-semibold">Select Excel File (.xlsx)</Form.Label>
+                            <Form.Control
+                                ref={supplierFileInputRef}
+                                type="file"
+                                accept=".xlsx,.xls"
+                                onChange={handleSupplierFileChange}
+                            />
+                            {supplierImportFile && (
+                                <small className="text-success mt-1 d-block">
+                                    ✓ {supplierImportFile.name} — {supplierImportPreview.length} data row(s) detected
+                                </small>
+                            )}
+                        </Col>
+
+                        {/* Action buttons */}
+                        <Col md={2} className="d-flex gap-2">
+                            <Button
+                                variant="success"
+                                onClick={handleSupplierImport}
+                                disabled={supplierImporting || !supplierImportFile}
+                                className="w-100"
+                            >
+                                {supplierImporting ? <><Spinner size="sm" className="me-1" />Importing...</> : <><Upload size={14} className="me-1" />Import</>}
+                            </Button>
+                        </Col>
+                    </Row>
+
+                    {/* Preview Table */}
+                    {supplierImportPreview.length > 0 && !supplierImportResult && (
+                        <div>
+                            <div className="d-flex align-items-center justify-content-between mb-2">
+                                <span className="fw-semibold text-secondary small">Preview ({supplierImportPreview.length} rows)</span>
+                                <Button variant="link" size="sm" className="text-danger p-0" onClick={resetSupplierImport}>✕ Clear</Button>
+                            </div>
+                            <div className="table-responsive" style={{ maxHeight: 280, overflowY: "auto", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                                <Table size="sm" hover className="mb-0" style={{ fontSize: 13 }}>
+                                    <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Supplier Name</th>
+                                            <th>Contact Details</th>
+                                            <th>Products</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {supplierImportPreview.map(r => (
+                                            <tr key={r.rowNum} className={(!r.name) ? "table-warning" : ""}>
+                                                <td className="text-muted">{r.rowNum}</td>
+                                                <td>{r.name || <span className="text-danger">—</span>}</td>
+                                                <td>{r.contactDetails || "—"}</td>
+                                                <td>{r.products || "—"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                            <p className="text-muted mt-1 mb-0" style={{ fontSize: 11 }}>
+                                Rows highlighted in yellow are missing required fields and will be skipped.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Import Result Panel */}
+                    {supplierImportResult && (
+                        <div className="mt-3">
+                            <Alert variant={supplierImportResult.errors > 0 ? "warning" : "success"} className="mb-3">
+                                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <strong>Import Complete</strong>
+                                    </div>
+                                    <div className="d-flex gap-3">
+                                        <span className="text-success fw-bold"><CheckCircle size={14} className="me-1" />{supplierImportResult.productsCreated} Created</span>
+                                        <span className="text-secondary fw-bold"><SkipForward size={14} className="me-1" />{supplierImportResult.productsSkipped} Skipped</span>
+                                        <span className="text-danger fw-bold"><XCircle size={14} className="me-1" />{supplierImportResult.errors} Errors</span>
+                                    </div>
+                                </div>
+                            </Alert>
+
+                            <div className="table-responsive" style={{ maxHeight: 300, overflowY: "auto", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                                <Table size="sm" hover className="mb-0" style={{ fontSize: 13 }}>
+                                    <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Supplier Name</th>
+                                            <th>Status</th>
+                                            <th>Message</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(supplierImportResult.rows || []).map(r => (
+                                            <tr key={r.rowNum}>
+                                                <td className="text-muted">{r.rowNum}</td>
+                                                <td>{r.name}</td>
+                                                <td>
+                                                    <Badge bg={r.status === "CREATED" ? "success" : r.status === "SKIPPED" ? "secondary" : "danger"}>
+                                                        {r.status}
+                                                    </Badge>
+                                                </td>
+                                                <td className="text-muted small">{r.message}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                            <div className="mt-2 text-end">
+                                <Button variant="link" size="sm" className="p-0 text-secondary" onClick={resetSupplierImport}>
                                     ✕ Clear &amp; Import Another File
                                 </Button>
                             </div>
