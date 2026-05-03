@@ -111,7 +111,7 @@ export default function SystemConfiguration() {
         reader.readAsBinaryString(f);
     };
 
-    // Submit the file to the backend
+    // Submit the file to the backend (async — backend processes in background)
     const handleImport = async () => {
         if (!importFile) { toast.warn("Please select an Excel file first."); return; }
         if (!selectedLocation) { toast.warn("Please select a target location."); return; }
@@ -121,16 +121,51 @@ export default function SystemConfiguration() {
             const formData = new FormData();
             formData.append("file", importFile);
             formData.append("locationId", selectedLocation);
-            const res = await api.post("/admin/import/inventory", formData, {
+
+            // Step 1: kick off the job — backend returns immediately with jobId
+            const kickoff = await api.post("/admin/import/inventory", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            setImportResult(res.data);
-            const { productsCreated, productsSkipped, errors, grnNumber } = res.data;
-            if (errors === 0) {
-                toast.success(`Import complete! ${productsCreated} created, ${productsSkipped} skipped. GRN: ${grnNumber}`);
-            } else {
-                toast.warn(`Import finished with ${errors} error(s). Check the results below.`);
-            }
+            const jobId = kickoff.data?.jobId;
+            if (!jobId) throw new Error("No jobId returned from server");
+
+            toast.info("Import started! Processing in the background...");
+
+            // Step 2: poll every 2s until DONE or FAILED
+            await new Promise((resolve, reject) => {
+                const interval = setInterval(async () => {
+                    try {
+                        const status = await api.get(`/admin/import/status/${jobId}`);
+                        const job = status.data;
+
+                        // Update progress
+                        setImportResult({
+                            _polling: true,
+                            processedRows: job.processedRows,
+                            totalRows: job.totalRows,
+                            state: job.state,
+                        });
+
+                        if (job.state === "DONE") {
+                            clearInterval(interval);
+                            setImportResult(job);
+                            const { productsCreated, productsSkipped, errors, grnNumber } = job;
+                            if (errors === 0) {
+                                toast.success(`Import complete! ${productsCreated} created, ${productsSkipped} skipped. GRN: ${grnNumber}`);
+                            } else {
+                                toast.warn(`Import finished with ${errors} error(s). Check the results below.`);
+                            }
+                            resolve();
+                        } else if (job.state === "FAILED") {
+                            clearInterval(interval);
+                            reject(new Error(job.errorMessage || "Import failed on server"));
+                        }
+                    } catch (pollErr) {
+                        clearInterval(interval);
+                        reject(pollErr);
+                    }
+                }, 2000);
+            });
         } catch (err) {
             toast.error("Import failed: " + (err?.response?.data?.message || err.message));
         } finally {
@@ -608,60 +643,92 @@ export default function SystemConfiguration() {
                         </div>
                     )}
 
-                    {/* Import Result Panel */}
+                    {/* Import Progress / Result Panel */}
                     {importResult && (
                         <div className="mt-3">
-                            <Alert variant={importResult.errors > 0 ? "warning" : "success"} className="mb-3">
-                                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                    <div>
-                                        <strong>Import Complete</strong>
-                                        {importResult.grnNumber && (
-                                            <span className="ms-2 text-muted small">Opening Stock GRN: <strong>{importResult.grnNumber}</strong></span>
-                                        )}
+                            {importResult._polling ? (
+                                /* ---- Live Progress Bar ---- */
+                                <Alert variant="info" className="mb-0">
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <strong>⏳ Import in progress…</strong>
+                                        <span className="text-muted small">
+                                            {importResult.processedRows} / {importResult.totalRows || "?"} rows
+                                        </span>
                                     </div>
-                                    <div className="d-flex gap-3">
-                                        <span className="text-success fw-bold"><CheckCircle size={14} className="me-1" />{importResult.productsCreated} Created</span>
-                                        <span className="text-secondary fw-bold"><SkipForward size={14} className="me-1" />{importResult.productsSkipped} Skipped</span>
-                                        <span className="text-danger fw-bold"><XCircle size={14} className="me-1" />{importResult.errors} Errors</span>
+                                    <div style={{ background: "#d0eaf8", borderRadius: 8, height: 14, overflow: "hidden" }}>
+                                        <div style={{
+                                            width: importResult.totalRows
+                                                ? `${Math.round((importResult.processedRows / importResult.totalRows) * 100)}%`
+                                                : "5%",
+                                            background: "linear-gradient(90deg, #0d6efd, #0dcaf0)",
+                                            height: "100%",
+                                            borderRadius: 8,
+                                            transition: "width 0.4s ease"
+                                        }} />
                                     </div>
-                                </div>
-                            </Alert>
+                                    {importResult.totalRows > 0 && (
+                                        <p className="text-muted small mb-0 mt-1 text-end">
+                                            {Math.round((importResult.processedRows / importResult.totalRows) * 100)}% complete
+                                        </p>
+                                    )}
+                                </Alert>
+                            ) : (
+                                /* ---- Final Results ---- */
+                                <>
+                                    <Alert variant={importResult.errors > 0 ? "warning" : "success"} className="mb-3">
+                                        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <strong>Import Complete</strong>
+                                                {importResult.grnNumber && (
+                                                    <span className="ms-2 text-muted small">Opening Stock GRN: <strong>{importResult.grnNumber}</strong></span>
+                                                )}
+                                            </div>
+                                            <div className="d-flex gap-3">
+                                                <span className="text-success fw-bold"><CheckCircle size={14} className="me-1" />{importResult.productsCreated} Created</span>
+                                                <span className="text-secondary fw-bold"><SkipForward size={14} className="me-1" />{importResult.productsSkipped} Skipped</span>
+                                                <span className="text-danger fw-bold"><XCircle size={14} className="me-1" />{importResult.errors} Errors</span>
+                                            </div>
+                                        </div>
+                                    </Alert>
 
-                            <div className="table-responsive" style={{ maxHeight: 300, overflowY: "auto", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                                <Table size="sm" hover className="mb-0" style={{ fontSize: 13 }}>
-                                    <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>SKU</th>
-                                            <th>Item Name</th>
-                                            <th>Status</th>
-                                            <th>Message</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(importResult.rows || []).map(r => (
-                                            <tr key={r.rowNum}>
-                                                <td className="text-muted">{r.rowNum}</td>
-                                                <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
-                                                <td>{r.name}</td>
-                                                <td>
-                                                    <Badge bg={r.status === "CREATED" ? "success" : r.status === "SKIPPED" ? "secondary" : "danger"}>
-                                                        {r.status}
-                                                    </Badge>
-                                                </td>
-                                                <td className="text-muted small">{r.message}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
-                            </div>
-                            <div className="mt-2 text-end">
-                                <Button variant="link" size="sm" className="p-0 text-secondary" onClick={resetImport}>
-                                    ✕ Clear &amp; Import Another File
-                                </Button>
-                            </div>
+                                    <div className="table-responsive" style={{ maxHeight: 300, overflowY: "auto", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                                        <Table size="sm" hover className="mb-0" style={{ fontSize: 13 }}>
+                                            <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>SKU</th>
+                                                    <th>Item Name</th>
+                                                    <th>Status</th>
+                                                    <th>Message</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(importResult.rows || []).map(r => (
+                                                    <tr key={r.rowNum}>
+                                                        <td className="text-muted">{r.rowNum}</td>
+                                                        <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
+                                                        <td>{r.name}</td>
+                                                        <td>
+                                                            <Badge bg={r.status === "CREATED" ? "success" : r.status === "SKIPPED" ? "secondary" : "danger"}>
+                                                                {r.status}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="text-muted small">{r.message}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                    <div className="mt-2 text-end">
+                                        <Button variant="link" size="sm" className="p-0 text-secondary" onClick={resetImport}>
+                                            ✕ Clear &amp; Import Another File
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
+
                 </Card.Body>
             </Card>
 
