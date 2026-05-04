@@ -60,7 +60,7 @@ export default function POCreateManual({ onCreated }) {
 
     // Load suppliers
     const loadSuppliers = async () => {
-        try { setSupplierData(await searchSuppliers(supplierQ, supplierPage, 8)); }
+        try { setSupplierData(await searchSuppliers(supplierQ, supplierPage, 100)); }
         catch { toast.error("Failed to search suppliers"); }
     };
     useEffect(() => { loadSuppliers(); }, [supplierPage]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -69,7 +69,7 @@ export default function POCreateManual({ onCreated }) {
     const loadProducts = async () => {
         try {
             const sid = supplier?.id || "";
-            setProductData(await searchProducts(productQ, sid, productPage, 8));
+            setProductData(await searchProducts(productQ, sid, productPage, 100));
         } catch { toast.error("Failed to search products"); }
     };
     useEffect(() => { loadProducts(); }, [productPage, supplier?.id]); // eslint-disable-line react-hooks/exhaustive-deps
