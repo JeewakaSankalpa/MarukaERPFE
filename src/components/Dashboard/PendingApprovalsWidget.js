@@ -12,6 +12,7 @@ export default function PendingApprovalsWidget() {
     const [loading, setLoading] = useState(false);
 
     const userRole = localStorage.getItem("role") || "";
+    const projectRoles = JSON.parse(localStorage.getItem("projectRoles") || "[]");
 
     useEffect(() => {
         fetchData();
@@ -21,10 +22,15 @@ export default function PendingApprovalsWidget() {
         setLoading(true);
         try {
             if (activeTab === 'projects') {
-                // Fetch Project Approvals
-                // Endpoint expects 'roles' param. We send current user role.
+                // Send workflow roles (e.g. SALES, PM, ENGINEERING, FINANCE)
+                // plus the system role as fallback, so admins/managers also see items.
+                const allRoles = [...new Set([...projectRoles, userRole])].filter(Boolean);
+                if (allRoles.length === 0) {
+                    setProjectApprovals([]);
+                    return;
+                }
                 const res = await api.get("/projects/pending-approvals", {
-                    params: { roles: userRole }
+                    params: { roles: allRoles }
                 });
                 setProjectApprovals(res.data || []);
             } else {

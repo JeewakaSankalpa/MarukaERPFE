@@ -58,10 +58,20 @@ export default function SystemConfiguration() {
     const [supplierImporting, setSupplierImporting] = useState(false);
     const [supplierImportResult, setSupplierImportResult] = useState(null);
 
+    // UI state for showing only errors
+    const [showOnlyErrors, setShowOnlyErrors] = useState(false);
+
     useEffect(() => {
         loadConfig();
         loadMappingRoles();
         loadLocations();
+        
+        // Auto-resume background import job if it exists
+        const savedJobId = localStorage.getItem("active_import_job");
+        if (savedJobId) {
+            setImporting(true);
+            pollJobStatus(savedJobId);
+        }
     }, []);
 
     const loadLocations = async () => {
@@ -111,6 +121,52 @@ export default function SystemConfiguration() {
         reader.readAsBinaryString(f);
     };
 
+    const pollJobStatus = async (jobId) => {
+        return new Promise((resolve, reject) => {
+            const interval = setInterval(async () => {
+                try {
+                    const status = await api.get(`/admin/import/status/${jobId}`);
+                    const job = status.data;
+
+                    // Update progress
+                    setImportResult({
+                        _polling: true,
+                        processedRows: job.processedRows,
+                        totalRows: job.totalRows,
+                        state: job.state,
+                    });
+
+                    if (job.state === "DONE") {
+                        clearInterval(interval);
+                        setImportResult(job);
+                        localStorage.removeItem("active_import_job");
+                        setImporting(false);
+                        const { productsCreated, productsSkipped, errors, grnNumber } = job;
+                        if (errors === 0) {
+                            toast.success(`Import complete! ${productsCreated} created, ${productsSkipped} updated/skipped. GRN: ${grnNumber}`);
+                        } else {
+                            toast.warn(`Import finished with ${errors} error(s). Check the results below.`);
+                        }
+                        resolve();
+                    } else if (job.state === "FAILED") {
+                        clearInterval(interval);
+                        localStorage.removeItem("active_import_job");
+                        setImporting(false);
+                        setImportResult(null);
+                        toast.error(job.errorMessage || "Import failed on server");
+                        reject(new Error(job.errorMessage || "Import failed on server"));
+                    }
+                } catch (pollErr) {
+                    clearInterval(interval);
+                    localStorage.removeItem("active_import_job");
+                    setImporting(false);
+                    toast.error("Lost connection to import job");
+                    reject(pollErr);
+                }
+            }, 2000);
+        });
+    };
+
     // Submit the file to the backend (async — backend processes in background)
     const handleImport = async () => {
         if (!importFile) { toast.warn("Please select an Excel file first."); return; }
@@ -130,46 +186,14 @@ export default function SystemConfiguration() {
             if (!jobId) throw new Error("No jobId returned from server");
 
             toast.info("Import started! Processing in the background...");
-
+            localStorage.setItem("active_import_job", jobId);
+            
             // Step 2: poll every 2s until DONE or FAILED
-            await new Promise((resolve, reject) => {
-                const interval = setInterval(async () => {
-                    try {
-                        const status = await api.get(`/admin/import/status/${jobId}`);
-                        const job = status.data;
-
-                        // Update progress
-                        setImportResult({
-                            _polling: true,
-                            processedRows: job.processedRows,
-                            totalRows: job.totalRows,
-                            state: job.state,
-                        });
-
-                        if (job.state === "DONE") {
-                            clearInterval(interval);
-                            setImportResult(job);
-                            const { productsCreated, productsSkipped, errors, grnNumber } = job;
-                            if (errors === 0) {
-                                toast.success(`Import complete! ${productsCreated} created, ${productsSkipped} skipped. GRN: ${grnNumber}`);
-                            } else {
-                                toast.warn(`Import finished with ${errors} error(s). Check the results below.`);
-                            }
-                            resolve();
-                        } else if (job.state === "FAILED") {
-                            clearInterval(interval);
-                            reject(new Error(job.errorMessage || "Import failed on server"));
-                        }
-                    } catch (pollErr) {
-                        clearInterval(interval);
-                        reject(pollErr);
-                    }
-                }, 2000);
-            });
+            await pollJobStatus(jobId);
         } catch (err) {
-            toast.error("Import failed: " + (err?.response?.data?.message || err.message));
-        } finally {
             setImporting(false);
+            localStorage.removeItem("active_import_job");
+            toast.error("Import failed: " + (err?.response?.data?.message || err.message));
         }
     };
 
@@ -683,10 +707,22 @@ export default function SystemConfiguration() {
                                                     <span className="ms-2 text-muted small">Opening Stock GRN: <strong>{importResult.grnNumber}</strong></span>
                                                 )}
                                             </div>
-                                            <div className="d-flex gap-3">
+                                            <div className="d-flex gap-3 align-items-center">
                                                 <span className="text-success fw-bold"><CheckCircle size={14} className="me-1" />{importResult.productsCreated} Created</span>
                                                 <span className="text-secondary fw-bold"><SkipForward size={14} className="me-1" />{importResult.productsSkipped} Skipped</span>
                                                 <span className="text-danger fw-bold"><XCircle size={14} className="me-1" />{importResult.errors} Errors</span>
+                                                
+                                                {importResult.errors > 0 && (
+                                                    <div className="ms-3 border-start ps-3">
+                                                        <Form.Check 
+                                                            type="switch" 
+                                                            id="show-only-errors" 
+                                                            label={<span className="fw-bold text-danger">Show only errors</span>}
+                                                            checked={showOnlyErrors}
+                                                            onChange={(e) => setShowOnlyErrors(e.target.checked)}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </Alert>
@@ -703,7 +739,9 @@ export default function SystemConfiguration() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {(importResult.rows || []).map(r => (
+                                                {(importResult.rows || [])
+                                                    .filter(r => !showOnlyErrors || r.status === "ERROR")
+                                                    .map(r => (
                                                     <tr key={r.rowNum}>
                                                         <td className="text-muted">{r.rowNum}</td>
                                                         <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
@@ -716,6 +754,9 @@ export default function SystemConfiguration() {
                                                         <td className="text-muted small">{r.message}</td>
                                                     </tr>
                                                 ))}
+                                                {showOnlyErrors && importResult.errors === 0 && (
+                                                    <tr><td colSpan={5} className="text-center text-muted py-3">No errors found!</td></tr>
+                                                )}
                                             </tbody>
                                         </Table>
                                     </div>
