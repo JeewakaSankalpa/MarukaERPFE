@@ -10,10 +10,10 @@ import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 
-const searchSuppliers = async (q, page = 0, size = 8) =>
-    (await api.get(`/suppliers?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data; // Page<SupplierSummaryDTO>
-const searchProducts = async (q, supplierId, page = 0, size = 8) =>
-    (await api.get(`/products?${qp({ q, status: "ACTIVE", supplierId, page, size, sort: "name,asc" })}`)).data; // Page<ProductSummaryDTO>
+const searchSuppliers = async (q, page = 0, size = 100) =>
+    (await api.get(`/suppliers?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
+const searchProducts = async (q, supplierId, page = 0, size = 100) =>
+    (await api.get(`/products?${qp({ q, status: "ACTIVE", supplierId, page, size, sort: "name,asc" })}`)).data;
 
 const createPOManual = async (payload) => (await api.post(`/pos`, payload)).data;
 
@@ -198,16 +198,27 @@ export default function POCreateManual({ onCreated }) {
                                     <Button size="sm" variant="link" onClick={() => setSupplier(null)}>Change</Button>
                                 </div>
                             ) : (
-                                <Table size="sm" hover responsive className="mb-0">
-                                    <tbody>
-                                        {(supplierData.content || []).map(s => (
-                                            <tr key={s.id}>
-                                                <td>{s.name}</td>
-                                                <td className="text-end"><Button size="sm" variant="outline-primary" onClick={() => pickSupplier(s)}>Select</Button></td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
+                                <>
+                                    <div style={{ maxHeight: 250, overflowY: 'auto' }}>
+                                        <Table size="sm" hover responsive className="mb-0">
+                                            <tbody>
+                                                {(supplierData.content || []).map(s => (
+                                                    <tr key={s.id}>
+                                                        <td>{s.name}</td>
+                                                        <td className="text-end"><Button size="sm" variant="outline-primary" onClick={() => pickSupplier(s)}>Select</Button></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                    {supplierData.totalPages > 1 && (
+                                        <div className="d-flex justify-content-between align-items-center mt-2">
+                                            <Button size="sm" variant="outline-secondary" disabled={supplierPage === 0} onClick={() => setSupplierPage(p => p - 1)}>‹ Prev</Button>
+                                            <small className="text-muted">Page {supplierPage + 1} / {supplierData.totalPages}</small>
+                                            <Button size="sm" variant="outline-secondary" disabled={supplierPage >= supplierData.totalPages - 1} onClick={() => setSupplierPage(p => p + 1)}>Next ›</Button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </Col>
@@ -262,7 +273,7 @@ export default function POCreateManual({ onCreated }) {
                         </div>
                     </div>
                     {/* Small Product List */}
-                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                    <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
                         <Table size="sm" hover className="mb-0 bg-white">
                             <tbody>
                                 {(productData.content || []).map(p => (
@@ -272,9 +283,20 @@ export default function POCreateManual({ onCreated }) {
                                         <td className="text-end"><Button size="sm" variant="link" onClick={() => addProduct(p)} style={{ padding: 0 }}>Add +</Button></td>
                                     </tr>
                                 ))}
+                                {productData.content?.length === 0 && (
+                                    <tr><td colSpan={3} className="text-center text-muted small py-2">No products found</td></tr>
+                                )}
                             </tbody>
                         </Table>
                     </div>
+                    {/* Product pagination */}
+                    {productData.totalPages > 1 && (
+                        <div className="d-flex justify-content-between align-items-center mt-2">
+                            <Button size="sm" variant="outline-secondary" disabled={productPage === 0} onClick={() => setProductPage(p => p - 1)}>‹ Prev</Button>
+                            <small className="text-muted">Page {productPage + 1} / {productData.totalPages} ({productData.totalElements} products)</small>
+                            <Button size="sm" variant="outline-secondary" disabled={productPage >= productData.totalPages - 1} onClick={() => setProductPage(p => p + 1)}>Next ›</Button>
+                        </div>
+                    )}
                 </div>
 
                 {/* PO lines */}
