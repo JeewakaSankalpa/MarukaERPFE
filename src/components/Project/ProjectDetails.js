@@ -477,7 +477,7 @@ export default function ProjectDetails() {
                         </div>
 
                         <div className="d-flex gap-2 align-items-center mt-2 mt-md-0">
-                            {!project?.jobNumber && (
+                            {!project?.jobNumber && effectiveActions?.canAcceptQuotation && (
                                 <Button variant="outline-success" className="me-2" onClick={() => setShowAcceptModal(true)}>
                                     Mark as Accepted by Customer
                                 </Button>

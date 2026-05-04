@@ -106,6 +106,8 @@ export const registerDefaultComponents = () => {
                     currency={props.project?.currency}
                     isVisible={true}
                     reloadKey={props.refreshKey}
+                    actions={props.effectiveActions}
+                    roleHeader={props.roleHeader}
                 />
             </>
         )

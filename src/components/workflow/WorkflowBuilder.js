@@ -45,6 +45,7 @@ const emptyFlow = {
     purchaseOrderApproverRoles: [],
     stockAuditApproverRoles: [],
     payrollApproverRoles: [],
+    quotationAcceptanceRoles: [],
     visualLayout: {} // { "STAGE": { x: 0, y: 0 } }
 };
 
@@ -155,6 +156,7 @@ export default function WorkflowBuilder() {
                     purchaseOrderApproverRoles: wf?.purchaseOrderApproverRoles || [],
                     stockAuditApproverRoles: wf?.stockAuditApproverRoles || [],
                     payrollApproverRoles: wf?.payrollApproverRoles || [],
+                    quotationAcceptanceRoles: wf?.quotationAcceptanceRoles || [],
                     visualLayout: wf?.visualLayout || {}
                 };
 
@@ -595,6 +597,7 @@ export default function WorkflowBuilder() {
                         { label: 'Purchase Order Approvers', field: 'purchaseOrderApproverRoles' },
                         { label: 'Stock Audit Approvers', field: 'stockAuditApproverRoles' },
                         { label: 'Payroll Approvers', field: 'payrollApproverRoles' },
+                        { label: 'Quotation Acceptance Approvers', field: 'quotationAcceptanceRoles' },
                     ].map(({ label, field }) => (
                         <div key={field} className="mb-3">
                             <label className="fw-bold mb-1">{label}</label>

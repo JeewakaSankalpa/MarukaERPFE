@@ -6,7 +6,7 @@ import api from "../../api/api";
 import { toast } from "react-toastify";
 import { useState } from "react";
 
-const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey }) => {
+const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, actions, roleHeader }) => {
     const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
     const [file, setFile] = useState(null);
@@ -35,7 +35,10 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey }) => {
 
         try {
             await api.post(`/projects/${targetId}/accept-quotation`, formData, {
-                headers: { "Content-Type": "multipart/form-data" }
+                headers: { 
+                    "Content-Type": "multipart/form-data",
+                    ...(roleHeader || {})
+                }
             });
             toast.success("Quotation accepted successfully! Project is now a Job.");
             setShowModal(false);
@@ -74,7 +77,7 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey }) => {
                     <Button variant="primary" onClick={handleViewQuotation} disabled={!targetId}>
                         Print / View
                     </Button>
-                    {(!project?.jobNumber) && (
+                    {(!project?.jobNumber) && actions?.canAcceptQuotation && (
                         <Button variant="success" onClick={() => setShowModal(true)} disabled={!targetId}>
                             <CheckCircle size={16} className="me-1" /> Mark as Accepted by Customer
                         </Button>
