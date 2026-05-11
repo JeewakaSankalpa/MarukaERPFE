@@ -9,7 +9,7 @@ const MyTasksWidget = () => {
     const [loading, setLoading] = useState(true);
     const [showLogModal, setShowLogModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
-    const [logData, setLogData] = useState({ durationHours: 0, note: "" });
+    const [logData, setLogData] = useState({ durationHours: 0, note: "", logDate: new Date().toISOString().split('T')[0] });
 
     useEffect(() => {
         fetchMyTasks();
@@ -85,7 +85,11 @@ const MyTasksWidget = () => {
                                     </td>
                                     <td>{t.dueDate}</td>
                                     <td>
-                                        <Button size="sm" variant="outline-success" onClick={() => { setSelectedTask(t); setShowLogModal(true); }}>
+                                        <Button size="sm" variant="outline-success" onClick={() => { 
+                                            setSelectedTask(t); 
+                                            setLogData({ durationHours: 0, note: "", logDate: new Date().toISOString().split('T')[0] });
+                                            setShowLogModal(true); 
+                                        }}>
                                             Log Time
                                         </Button>
                                     </td>
@@ -100,13 +104,22 @@ const MyTasksWidget = () => {
                 <Modal.Header closeButton><Modal.Title>Log Time: {selectedTask?.name}</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <Form onSubmit={handleLogWork}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Hours Spent</Form.Label>
-                            <Form.Control type="number" step="0.5" required
-                                value={logData.durationHours}
-                                onChange={e => setLogData({ ...logData, durationHours: e.target.value })}
-                            />
-                        </Form.Group>
+                        <div className="d-flex gap-2">
+                            <Form.Group className="mb-3 flex-grow-1">
+                                <Form.Label>Date Worked</Form.Label>
+                                <Form.Control type="date" required
+                                    value={logData.logDate}
+                                    onChange={e => setLogData({ ...logData, logDate: e.target.value })}
+                                />
+                            </Form.Group>
+                            <Form.Group className="mb-3 flex-grow-1">
+                                <Form.Label>Hours Spent</Form.Label>
+                                <Form.Control type="number" step="0.5" required
+                                    value={logData.durationHours}
+                                    onChange={e => setLogData({ ...logData, durationHours: e.target.value })}
+                                />
+                            </Form.Group>
+                        </div>
                         <Form.Group className="mb-3">
                             <Form.Label>Note</Form.Label>
                             <Form.Control as="textarea" rows={2}

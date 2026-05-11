@@ -4,6 +4,7 @@ import { Button } from 'react-bootstrap';
 const ProjectTasks = React.lazy(() => import('../../Projects/Tasks/ProjectTasks'));
 const ProjectKanban = React.lazy(() => import('../../Projects/Tasks/ProjectKanban'));
 const ProjectGantt = React.lazy(() => import('../../Projects/Tasks/ProjectGantt'));
+const ProjectTaskReport = React.lazy(() => import('../../Projects/Tasks/ProjectTaskReport'));
 
 export const TasksContainer = ({ id, refreshKey }) => {
     const [taskSubTab, setTaskSubTab] = useState('list'); // list, kanban, gantt
@@ -14,6 +15,7 @@ export const TasksContainer = ({ id, refreshKey }) => {
                 <Button variant={taskSubTab === 'list' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('list')}>List View</Button>
                 <Button variant={taskSubTab === 'kanban' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('kanban')}>Kanban Board</Button>
                 <Button variant={taskSubTab === 'gantt' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('gantt')}>Gantt Chart</Button>
+                <Button variant={taskSubTab === 'report' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setTaskSubTab('report')}>Task Report</Button>
             </div>
 
             <React.Suspense fallback={<div>Loading tasks...</div>}>
@@ -30,6 +32,11 @@ export const TasksContainer = ({ id, refreshKey }) => {
                 {taskSubTab === 'gantt' && (
                     <div className="">
                         <ProjectGantt projectId={id} reloadKey={refreshKey} />
+                    </div>
+                )}
+                {taskSubTab === 'report' && (
+                    <div className="">
+                        <ProjectTaskReport projectId={id} reloadKey={refreshKey} />
                     </div>
                 )}
             </React.Suspense>

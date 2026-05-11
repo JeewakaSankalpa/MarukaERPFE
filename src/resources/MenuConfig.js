@@ -100,6 +100,7 @@ export const MenuConfig = [
             { id: "reports.payables", title: "Payables Report", path: "/reports/payables" },
             { id: "reports.receivables", title: "Receivables Report", path: "/reports/receivables" },
             { id: "reports.leave", title: "Leave Utilization", path: "/reports/leave" },
+            { id: "reports.all_tasks", title: "All Projects Task Report", path: "/reports/all-tasks" },
             // Add Project Material if route exists, keeping it safe for now:
             // { id: "reports.project_material", title: "Project Material", path: "/reports/project-material" }, 
         ]

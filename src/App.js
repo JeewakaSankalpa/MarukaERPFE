@@ -91,6 +91,7 @@ import StockAuditApprovalsPage from "./components/Inventory/Adjustments/StockAud
 import AssetRegister from "./components/Assets/AssetRegister";
 import QuotationPrint from "./components/Projects/QuotationPrint";
 import InvoiceView from "./components/Projects/InvoiceView";
+import AllTasksReport from "./components/Projects/Tasks/AllTasksReport";
 // import QuotationList from "./components/Sales/QuotationList";
 // import QuotationPage from "./components/Sales/QuotationPage";
 import SettingsPage from "./components/settings/SettingsPage";
@@ -325,6 +326,7 @@ function App() {
                     </Route>
 
                     <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/reports/all-tasks" element={<AllTasksReport />} />
 
                 </Routes>
             </Layout>

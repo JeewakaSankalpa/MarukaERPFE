@@ -20,7 +20,7 @@ const ProjectTasks = ({ projectId }) => {
 
     // Log Data
     const [logTask, setLogTask] = useState(null);
-    const [logForm, setLogForm] = useState({ durationHours: "", note: "" });
+    const [logForm, setLogForm] = useState({ durationHours: "", note: "", logDate: new Date().toISOString().split('T')[0] });
 
     const loadData = React.useCallback(async () => {
         try {
@@ -90,7 +90,7 @@ const ProjectTasks = ({ projectId }) => {
 
     const openLog = (t) => {
         setLogTask(t);
-        setLogForm({ durationHours: "", note: "" });
+        setLogForm({ durationHours: "", note: "", logDate: new Date().toISOString().split('T')[0] });
         setShowLogModal(true);
     };
 
@@ -219,15 +219,25 @@ const ProjectTasks = ({ projectId }) => {
                                 {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
                             </SafeSelect>
                         </Form.Group>
-                        <Form.Group className="mb-2">
-                            <Form.Label>Status</Form.Label>
-                            <SafeSelect value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value })}>
-                                <option>TODO</option>
-                                <option>IN_PROGRESS</option>
-                                <option>REVIEW</option>
-                                <option>DONE</option>
-                            </SafeSelect>
-                        </Form.Group>
+                        <div className="d-flex gap-2">
+                            <Form.Group className="mb-2 flex-grow-1">
+                                <Form.Label>Status</Form.Label>
+                                <SafeSelect value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value })}>
+                                    <option value="TODO">TODO</option>
+                                    <option value="IN_PROGRESS">IN_PROGRESS</option>
+                                    <option value="REVIEW">REVIEW</option>
+                                    <option value="DONE">DONE</option>
+                                </SafeSelect>
+                            </Form.Group>
+                            <Form.Group className="mb-2 flex-grow-1">
+                                <Form.Label>Priority</Form.Label>
+                                <SafeSelect value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}>
+                                    <option value="LOW">LOW</option>
+                                    <option value="MEDIUM">MEDIUM</option>
+                                    <option value="HIGH">HIGH</option>
+                                </SafeSelect>
+                            </Form.Group>
+                        </div>
                         <div className="d-flex gap-2">
                             <div className="flex-grow-1">
                                 <Form.Label>Est. Hours</Form.Label>
@@ -256,10 +266,21 @@ const ProjectTasks = ({ projectId }) => {
                 <Form onSubmit={handleLogSubmit}>
                     <Modal.Header closeButton><Modal.Title>Log Work: {logTask?.name}</Modal.Title></Modal.Header>
                     <Modal.Body>
-                        <Form.Group className="mb-2">
-                            <Form.Label>Hours Worked</Form.Label>
-                            <Form.Control type="number" step="0.25" required value={logForm.durationHours} onChange={e => setLogForm({ ...logForm, durationHours: e.target.value })} />
-                        </Form.Group>
+                        <div className="d-flex gap-2">
+                            <Form.Group className="mb-2 flex-grow-1">
+                                <Form.Label>Date Worked</Form.Label>
+                                <SafeDatePicker 
+                                    name="logDate" 
+                                    value={logForm.logDate} 
+                                    onChange={e => setLogForm({ ...logForm, logDate: e.target.value })} 
+                                    required 
+                                />
+                            </Form.Group>
+                            <Form.Group className="mb-2 flex-grow-1">
+                                <Form.Label>Hours Worked</Form.Label>
+                                <Form.Control type="number" step="0.25" required value={logForm.durationHours} onChange={e => setLogForm({ ...logForm, durationHours: e.target.value })} />
+                            </Form.Group>
+                        </div>
                         <Form.Group className="mb-2">
                             <Form.Label>Note</Form.Label>
                             <Form.Control as="textarea" value={logForm.note} onChange={e => setLogForm({ ...logForm, note: e.target.value })} />
