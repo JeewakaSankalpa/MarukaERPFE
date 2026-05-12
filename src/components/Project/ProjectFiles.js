@@ -122,6 +122,8 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     displayName: name,
                     url: x.url,
                     docType: x.docType || '',
+                    uploadedAt: x.uploadedAt,
+                    uploadedBy: x.uploadedBy,
                     _kind: 'file'
                 };
             });
@@ -138,6 +140,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                         url: p.fileUrl,
                         docType: 'Payment',
                         _kind: 'payment',
+                        uploadedAt: p.paidAt,
                         _paidAt: p.paidAt
                     }));
             } catch {
@@ -351,6 +354,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Uploaded / Paid At</th>
                             <th style={{ width: 140 }}>Actions</th>
                         </tr>
                     </thead>
@@ -360,7 +364,13 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                                 <td className="text-break">
                                     {f._kind === 'payment' ? <Badge bg="success" className="me-2">Payment</Badge> : null}
                                     {f.displayName}
-                                    {f._paidAt ? <span className="text-muted ms-2 small">({new Date(f._paidAt).toLocaleString()})</span> : null}
+                                </td>
+                                <td>
+                                    {f.uploadedAt ? (
+                                        <span className="small text-muted">{new Date(f.uploadedAt).toLocaleString()}</span>
+                                    ) : (
+                                        <span className="text-muted small">-</span>
+                                    )}
                                 </td>
                                 <td className="d-flex gap-2 justify-content-center">
                                     <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">
