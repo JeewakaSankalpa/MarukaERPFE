@@ -31,8 +31,10 @@ export default function SystemConfiguration() {
         "app.notification.enable.inventory.lowstock": "true",
         "app.notification.enable.project.task": "true",
         "app.notification.enable.project.digest": "true",
-        "app.notification.enable.project.task": "true",
-        "app.notification.enable.project.digest": "true",
+        "app.notification.enable.estimation": "true",
+        "app.notification.enable.approval": "true",
+        "app.notification.enable.general": "true",
+        "app.notification.enable.project.transition": "true",
         "app.estimation.vat": "18",
         "app.estimation.tax": "0",
         "app.estimation.margin": "15",
@@ -455,6 +457,58 @@ export default function SystemConfiguration() {
                                 name="app.notification.enable.project.digest"
                                 checked={config["app.notification.enable.project.digest"] !== "false"}
                                 onChange={(e) => setConfig({ ...config, "app.notification.enable.project.digest": String(e.target.checked) })}
+                            />
+                        </Col>
+                    </Row>
+                </Card.Body>
+            </Card>
+
+            <Card className="shadow-sm mb-4">
+                <Card.Header className="bg-white py-3">
+                    <h5 className="mb-0 text-primary">Global Email Notification Controls</h5>
+                </Card.Header>
+                <Card.Body>
+                    <Row className="g-3">
+                        <Col md={6}>
+                            <h6 className="text-muted mb-3">Core Workflows</h6>
+                            <Form.Check
+                                type="switch"
+                                id="email-estimation"
+                                label="Estimation Emails"
+                                name="app.notification.enable.estimation"
+                                checked={config["app.notification.enable.estimation"] !== "false"}
+                                onChange={(e) => setConfig({ ...config, "app.notification.enable.estimation": String(e.target.checked) })}
+                                className="mb-2"
+                            />
+                            <Form.Check
+                                type="switch"
+                                id="email-approval"
+                                label="Approval Request/Status Emails"
+                                name="app.notification.enable.approval"
+                                checked={config["app.notification.enable.approval"] !== "false"}
+                                onChange={(e) => setConfig({ ...config, "app.notification.enable.approval": String(e.target.checked) })}
+                                className="mb-2"
+                            />
+                            <Form.Check
+                                type="switch"
+                                id="email-general"
+                                label="General System Notification Emails"
+                                name="app.notification.enable.general"
+                                checked={config["app.notification.enable.general"] !== "false"}
+                                onChange={(e) => setConfig({ ...config, "app.notification.enable.general": String(e.target.checked) })}
+                                className="mb-2"
+                            />
+                        </Col>
+                        <Col md={6}>
+                            <h6 className="text-muted mb-3">Project & Inventory</h6>
+                            <Form.Check
+                                type="switch"
+                                id="email-transition"
+                                label="Workflow/Project Transition Emails"
+                                name="app.notification.enable.project.transition"
+                                checked={config["app.notification.enable.project.transition"] !== "false"}
+                                onChange={(e) => setConfig({ ...config, "app.notification.enable.project.transition": String(e.target.checked) })}
+                                className="mb-2"
                             />
                         </Col>
                     </Row>

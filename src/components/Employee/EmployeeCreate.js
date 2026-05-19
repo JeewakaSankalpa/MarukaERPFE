@@ -205,7 +205,8 @@ function EmployeeCreate({ mode }) {
           await api.post(`/notification-rules/user/${newEmpId}/subscriptions`, subscribedRuleIds);
         }
 
-        toast.success("Employee created and credentials emailed!");
+        const successMsg = createRes.data?.message || "Employee created successfully!";
+        toast.success(successMsg, { autoClose: false }); // Stay open so admin can copy password
         navigate("/employee/list");
       } else {
         await api.post(`/employee/${id}`, employeePayload);
