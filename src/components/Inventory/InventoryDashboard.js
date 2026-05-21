@@ -136,7 +136,7 @@ const InventoryDashboard = () => {
               <h6 className="mb-0 fw-bold">Items Usage Trend (Last 6 Months)</h6>
             </Card.Header>
             <Card.Body style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={100} minWidth={100}>
                 <BarChart data={stats?.globalUsageTrend || []}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" axisLine={false} tickLine={false} />
@@ -157,7 +157,7 @@ const InventoryDashboard = () => {
               <h6 className="mb-0 fw-bold">Top Moved Items</h6>
             </Card.Header>
             <Card.Body style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={100} minWidth={100}>
                 <BarChart
                   layout="vertical"
                   data={stats?.topMovedItems || []}
