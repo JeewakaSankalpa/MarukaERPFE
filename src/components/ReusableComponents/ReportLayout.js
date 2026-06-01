@@ -10,7 +10,14 @@ import Colors from "../../resources/Colors";
  *    <Table>...</Table>
  * </ReportLayout>
  */
-const ReportLayout = ({ title, children, orientation = "portrait" }) => {
+const company = {
+    name: "Maruka Technologies (Pvt) Ltd",
+    address: "558/7, Sethsiri Place, Pannipitiya, Sri Lanka 10230",
+    email: "rohan@maruka.lk",
+    vatNo: "174038295-7000",
+};
+
+const ReportLayout = ({ title, subtitle, children, orientation = "portrait" }) => {
     const user = localStorage.getItem("username") || "System User";
     const date = new Date().toLocaleString();
 
@@ -49,10 +56,11 @@ const ReportLayout = ({ title, children, orientation = "portrait" }) => {
         .report-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             border-bottom: 2px solid ${Colors.mainBlue};
-            padding-bottom: 10px;
+            padding-bottom: 12px;
             margin-bottom: 20px;
+            gap: 20px;
         }
         .report-footer {
             margin-top: 30px;
@@ -63,8 +71,18 @@ const ReportLayout = ({ title, children, orientation = "portrait" }) => {
             display: flex;
             justify-content: space-between;
         }
-        .company-info h2 { margin: 0; color: ${Colors.mainBlue}; }
-        .company-info p { margin: 0; font-size: 12px; }
+        .company-info h2 { margin: 0 0 4px; color: ${Colors.mainBlue}; font-size: 22px; }
+        .company-info p { margin: 0; font-size: 12px; line-height: 1.35; color: #333; }
+        .report-title { min-width: 230px; }
+        .report-title h3 {
+            margin: 0;
+            color: #111827;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0;
+            text-transform: uppercase;
+        }
+        .report-title p { margin: 4px 0 0; font-size: 12px; color: #555; }
       `}</style>
 
             {/* Header */}
@@ -72,13 +90,15 @@ const ReportLayout = ({ title, children, orientation = "portrait" }) => {
                 <div className="d-flex align-items-center gap-3">
                     <img src={logo} alt="Company Logo" style={{ height: "60px", width: "auto" }} />
                     <div className="company-info">
-                        <h2>Maruka Technologies</h2>
-                        <p>123 Business Rd, Colombo, Sri Lanka</p>
-                        <p>Reg No: PV12345 | Tel: +94 11 234 5678</p>
+                        <h2>{company.name}</h2>
+                        <p>{company.address}</p>
+                        <p>Email: {company.email}</p>
+                        <p>VAT Reg No: {company.vatNo}</p>
                     </div>
                 </div>
-                <div className="text-end">
+                <div className="text-end report-title">
                     <h3>{title}</h3>
+                    {subtitle && <p>{subtitle}</p>}
                 </div>
             </div>
 

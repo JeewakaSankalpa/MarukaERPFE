@@ -61,21 +61,21 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                 <div className="d-flex justify-content-between align-items-center">
                     <h5 className="mb-0 text-primary">
                         <Printer size={18} className="me-2" />
-                        Quotation
+                        Commercial Documents
                     </h5>
                     <div className="d-flex gap-2">
                         {project?.status === "APPROVED" && <Badge bg="success">Approved</Badge>}
-                        <Badge bg="info">Official</Badge>
+                    <Badge bg="info">Quotation / Proforma</Badge>
                     </div>
                 </div>
             </Card.Header>
             <Card.Body>
                 <p className="text-muted small">
-                    View the official quotation for this project. Download the PDF for clients, or preview the estimation details.
+                    View the customer-facing quotation, generate the proforma invoice after final approval, and keep the detailed costing inside the estimation record.
                 </p>
                 <div className="d-flex gap-2">
                     <Button variant="primary" onClick={handleViewQuotation} disabled={!targetId}>
-                        Print / View
+                        Open Quotation
                     </Button>
                     {(!project?.jobNumber) && actions?.canAcceptQuotation && (
                         <Button variant="success" onClick={() => setShowModal(true)} disabled={!targetId}>
