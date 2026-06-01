@@ -34,15 +34,52 @@ const ProjectTaskReport = ({ projectId }) => {
         }
     };
 
-    const getEmployeeName = (id) => {
-        const e = employees.find(e => e.id === id);
-        return e ? `${e.firstName} ${e.lastName}` : id;
+    const getEntityId = (value) => {
+        if (!value) return '';
+        if (typeof value === 'object') return value.id || value._id || '';
+        return value;
     };
 
-    const getProjectName = (id) => {
+    const getEntityLabel = (value, fallback = '-') => {
+        if (!value) return fallback;
+        if (typeof value !== 'object') return value;
+        return value.name || value.projectName || [value.firstName, value.lastName].filter(Boolean).join(' ') || value.id || fallback;
+    };
+
+    const getTaskStatus = (status) => {
+        if (!status) return 'TODO';
+        if (typeof status === 'object') return status.name || status.status || status.id || 'TODO';
+        return status;
+    };
+
+    const getStatusBadgeVariant = (status) => {
+        const label = getTaskStatus(status);
+        return label === "DONE" ? "success" : label === "IN_PROGRESS" ? "primary" : "secondary";
+    };
+
+    const getEmployeeName = (assignee) => {
+        const id = getEntityId(assignee);
+        const e = employees.find(e => e.id === id);
+        return e ? `${e.firstName} ${e.lastName}` : getEntityLabel(assignee, id || '-');
+    };
+
+    const getAssignedIds = (task) => {
+        const ids = new Set();
+        (task?.assignedToIds || []).forEach(id => id && ids.add(getEntityId(id)));
+        if (task?.assignedTo) ids.add(getEntityId(task.assignedTo));
+        return Array.from(ids).filter(Boolean);
+    };
+
+    const getAssigneeNames = (task) => {
+        const ids = getAssignedIds(task);
+        return ids.length ? ids.map(getEmployeeName).join(", ") : "Unassigned";
+    };
+
+    const getProjectName = (projectRef) => {
+        const id = getEntityId(projectRef);
         if (!id) return '-';
         const p = projects.find(p => p.id === id);
-        if (!p) return id;
+        if (!p) return getEntityLabel(projectRef, id);
         
         const no = p.jobNumber || p.referenceNumber || p.id;
         return `${p.projectName} (No: ${no})`;
@@ -69,7 +106,7 @@ const ProjectTaskReport = ({ projectId }) => {
     }).filter(t => selectedDate ? t.taskLogs.length > 0 : true);
 
     const totalProjectHours = reportData.reduce((sum, t) => sum + t.totalHoursThisPeriod, 0);
-    const completedTasksCount = reportData.filter(t => t.status === 'DONE').length;
+    const completedTasksCount = reportData.filter(t => getTaskStatus(t.status) === 'DONE').length;
     const pendingTasksCount = reportData.length - completedTasksCount;
 
     if (loading) return <div className="text-center p-4"><Spinner animation="border" /></div>;
@@ -132,13 +169,13 @@ const ProjectTaskReport = ({ projectId }) => {
                             {reportData.map(task => (
                                 <tr key={task.id}>
                                     <td className="fw-bold">{task.name}</td>
-                                    <td>{getEmployeeName(task.assignedTo)}</td>
+                                    <td>{getAssigneeNames(task)}</td>
                                     <td>
-                                        <Badge bg={task.status === "DONE" ? "success" : task.status === "IN_PROGRESS" ? "primary" : "secondary"}>
-                                            {task.status}
+                                        <Badge bg={getStatusBadgeVariant(task.status)}>
+                                            {getTaskStatus(task.status)}
                                         </Badge>
                                     </td>
-                                    {!projectId && <td>{getProjectName(task.projectId)}</td>}
+                                    {!projectId && <td>{getProjectName(task.projectId || task.project)}</td>}
                                     <td className="text-end fw-semibold">{task.totalHoursThisPeriod.toFixed(2)}</td>
                                     <td className="text-center">{task.daysWorked}</td>
                                     <td>
@@ -147,7 +184,7 @@ const ProjectTaskReport = ({ projectId }) => {
                                                 {task.taskLogs.map(log => (
                                                     <li key={log.id}>
                                                         <strong>{log.logDate || 'Unknown'}</strong>: {log.durationHours} hrs 
-                                                        {log.note && <span> - {log.note}</span>}
+                                                        {log.note && <span> - {getEntityLabel(log.note, '')}</span>}
                                                     </li>
                                                 ))}
                                             </ul>

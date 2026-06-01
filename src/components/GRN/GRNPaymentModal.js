@@ -6,12 +6,14 @@ import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 import OverdraftConfirmModal from "../ReusableComponents/OverdraftConfirmModal";
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 
-const addPayment = async (id, payload) => (await api.post(`/grns/${id}/payments`, payload)).data;
+const addPayment = async (id, formData) => (await api.post(`/grns/${id}/payments`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+})).data;
 
 export default function GRNPaymentModal({ grn, onClose }) {
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
-    const [ref, setRef] = useState("");
+    const [receiptFile, setReceiptFile] = useState(null);
     const [paymentInfo, setPaymentInfo] = useState({ paymentAccountId: '', paymentAccountName: '', paymentAccountType: '', paymentMethod: '' });
     const [accountBalance, setAccountBalance] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,20 +48,23 @@ export default function GRNPaymentModal({ grn, onClose }) {
     const submitPayment = async (allowOverdraft = false) => {
         setIsSubmitting(true);
         try {
-            await addPayment(grn.id, {
+            const payload = {
                 amount: Number(amount),
                 date,
-                reference: ref,
                 paymentAccountId: paymentInfo.paymentAccountId,
                 paymentAccountName: paymentInfo.paymentAccountName,
                 paymentAccountType: paymentInfo.paymentAccountType,
                 paymentMethod: paymentInfo.paymentMethod,
                 allowOverdraft
-            });
+            };
+            const formData = new FormData();
+            formData.append("payment", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+            formData.append("receipt", receiptFile);
+            await addPayment(grn.id, formData);
             toast.success("Payment added");
             onClose();
         } catch (e) {
-            toast.error("Failed to add payment");
+            toast.error(e?.response?.data?.message || "Failed to add payment");
             setIsSubmitting(false);
         }
     };
@@ -69,6 +74,7 @@ export default function GRNPaymentModal({ grn, onClose }) {
         if (Number(amount) > maxPayable) { toast.error(`Cannot exceed remaining balance due: Rs. ${maxPayable.toFixed(2)}`); return; }
         if (!paymentInfo.paymentAccountId) { toast.warn("Please select a payment account"); return; }
         if (!paymentInfo.paymentMethod) { toast.warn("Please explicitly select a Payment Method (e.g. Card, Cash)"); return; }
+        if (!receiptFile) { toast.warn("Please upload the payment receipt"); return; }
 
         // Check if amount exceeds account balance → prompt overdraft
         if (accountBalance !== null && Number(amount) > accountBalance) {
@@ -89,12 +95,20 @@ export default function GRNPaymentModal({ grn, onClose }) {
                         <h5>Payment History</h5>
                         {history.length === 0 ? <div className="text-muted">No payments recorded.</div> :
                             <Table size="sm" bordered>
-                                <thead><tr><th>Date</th><th>Ref</th><th className="text-end">Amount</th><th>Method</th><th>Added By</th></tr></thead>
+                                <thead><tr><th>Date</th><th>Receipt</th><th className="text-end">Amount</th><th>Method</th><th>Added By</th></tr></thead>
                                 <tbody>
                                     {history.map((p, i) => (
                                         <tr key={i}>
                                             <td>{p.paymentDate}</td>
-                                            <td>{p.reference}</td>
+                                            <td>
+                                                {p.receiptUrl ? (
+                                                    <a href={p.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                                        {p.receiptFileName || "View receipt"}
+                                                    </a>
+                                                ) : (
+                                                    p.reference || "—"
+                                                )}
+                                            </td>
                                             <td className="text-end">{p.amount?.toFixed(2)}</td>
                                             <td>{p.paymentMethod || '—'}</td>
                                             <td>{p.addedBy}</td>
@@ -147,8 +161,12 @@ export default function GRNPaymentModal({ grn, onClose }) {
                                         />
                                     </Col>
                                     <Col md={4}>
-                                        <Form.Label>Reference / Check No</Form.Label>
-                                        <Form.Control value={ref} onChange={e => setRef(e.target.value)} />
+                                        <Form.Label>Payment Receipt <span className="text-danger">*</span></Form.Label>
+                                        <Form.Control
+                                            type="file"
+                                            accept="image/*,application/pdf"
+                                            onChange={e => setReceiptFile(e.target.files?.[0] || null)}
+                                        />
                                     </Col>
                                     <Col md={2}>
                                         <Button className="w-100" onClick={doPay} disabled={isSubmitting || maxPayable <= 0}>

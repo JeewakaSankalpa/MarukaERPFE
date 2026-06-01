@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { DollarSign, Users, Briefcase, Truck, ShoppingCart } from "lucide-react";
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import QuickDateRangeButtons from '../ReusableComponents/QuickDateRangeButtons';
 
 // Helper for formatted currency
 const formatCurrency = (val) => {
@@ -47,6 +48,10 @@ const SupplierCustomerDashboard = () => {
         productSupplierStats: [],
     });
     const [loading, setLoading] = useState(true);
+
+    const applyQuickRange = (range) => {
+        setDateRange(range);
+    };
 
     useEffect(() => {
         fetchAllData();
@@ -123,6 +128,7 @@ const SupplierCustomerDashboard = () => {
                             value={dateRange.endDate}
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
                         /></div>
+                        <QuickDateRangeButtons className="ms-2" onSelect={applyQuickRange} />
                     </div>
 
                     <div>

@@ -6,7 +6,7 @@ import Select from 'react-select';
 import api from '../../api/api';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 
@@ -23,6 +23,7 @@ function InventoryView() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [batchDetails, setBatchDetails] = useState([]);
     const [userName, setUserName] = useState('');
+    const [loadingInventory, setLoadingInventory] = useState(true);
 
     // Return to Supplier State
     const [showReturnModal, setShowReturnModal] = useState(false);
@@ -53,6 +54,7 @@ function InventoryView() {
     };
 
     const fetchInventory = async () => {
+        setLoadingInventory(true);
         try {
             // Use the new lightweight summary endpoint
             const response = await api.get('/inventory/available-summary');
@@ -77,12 +79,14 @@ function InventoryView() {
 
             setLocationOptions(dynamicOptions);
 
-            toast.success(`Fetched ${items.length} inventory item(s)`);
+            toast.success(`Fetched ${items.length} inventory item(s)`, { toastId: 'inventory-fetch-success' });
         } catch (error) {
             console.error('Failed to fetch inventory items:', error);
             toast.error('Failed to load inventory items');
             setInventoryItems([]);
             setFilteredItems([]);
+        } finally {
+            setLoadingInventory(false);
         }
     };
 
@@ -285,6 +289,33 @@ function InventoryView() {
         return sum;
     };
 
+    const renderLoadingRows = () => (
+        Array.from({ length: 8 }).map((_, index) => (
+            <tr key={`inventory-loading-${index}`}>
+                <td>
+                    <span className="placeholder-glow d-block">
+                        <span className="placeholder rounded d-block mx-auto" style={{ width: '70%', height: 18 }} />
+                    </span>
+                </td>
+                <td>
+                    <span className="placeholder-glow d-block">
+                        <span className="placeholder rounded d-block mx-auto" style={{ width: '42%', height: 18 }} />
+                    </span>
+                </td>
+                <td>
+                    <span className="placeholder-glow d-block">
+                        <span className="placeholder rounded d-block mx-auto" style={{ width: '42%', height: 18 }} />
+                    </span>
+                </td>
+                <td>
+                    <span className="placeholder-glow d-block">
+                        <span className="placeholder rounded d-block mx-auto" style={{ width: 90, height: 30 }} />
+                    </span>
+                </td>
+            </tr>
+        ))
+    );
+
     return (
         <Container className="my-5">
             <div className="d-flex align-items-center mb-4">
@@ -331,7 +362,7 @@ function InventoryView() {
                     </tr>
                 </thead>
                 <tbody>
-                    {(filteredItems || []).map((item) => (
+                    {loadingInventory ? renderLoadingRows() : (filteredItems || []).map((item) => (
                         <tr
                             key={item.productId}
                             onClick={() => handleProductClick(item)}
@@ -350,6 +381,13 @@ function InventoryView() {
                             </td>
                         </tr>
                     ))}
+                    {!loadingInventory && filteredItems.length === 0 && (
+                        <tr>
+                            <td colSpan="4" className="text-muted py-4">
+                                No inventory items found.
+                            </td>
+                        </tr>
+                    )}
                 </tbody>
             </Table>
 
@@ -437,7 +475,6 @@ function InventoryView() {
                 </Modal.Footer>
             </Modal>
 
-            <ToastContainer position="top-right" autoClose={2500} />
         </Container>
     );
 }

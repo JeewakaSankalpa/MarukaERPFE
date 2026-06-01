@@ -193,9 +193,14 @@ function SupplierForm({ id, onClose, onSaved }) {
         <Container className="my-5" style={{ width: "80vw", maxWidth: 900, paddingTop: 24, overflow: "auto", height: "calc(100vh - 10rem)" }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center">
-                    <h2 style={{ fontSize: "1.5rem" }}>
-                        {id ? (isEditMode ? "Edit Supplier" : "View Supplier") : "Create Supplier"}
-                    </h2>
+                    <div className="d-flex align-items-center">
+                        <button type="button" className="btn btn-light me-3" onClick={onClose}>
+                            <ArrowLeft size={18} />
+                        </button>
+                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>
+                            {id ? (isEditMode ? "Edit Supplier" : "View Supplier") : "Create Supplier"}
+                        </h2>
+                    </div>
                     {id && (
                         <Button size="sm" variant={isEditMode ? "secondary" : "primary"} onClick={() => setIsEditMode(v => !v)}>
                             {isEditMode ? "Cancel Edit" : "Edit"}

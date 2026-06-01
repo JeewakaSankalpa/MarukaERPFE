@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Spinner, Row, Col, Badge, Form, Button, ProgressBar } from 'react-bootstrap';
 import api from '../../../api/api';
+import QuickDateRangeButtons from '../../ReusableComponents/QuickDateRangeButtons';
 
 const WorkerSummaryReport = () => {
     const [tasks, setTasks] = useState([]);
@@ -9,6 +10,7 @@ const WorkerSummaryReport = () => {
     const [loading, setLoading] = useState(true);
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+    const [workerSearch, setWorkerSearch] = useState('');
 
     useEffect(() => {
         loadData();
@@ -32,14 +34,46 @@ const WorkerSummaryReport = () => {
         }
     };
 
-    const getEmployeeName = (id) => {
-        const e = employees.find(e => e.id === id);
-        return e ? `${e.firstName} ${e.lastName}` : null;
+    const applyQuickRange = (range) => {
+        setDateFrom(range.startDate);
+        setDateTo(range.endDate);
     };
 
-    const getEmployeeDesignation = (id) => {
+    const getEntityId = (value) => {
+        if (!value) return '';
+        if (typeof value === 'object') return value.id || value._id || '';
+        return value;
+    };
+
+    const getEntityLabel = (value, fallback = '-') => {
+        if (!value) return fallback;
+        if (typeof value !== 'object') return value;
+        return value.name || [value.firstName, value.lastName].filter(Boolean).join(' ') || value.id || fallback;
+    };
+
+    const getTaskStatus = (status) => {
+        if (!status) return 'TODO';
+        if (typeof status === 'object') return status.name || status.status || status.id || 'TODO';
+        return status;
+    };
+
+    const getAssignedIds = (task) => {
+        const ids = new Set();
+        (task?.assignedToIds || []).forEach(id => id && ids.add(getEntityId(id)));
+        if (task?.assignedTo) ids.add(getEntityId(task.assignedTo));
+        return Array.from(ids).filter(Boolean);
+    };
+
+    const getEmployeeName = (assignee) => {
+        const id = getEntityId(assignee);
         const e = employees.find(e => e.id === id);
-        return e?.designation || e?.department || '-';
+        return e ? `${e.firstName} ${e.lastName}` : getEntityLabel(assignee, null);
+    };
+
+    const getEmployeeDesignation = (assignee) => {
+        const id = getEntityId(assignee);
+        const e = employees.find(e => e.id === id);
+        return getEntityLabel(e?.designation || e?.department || assignee?.description, '-');
     };
 
     // Build a resolved name: try employee lookup first, then log.employeeName, then raw id
@@ -55,11 +89,12 @@ const WorkerSummaryReport = () => {
     // Filter work logs by date range and map orphaned IDs to task assignees
     const filteredLogs = workLogs.map(log => {
         // If the log's userId doesn't match an employee, try to map it to the task's assignedTo
-        let effectiveUserId = log.userId;
-        if (!getEmployeeName(log.userId)) {
+        let effectiveUserId = getEntityId(log.userId || log.user);
+        if (!effectiveUserId || !getEmployeeName(effectiveUserId)) {
             const relatedTask = tasks.find(t => t.id === log.taskId);
-            if (relatedTask && relatedTask.assignedTo) {
-                effectiveUserId = relatedTask.assignedTo;
+            const assignedIds = getAssignedIds(relatedTask);
+            if (assignedIds.length === 1) {
+                effectiveUserId = assignedIds[0];
             }
         }
         return { ...log, effectiveUserId };
@@ -73,17 +108,17 @@ const WorkerSummaryReport = () => {
     // Aggregate per worker using effectiveUserId
     const allWorkerIds = [
         ...new Set([
-            ...tasks.map(t => t.assignedTo).filter(Boolean),
+            ...tasks.flatMap(getAssignedIds).filter(Boolean),
             ...filteredLogs.map(l => l.effectiveUserId).filter(Boolean)
         ])
     ];
 
     const workerData = allWorkerIds.map(workerId => {
-        const assignedTasks = tasks.filter(t => t.assignedTo === workerId);
-        const completedTasks = assignedTasks.filter(t => t.status === 'DONE');
-        const inProgressTasks = assignedTasks.filter(t => t.status === 'IN_PROGRESS');
-        const reviewTasks = assignedTasks.filter(t => t.status === 'REVIEW');
-        const pendingTasks = assignedTasks.filter(t => t.status === 'TODO');
+        const assignedTasks = tasks.filter(t => getAssignedIds(t).includes(workerId));
+        const completedTasks = assignedTasks.filter(t => getTaskStatus(t.status) === 'DONE');
+        const inProgressTasks = assignedTasks.filter(t => getTaskStatus(t.status) === 'IN_PROGRESS');
+        const reviewTasks = assignedTasks.filter(t => getTaskStatus(t.status) === 'REVIEW');
+        const pendingTasks = assignedTasks.filter(t => getTaskStatus(t.status) === 'TODO');
 
         const workerLogs = filteredLogs.filter(l => l.effectiveUserId === workerId);
         const totalLoggedHours = workerLogs.reduce((sum, l) => sum + (l.durationHours || 0), 0);
@@ -110,6 +145,10 @@ const WorkerSummaryReport = () => {
                 .sort((a, b) => b.logDate.localeCompare(a.logDate))
                 .slice(0, 3)
         };
+    }).filter(worker => {
+        const q = workerSearch.trim().toLowerCase();
+        if (!q) return true;
+        return `${worker.name || ''} ${worker.workerId || ''} ${worker.designation || ''}`.toLowerCase().includes(q);
     }).sort((a, b) => b.totalLoggedHours - a.totalLoggedHours);
 
     // Summary stats
@@ -186,9 +225,25 @@ const WorkerSummaryReport = () => {
                             onChange={e => setDateTo(e.target.value)}
                             placeholder="To"
                         />
+                        <QuickDateRangeButtons onSelect={applyQuickRange} />
                         {(dateFrom || dateTo) && (
                             <Button size="sm" variant="outline-secondary" onClick={() => { setDateFrom(''); setDateTo(''); }}>
                                 Clear
+                            </Button>
+                        )}
+                        <div className="vr d-none d-md-block" />
+                        <span className="fw-semibold text-muted small">Worker:</span>
+                        <Form.Control
+                            type="search"
+                            size="sm"
+                            style={{ maxWidth: '220px' }}
+                            value={workerSearch}
+                            onChange={e => setWorkerSearch(e.target.value)}
+                            placeholder="Search by worker name"
+                        />
+                        {workerSearch && (
+                            <Button size="sm" variant="outline-secondary" onClick={() => setWorkerSearch('')}>
+                                Clear Worker
                             </Button>
                         )}
                     </div>
@@ -268,7 +323,7 @@ const WorkerSummaryReport = () => {
                                                 {w.recentLogs.map((log, i) => (
                                                     <li key={i}>
                                                         <strong>{log.logDate}</strong>: {log.durationHours} hrs
-                                                        {log.note && <span> — {log.note}</span>}
+                                                        {log.note && <span> — {getEntityLabel(log.note, '')}</span>}
                                                     </li>
                                                 ))}
                                             </ul>

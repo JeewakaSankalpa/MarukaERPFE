@@ -32,13 +32,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const location = useLocation(); // Hook for URL query params
     const searchParams = new URLSearchParams(location.search);
     const forceReadOnly = searchParams.get("readOnly") === "true";
+    const isProjectRoute = Boolean(propProjectId);
 
     /* ------------ reference data ------------ */
     const [projects, setProjects] = useState([]);
     const [products, setProducts] = useState([]);
     const [available, setAvailable] = useState([]); // [{productId, availableQty}]
     const [employees, setEmployees] = useState([]); // Restored
-    const [loading, setLoading] = useState(false); // Global loading state
+    const [loading, setLoading] = useState(isProjectRoute); // Global loading state
     const [isRefDataLoaded, setIsRefDataLoaded] = useState(false); // NEW: Track ref data load
     const { employeeId } = useAuth(); // Get real employee ID from context
 
@@ -149,13 +150,17 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 // Store config for usage when resetting/initing
                 window._sysConfig = sysConfig.data || {};
 
-                if (propProjectId && projs.length) {
+                if (propProjectId) {
                     const found = projs.find(p => p.id === propProjectId);
-                    if (found) setProjectOpt({ value: found.id, label: found.projectName || found.id });
+                    setProjectOpt({
+                        value: found?.id || propProjectId,
+                        label: found?.projectName || propProjectId
+                    });
                 }
                 setIsRefDataLoaded(true);
             } catch (e) {
                 toast.error(e?.response?.data?.message || "Failed to load reference data");
+                setLoading(false);
             } finally {
                 // Ensure initial load doesn't block if we manage loading here.
                 // But mainly we care about the estimation load logic below.
@@ -167,7 +172,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     /* ------------ load estimation when project changes ------------ */
     useEffect(() => {
         if (!isRefDataLoaded) return;
-        const pid = projectOpt?.value;
+        const pid = projectOpt?.value || propProjectId;
         if (!pid) {
             setComponents(["Component A"]);
             setRows([]);
@@ -199,6 +204,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setApprovalStatus("DRAFT");
             setApproverIds([]);
             setApprovalPolicy("ALL");
+            setLoading(false);
             return;
         }
         (async () => {
@@ -938,7 +944,6 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                 </div>
 
                                 {!isLocked && <Button variant="outline-success" onClick={addComponent}>+ Column</Button>}
-                                {!isLocked && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
                             </div>
                         </div>
 
@@ -1046,7 +1051,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             </td>
                                             <td className="text-end">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</td>
                                             <td className="text-end">
-                                                <Button size="sm" variant="outline-danger" onClick={() => removeRow(i)}>✕</Button>
+                                                {!isReadOnly && (
+                                                    <Button size="sm" variant="outline-danger" onClick={() => removeRow(i)}>✕</Button>
+                                                )}
                                             </td>
                                         </tr>
                                     );

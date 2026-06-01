@@ -5,6 +5,7 @@ import { Container, Tabs, Tab, Table, Card, Form, Button, Row, Col, Alert, Spinn
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import QuickDateRangeButtons from '../ReusableComponents/QuickDateRangeButtons';
 
 export default function FinanceReportsPage() {
     const navigate = useNavigate();
@@ -80,6 +81,12 @@ export default function FinanceReportsPage() {
 
     const print = () => window.print();
 
+    const applyQuickRange = (range) => {
+        setStartDate(range.startDate);
+        setEndDate(range.endDate);
+        setAsOfDate(range.endDate);
+    };
+
     return (
         <Container className="py-4">
             <div className="d-flex justify-content-between align-items-center mb-4 noprint">
@@ -97,7 +104,7 @@ export default function FinanceReportsPage() {
                     <Row className="align-items-end">
                         <Col md={12}>
                             {activeTab === 'PL' && (
-                                <div className="d-flex gap-3">
+                                <div className="d-flex gap-3 align-items-end flex-wrap">
                                     <Form.Group>
                                         <Form.Label>From</Form.Label>
                                         <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -106,18 +113,24 @@ export default function FinanceReportsPage() {
                                         <Form.Label>To</Form.Label>
                                         <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
                                     </Form.Group>
+                                    <div className="pb-1">
+                                        <QuickDateRangeButtons onSelect={applyQuickRange} />
+                                    </div>
                                 </div>
                             )}
                             {activeTab === 'BS' && (
-                                <div className="d-flex gap-3">
+                                <div className="d-flex gap-3 align-items-end flex-wrap">
                                     <Form.Group>
                                         <Form.Label>As of Date</Form.Label>
                                         <SafeDatePicker name="asOfDate" value={asOfDate} onChange={e => setAsOfDate(e.target.value)} />
                                     </Form.Group>
+                                    <div className="pb-1">
+                                        <QuickDateRangeButtons onSelect={applyQuickRange} />
+                                    </div>
                                 </div>
                             )}
                             {activeTab === 'TB' && (
-                                <div className="d-flex gap-3">
+                                <div className="d-flex gap-3 align-items-end flex-wrap">
                                     <Form.Group>
                                         <Form.Label>From</Form.Label>
                                         <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -126,6 +139,9 @@ export default function FinanceReportsPage() {
                                         <Form.Label>To</Form.Label>
                                         <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
                                     </Form.Group>
+                                    <div className="pb-1">
+                                        <QuickDateRangeButtons onSelect={applyQuickRange} />
+                                    </div>
                                 </div>
                             )}
                         </Col>

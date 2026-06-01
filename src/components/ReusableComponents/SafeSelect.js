@@ -76,7 +76,8 @@ export default function SafeSelect({
         if (!onChange) return;
 
         if (multiple) {
-            const values = opt ? opt.map((o) => o.value) : [];
+            const selectedOptions = Array.isArray(opt) ? opt : (opt ? [opt] : []);
+            const values = selectedOptions.map((o) => o.value);
             onChange({ target: { name, value: values } });
             return;
         }
@@ -120,6 +121,8 @@ export default function SafeSelect({
                 isMulti={multiple}
                 isSearchable={isSearchable}
                 isClearable={isClearable}
+                closeMenuOnSelect={!multiple}
+                hideSelectedOptions={false}
                 className={`modern-select-container${className ? ` ${className}` : ''}`}
                 classNamePrefix={classNamePrefix ?? 'modern-select'}
                 menuPortalTarget={document.body}

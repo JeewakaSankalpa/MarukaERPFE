@@ -5,6 +5,7 @@ import ReportLayout from "../../ReusableComponents/ReportLayout";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import SafeDatePicker from '../../ReusableComponents/SafeDatePicker';
+import QuickDateRangeButtons from '../../ReusableComponents/QuickDateRangeButtons';
 
 const PayablesReport = () => {
     const [loading, setLoading] = useState(false);
@@ -13,12 +14,12 @@ const PayablesReport = () => {
     const [endDate, setEndDate] = useState("");
     const navigate = useNavigate();
 
-    const fetchReport = async () => {
+    const fetchReport = async (range = { startDate, endDate }) => {
         setLoading(true);
         try {
             const params = {};
-            if (startDate) params.startDate = startDate;
-            if (endDate) params.endDate = endDate;
+            if (range.startDate) params.startDate = range.startDate;
+            if (range.endDate) params.endDate = range.endDate;
 
             const res = await api.get("/reports/payables", { params });
             setData(res.data || []);
@@ -32,6 +33,12 @@ const PayablesReport = () => {
     useEffect(() => {
         fetchReport();
     }, []); // Load initial (all) on mount
+
+    const applyQuickRange = (range) => {
+        setStartDate(range.startDate);
+        setEndDate(range.endDate);
+        fetchReport(range);
+    };
 
     const totalPayable = data.reduce((sum, item) => sum + (item.balance || 0), 0);
 
@@ -63,9 +70,13 @@ const PayablesReport = () => {
                         <Button variant="info" className="w-100" onClick={fetchReport}>Filter</Button>
                     </Col>
                     <Col md={2}>
-                        <Button variant="outline-secondary" className="w-100" onClick={() => { setStartDate(""); setEndDate(""); fetchReport(); }}>Clear</Button>
+                        <Button variant="outline-secondary" className="w-100" onClick={() => { setStartDate(""); setEndDate(""); fetchReport({ startDate: "", endDate: "" }); }}>Clear</Button>
                     </Col>
                 </Row>
+                <div className="d-flex align-items-center gap-2 mt-3 flex-wrap">
+                    <span className="text-muted small fw-semibold">Quick due range:</span>
+                    <QuickDateRangeButtons mode="future" onSelect={applyQuickRange} />
+                </div>
             </div>
 
             {loading ? <div className="text-center p-5"><Spinner animation="border" /></div> : (

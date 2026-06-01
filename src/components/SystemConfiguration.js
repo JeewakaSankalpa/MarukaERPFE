@@ -468,6 +468,9 @@ export default function SystemConfiguration() {
                     <h5 className="mb-0 text-primary">Global Email Notification Controls</h5>
                 </Card.Header>
                 <Card.Body>
+                    <Alert variant="info" className="small">
+                        These switches only control business notification emails. Password reset OTPs and account access emails always remain enabled.
+                    </Alert>
                     <Row className="g-3">
                         <Col md={6}>
                             <h6 className="text-muted mb-3">Core Workflows</h6>

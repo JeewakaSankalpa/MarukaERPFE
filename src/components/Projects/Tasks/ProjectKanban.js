@@ -77,9 +77,19 @@ const ProjectKanban = ({ projectId, reloadKey }) => {
             ]);
 
             const emps = eRes.data;
+            const getAssignedIds = (task) => {
+                const ids = new Set();
+                (task?.assignedToIds || []).forEach(id => id && ids.add(id));
+                if (task?.assignedTo) ids.add(task.assignedTo);
+                return Array.from(ids);
+            };
             const mappedTasks = tRes.data.map(t => ({
                 ...t,
-                assigneeName: emps.find(e => e.id === t.assignedTo)?.firstName || null
+                assigneeName: getAssignedIds(t)
+                    .map(id => emps.find(e => e.id === id))
+                    .filter(Boolean)
+                    .map(e => `${e.firstName} ${e.lastName}`.trim())
+                    .join(", ") || null
             }));
 
             setTasks(mappedTasks);

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Form, Spinner, Modal } from "react-bootstrap";
+import { Alert, Button, Form, Spinner, Modal } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -17,6 +17,8 @@ const Login = () => {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotStep, setForgotStep] = useState(1);
   const [forgotData, setForgotData] = useState({ username: "", email: "", otp: "", newPassword: "", confirmPassword: "" });
+  const [forgotError, setForgotError] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   // Force Password Change State
   const [showForcePassword, setShowForcePassword] = useState(false);
@@ -25,30 +27,57 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const getApiErrorMessage = (error, fallback) => {
+    const data = error?.response?.data;
+    if (typeof data === "string") return data;
+    if (data?.message) return data.message;
+    if (data?.error) return data.error;
+    return fallback;
+  };
+
+  const updateForgotData = (patch) => {
+    setForgotError("");
+    setForgotData(prev => ({ ...prev, ...patch }));
+  };
+
   const handleForgotSubmit = async () => {
+    if (forgotLoading) return;
+    setForgotError("");
+
     if (forgotStep === 1) {
       if (!forgotData.username || !forgotData.email) {
-        toast.error("Please fill in all fields");
+        const msg = "Please fill in all fields";
+        setForgotError(msg);
+        toast.error(msg);
         return;
       }
       try {
+        setForgotLoading(true);
         await api.post("/auth/forgot-password", forgotData);
         toast.success("OTP sent to your email.");
         setForgotStep(2);
       } catch (e) {
-        toast.error(e.response?.data || "Failed to send OTP");
+        const msg = getApiErrorMessage(e, "Failed to send OTP");
+        setForgotError(msg);
+        toast.error(msg);
+      } finally {
+        setForgotLoading(false);
       }
     } else if (forgotStep === 2) {
       if (!forgotData.otp) {
-        toast.error("Please enter the OTP");
+        const msg = "Please enter the OTP";
+        setForgotError(msg);
+        toast.error(msg);
         return;
       }
       try {
+        setForgotLoading(true);
         await api.post("/auth/verify-otp", { username: forgotData.username, otp: forgotData.otp });
         toast.success("OTP verified!");
         setForgotStep(3);
       } catch (e) {
-        const errorMsg = e.response?.data || "Invalid or expired OTP";
+        const errorMsg = getApiErrorMessage(e, "Invalid or expired OTP");
+        setForgotError(errorMsg);
         toast.error(errorMsg);
         if (errorMsg.toLowerCase().includes("expire") || errorMsg.toLowerCase().includes("pending")) {
           setForgotStep(1);
@@ -57,17 +86,24 @@ const Login = () => {
           // Let them try again, just clear the field
           setForgotData({ ...forgotData, otp: "" });
         }
+      } finally {
+        setForgotLoading(false);
       }
     } else if (forgotStep === 3) {
       if (!forgotData.newPassword || !forgotData.confirmPassword) {
-        toast.error("Please fill in all fields");
+        const msg = "Please fill in all fields";
+        setForgotError(msg);
+        toast.error(msg);
         return;
       }
       if (forgotData.newPassword !== forgotData.confirmPassword) {
-        toast.error("Passwords do not match");
+        const msg = "Passwords do not match";
+        setForgotError(msg);
+        toast.error(msg);
         return;
       }
       try {
+        setForgotLoading(true);
         await api.post("/auth/reset-password", {
           username: forgotData.username,
           otp: forgotData.otp,
@@ -78,12 +114,15 @@ const Login = () => {
         setForgotStep(1);
         setForgotData({ username: "", email: "", otp: "", newPassword: "", confirmPassword: "" });
       } catch (e) {
-        const errorMsg = e.response?.data || "Failed to reset password";
+        const errorMsg = getApiErrorMessage(e, "Failed to reset password");
+        setForgotError(errorMsg);
         toast.error(errorMsg);
         if (errorMsg.toLowerCase().includes("expire") || errorMsg.toLowerCase().includes("pending") || errorMsg.toLowerCase().includes("invalid otp")) {
           setForgotStep(1);
           setForgotData({ ...forgotData, otp: "", newPassword: "", confirmPassword: "" });
         }
+      } finally {
+        setForgotLoading(false);
       }
     }
   };
@@ -91,6 +130,8 @@ const Login = () => {
   const handleCloseForgot = () => {
     setShowForgot(false);
     setForgotStep(1);
+    setForgotError("");
+    setForgotLoading(false);
     setForgotData({ username: "", email: "", otp: "", newPassword: "", confirmPassword: "" });
   };
 
@@ -261,6 +302,11 @@ const Login = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {forgotError && (
+            <Alert variant="danger" className="mb-3">
+              {forgotError}
+            </Alert>
+          )}
           <Form>
             {forgotStep === 1 && (
               <>
@@ -270,7 +316,8 @@ const Login = () => {
                     type="text"
                     placeholder="Enter your username"
                     value={forgotData.username}
-                    onChange={(e) => setForgotData({ ...forgotData, username: e.target.value })}
+                    onChange={(e) => updateForgotData({ username: e.target.value })}
+                    disabled={forgotLoading}
                   />
                 </Form.Group>
                 <Form.Group className="mb-3">
@@ -279,7 +326,8 @@ const Login = () => {
                     type="email"
                     placeholder="Enter registered email"
                     value={forgotData.email}
-                    onChange={(e) => setForgotData({ ...forgotData, email: e.target.value })}
+                    onChange={(e) => updateForgotData({ email: e.target.value })}
+                    disabled={forgotLoading}
                   />
                 </Form.Group>
               </>
@@ -291,7 +339,8 @@ const Login = () => {
                   type="text"
                   placeholder="Enter 6-digit OTP"
                   value={forgotData.otp}
-                  onChange={(e) => setForgotData({ ...forgotData, otp: e.target.value })}
+                  onChange={(e) => updateForgotData({ otp: e.target.value })}
+                  disabled={forgotLoading}
                 />
                 <Form.Text className="text-muted">
                   Please check your email for the OTP. It expires in 15 minutes.
@@ -306,7 +355,8 @@ const Login = () => {
                     type="password"
                     placeholder="Enter new password"
                     value={forgotData.newPassword}
-                    onChange={(e) => setForgotData({ ...forgotData, newPassword: e.target.value })}
+                    onChange={(e) => updateForgotData({ newPassword: e.target.value })}
+                    disabled={forgotLoading}
                   />
                 </Form.Group>
                 <Form.Group className="mb-3">
@@ -315,7 +365,8 @@ const Login = () => {
                     type="password"
                     placeholder="Confirm new password"
                     value={forgotData.confirmPassword}
-                    onChange={(e) => setForgotData({ ...forgotData, confirmPassword: e.target.value })}
+                    onChange={(e) => updateForgotData({ confirmPassword: e.target.value })}
+                    disabled={forgotLoading}
                   />
                 </Form.Group>
               </>
@@ -323,11 +374,13 @@ const Login = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseForgot}>Cancel</Button>
-          <Button variant="primary" onClick={handleForgotSubmit}>
-            {forgotStep === 1 && "Send OTP"}
-            {forgotStep === 2 && "Verify OTP"}
-            {forgotStep === 3 && "Reset Password"}
+          <Button variant="secondary" onClick={handleCloseForgot} disabled={forgotLoading}>Cancel</Button>
+          <Button variant="primary" onClick={handleForgotSubmit} disabled={forgotLoading}>
+            {forgotLoading && <Spinner animation="border" size="sm" className="me-2" />}
+            {!forgotLoading && forgotStep === 1 && "Send OTP"}
+            {!forgotLoading && forgotStep === 2 && "Verify OTP"}
+            {!forgotLoading && forgotStep === 3 && "Reset Password"}
+            {forgotLoading && "Please wait..."}
           </Button>
         </Modal.Footer>
       </Modal>

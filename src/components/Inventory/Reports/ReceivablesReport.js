@@ -5,6 +5,7 @@ import ReportLayout from "../../ReusableComponents/ReportLayout";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import SafeDatePicker from '../../ReusableComponents/SafeDatePicker';
+import QuickDateRangeButtons from '../../ReusableComponents/QuickDateRangeButtons';
 
 const ReceivablesReport = () => {
     const [loading, setLoading] = useState(false);
@@ -14,13 +15,13 @@ const ReceivablesReport = () => {
     const [customerName, setCustomerName] = useState("");
     const navigate = useNavigate();
 
-    const fetchReport = async () => {
+    const fetchReport = async (range = { startDate, endDate }, customerFilter = customerName) => {
         setLoading(true);
         try {
             const params = {};
-            if (startDate) params.startDate = startDate;
-            if (endDate) params.endDate = endDate;
-            if (customerName) params.customerName = customerName;
+            if (range.startDate) params.startDate = range.startDate;
+            if (range.endDate) params.endDate = range.endDate;
+            if (customerFilter) params.customerName = customerFilter;
 
             const res = await api.get("/reports/receivables", { params });
             setData(res.data || []);
@@ -34,6 +35,12 @@ const ReceivablesReport = () => {
     useEffect(() => {
         fetchReport();
     }, []);
+
+    const applyQuickRange = (range) => {
+        setStartDate(range.startDate);
+        setEndDate(range.endDate);
+        fetchReport(range);
+    };
 
     const totalReceivable = data.reduce((sum, item) => sum + (item.balance || 0), 0);
 
@@ -70,10 +77,14 @@ const ReceivablesReport = () => {
                     <Col md={3}>
                         <div className="d-flex w-100 gap-2">
                             <Button variant="info" className="flex-grow-1" onClick={fetchReport}>Filter</Button>
-                            <Button variant="outline-secondary" className="flex-grow-1" onClick={() => { setStartDate(""); setEndDate(""); setCustomerName(""); }}>Clear</Button>
+                            <Button variant="outline-secondary" className="flex-grow-1" onClick={() => { setStartDate(""); setEndDate(""); setCustomerName(""); fetchReport({ startDate: "", endDate: "" }, ""); }}>Clear</Button>
                         </div>
                     </Col>
                 </Row>
+                <div className="d-flex align-items-center gap-2 mt-3 flex-wrap">
+                    <span className="text-muted small fw-semibold">Quick due range:</span>
+                    <QuickDateRangeButtons mode="future" onSelect={applyQuickRange} />
+                </div>
             </div>
 
             {loading ? <div className="text-center p-5"><Spinner animation="border" /></div> : (

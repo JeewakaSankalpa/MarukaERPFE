@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Form } from "react-bootstrap";
+import { Container, Row, Col, Card, Table, Badge, Button, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { FaBoxes, FaExclamationTriangle, FaBoxOpen, FaClipboardList, FaArrowRight, FaPlus } from "react-icons/fa";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -8,17 +8,123 @@ import MenuCard from "../ReusableComponents/MenuCard";
 
 const StatCard = ({ title, value, icon, color, subtext }) => (
   <Card className="h-100 shadow-sm border-0">
-    <Card.Body className="d-flex align-items-center justify-content-between">
-      <div>
+    <Card.Body className="d-flex align-items-center justify-content-between gap-3">
+      <div className="min-w-0 flex-grow-1">
         <h6 className="text-muted text-uppercase mb-2" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>{title}</h6>
-        <h2 className="mb-0 fw-bold">{value}</h2>
+        <h2
+          className="mb-0 fw-bold"
+          style={{
+            fontSize: 'clamp(1.65rem, 3vw, 2.25rem)',
+            lineHeight: 1.15,
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word'
+          }}
+        >
+          {value}
+        </h2>
         {subtext && <small className="text-muted">{subtext}</small>}
       </div>
-      <div className={`p-3 rounded-circle bg-${color} bg-opacity-10 text-${color}`}>
+      <div className={`p-3 rounded-circle bg-${color} bg-opacity-10 text-${color} flex-shrink-0`}>
         {icon}
       </div>
     </Card.Body>
   </Card>
+);
+
+const SkeletonBlock = ({ height = 24, width = '100%' }) => (
+  <div
+    className="placeholder-glow"
+    style={{ width }}
+  >
+    <span
+      className="placeholder rounded d-block"
+      style={{ height }}
+    />
+  </div>
+);
+
+const InventoryDashboardSkeleton = () => (
+  <Container className="py-4">
+    <div className="d-flex justify-content-between align-items-center mb-4">
+      <SkeletonBlock width="260px" height={34} />
+    </div>
+
+    <Row className="g-3 mb-4">
+      {[1, 2, 3].map((item) => (
+        <Col md={4} key={item}>
+          <Card className="h-100 shadow-sm border-0">
+            <Card.Body className="d-flex align-items-center justify-content-between">
+              <div style={{ width: '70%' }}>
+                <SkeletonBlock width="55%" height={14} />
+                <div className="mt-3">
+                  <SkeletonBlock width="40%" height={34} />
+                </div>
+                <div className="mt-2">
+                  <SkeletonBlock width="70%" height={12} />
+                </div>
+              </div>
+              <SkeletonBlock width="56px" height={56} />
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+
+    <Row className="g-4 mb-4">
+      <Col lg={8}>
+        <Card className="shadow-sm border-0 h-100">
+          <Card.Header className="bg-white border-bottom-0 py-3">
+            <SkeletonBlock width="240px" height={18} />
+          </Card.Header>
+          <Card.Body style={{ height: 300 }}>
+            <SkeletonBlock height={250} />
+          </Card.Body>
+        </Card>
+      </Col>
+      <Col lg={4}>
+        <Card className="shadow-sm border-0 h-100">
+          <Card.Header className="bg-white border-bottom-0 py-3">
+            <SkeletonBlock width="150px" height={18} />
+          </Card.Header>
+          <Card.Body style={{ height: 300 }}>
+            <SkeletonBlock height={250} />
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
+
+    <Row className="g-4">
+      <Col lg={8}>
+        <Card className="shadow-sm border-0 h-100">
+          <Card.Header className="bg-white border-bottom-0 py-3">
+            <SkeletonBlock width="180px" height={22} />
+          </Card.Header>
+          <Card.Body>
+            {[1, 2, 3, 4].map((item) => (
+              <div className="d-flex align-items-center gap-3 py-2" key={item}>
+                <SkeletonBlock width="28px" height={20} />
+                <SkeletonBlock width="45%" height={18} />
+                <SkeletonBlock width="18%" height={18} />
+                <SkeletonBlock width="18%" height={18} />
+              </div>
+            ))}
+          </Card.Body>
+        </Card>
+      </Col>
+      <Col lg={4}>
+        <Card className="shadow-sm border-0 h-100">
+          <Card.Header className="bg-white border-bottom-0 py-3">
+            <SkeletonBlock width="130px" height={22} />
+          </Card.Header>
+          <Card.Body className="d-flex flex-column gap-3">
+            {[1, 2, 3].map((item) => (
+              <SkeletonBlock key={item} height={70} />
+            ))}
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
+  </Container>
 );
 
 const InventoryDashboard = () => {
@@ -26,6 +132,9 @@ const InventoryDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dataQualityIssues, setDataQualityIssues] = useState([]);
+  const [issuesLoading, setIssuesLoading] = useState(false);
+  const [issuesError, setIssuesError] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
@@ -37,10 +146,25 @@ const InventoryDashboard = () => {
       const response = await api.get('/inventory/dashboard-stats');
       setStats(response.data);
       setLoading(false);
+      fetchDataQualityIssues();
     } catch (err) {
       console.error("Failed to load stats", err);
       setError("Failed to load dashboard data");
       setLoading(false);
+    }
+  };
+
+  const fetchDataQualityIssues = async () => {
+    try {
+      setIssuesLoading(true);
+      setIssuesError(null);
+      const response = await api.get('/inventory/data-quality-issues');
+      setDataQualityIssues(response.data || []);
+    } catch (err) {
+      console.error("Failed to load inventory data issues", err);
+      setIssuesError("Failed to load inventory data issues");
+    } finally {
+      setIssuesLoading(false);
     }
   };
 
@@ -85,11 +209,7 @@ const InventoryDashboard = () => {
     }
   };
 
-  if (loading) return (
-    <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
-      <Spinner animation="border" variant="primary" />
-    </Container>
-  );
+  if (loading) return <InventoryDashboardSkeleton />;
 
   return (
     <Container className="py-4">
@@ -101,11 +221,11 @@ const InventoryDashboard = () => {
       <Row className="g-3 mb-4">
         <Col md={4}>
           <StatCard
-            title="Total Value"
+            title="Total Cost Value"
             value={`Rs. ${(stats?.totalInventoryValue || 0).toLocaleString()}`}
             icon={<FaClipboardList size={24} />}
             color="primary"
-            subtext="Across all locations"
+            subtext="Buying cost across all locations"
           />
         </Col>
         <Col md={4}>
@@ -290,6 +410,64 @@ const InventoryDashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      {(issuesLoading || issuesError || dataQualityIssues.length > 0) && (
+        <Card className="shadow-sm border-0 mt-4">
+          <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+              <h5 className="mb-0 fw-bold text-warning">Inventory Data Issues</h5>
+              <small className="text-muted">Rows skipped or repaired while calculating inventory views</small>
+            </div>
+            {issuesLoading ? (
+              <Spinner animation="border" size="sm" variant="warning" />
+            ) : (
+              <Badge bg={issuesError ? 'danger' : 'warning'} text={issuesError ? undefined : 'dark'}>
+                {issuesError ? 'Error' : dataQualityIssues.length}
+              </Badge>
+            )}
+          </Card.Header>
+          <Card.Body className="p-0" style={{ maxHeight: '320px', overflowY: 'auto' }}>
+            {issuesLoading ? (
+              <div className="text-center py-4 text-muted">Checking inventory data...</div>
+            ) : issuesError ? (
+              <div className="text-center py-4 text-danger">{issuesError}</div>
+            ) : (
+              <Table hover responsive className="mb-0 align-middle">
+                <thead className="bg-light text-muted" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <th className="ps-4">Source</th>
+                    <th>Record</th>
+                    <th>Product</th>
+                    <th>Issue</th>
+                    <th>Impact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dataQualityIssues.map((item, index) => (
+                    <tr key={`${item.source}-${item.recordId || item.productId || index}`}>
+                      <td className="ps-4">
+                        <Badge bg={item.source === 'Product' ? 'info' : item.source === 'Stock Batch' ? 'primary' : 'secondary'}>
+                          {item.source}
+                        </Badge>
+                      </td>
+                      <td>
+                        <div className="small fw-medium">{item.recordId || '-'}</div>
+                        <div className="small text-muted">{item.reference || item.locationId || ''}</div>
+                      </td>
+                      <td>
+                        <div className="fw-medium">{item.productName || 'Unknown product'}</div>
+                        <div className="small text-muted">{item.productId || '-'}</div>
+                      </td>
+                      <td className="text-warning fw-medium">{item.issue}</td>
+                      <td className="small text-muted">{item.impact}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Card.Body>
+        </Card>
+      )}
     </Container>
   );
 };

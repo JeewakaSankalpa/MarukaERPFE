@@ -430,6 +430,12 @@ export default function ProjectDetails() {
                 </div>
             )}
 
+            <div className="d-flex align-items-center justify-content-between mb-2">
+                <Button variant="light" size="sm" onClick={() => navigate('/projects/search')}>
+                    ← Back to Projects
+                </Button>
+            </div>
+
             {viewVersion && (
                 <div className="alert alert-info d-flex justify-content-between align-items-center mx-2 mt-2 shadow-sm border-info">
                     <div>
