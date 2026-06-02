@@ -20,8 +20,8 @@ const qp = (o = {}) => {
 const listActiveSuppliers = async () =>
     (await api.get(`/suppliers?${qp({ status: "ACTIVE", page: 0, size: 100, sort: "name,asc" })}`)).data?.content || [];
 
-const listProductsBySupplier = async (supplierId) =>
-    (await api.get(`/products?${qp({ supplierId, status: "ACTIVE", page: 0, size: 1000, sort: "name,asc" })}`)).data?.content || [];
+const listProductsBySupplier = async (supplierId, q = "", page = 0, size = 40) =>
+    (await api.get(`/products?${qp({ supplierId, q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
 
 /** Preferred (faster): batch summary */
 const getInventorySummaryBatch = async (productIds) => {
@@ -58,12 +58,15 @@ function PRForm({ onSaved }) {
     const navigate = useNavigate();
     const [suppliers, setSuppliers] = useState([]);
     const [supplierId, setSupplierId] = useState("");
-    const [products, setProducts] = useState([]); // supplier's products
     const [summaries, setSummaries] = useState({}); // {productId: { totalQty, serialTracked, serialCount }}
     const [rows, setRows] = useState([]); // editable lines: {productId, name, sku, unit, qty, note}
     const [comment, setComment] = useState("");
     const [validated, setValidated] = useState(false);
     const [loadingProducts, setLoadingProducts] = useState(false);
+    const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
+    const [itemSearch, setItemSearch] = useState("");
+    const [productPage, setProductPage] = useState(0);
+    const [hasMoreProducts, setHasMoreProducts] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -75,44 +78,84 @@ function PRForm({ onSaved }) {
         })();
     }, []);
 
-    // load products when supplier changes
-    useEffect(() => {
-        (async () => {
-            if (!supplierId) { setProducts([]); setRows([]); setSummaries({}); return; }
-            setLoadingProducts(true);
-            try {
-                const list = await listProductsBySupplier(supplierId);
-                setProducts(list);
+    const mergeProductRows = (list, append) => {
+        setRows(prev => {
+            const existing = new Map(prev.map(row => [row.productId, row]));
+            const nextRows = list.map(p => ({
+                productId: p.id,
+                name: p.name,
+                sku: p.sku,
+                unit: p.unit || "pcs",
+                qty: existing.get(p.id)?.qty || "",
+                note: existing.get(p.id)?.note || "",
+            }));
+            if (append) return [...prev, ...nextRows.filter(row => !existing.has(row.productId))];
+            const selectedRows = prev.filter(row =>
+                Number(row.qty) > 0 && !nextRows.some(next => next.productId === row.productId)
+            );
+            return [...selectedRows, ...nextRows];
+        });
+    };
 
-                // build a default grid of 0 qty rows
-                setRows(list.map(p => ({
-                    productId: p.id, name: p.name, sku: p.sku, unit: p.unit || "pcs", qty: "", note: ""
-                })));
+    const loadProductPage = async ({ pageToLoad = 0, append = false, searchText = itemSearch } = {}) => {
+        if (!supplierId) return;
+        if (append) setLoadingMoreProducts(true);
+        else setLoadingProducts(true);
+        try {
+            const data = await listProductsBySupplier(supplierId, searchText, pageToLoad, 40);
+            const list = data?.content || [];
+            mergeProductRows(list, append);
+            setProductPage(pageToLoad);
+            setHasMoreProducts(pageToLoad + 1 < (data?.totalPages || 1));
 
-                // inventory summaries (prefer batch)
-                const ids = list.map(p => p.id);
+            const ids = list.map(p => p.id);
+            if (ids.length) {
                 const batch = await getInventorySummaryBatch(ids);
+                const map = {};
                 if (batch) {
-                    const map = {};
                     batch.forEach(su => { map[su.productId] = su; });
-                    setSummaries(map);
                 } else {
-                    // fallback: sequential (okay for <1000)
-                    const map = {};
                     for (const id of ids) {
                         try { map[id] = await getInventorySummary(id); } catch { /* ignore */ }
                     }
-                    setSummaries(map);
                 }
-            } catch {
-                toast.error("Failed to load products");
-            } finally {
-                setLoadingProducts(false);
+                setSummaries(prev => ({ ...prev, ...map }));
             }
-        })();
+        } catch {
+            toast.error("Failed to load products");
+        } finally {
+            if (append) setLoadingMoreProducts(false);
+            else setLoadingProducts(false);
+        }
+    };
+
+    // load first product batch when supplier changes
+    useEffect(() => {
+        if (!supplierId) {
+            setRows([]);
+            setSummaries({});
+            setItemSearch("");
+            setProductPage(0);
+            setHasMoreProducts(false);
+            return;
+        }
+        setRows([]);
+        setSummaries({});
+        setProductPage(0);
+        setHasMoreProducts(false);
+        loadProductPage({ pageToLoad: 0, append: false, searchText: "" });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [supplierId]);
 
     const totalLines = useMemo(() => rows.filter(r => Number(r.qty) > 0).length, [rows]);
+    const visibleRows = useMemo(() => {
+        const term = itemSearch.trim().toLowerCase();
+        if (!term) return rows;
+        return rows.filter(r =>
+            String(r.name || "").toLowerCase().includes(term) ||
+            String(r.sku || "").toLowerCase().includes(term)
+        );
+    }, [rows, itemSearch]);
 
     const setRow = (i, key, value) => {
         setRows(prev => {
@@ -120,6 +163,25 @@ function PRForm({ onSaved }) {
             copy[i] = { ...copy[i], [key]: value };
             return copy;
         });
+    };
+
+    const handleSearchProducts = () => {
+        setSummaries({});
+        setProductPage(0);
+        setHasMoreProducts(false);
+        loadProductPage({ pageToLoad: 0, append: false, searchText: itemSearch });
+    };
+
+    const loadMoreProducts = () => {
+        if (loadingProducts || loadingMoreProducts || !hasMoreProducts) return;
+        loadProductPage({ pageToLoad: productPage + 1, append: true, searchText: itemSearch });
+    };
+
+    const handleProductsScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        if (scrollHeight - scrollTop - clientHeight < 48) {
+            loadMoreProducts();
+        }
     };
 
     const save = async (e) => {
@@ -182,61 +244,103 @@ function PRForm({ onSaved }) {
                             <h5 className="mb-0">Items ({fmtNum(totalLines)})</h5>
                             {loadingProducts && <Badge bg="info">Loading products…</Badge>}
                         </div>
+                        <div className="d-flex gap-2 mb-2">
+                            <Form.Control
+                                placeholder="Search item names or SKU"
+                                value={itemSearch}
+                                onChange={(e) => setItemSearch(e.target.value)}
+                                disabled={!supplierId || loadingProducts}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSearchProducts();
+                                    }
+                                }}
+                            />
+                            <Button variant="outline-secondary" onClick={handleSearchProducts} disabled={!supplierId || loadingProducts}>
+                                Search
+                            </Button>
+                        </div>
 
-                        <Table hover responsive size="sm">
-                            <thead>
-                            <tr>
-                                <th style={{ minWidth: 180 }}>Product</th>
-                                <th>SKU</th>
-                                <th>Stock</th>
-                                <th>Serial</th>
-                                <th style={{ width: 140 }}>Qty</th>
-                                <th style={{ minWidth: 200 }}>Note</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {rows.map((r, i) => {
-                                const sum = summaries[r.productId] || {};
-                                const serialTracked = !!sum.serialTracked;
-                                return (
-                                    <tr key={r.productId}>
-                                        <td>{r.name}</td>
-                                        <td>{r.sku}</td>
-                                        <td>
-                                            {fmtNum(sum.totalQty || 0)}{" "}
-                                            <span className="text-muted">({safe(r.unit)})</span>
-                                        </td>
-                                        <td>
-                                            {serialTracked ? (
-                                                <Badge bg="secondary">Tracked ({fmtNum(sum.serialCount || 0)})</Badge>
-                                            ) : (
-                                                <span className="text-muted">No</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <InputGroup>
+                        <div className="border rounded" style={{ maxHeight: 360, overflowY: "auto" }} onScroll={handleProductsScroll}>
+                            <Table hover responsive size="sm" className="mb-0">
+                                <thead className="table-light" style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                                <tr>
+                                    <th style={{ minWidth: 180 }}>Product</th>
+                                    <th>SKU</th>
+                                    <th>Stock</th>
+                                    <th>Serial</th>
+                                    <th style={{ width: 140 }}>Qty</th>
+                                    <th style={{ minWidth: 200 }}>Note</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {visibleRows.map((r) => {
+                                    const i = rows.findIndex(row => row.productId === r.productId);
+                                    const sum = summaries[r.productId] || {};
+                                    const serialTracked = !!sum.serialTracked;
+                                    return (
+                                        <tr key={r.productId}>
+                                            <td>{r.name}</td>
+                                            <td>{r.sku}</td>
+                                            <td>
+                                                {fmtNum(sum.totalQty || 0)}{" "}
+                                                <span className="text-muted">({safe(r.unit)})</span>
+                                            </td>
+                                            <td>
+                                                {serialTracked ? (
+                                                    <Badge bg="secondary">Tracked ({fmtNum(sum.serialCount || 0)})</Badge>
+                                                ) : (
+                                                    <span className="text-muted">No</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <InputGroup>
+                                                    <Form.Control
+                                                        type="number"
+                                                        min="0"
+                                                        inputMode="numeric"
+                                                        value={r.qty}
+                                                        onChange={(e) => setRow(i, "qty", e.target.value)}
+                                                    />
+                                                    <InputGroup.Text>{safe(r.unit)}</InputGroup.Text>
+                                                </InputGroup>
+                                            </td>
+                                            <td>
                                                 <Form.Control
-                                                    type="number"
-                                                    min="0"
-                                                    inputMode="numeric"
-                                                    value={r.qty}
-                                                    onChange={(e) => setRow(i, "qty", e.target.value)}
+                                                    value={r.note}
+                                                    onChange={(e) => setRow(i, "note", e.target.value)}
+                                                    placeholder="optional"
                                                 />
-                                                <InputGroup.Text>{safe(r.unit)}</InputGroup.Text>
-                                            </InputGroup>
-                                        </td>
-                                        <td>
-                                            <Form.Control
-                                                value={r.note}
-                                                onChange={(e) => setRow(i, "note", e.target.value)}
-                                                placeholder="optional"
-                                            />
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {supplierId && loadingProducts && (
+                                    <tr>
+                                        <td colSpan="6" className="text-center text-muted py-3">Loading products...</td>
+                                    </tr>
+                                )}
+                                {supplierId && !loadingProducts && visibleRows.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="text-center text-muted py-3">
+                                            No items match your search.
                                         </td>
                                     </tr>
-                                );
-                            })}
-                            </tbody>
-                        </Table>
+                                )}
+                                {loadingMoreProducts && (
+                                    <tr>
+                                        <td colSpan="6" className="text-center text-muted py-2">Loading more...</td>
+                                    </tr>
+                                )}
+                                </tbody>
+                            </Table>
+                        </div>
+                        {supplierId && (
+                            <div className="small text-muted mt-1">
+                                {hasMoreProducts ? `Showing ${rows.length} items. Scroll down to load more.` : `Showing ${rows.length} items.`}
+                            </div>
+                        )}
                     </div>
 
                     <Button type="submit" className="w-100 mt-3">Save Purchase Request</Button>

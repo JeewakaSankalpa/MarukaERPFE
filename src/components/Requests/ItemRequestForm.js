@@ -71,8 +71,11 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
     // search state
     const [q, setQ] = useState("");
-    const [page, setPage] = useState(0);
     const [searchData, setSearchData] = useState({ content: [], totalPages: 0 });
+    const [productPage, setProductPage] = useState(0);
+    const [hasMoreProducts, setHasMoreProducts] = useState(true);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+    const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
 
     // request lines
     const [rows, setRows] = useState([]); // [{productId, name, sku, unit, qty, note, fulfilledQty?}]
@@ -126,14 +129,42 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         })();
     }, [routeId]);
 
-    // product search
-    const loadProducts = async () => {
+    const loadProductPage = async ({ pageToLoad = 0, append = false, searchText = q } = {}) => {
+        if (append) setLoadingMoreProducts(true);
+        else setLoadingProducts(true);
         try {
-            const res = await searchProducts(q, page, 8);
-            setSearchData(res);
-        } catch { toast.error("Failed to search products"); }
+            const res = await searchProducts(searchText, pageToLoad, 40);
+            const nextContent = res.content || [];
+            setSearchData(prev => ({
+                ...res,
+                content: append ? [...(prev.content || []), ...nextContent] : nextContent,
+            }));
+            setProductPage(pageToLoad);
+            setHasMoreProducts(pageToLoad + 1 < (res.totalPages || 1));
+        } catch {
+            if (!append) setSearchData({ content: [], totalPages: 0 });
+            toast.error("Failed to search products");
+        } finally {
+            if (append) setLoadingMoreProducts(false);
+            else setLoadingProducts(false);
+        }
     };
-    useEffect(() => { loadProducts(); /* eslint-disable-next-line */ }, [page]);
+
+    const loadProducts = () => loadProductPage({ pageToLoad: 0, append: false, searchText: q });
+
+    const loadMoreProducts = () => {
+        if (loadingProducts || loadingMoreProducts || !hasMoreProducts) return;
+        loadProductPage({ pageToLoad: productPage + 1, append: true, searchText: q });
+    };
+
+    const handleProductScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        if (scrollHeight - scrollTop - clientHeight < 48) {
+            loadMoreProducts();
+        }
+    };
+
+    useEffect(() => { loadProductPage({ pageToLoad: 0, append: false, searchText: "" }); /* eslint-disable-next-line */ }, []);
 
     // add product to request
     const addProduct = (p) => {
@@ -238,27 +269,55 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         <div className="mt-4">
                             <div className="d-flex gap-2 mb-2">
                                 <Form.Control placeholder="Search product name/SKU" value={q} onChange={e => setQ(e.target.value)} />
-                                <Button variant="outline-secondary" onClick={() => { setPage(0); loadProducts(); }}>Search</Button>
+                                <Button variant="outline-secondary" onClick={loadProducts} disabled={loadingProducts}>
+                                    {loadingProducts ? <Spinner as="span" animation="border" size="sm" className="me-1" /> : null}
+                                    Search
+                                </Button>
                             </div>
-                            <Table size="sm" hover responsive>
-                                <thead><tr><th>Product</th><th>SKU</th><th>Unit</th><th></th></tr></thead>
-                                <tbody>
-                                    {(searchData.content || []).map(p => (
-                                        <tr key={p.id}>
-                                            <td>{p.name}</td>
-                                            <td>{p.sku}</td>
-                                            <td>{p.unit || "pcs"}</td>
-                                            <td><Button size="sm" onClick={() => addProduct(p)}>Add</Button></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                            <div className="d-flex justify-content-between">
-                                <div>Page {page + 1}/{Math.max(1, searchData.totalPages || 1)}</div>
-                                <div className="d-flex gap-2">
-                                    <Button size="sm" variant="outline-secondary" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Prev</Button>
-                                    <Button size="sm" variant="outline-secondary" disabled={page + 1 >= (searchData.totalPages || 1)} onClick={() => setPage(p => p + 1)}>Next</Button>
-                                </div>
+                            <div className="border rounded" style={{ maxHeight: 280, overflowY: "auto" }} onScroll={handleProductScroll}>
+                                <Table size="sm" hover responsive className="mb-0">
+                                    <thead className="table-light" style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                                        <tr><th>Product</th><th>SKU</th><th>Unit</th><th></th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {(searchData.content || []).map(p => (
+                                            <tr key={p.id}>
+                                                <td>{p.name}</td>
+                                                <td>{p.sku}</td>
+                                                <td>{p.unit || "pcs"}</td>
+                                                <td><Button size="sm" onClick={() => addProduct(p)}>Add</Button></td>
+                                            </tr>
+                                        ))}
+                                        {loadingProducts && (
+                                            <tr>
+                                                <td colSpan="4" className="text-center text-muted py-3">
+                                                    <Spinner animation="border" size="sm" className="me-2" />
+                                                    Loading products...
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {!loadingProducts && (searchData.content || []).length === 0 && (
+                                            <tr>
+                                                <td colSpan="4" className="text-center text-muted py-3">No products found</td>
+                                            </tr>
+                                        )}
+                                        {loadingMoreProducts && (
+                                            <tr>
+                                                <td colSpan="4" className="text-center text-muted py-2">
+                                                    <Spinner animation="border" size="sm" className="me-2" />
+                                                    Loading more...
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </Table>
+                            </div>
+                            <div className="small text-muted mt-1">
+                                {loadingProducts
+                                    ? "Loading products..."
+                                    : hasMoreProducts
+                                        ? `Showing ${(searchData.content || []).length} products. Scroll down to load more.`
+                                        : `Showing ${(searchData.content || []).length} products.`}
                             </div>
                         </div>
                     )}

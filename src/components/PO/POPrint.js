@@ -7,6 +7,15 @@ import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
 import signature from "../../assets/signature.png";
 
+const addressLines = (address = {}) => [
+    address?.line1,
+    address?.line2,
+    address?.city,
+    address?.state,
+    address?.postalCode,
+    address?.country,
+].filter(Boolean);
+
 const POPrint = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -94,13 +103,13 @@ const POPrint = () => {
                         <h6 className="fw-bold text-uppercase mb-2">VENDOR</h6>
                         {supplier ? (
                             <div style={{ fontSize: "0.9rem" }}>
-                                <div><strong>{supplier.contactPerson}</strong></div>
-                                <div>{supplier.comName}</div>
-                                <div style={{ whiteSpace: "pre-wrap" }}>
-                                    {[supplier.address.line1, supplier.address.line2, supplier.address.city, supplier.address.state, supplier.address.country]
-                                        .filter(Boolean)
-                                        .join("\n")}
-                                </div>
+                                <div><strong>{supplier.contactPerson || supplier.name || po.supplierNameSnapshot || "-"}</strong></div>
+                                <div>{supplier.comName || supplier.name || ""}</div>
+                                {addressLines(supplier.address).length > 0 ? (
+                                    <div style={{ whiteSpace: "pre-wrap" }}>{addressLines(supplier.address).join("\n")}</div>
+                                ) : (
+                                    <div className="text-muted">Address not available</div>
+                                )}
                             </div>
                         ) : (
                             <div>{po.supplierNameSnapshot}</div>
@@ -111,13 +120,7 @@ const POPrint = () => {
                         {po.shippingAddress ? (
                             <div style={{ fontSize: "0.9rem" }}>
                                 <div><strong>{po.shippingAddress.name || "Maruka Technologies (Pvt) Ltd"}</strong></div>
-                                <div>{po.shippingAddress.line1}</div>
-                                {po.shippingAddress.line2 && <div>{po.shippingAddress.line2}</div>}
-                                <div>
-                                    {[po.shippingAddress.city, po.shippingAddress.state, po.shippingAddress.postalCode]
-                                        .filter(Boolean).join(", ")}
-                                </div>
-                                <div>{po.shippingAddress.country}</div>
+                                {addressLines(po.shippingAddress).map((line, idx) => <div key={idx}>{line}</div>)}
                             </div>
                         ) : (
                             <div style={{ fontSize: "0.9rem" }}>
