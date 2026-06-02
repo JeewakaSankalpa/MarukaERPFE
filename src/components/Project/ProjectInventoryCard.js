@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import ReportLayout from '../ReusableComponents/ReportLayout';
 
 /**
  * Component to display project inventory, consumption, and transfers.
@@ -12,11 +13,15 @@ import SafeSelect from '../ReusableComponents/SafeSelect';
  * @component
  * @param {Object} props
  * @param {string} props.projectId - Project ID
+ * @param {Object} props.project - Optional project summary for report headers
  */
-export default function ProjectInventoryCard({ projectId }) {
+export default function ProjectInventoryCard({ projectId, project }) {
     const navigate = useNavigate();
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [showConsumedReport, setShowConsumedReport] = useState(false);
+    const [consumptionRecords, setConsumptionRecords] = useState([]);
+    const [loadingConsumption, setLoadingConsumption] = useState(false);
 
     // Consume state
     const [showConsume, setShowConsume] = useState(false);
@@ -126,6 +131,52 @@ export default function ProjectInventoryCard({ projectId }) {
             toast.error(e?.response?.data?.message || 'Failed to consume items');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const formatDateTime = (value) => {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '-';
+        return date.toLocaleString();
+    };
+
+    const buildConsumedRows = (records) => {
+        const productNames = inventory.reduce((map, item) => {
+            map[item.productId] = item.productName;
+            return map;
+        }, {});
+
+        return records.flatMap((record) => (record.items || []).map((item, index) => ({
+            key: `${record.id || record.consumptionNumber || 'consumption'}-${index}`,
+            date: record.createdAt,
+            consumptionNumber: record.consumptionNumber || record.id || '-',
+            productName: item.productNameSnapshot || productNames[item.productId] || item.productId || '-',
+            quantity: item.quantity ?? 0,
+            unit: item.unit || '',
+            serials: (item.serials || []).join(', '),
+            note: item.note || '',
+            createdBy: record.createdBy || '-'
+        })));
+    };
+
+    const consumedRows = buildConsumedRows(consumptionRecords);
+    const totalConsumedQty = consumedRows.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
+
+    const openConsumedReport = async () => {
+        if (!projectId) return;
+        setShowConsumedReport(true);
+        setLoadingConsumption(true);
+        try {
+            const res = await api.get(`/consumptions/project/${projectId}`, {
+                params: { size: 1000, sort: 'createdAt,desc' }
+            });
+            setConsumptionRecords(res.data?.content || res.data || []);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to load consumed items");
+        } finally {
+            setLoadingConsumption(false);
         }
     };
 
@@ -368,6 +419,9 @@ export default function ProjectInventoryCard({ projectId }) {
                 <div className="d-flex gap-2">
                     <Button size="sm" variant="outline-primary" onClick={() => navigate(`/item/requests?projectId=${projectId}`)} disabled={!projectId}>
                         Request Item
+                    </Button>
+                    <Button size="sm" variant="outline-secondary" onClick={openConsumedReport} disabled={!projectId}>
+                        Print Consumed Items
                     </Button>
                     <Button size="sm" variant="primary" onClick={() => setShowConsume(true)} disabled={!projectId}>
                         Consume Items
@@ -612,6 +666,86 @@ export default function ProjectInventoryCard({ projectId }) {
                     </Table>
                 )}
             </Card.Body>
+
+            <Modal show={showConsumedReport} onHide={() => setShowConsumedReport(false)} size="xl">
+                <Modal.Header closeButton className="no-print">
+                    <Modal.Title>Consumed Items Report</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {loadingConsumption ? (
+                        <div className="text-center py-5 no-print">
+                            <Spinner animation="border" variant="primary" />
+                            <div className="text-muted mt-3">Loading consumed items...</div>
+                        </div>
+                    ) : (
+                        <ReportLayout
+                            title="Consumed Items"
+                            subtitle={`${project?.projectName || project?.name || 'Project'} | Job: ${project?.jobNumber || projectId}`}
+                            orientation="landscape"
+                        >
+                            <div className="mb-3">
+                                <Table bordered size="sm" className="mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <th style={{ width: '18%' }}>Project</th>
+                                            <td>{project?.projectName || project?.name || projectId}</td>
+                                            <th style={{ width: '16%' }}>Job Number</th>
+                                            <td>{project?.jobNumber || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Customer</th>
+                                            <td>{project?.customerName || '-'}</td>
+                                            <th>Total Consumed Qty</th>
+                                            <td>{totalConsumedQty}</td>
+                                        </tr>
+                                    </tbody>
+                                </Table>
+                            </div>
+
+                            {consumedRows.length === 0 ? (
+                                <div className="text-center text-muted py-4 border rounded">
+                                    No consumed items recorded for this project.
+                                </div>
+                            ) : (
+                                <Table bordered hover size="sm" responsive>
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th style={{ width: '12%' }}>Date</th>
+                                            <th style={{ width: '13%' }}>Reference</th>
+                                            <th>Product</th>
+                                            <th className="text-end" style={{ width: '9%' }}>Qty</th>
+                                            <th style={{ width: '8%' }}>Unit</th>
+                                            <th style={{ width: '18%' }}>Serials</th>
+                                            <th style={{ width: '16%' }}>Note</th>
+                                            <th style={{ width: '10%' }}>By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {consumedRows.map(row => (
+                                            <tr key={row.key}>
+                                                <td>{formatDateTime(row.date)}</td>
+                                                <td>{row.consumptionNumber}</td>
+                                                <td className="fw-semibold">{row.productName}</td>
+                                                <td className="text-end">{row.quantity}</td>
+                                                <td>{row.unit || '-'}</td>
+                                                <td>{row.serials || '-'}</td>
+                                                <td>{row.note || '-'}</td>
+                                                <td>{row.createdBy}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            )}
+                        </ReportLayout>
+                    )}
+                </Modal.Body>
+                <Modal.Footer className="no-print">
+                    <Button variant="secondary" onClick={() => setShowConsumedReport(false)}>Close</Button>
+                    <Button variant="primary" onClick={() => window.print()} disabled={loadingConsumption}>
+                        Print
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             {/* Consume Modal */}
             {showConsume && (

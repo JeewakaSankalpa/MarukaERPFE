@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Button, Row, Col, Spinner, Badge } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
+import { formatAttendanceTime, getOfficeTodayString } from '../../utils/attendanceTime';
 
 export default function EmployeeHRWidget({ user }) {
     const [attendance, setAttendance] = useState(null);
@@ -18,7 +19,7 @@ export default function EmployeeHRWidget({ user }) {
             const attRes = await api.get(`/attendance/${employeeId}`);
             if (attRes.data && attRes.data.length > 0) {
                 // Find today's record
-                const today = new Date().toISOString().split('T')[0];
+                const today = getOfficeTodayString();
                 const todayRecord = attRes.data.find(r => r.checkInTime && r.checkInTime.startsWith(today));
                 setAttendance(todayRecord || null);
             }
@@ -72,10 +73,10 @@ export default function EmployeeHRWidget({ user }) {
                             {attendance ? (
                                 <div>
                                     <div className="mb-2">
-                                        <Badge bg="success">In</Badge> {new Date(attendance.checkInTime).toLocaleTimeString()}
+                                        <Badge bg="success">In</Badge> {formatAttendanceTime(attendance.checkInTime)}
                                     </div>
                                     {attendance.checkOutTime ? (
-                                        <div><Badge bg="danger">Out</Badge> {new Date(attendance.checkOutTime).toLocaleTimeString()}</div>
+                                        <div><Badge bg="danger">Out</Badge> {formatAttendanceTime(attendance.checkOutTime)}</div>
                                     ) : (
                                         <Button size="sm" variant="outline-danger" onClick={handleCheckOut}>Check Out Now</Button>
                                     )}

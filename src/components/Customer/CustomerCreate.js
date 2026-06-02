@@ -29,11 +29,10 @@ function CustomerCreate() {
       contactNumber: "",
       email: "",
     },
-    vatDocument: null, // Required
+    vatDocument: null, // Optional
     businessRegDocument: null, // Optional
     documentURL: "",
     fileList: [], // URLs after save or load
-    password: "", // Only for creation
   });
 
   const handleChange = (e) => {
@@ -141,10 +140,6 @@ function CustomerCreate() {
     }
     if (companyData.businessRegDocument instanceof File) {
       formData.append("businessRegDocument", companyData.businessRegDocument);
-    }
-
-    if (!isEditMode && companyData.password) {
-      formData.append("password", companyData.password);
     }
 
     try {
@@ -322,18 +317,6 @@ function CustomerCreate() {
                 <Form.Control.Feedback type="invalid">{errors.contactPersonData_email}</Form.Control.Feedback>
               </Form.Group>
 
-              {!isEditMode && (
-                <Form.Group controlId="password" className="mb-3">
-                  <Form.Label>Password (Optional - Defaults to "TestP")</Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="password"
-                    value={companyData.password}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              )}
-
               <Row>
                 <Form.Group controlId="vatType" className="mb-3">
                   <Form.Label>VAT Type</Form.Label>
@@ -365,7 +348,7 @@ function CustomerCreate() {
               </Row>
 
               <Form.Group controlId="vatDoc" className="mb-2">
-                <Form.Label>VAT Registration Document *</Form.Label>
+                <Form.Label>VAT Registration Document (Optional)</Form.Label>
                 <Form.Control
                   type="file"
                   accept=".pdf,.jpg,.png"
@@ -375,7 +358,6 @@ function CustomerCreate() {
                       vatDocument: e.target.files[0],
                     }))
                   }
-                  required
                 />
               </Form.Group>
 

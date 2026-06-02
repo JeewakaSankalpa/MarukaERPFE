@@ -4,6 +4,7 @@ import { Container, Tabs, Tab, Form, Button, Table, Row, Col, Card, Alert, Spinn
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { toast } from "react-toastify";
+import { formatAttendanceTime, toDateTimeLocalValue } from "../../utils/attendanceTime";
 import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 
 function SalaryManagement() {
@@ -480,8 +481,8 @@ function SalaryManagement() {
                                                                 <tr key={d.date} className={d.status === 'ABSENT' ? 'table-danger' : ''}>
                                                                     <td>{d.date} <small className="text-muted">{d.dayOfWeek}</small></td>
                                                                     <td>{d.status}</td>
-                                                                    <td>{d.checkIn ? new Date(d.checkIn).toLocaleTimeString() : '-'}</td>
-                                                                    <td>{d.checkOut ? new Date(d.checkOut).toLocaleTimeString() : '-'}</td>
+                                                                    <td>{formatAttendanceTime(d.checkIn)}</td>
+                                                                    <td>{formatAttendanceTime(d.checkOut)}</td>
                                                                     <td>{d.workedHours}</td>
                                                                     <td>{d.comments}</td>
                                                                     <td>
@@ -489,8 +490,8 @@ function SalaryManagement() {
                                                                             e.stopPropagation();
                                                                             setEditRecord({
                                                                                 attendanceId: d.attendanceId,
-                                                                                checkIn: d.checkIn ? d.checkIn : `${d.date}T08:30`,
-                                                                                checkOut: d.checkOut ? d.checkOut : `${d.date}T17:00`,
+                                                                                checkIn: toDateTimeLocalValue(d.checkIn, `${d.date}T08:30`),
+                                                                                checkOut: toDateTimeLocalValue(d.checkOut, `${d.date}T17:00`),
                                                                                 reason: "",
                                                                                 date: d.date // Pass date for manual creation reference if needed
                                                                             });

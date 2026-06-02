@@ -156,7 +156,7 @@ export const registerDefaultComponents = () => {
         label: 'Inventory',
         zone: 'TAB',
         order: 20,
-        render: (props) => <ProjectInventoryCard projectId={props.id} reloadKey={props.refreshKey} />
+        render: (props) => <ProjectInventoryCard projectId={props.id} project={props.project} reloadKey={props.refreshKey} />
     });
 
     ProjectComponentRegistry.register({

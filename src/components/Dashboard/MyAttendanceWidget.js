@@ -3,6 +3,7 @@ import { Card, Button, Badge, Spinner } from "react-bootstrap";
 import { FaClock, FaSignInAlt, FaSignOutAlt, FaCalendarCheck } from "react-icons/fa";
 import api from "../../api/api";
 import { toast } from "react-toastify";
+import { formatAttendanceTime, getOfficeTodayString } from "../../utils/attendanceTime";
 
 export default function MyAttendanceWidget() {
     const [loading, setLoading] = useState(false);
@@ -27,7 +28,7 @@ export default function MyAttendanceWidget() {
         try {
             // Get all records (Not ideal, but endpoint limitation for now)
             const res = await api.get(`/attendance/${employeeId}`);
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getOfficeTodayString();
 
             // Find record for today
             const found = res.data?.find(r => r.checkInTime && r.checkInTime.startsWith(todayStr));
@@ -84,14 +85,14 @@ export default function MyAttendanceWidget() {
                             <div className="d-flex justify-content-between align-items-center mb-2">
                                 <span className="text-muted small">Check In</span>
                                 <span className="fw-bold text-success">
-                                    {new Date(todayRecord.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {formatAttendanceTime(todayRecord.checkInTime)}
                                 </span>
                             </div>
                             <div className="d-flex justify-content-between align-items-center">
                                 <span className="text-muted small">Check Out</span>
                                 <span className={`fw-bold ${isCheckedOut ? 'text-danger' : 'text-secondary'}`}>
                                     {isCheckedOut
-                                        ? new Date(todayRecord.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                        ? formatAttendanceTime(todayRecord.checkOutTime)
                                         : '--:--'}
                                 </span>
                             </div>

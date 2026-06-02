@@ -21,9 +21,9 @@ const ProjectMaterialReport = () => {
     useEffect(() => {
         // Fetch Projects for cards
         setLoadingProjects(true);
-        api.get('/projects/search') // Using /search to get ProjectSummaryDTO with all fields
+        api.get('/projects/search', { params: { hasJobNumber: true } }) // Customer-approved jobs have an accepted quotation and MJN/job number
             .then(res => {
-                const list = res.data || [];
+                const list = (res.data || []).filter(project => !!project.jobNumber);
                 setProjects(list);
                 setFilteredProjects(list);
             })
@@ -147,7 +147,7 @@ const ProjectMaterialReport = () => {
                         <h2 className="fw-bold mb-1 d-flex align-items-center gap-2">
                             <FaProjectDiagram className="text-primary" /> Project Inventory Allocation
                         </h2>
-                        <p className="text-muted mb-0">Select a project to view its material status, consumption, and shortages.</p>
+                        <p className="text-muted mb-0">Select a customer-approved job to view its material status, consumption, and shortages.</p>
                     </div>
                 </div>
 
@@ -179,7 +179,7 @@ const ProjectMaterialReport = () => {
                             <FaProjectDiagram size={48} className="text-muted opacity-25" />
                         </div>
                         <h5>No Projects Found</h5>
-                        <p className="text-muted">Try adjusting your search criteria.</p>
+                        <p className="text-muted">No customer-approved jobs match your search criteria.</p>
                     </div>
                 ) : (
                     <Row className="g-4">
@@ -234,7 +234,7 @@ const ProjectMaterialReport = () => {
                 </div>
             </div>
 
-            <ProjectInventoryCard projectId={selectedProject.id} />
+            <ProjectInventoryCard projectId={selectedProject.id} project={selectedProject} />
 
         </Container>
     );

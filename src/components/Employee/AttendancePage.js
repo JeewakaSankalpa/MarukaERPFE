@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Button, Card, Table, Badge, Row, Col } from "react-bootstrap";
 import api from "../../api/api";
 import { toast } from "react-toastify";
+import { formatAttendanceDate, formatAttendanceDateTime } from "../../utils/attendanceTime";
 
 function AttendancePage() {
     const navigate = useNavigate();
@@ -103,11 +104,6 @@ function AttendancePage() {
         } finally { setLoading(false); }
     };
 
-    const formatTime = (timeStr) => {
-        if (!timeStr) return "-";
-        return new Date(timeStr).toLocaleString();
-    };
-
     return (
         <Container className="my-5">
             <div className="d-flex align-items-center mb-4">
@@ -155,9 +151,9 @@ function AttendancePage() {
                 <tbody>
                     {logs.slice().reverse().map((l, i) => (
                         <tr key={i}>
-                            <td>{new Date(l.checkInTime).toLocaleDateString()}</td>
-                            <td>{formatTime(l.checkInTime)}</td>
-                            <td>{formatTime(l.checkOutTime)}</td>
+                            <td>{formatAttendanceDate(l.checkInTime)}</td>
+                            <td>{formatAttendanceDateTime(l.checkInTime)}</td>
+                            <td>{formatAttendanceDateTime(l.checkOutTime)}</td>
                             <td>{l.shiftType}</td>
                         </tr>
                     ))}
