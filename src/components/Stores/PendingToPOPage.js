@@ -1,16 +1,22 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Button, Form, Table, Badge } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import CompletenessModal from '../ReusableComponents/CompletenessModal';
+import { buildCompletenessIssues, hasBlockingIssues } from '../../utils/entityCompleteness';
+import { ProductForm } from '../Inventory/ProductPage';
+import { SupplierForm } from '../Supplier/SupplierPage';
 
 /* ========== INLINE API HELPERS ========== */
 const getLatestPending = async () => (await api.get(`/stores/pending-purchase/latest`)).data; // implement endpoint to return latest plan
 const createPOsFromPending = async (pendingId, allocation) =>
     (await api.post(`/stores/pending-to-po/${pendingId}`, allocation)).data;
+const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
+const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
 
 /* ========== PAGE ========== */
 export default function PendingToPOPage() {
@@ -18,6 +24,10 @@ export default function PendingToPOPage() {
     const [plan, setPlan] = useState(null); // {id, lines:[{productId, productNameSnapshot, shortageQty, suppliers:[...] }]}
     const [choices, setChoices] = useState({}); // productId -> { supplierId, qty, unitPrice, taxPercent }
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [completenessIssues, setCompletenessIssues] = useState([]);
+    const [showCompletenessModal, setShowCompletenessModal] = useState(false);
+    const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
+    const [editRecord, setEditRecord] = useState(null);
 
     useEffect(() => {
         (async () => {
@@ -44,7 +54,42 @@ export default function PendingToPOPage() {
         return map;
     }, [choices]);
 
-    const createPOs = async () => {
+    const openCompletenessModal = (issues, proceed = null) => {
+        setCompletenessIssues(issues);
+        setPendingCompletenessProceed(() => proceed);
+        setShowCompletenessModal(true);
+    };
+
+    const runCompletenessChecks = async () => {
+        const selectedSupplierIds = [...new Set(Object.values(choices).map(c => c?.supplierId).filter(Boolean))];
+        const selectedProductIds = Object.entries(choices)
+            .filter(([, c]) => c?.supplierId && Number(c.qty) > 0)
+            .map(([productId]) => productId);
+
+        const suppliers = await Promise.all(selectedSupplierIds.map(id => getSupplier(id).catch(() => ({ id }))));
+        const products = await Promise.all(selectedProductIds.map(id => getProduct(id).catch(() => {
+            const line = (plan?.lines || []).find(l => l.productId === id);
+            return { id, name: line?.productNameSnapshot, sku: line?.sku };
+        })));
+
+        return [
+            ...buildCompletenessIssues('supplierPurchase', suppliers, item => item?.name || item?.id || 'Supplier'),
+            ...buildCompletenessIssues('productPurchase', products, item => item?.name || item?.productNameSnapshot || item?.id || 'Product')
+        ];
+    };
+
+    const openIssueEditor = (issue) => {
+        if (!issue?.entityId) return;
+        setEditRecord({
+            type: issue.ruleKey === 'supplierPurchase' ? 'supplier' : 'product',
+            id: issue.entityId,
+            name: issue.name
+        });
+    };
+
+    const closeIssueEditor = () => setEditRecord(null);
+
+    const performCreatePOs = async () => {
         if (isSubmitting) return;
         try {
             if (!plan?.id) return;
@@ -61,6 +106,23 @@ export default function PendingToPOPage() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const createPOs = async () => {
+        if (!plan?.id) return;
+        if (Object.keys(groupedAllocation).length === 0) { toast.info("No supplier allocation selected"); return; }
+
+        const issues = await runCompletenessChecks();
+        if (issues.length > 0) {
+            if (hasBlockingIssues(issues)) {
+                openCompletenessModal(issues);
+                return;
+            }
+            openCompletenessModal(issues, performCreatePOs);
+            return;
+        }
+
+        await performCreatePOs();
     };
 
     if (!plan) return (
@@ -134,6 +196,32 @@ export default function PendingToPOPage() {
                 </div>
             </div>
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
+            <CompletenessModal
+                show={showCompletenessModal}
+                issues={completenessIssues}
+                title="Complete Supplier / Product Details"
+                onClose={() => setShowCompletenessModal(false)}
+                onEditIssue={openIssueEditor}
+                onProceed={pendingCompletenessProceed ? () => {
+                    setShowCompletenessModal(false);
+                    pendingCompletenessProceed();
+                } : null}
+            />
+            <Modal show={Boolean(editRecord)} onHide={closeIssueEditor} size="xl" centered scrollable>
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        {editRecord?.type === 'supplier' ? 'Edit Supplier Details' : 'Edit Product Details'}
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {editRecord?.type === 'supplier' && (
+                        <SupplierForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={closeIssueEditor} />
+                    )}
+                    {editRecord?.type === 'product' && (
+                        <ProductForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={closeIssueEditor} />
+                    )}
+                </Modal.Body>
+            </Modal>
         </Container>
     );
 }

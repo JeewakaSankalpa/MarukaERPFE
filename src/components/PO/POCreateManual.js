@@ -1,11 +1,15 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Row, Col, Form, Button, Table, Badge } from "react-bootstrap";
+import { Container, Row, Col, Form, Button, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import CompletenessModal from '../ReusableComponents/CompletenessModal';
+import { buildCompletenessIssues, hasBlockingIssues } from '../../utils/entityCompleteness';
+import { ProductForm } from '../Inventory/ProductPage';
+import { SupplierForm } from '../Supplier/SupplierPage';
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -14,6 +18,9 @@ const searchSuppliers = async (q, page = 0, size = 100) =>
     (await api.get(`/suppliers?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
 const searchProducts = async (q, supplierId, page = 0, size = 100) =>
     (await api.get(`/products?${qp({ q, status: "ACTIVE", supplierId, page, size, sort: "name,asc" })}`)).data;
+const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
+const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
+const updateProduct = async (id, payload) => (await api.put(`/products/${id}`, payload)).data;
 
 const createPOManual = async (payload) => (await api.post(`/pos`, payload)).data;
 
@@ -36,6 +43,14 @@ export default function POCreateManual({ onCreated }) {
     const [rows, setRows] = useState([]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [completenessIssues, setCompletenessIssues] = useState([]);
+    const [showCompletenessModal, setShowCompletenessModal] = useState(false);
+    const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
+    const [editRecord, setEditRecord] = useState(null);
+    const [showSupplierAssistModal, setShowSupplierAssistModal] = useState(false);
+    const [supplierAssistLoading, setSupplierAssistLoading] = useState(false);
+    const [commonSuppliers, setCommonSuppliers] = useState([]);
+    const [showQuickSupplierCreate, setShowQuickSupplierCreate] = useState(false);
     // Settings & Toggles
     const [globalSettings, setGlobalSettings] = useState({});
     const [enableVat, setEnableVat] = useState(false);
@@ -74,13 +89,31 @@ export default function POCreateManual({ onCreated }) {
     };
     useEffect(() => { loadProducts(); }, [productPage, supplier?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const pickSupplier = (s) => { setSupplier(s); setRows([]); };
+    const pickSupplier = async (s, clearRows = true) => {
+        try {
+            setSupplier(await getSupplier(s.id));
+            if (clearRows) setRows([]);
+        } catch {
+            setSupplier(s);
+            if (clearRows) setRows([]);
+            toast.warn("Loaded supplier summary only. Some completeness checks may be limited.");
+        }
+    };
 
-    const addProduct = (p) => {
+    const addProduct = async (p) => {
+        let product = p;
+        try {
+            product = await getProduct(p.id);
+        } catch {
+            toast.warn("Loaded product summary only. Some completeness checks may be limited.");
+        }
         setRows(prev => prev.some(r => r.productId === p.id) ? prev : [
             ...prev, {
-                productId: p.id, name: p.name, sku: p.sku, unit: p.unit || "pcs",
-                qty: "", unitPrice: p.lastPurchasePrice || "",
+                productId: product.id, name: product.name, sku: product.sku, unit: product.unit || "",
+                status: product.status, originalCostPrice: product.originalCostPrice, reorderLevel: product.reorderLevel,
+                suppliers: product.suppliers || [], defaultSellingPrice: product.defaultSellingPrice,
+                barcode: product.barcode, categoryId: product.categoryId,
+                qty: "", unitPrice: product.lastPurchasePrice || product.originalCostPrice || "",
                 taxPercent: "", // Line-level tax override
                 note: ""
             }
@@ -134,7 +167,144 @@ export default function POCreateManual({ onCreated }) {
         };
     }, [rows, deliveryCharge, enableVat, enableOtherTax, globalSettings]);
 
-    const save = async () => {
+    const openCompletenessModal = (issues, proceed = null) => {
+        setCompletenessIssues(issues);
+        setPendingCompletenessProceed(() => proceed);
+        setShowCompletenessModal(true);
+    };
+
+    const runCompletenessChecks = () => {
+        const supplierIssues = buildCompletenessIssues('supplierPurchase', supplier, item => item?.name || 'Supplier');
+        const productIssues = buildCompletenessIssues('productPurchase', rows, item => item?.name || 'Product');
+        return [...supplierIssues, ...productIssues];
+    };
+
+    const openIssueEditor = (issue) => {
+        if (!issue?.entityId) return;
+        setEditRecord({
+            type: issue.ruleKey === 'supplierPurchase' ? 'supplier' : 'product',
+            id: issue.entityId,
+            name: issue.name
+        });
+    };
+
+    const closeIssueEditor = () => setEditRecord(null);
+
+    const refreshEditedRecord = async () => {
+        if (!editRecord?.id) return;
+        try {
+            if (editRecord.type === 'supplier') {
+                const updated = await getSupplier(editRecord.id);
+                setSupplier(updated);
+                return;
+            }
+            const updated = await getProduct(editRecord.id);
+            setRows(prev => prev.map(row => row.productId === editRecord.id ? {
+                ...row,
+                name: updated.name,
+                sku: updated.sku,
+                unit: updated.unit || "",
+                status: updated.status,
+                originalCostPrice: updated.originalCostPrice,
+                reorderLevel: updated.reorderLevel,
+                suppliers: updated.suppliers || [],
+                defaultSellingPrice: updated.defaultSellingPrice,
+                barcode: updated.barcode,
+                categoryId: updated.categoryId,
+                unitPrice: row.unitPrice || updated.lastPurchasePrice || updated.originalCostPrice || ""
+            } : row));
+        } catch {
+            toast.warn("Saved, but could not refresh the record in this screen.");
+        } finally {
+            closeIssueEditor();
+        }
+    };
+
+    const activeSupplierLinks = (row) => (row.suppliers || []).filter(link => link?.supplierId && link.active !== false);
+
+    const openSupplierAssist = async () => {
+        if (rows.length === 0) { toast.warn("Add at least one product line"); return; }
+        setShowSupplierAssistModal(true);
+        setSupplierAssistLoading(true);
+        setShowQuickSupplierCreate(false);
+        try {
+            const supplierIdSets = rows.map(row => new Set(activeSupplierLinks(row).map(link => link.supplierId)));
+            const commonIds = supplierIdSets.length
+                ? [...supplierIdSets[0]].filter(id => supplierIdSets.every(set => set.has(id)))
+                : [];
+            const suppliers = await Promise.all(commonIds.map(id => getSupplier(id).catch(() => ({ id, name: id }))));
+            setCommonSuppliers(suppliers);
+        } catch {
+            toast.error("Failed to check available suppliers");
+            setCommonSuppliers([]);
+        } finally {
+            setSupplierAssistLoading(false);
+        }
+    };
+
+    const selectAssistedSupplier = async (candidate) => {
+        await pickSupplier(candidate, false);
+        setShowSupplierAssistModal(false);
+    };
+
+    const linkSupplierToSelectedProducts = async (savedSupplier) => {
+        if (!savedSupplier?.id) return;
+        const refreshedRows = [];
+        for (const row of rows) {
+            try {
+                const product = await getProduct(row.productId);
+                const links = product.suppliers || [];
+                const alreadyLinked = links.some(link => link.supplierId === savedSupplier.id);
+                if (!alreadyLinked) {
+                    await updateProduct(product.id, {
+                        barcode: product.barcode || undefined,
+                        name: product.name,
+                        categoryId: product.categoryId || undefined,
+                        unit: product.unit || undefined,
+                        status: product.status,
+                        originalCostPrice: product.originalCostPrice || undefined,
+                        defaultSellingPrice: product.defaultSellingPrice || undefined,
+                        reorderLevel: product.reorderLevel,
+                        suppliers: [
+                            ...links,
+                            {
+                                supplierId: savedSupplier.id,
+                                active: true
+                            }
+                        ]
+                    });
+                }
+                const updated = await getProduct(row.productId);
+                refreshedRows.push({
+                    ...row,
+                    suppliers: updated.suppliers || [],
+                    defaultSellingPrice: updated.defaultSellingPrice,
+                    barcode: updated.barcode,
+                    categoryId: updated.categoryId,
+                    unit: updated.unit || row.unit,
+                    status: updated.status || row.status
+                });
+            } catch {
+                refreshedRows.push(row);
+            }
+        }
+        if (refreshedRows.length) setRows(refreshedRows);
+    };
+
+    const handleQuickSupplierSaved = async (savedSupplier) => {
+        try {
+            await linkSupplierToSelectedProducts(savedSupplier);
+            setSupplier(savedSupplier);
+            setShowSupplierAssistModal(false);
+            toast.success("Supplier created and linked to selected products");
+        } catch {
+            setSupplier(savedSupplier);
+            setShowSupplierAssistModal(false);
+            toast.warn("Supplier selected, but product supplier links may need to be updated manually.");
+        }
+    };
+
+    const performSave = async () => {
         if (isSubmitting) return;
         setIsSubmitting(true);
         try {
@@ -169,6 +339,26 @@ export default function POCreateManual({ onCreated }) {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const save = async () => {
+        if (rows.length === 0) { toast.warn("Add at least one product line"); return; }
+        if (!supplier?.id) {
+            await openSupplierAssist();
+            return;
+        }
+
+        const issues = runCompletenessChecks();
+        if (issues.length > 0) {
+            if (hasBlockingIssues(issues)) {
+                openCompletenessModal(issues);
+                return;
+            }
+            openCompletenessModal(issues, performSave);
+            return;
+        }
+
+        await performSave();
     };
 
     return (
@@ -383,6 +573,100 @@ export default function POCreateManual({ onCreated }) {
             </div>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
+            <CompletenessModal
+                show={showCompletenessModal}
+                issues={completenessIssues}
+                title="Complete Supplier / Product Details"
+                onClose={() => setShowCompletenessModal(false)}
+                onEditIssue={openIssueEditor}
+                onProceed={pendingCompletenessProceed ? () => {
+                    setShowCompletenessModal(false);
+                    pendingCompletenessProceed();
+                } : null}
+            />
+            <Modal show={showSupplierAssistModal} onHide={() => setShowSupplierAssistModal(false)} size="xl" centered scrollable>
+                <Modal.Header closeButton>
+                    <Modal.Title>Select Supplier for Selected Products</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {!showQuickSupplierCreate ? (
+                        <>
+                            <div className="border rounded p-3 mb-3 bg-light">
+                                <div className="fw-semibold mb-1">Selected products</div>
+                                <div className="d-flex flex-wrap gap-2">
+                                    {rows.map(row => (
+                                        <Badge bg="secondary" key={row.productId}>{row.name}</Badge>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {supplierAssistLoading ? (
+                                <div className="text-muted py-4 text-center">Checking suppliers...</div>
+                            ) : commonSuppliers.length > 0 ? (
+                                <>
+                                    <div className="mb-2 text-muted small">
+                                        These suppliers are linked to every selected product.
+                                    </div>
+                                    <Table hover responsive>
+                                        <thead>
+                                            <tr>
+                                                <th>Supplier</th>
+                                                <th>Phone</th>
+                                                <th>Email</th>
+                                                <th className="text-end"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {commonSuppliers.map(candidate => (
+                                                <tr key={candidate.id}>
+                                                    <td className="fw-semibold">{candidate.name}</td>
+                                                    <td>{candidate.phone || "-"}</td>
+                                                    <td>{candidate.email || "-"}</td>
+                                                    <td className="text-end">
+                                                        <Button size="sm" onClick={() => selectAssistedSupplier(candidate)}>Use this supplier</Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                </>
+                            ) : (
+                                <div className="alert alert-warning mb-3">
+                                    No existing supplier is linked to all selected products. Create a supplier here and it will be linked to these products.
+                                </div>
+                            )}
+
+                            <div className="d-flex justify-content-end gap-2">
+                                <Button variant="outline-secondary" onClick={() => setShowSupplierAssistModal(false)}>Cancel</Button>
+                                <Button variant="outline-primary" onClick={() => setShowQuickSupplierCreate(true)}>Create New Supplier</Button>
+                            </div>
+                        </>
+                    ) : (
+                        <SupplierForm
+                            id={null}
+                            compact
+                            startEditing
+                            onClose={() => setShowQuickSupplierCreate(false)}
+                            onSaved={handleQuickSupplierSaved}
+                        />
+                    )}
+                </Modal.Body>
+            </Modal>
+            <Modal show={Boolean(editRecord)} onHide={closeIssueEditor} size="xl" centered scrollable>
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        {editRecord?.type === 'supplier' ? 'Edit Supplier Details' : 'Edit Product Details'}
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {editRecord?.type === 'supplier' && (
+                        <SupplierForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={refreshEditedRecord} />
+                    )}
+                    {editRecord?.type === 'product' && (
+                        <ProductForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={refreshEditedRecord} />
+                    )}
+                </Modal.Body>
+            </Modal>
         </Container>
     );
 }

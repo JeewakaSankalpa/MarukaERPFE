@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
-import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab, Spinner } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import Select from "react-select";
 import api from "../../api/api";
@@ -20,6 +20,7 @@ const createProduct = async (payload) => (await api.post("/products", payload)).
 const updateProduct = async (id, payload) => (await api.put(`/products/${id}`, payload)).data;
 const patchProductStatus = async (id, status) =>
     (await api.patch(`/products/${id}/status`, { status })).data;
+const getReorderSuggestion = async (id) => (await api.get(`/products/${id}/reorder-suggestion`)).data;
 
 const listSuppliersQuick = async () =>
     (await api.get(`/suppliers?${qp({ status: "ACTIVE", page: 0, size: 100, sort: "name,asc" })}`)).data?.content || [];
@@ -123,7 +124,7 @@ function ProductList({ onOpen }) {
 }
 
 /* ================== Form ================== */
-function ProductForm({ id, onClose, onSaved }) {
+export function ProductForm({ id, onClose, onSaved, startEditing = false, compact = false }) {
     const isEdit = Boolean(id);
     const [form, setForm] = useState({
         sku: "", barcode: "", name: "", categoryId: "", unit: "", status: "ACTIVE",
@@ -131,9 +132,11 @@ function ProductForm({ id, onClose, onSaved }) {
     });
     const [supplierOptions, setSupplierOptions] = useState([]);
     const [validated, setValidated] = useState(false);
-    const [isEditMode, setIsEditMode] = useState(!id);
+    const [isEditMode, setIsEditMode] = useState(!id || startEditing);
     const [activeTab, setActiveTab] = useState("details");
     const [stockBatches, setStockBatches] = useState([]);
+    const [reorderSuggestion, setReorderSuggestion] = useState(null);
+    const [loadingReorderSuggestion, setLoadingReorderSuggestion] = useState(false);
 
     const loadStockBatches = async () => {
         if (!id) return;
@@ -148,6 +151,18 @@ function ProductForm({ id, onClose, onSaved }) {
     useEffect(() => {
         if (activeTab === "stock" && id) loadStockBatches();
     }, [activeTab, id]);
+
+    const loadReorderSuggestion = async () => {
+        if (!id) return;
+        setLoadingReorderSuggestion(true);
+        try {
+            setReorderSuggestion(await getReorderSuggestion(id));
+        } catch {
+            toast.error("Failed to calculate reorder suggestion");
+        } finally {
+            setLoadingReorderSuggestion(false);
+        }
+    };
 
     useEffect(() => {
         (async () => {
@@ -169,10 +184,11 @@ function ProductForm({ id, onClose, onSaved }) {
                     reorderLevel: d.reorderLevel || "",
                     suppliers: d.suppliers || [],
                 });
-                setIsEditMode(false);
+                setIsEditMode(Boolean(startEditing));
+                loadReorderSuggestion();
             } catch { toast.error("Failed to load product"); }
         })();
-    }, [id]);
+    }, [id, startEditing]);
 
     const bind = (k, sub) => e => {
         const v = e.target.value;
@@ -236,8 +252,8 @@ function ProductForm({ id, onClose, onSaved }) {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 900, paddingTop: 24 }}>
-            <div className="bg-white shadow rounded p-4">
+        <Container style={{ width: compact ? "100%" : "80vw", maxWidth: 900, paddingTop: compact ? 0 : 24, paddingLeft: compact ? 0 : undefined, paddingRight: compact ? 0 : undefined }}>
+            <div className={compact ? "bg-white" : "bg-white shadow rounded p-4"}>
                 <div className="d-flex justify-content-between align-items-center">
                     <div className="d-flex align-items-center">
                         <button type="button" className="btn btn-light me-3" onClick={onClose}><ArrowLeft size={18} /></button>
@@ -330,6 +346,71 @@ function ProductForm({ id, onClose, onSaved }) {
                         </Col>
                     </Row>
 
+                    {id && (
+                        <div className="border rounded p-3 mt-3 bg-light">
+                            <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                <div>
+                                    <div className="fw-semibold">Reorder suggestion</div>
+                                    <div className="small text-muted">
+                                        Based on recent outgoing stock and supplier lead time.
+                                    </div>
+                                </div>
+                                <Button size="sm" variant="outline-secondary" onClick={loadReorderSuggestion} disabled={loadingReorderSuggestion}>
+                                    {loadingReorderSuggestion ? <Spinner size="sm" className="me-1" /> : null}
+                                    Refresh
+                                </Button>
+                            </div>
+
+                            {reorderSuggestion ? (
+                                <>
+                                    <Row className="g-2 text-center mb-3">
+                                        <Col md={3}>
+                                            <div className="bg-white border rounded p-2 h-100">
+                                                <div className="small text-muted">Used today</div>
+                                                <div className="fw-bold">{reorderSuggestion.usedToday ?? 0}</div>
+                                            </div>
+                                        </Col>
+                                        <Col md={3}>
+                                            <div className="bg-white border rounded p-2 h-100">
+                                                <div className="small text-muted">7-day avg/day</div>
+                                                <div className="fw-bold">{reorderSuggestion.averageDailyUsage7Days ?? 0}</div>
+                                            </div>
+                                        </Col>
+                                        <Col md={3}>
+                                            <div className="bg-white border rounded p-2 h-100">
+                                                <div className="small text-muted">30-day avg/day</div>
+                                                <div className="fw-bold">{reorderSuggestion.averageDailyUsage30Days ?? 0}</div>
+                                            </div>
+                                        </Col>
+                                        <Col md={3}>
+                                            <div className="bg-white border rounded p-2 h-100">
+                                                <div className="small text-muted">Suggested level</div>
+                                                <div className="fw-bold text-primary">{reorderSuggestion.suggestedReorderLevel ?? 0}</div>
+                                            </div>
+                                        </Col>
+                                    </Row>
+                                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                        <div className="small text-muted">
+                                            Uses {reorderSuggestion.selectedAverageDailyUsage ?? 0}/day x ({reorderSuggestion.leadTimeDays ?? 0} lead days + {reorderSuggestion.safetyDays ?? 0} safety days).
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="primary"
+                                            disabled={!isEditMode}
+                                            onClick={() => setForm(f => ({ ...f, reorderLevel: reorderSuggestion.suggestedReorderLevel ?? "" }))}
+                                        >
+                                            Use suggestion
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-muted small">
+                                    {loadingReorderSuggestion ? "Calculating suggestion..." : "No usage data found yet."}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="mt-4">
                         <div className="d-flex justify-content-between align-items-center mb-2">
                             <h5 className="mb-0">Suppliers</h5>
@@ -339,8 +420,9 @@ function ProductForm({ id, onClose, onSaved }) {
                         </div>
 
                         {(form.suppliers || []).map((sl, i) => (
-                            <Row className="g-3 border rounded p-2 mb-2" key={i}>
-                                <Col md={4}>
+                            <div className="border rounded p-3 mb-3 bg-white" key={i}>
+                            <Row className="g-3 align-items-end">
+                                <Col xs={12} lg={4}>
                                     <Form.Group>
                                         <Form.Label>Supplier *</Form.Label>
                                         <Select
@@ -358,41 +440,49 @@ function ProductForm({ id, onClose, onSaved }) {
                                             isSearchable
                                             className="modern-select-container"
                                             classNamePrefix="modern-select"
+                                            menuPortalTarget={document.body}
+                                            styles={{
+                                                menuPortal: base => ({ ...base, zIndex: 9999 }),
+                                                control: base => ({ ...base, minHeight: 38 }),
+                                                valueContainer: base => ({ ...base, minWidth: 0 }),
+                                                singleValue: base => ({ ...base, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })
+                                            }}
                                         />
                                     </Form.Group>
                                 </Col>
-                                <Col md={2}>
+                                <Col xs={12} sm={6} lg={2}>
                                     <Form.Group>
                                         <Form.Label>Item Code</Form.Label>
                                         <Form.Control value={sl.supplierItemCode || ""} onChange={updSupplierLink(i, "supplierItemCode")} disabled={!isEditMode} />
                                     </Form.Group>
                                 </Col>
-                                <Col md={2}>
+                                <Col xs={6} sm={3} lg={1}>
                                     <Form.Group>
                                         <Form.Label>Lead Time</Form.Label>
-                                        <Form.Control value={sl.leadTimeDays || ""} onChange={updSupplierLink(i, "leadTimeDays")} disabled={!isEditMode} />
+                                        <Form.Control type="number" min="0" value={sl.leadTimeDays || ""} onChange={updSupplierLink(i, "leadTimeDays")} disabled={!isEditMode} />
                                     </Form.Group>
                                 </Col>
-                                <Col md={2}>
+                                <Col xs={6} sm={3} lg={1}>
                                     <Form.Group>
                                         <Form.Label>MOQ</Form.Label>
-                                        <Form.Control value={sl.minOrderQty || ""} onChange={updSupplierLink(i, "minOrderQty")} disabled={!isEditMode} />
+                                        <Form.Control type="number" min="0" value={sl.minOrderQty || ""} onChange={updSupplierLink(i, "minOrderQty")} disabled={!isEditMode} />
                                     </Form.Group>
                                 </Col>
-                                <Col md={2}>
+                                <Col xs={12} sm={6} lg={2}>
                                     <Form.Group>
                                         <Form.Label>Last Price</Form.Label>
-                                        <Form.Control value={sl.lastPurchasePrice || ""} onChange={updSupplierLink(i, "lastPurchasePrice")} disabled={!isEditMode} />
+                                        <Form.Control type="number" min="0" step="0.01" value={sl.lastPurchasePrice || ""} onChange={updSupplierLink(i, "lastPurchasePrice")} disabled={!isEditMode} />
                                     </Form.Group>
                                 </Col>
-                                <Col md={2} className="d-flex align-items-center">
-                                    <Form.Check type="checkbox" label="Active" checked={sl.active !== false}
-                                                onChange={updSupplierLink(i, "active")} disabled={!isEditMode} />
-                                </Col>
-                                <Col md={12} className="d-flex justify-content-end">
-                                    <Button size="sm" variant="link" onClick={() => rmSupplierLink(i)} disabled={!isEditMode}>Remove</Button>
+                                <Col xs={12} lg={2}>
+                                    <div className="d-flex flex-wrap justify-content-lg-end align-items-center gap-3 h-100">
+                                        <Form.Check type="checkbox" label="Active" checked={sl.active !== false}
+                                                    onChange={updSupplierLink(i, "active")} disabled={!isEditMode} />
+                                        <Button size="sm" variant="outline-danger" onClick={() => rmSupplierLink(i)} disabled={!isEditMode}>Remove</Button>
+                                    </div>
                                 </Col>
                             </Row>
+                            </div>
                         ))}
                     </div>
 

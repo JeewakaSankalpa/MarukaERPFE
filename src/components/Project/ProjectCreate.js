@@ -19,6 +19,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { listWorkflows } from "../../services/workflowApi";
 import Select from "react-select";
 import SafeSelect from "../ReusableComponents/SafeSelect";
+import CompletenessModal from "../ReusableComponents/CompletenessModal";
+import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
 
 const ProjectForm = () => {
   const { id: routeId } = useParams();
@@ -50,6 +52,9 @@ const ProjectForm = () => {
   // Quick Customer Add State
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [addingCustomer, setAddingCustomer] = useState(false);
+  const [completenessIssues, setCompletenessIssues] = useState([]);
+  const [showCompletenessModal, setShowCompletenessModal] = useState(false);
+  const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
   const [quickCustomer, setQuickCustomer] = useState({
     comName: "",
     contactPersonName: "",
@@ -208,13 +213,14 @@ const ProjectForm = () => {
     // (add GB if you want)
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setValidated(true);
+  const openCompletenessModal = (issues, proceed = null) => {
+    setCompletenessIssues(issues);
+    setPendingCompletenessProceed(() => proceed);
+    setShowCompletenessModal(true);
+  };
 
+  const performSubmit = async () => {
     const { projectName, customerId, salesRep, comment } = projectData;
-    if (!projectName || !customerId || !salesRep || !comment) return;
-
     setIsSubmitting(true);
     try {
       if (!routeId) {
@@ -300,6 +306,27 @@ const ProjectForm = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setValidated(true);
+
+    const { projectName, customerId, salesRep, comment } = projectData;
+    if (!projectName || !customerId || !salesRep || !comment) return;
+
+    const selectedCustomer = customers.find(c => c.id === customerId);
+    const issues = buildCompletenessIssues('customerProject', selectedCustomer, item => item?.comName || 'Customer');
+    if (issues.length > 0) {
+      if (hasBlockingIssues(issues)) {
+        openCompletenessModal(issues);
+        return;
+      }
+      openCompletenessModal(issues, performSubmit);
+      return;
+    }
+
+    await performSubmit();
   };
 
   const sortOptionsBySearch = (options, search) => {
@@ -682,6 +709,17 @@ const ProjectForm = () => {
       </Modal>
 
       <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
+      <CompletenessModal
+        show={showCompletenessModal}
+        issues={completenessIssues}
+        title="Complete Customer Details"
+        onClose={() => setShowCompletenessModal(false)}
+        onEditIssue={(issue) => issue?.entityId && navigate(`/customer/edit/${issue.entityId}`)}
+        onProceed={pendingCompletenessProceed ? () => {
+          setShowCompletenessModal(false);
+          pendingCompletenessProceed();
+        } : null}
+      />
     </div >
   );
 };

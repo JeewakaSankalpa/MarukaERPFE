@@ -110,11 +110,11 @@ function SupplierList({ onOpen }) {
 }
 
 /* ================== Form ================== */
-function SupplierForm({ id, onClose, onSaved }) {
+export function SupplierForm({ id, onClose, onSaved, startEditing = false, compact = false }) {
     const isEdit = Boolean(id);
     const [form, setForm] = useState({ supplierCode: "", name: "", status: "ACTIVE", email: "", phone: "", taxId: "", contactPerson: "", address: {} });
     const [validated, setValidated] = useState(false);
-    const [isEditMode, setIsEditMode] = useState(!id);
+    const [isEditMode, setIsEditMode] = useState(!id || startEditing);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -132,10 +132,10 @@ function SupplierForm({ id, onClose, onSaved }) {
                     contactPerson: d.contactPerson || "",
                     address: d.address || {},
                 });
-                setIsEditMode(false);
+                setIsEditMode(Boolean(startEditing));
             } catch { toast.error("Failed to load supplier"); }
         })();
-    }, [id]);
+    }, [id, startEditing]);
 
     const bind = (k, sub) => e => {
         const v = e.target.value;
@@ -177,10 +177,9 @@ function SupplierForm({ id, onClose, onSaved }) {
                 address: form.address,
                 ...(isEdit ? {} : { supplierCode: form.supplierCode || undefined }),
             };
-            if (isEdit) await updateSupplier(id, payload);
-            else await createSupplier(payload);
+            const saved = isEdit ? await updateSupplier(id, payload) : await createSupplier(payload);
             toast.success(isEdit ? "Supplier updated" : "Supplier created");
-            onSaved?.();
+            onSaved?.(saved);
             onClose?.();
         } catch {
             toast.error("Save failed");
@@ -190,8 +189,8 @@ function SupplierForm({ id, onClose, onSaved }) {
     };
 
     return (
-        <Container className="my-5" style={{ width: "80vw", maxWidth: 900, paddingTop: 24, overflow: "auto", height: "calc(100vh - 10rem)" }}>
-            <div className="bg-white shadow rounded p-4">
+        <Container className={compact ? "" : "my-5"} style={{ width: compact ? "100%" : "80vw", maxWidth: 900, paddingTop: compact ? 0 : 24, overflow: "auto", height: compact ? "auto" : "calc(100vh - 10rem)", paddingLeft: compact ? 0 : undefined, paddingRight: compact ? 0 : undefined }}>
+            <div className={compact ? "bg-white" : "bg-white shadow rounded p-4"}>
                 <div className="d-flex justify-content-between align-items-center">
                     <div className="d-flex align-items-center">
                         <button type="button" className="btn btn-light me-3" onClick={onClose}>

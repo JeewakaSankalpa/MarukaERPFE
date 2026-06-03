@@ -6,6 +6,8 @@ import api from "../../api/api";
 import { toast } from "react-toastify";
 import { formatAttendanceTime, toDateTimeLocalValue } from "../../utils/attendanceTime";
 import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
+import CompletenessModal from "../ReusableComponents/CompletenessModal";
+import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
 
 function SalaryManagement() {
     const [key, setKey] = useState("processing");
@@ -18,6 +20,10 @@ function SalaryManagement() {
     const [salaries, setSalaries] = useState([]);
     const [processedRun, setProcessedRun] = useState(null); // The details of the run status
     const [employees, setEmployees] = useState({}); // Map ID -> Name
+    const [employeeList, setEmployeeList] = useState([]);
+    const [completenessIssues, setCompletenessIssues] = useState([]);
+    const [showCompletenessModal, setShowCompletenessModal] = useState(false);
+    const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
 
     // -- Config State --
     const [config, setConfig] = useState({
@@ -35,6 +41,9 @@ function SalaryManagement() {
     const [viewingSalary, setViewingSalary] = useState(null); // For salary Modal
     const [showEditModal, setShowEditModal] = useState(false);
     const [editRecord, setEditRecord] = useState(null);
+    const [attendanceFile, setAttendanceFile] = useState(null);
+    const [importingAttendance, setImportingAttendance] = useState(false);
+    const [attendanceImportResult, setAttendanceImportResult] = useState(null);
 
     useEffect(() => {
         fetchEmployees();
@@ -52,8 +61,17 @@ function SalaryManagement() {
             const map = {};
             (res.data || []).forEach(e => map[e.id] = `${e.firstName} ${e.lastName}`);
             setEmployees(map);
+            setEmployeeList(res.data || []);
         } catch (e) { }
     };
+
+    const openCompletenessModal = (issues, proceed = null) => {
+        setCompletenessIssues(issues);
+        setPendingCompletenessProceed(() => proceed);
+        setShowCompletenessModal(true);
+    };
+
+    const activeEmployees = () => (employeeList || []).filter(e => e.active !== false);
 
     const fetchSalaries = async () => {
         setLoading(true);
@@ -129,6 +147,44 @@ function SalaryManagement() {
         }
     };
 
+    const performAttendanceImport = async () => {
+        const formData = new FormData();
+        formData.append("file", attendanceFile);
+        setImportingAttendance(true);
+        try {
+            const res = await api.post("/attendance/import", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            setAttendanceImportResult(res.data);
+            toast.success(`Attendance imported: ${res.data.imported || 0} new, ${res.data.updated || 0} updated`);
+            setAttendanceFile(null);
+            fetchAttendanceReport();
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Attendance import failed");
+        } finally {
+            setImportingAttendance(false);
+        }
+    };
+
+    const handleAttendanceImport = async () => {
+        if (!attendanceFile) {
+            toast.warn("Select an attendance Excel file first");
+            return;
+        }
+
+        const issues = buildCompletenessIssues('employeeAttendanceImport', activeEmployees(), item => `${item?.firstName || ''} ${item?.lastName || ''}`.trim() || item?.username || 'Employee');
+        if (issues.length > 0) {
+            if (hasBlockingIssues(issues)) {
+                openCompletenessModal(issues);
+                return;
+            }
+            openCompletenessModal(issues, performAttendanceImport);
+            return;
+        }
+
+        await performAttendanceImport();
+    };
+
     const exportExcel = () => {
         let csv = "Employee,Date,Status,CheckIn,CheckOut,WorkedHours,Comments\n";
         attendanceReport.forEach(e => {
@@ -144,7 +200,7 @@ function SalaryManagement() {
         a.click();
     };
 
-    const handleGenerate = async () => {
+    const performGenerate = async () => {
         setLoading(true);
         try {
             const res = await api.post(`/salary/generate?month=${selectedMonth}`);
@@ -155,6 +211,20 @@ function SalaryManagement() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleGenerate = async () => {
+        const issues = buildCompletenessIssues('employeePayroll', activeEmployees(), item => `${item?.firstName || ''} ${item?.lastName || ''}`.trim() || item?.username || 'Employee');
+        if (issues.length > 0) {
+            if (hasBlockingIssues(issues)) {
+                openCompletenessModal(issues);
+                return;
+            }
+            openCompletenessModal(issues, performGenerate);
+            return;
+        }
+
+        await performGenerate();
     };
 
     const saveConfig = async () => {
@@ -436,8 +506,38 @@ function SalaryManagement() {
                                 <Form.Label>Review Month</Form.Label>
                                 <Form.Control type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
                             </div>
-                            <Button variant="success" onClick={exportExcel}>Export Excel/CSV</Button>
+                            <div className="d-flex align-items-end gap-2 flex-wrap justify-content-end">
+                                <div style={{ minWidth: 260 }}>
+                                    <Form.Label>Upload Attendance Report</Form.Label>
+                                    <Form.Control
+                                        type="file"
+                                        accept=".xls,.xlsx"
+                                        onChange={(e) => setAttendanceFile(e.target.files?.[0] || null)}
+                                    />
+                                </div>
+                                <Button variant="primary" onClick={handleAttendanceImport} disabled={!attendanceFile || importingAttendance}>
+                                    {importingAttendance ? <><Spinner size="sm" animation="border" className="me-1" />Importing</> : "Import Attendance"}
+                                </Button>
+                                <Button variant="success" onClick={exportExcel}>Export Excel/CSV</Button>
+                            </div>
                         </div>
+                        {attendanceImportResult && (
+                            <Alert variant={attendanceImportResult.unmatched > 0 || attendanceImportResult.warnings?.length > 0 ? "warning" : "success"}>
+                                <div className="fw-semibold mb-1">
+                                    Import summary: {attendanceImportResult.imported || 0} new, {attendanceImportResult.updated || 0} updated,
+                                    {" "}{attendanceImportResult.skipped || 0} skipped, {attendanceImportResult.unmatched || 0} unmatched.
+                                </div>
+                                {attendanceImportResult.unmatchedRows?.length > 0 && (
+                                    <div className="small">
+                                        Unmatched: {attendanceImportResult.unmatchedRows.slice(0, 8).join("; ")}
+                                        {attendanceImportResult.unmatchedRows.length > 8 ? "..." : ""}
+                                    </div>
+                                )}
+                                {attendanceImportResult.warnings?.map((warning, idx) => (
+                                    <div key={idx} className="small">{warning}</div>
+                                ))}
+                            </Alert>
+                        )}
                         <Table striped bordered size="sm" hover>
                             <thead>
                                 <tr>
@@ -574,6 +674,17 @@ function SalaryManagement() {
                     }}>Confirm Batch Payment</Button>
                 </Modal.Footer>
             </Modal>
+            <CompletenessModal
+                show={showCompletenessModal}
+                issues={completenessIssues}
+                title="Complete Employee Details"
+                onClose={() => setShowCompletenessModal(false)}
+                onEditIssue={(issue) => issue?.entityId && navigate(`/employee/edit/${issue.entityId}`)}
+                onProceed={pendingCompletenessProceed ? () => {
+                    setShowCompletenessModal(false);
+                    pendingCompletenessProceed();
+                } : null}
+            />
         </Container>
     );
 }
