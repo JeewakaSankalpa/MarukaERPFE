@@ -89,13 +89,29 @@ export default function SystemConfiguration() {
 
     // Download a blank Excel template
     const handleDownloadTemplate = () => {
-        const headers = [["Product / Service Name", "Sales Description", "SKU", "Type", "Sales Price / Rate", "Tax on Sales", "Price / Rate Includes Tax", "Income Account", "Purchase Description", "Purchase Cost", "Tax on Purchase", "Purchase Cost Includes Tax", "Expense Account", "Quantity on hand", "Reorder point", "Inventory asset account", "Quantity as of date"]];
+        const headers = [["ITEM CODE", "ITEM DESCRIPTION", "QTY", "RATE", "SUPPLIER", "Price"]];
         const ws = XLSX.utils.aoa_to_sheet(headers);
-        // Set column widths
-        ws["!cols"] = [30, 20, 15, 12, 15, 12, 12, 15, 20, 15, 12, 12, 15, 15, 15, 15, 15].map(w => ({ wch: w }));
+        ws["!cols"] = [16, 40, 12, 12, 44, 14].map(w => ({ wch: w }));
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+        XLSX.utils.book_append_sheet(wb, ws, "Inventory Valuation Summary");
         XLSX.writeFile(wb, "inventory_import_template.xlsx");
+    };
+
+    const normalizeImportHeader = (value) => String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+
+    const findInventoryHeaderRow = (data) => {
+        for (let i = 0; i < data.length; i += 1) {
+            const normalized = (data[i] || []).map(normalizeImportHeader);
+            if (normalized.includes("ITEM CODE") && normalized.includes("ITEM DESCRIPTION")) {
+                return i;
+            }
+        }
+        return 0;
+    };
+
+    const headerIndex = (headers, label, fallback) => {
+        const idx = headers.findIndex(h => h === label);
+        return idx >= 0 ? idx : fallback;
     };
 
     // Parse the selected file and populate preview rows
@@ -109,15 +125,29 @@ export default function SystemConfiguration() {
             const wb = XLSX.read(evt.target.result, { type: "binary" });
             const ws = wb.Sheets[wb.SheetNames[0]];
             const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-            // data[0] = headers, data[1..] = rows
-            const rows = data.slice(1).filter(r => r.some(c => String(c).trim() !== "")).map((r, i) => ({
-                rowNum: i + 2,
-                name: String(r[0] || "").trim(),
-                sku: String(r[2] || "").trim() || String(i + 1).padStart(3, '0'),
-                sellingPrice: r[4] !== undefined ? r[4] : "",
-                costPrice: r[9] !== undefined ? r[9] : "",
-                openingQty: r[13] !== undefined ? r[13] : "",
-            }));
+            const headerRow = findInventoryHeaderRow(data);
+            const headers = (data[headerRow] || []).map(normalizeImportHeader);
+            const isFinalFormat = headers.includes("ITEM CODE") && headers.includes("ITEM DESCRIPTION");
+
+            const skuCol = isFinalFormat ? headerIndex(headers, "ITEM CODE", 0) : 2;
+            const nameCol = isFinalFormat ? headerIndex(headers, "ITEM DESCRIPTION", 1) : 0;
+            const qtyCol = isFinalFormat ? headerIndex(headers, "QTY", 2) : 13;
+            const rateCol = isFinalFormat ? headerIndex(headers, "RATE", 3) : 4;
+            const costCol = isFinalFormat ? rateCol : 9;
+            const supplierCol = isFinalFormat ? headerIndex(headers, "SUPPLIER", 4) : -1;
+
+            const rows = data.slice(headerRow + 1)
+                .map((r, i) => ({
+                    rowNum: headerRow + i + 2,
+                    name: String(r[nameCol] || "").trim(),
+                    sku: String(r[skuCol] || "").trim() || String(i + 1).padStart(3, '0'),
+                    sellingPrice: r[rateCol] !== undefined ? r[rateCol] : "",
+                    costPrice: r[costCol] !== undefined ? r[costCol] : "",
+                    openingQty: r[qtyCol] !== undefined && String(r[qtyCol]).trim() !== "" ? r[qtyCol] : 0,
+                    supplier: supplierCol >= 0 ? String(r[supplierCol] || "").trim() : "",
+                    isFinalFormat
+                }))
+                .filter(r => r.name);
             setImportPreview(rows);
         };
         reader.readAsBinaryString(f);
@@ -607,26 +637,15 @@ export default function SystemConfiguration() {
                 <Card.Body className="p-4">
                     {/* Step 1: Column guide */}
                     <div className="mb-4 p-3 rounded" style={{ background: "#f8f9ff", border: "1px solid #e2e8f0" }}>
-                        <p className="mb-2 fw-semibold small text-secondary">Expected Excel columns (1 to 17):</p>
+                        <p className="mb-2 fw-semibold small text-secondary">Expected Excel columns:</p>
                         <div className="d-flex flex-wrap gap-2">
                             {[
-                                { col: "1", label: "Product / Service Name *" },
-                                { col: "2", label: "Sales Description" },
-                                { col: "3", label: "SKU" },
-                                { col: "4", label: "Type" },
-                                { col: "5", label: "Sales Price / Rate *" },
-                                { col: "6", label: "Tax on Sales" },
-                                { col: "7", label: "Price / Rate Includes Tax" },
-                                { col: "8", label: "Income Account" },
-                                { col: "9", label: "Purchase Description" },
-                                { col: "10", label: "Purchase Cost" },
-                                { col: "11", label: "Tax on Purchase" },
-                                { col: "12", label: "Purchase Cost Includes Tax" },
-                                { col: "13", label: "Expense Account" },
-                                { col: "14", label: "Quantity on hand *" },
-                                { col: "15", label: "Reorder point" },
-                                { col: "16", label: "Inventory asset account" },
-                                { col: "17", label: "Quantity as of date" },
+                                { col: "A", label: "ITEM CODE / SKU" },
+                                { col: "B", label: "ITEM DESCRIPTION / Item name *" },
+                                { col: "C", label: "QTY / Stock, blank = 0" },
+                                { col: "D", label: "RATE / Buy & sell price" },
+                                { col: "E", label: "SUPPLIER, split multiple with /" },
+                                { col: "F", label: "Price / Stock value" },
                             ].map(({ col, label }) => (
                                 <span key={col} className="badge d-flex align-items-center gap-1"
                                     style={{ background: "#edf2f7", color: "#2d3748", fontWeight: 500, fontSize: 12 }}>
@@ -635,7 +654,7 @@ export default function SystemConfiguration() {
                                 </span>
                             ))}
                         </div>
-                        <p className="mb-0 mt-2 text-muted" style={{ fontSize: 12 }}>* Product Name, Sales Price, and Quantity are required. SKU is auto-generated if left blank. Other fields use system defaults if empty.</p>
+                        <p className="mb-0 mt-2 text-muted" style={{ fontSize: 12 }}>* Item Description is required. Empty QTY imports as 0 stock. RATE is used as both buying and selling price.</p>
                     </div>
 
                     <Row className="g-3 align-items-end mb-3">
@@ -706,11 +725,11 @@ export default function SystemConfiguration() {
                                     </thead>
                                     <tbody>
                                         {importPreview.map(r => (
-                                            <tr key={r.rowNum} className={(!r.name || r.sellingPrice === "" || r.openingQty === "") ? "table-warning" : ""}>
+                                            <tr key={r.rowNum} className={!r.name ? "table-warning" : ""}>
                                                 <td className="text-muted">{r.rowNum}</td>
                                                 <td>{r.name || <span className="text-danger">—</span>}</td>
                                                 <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
-                                                <td>{r.costPrice}</td>
+                                                <td>{r.costPrice === "" ? 0 : r.costPrice}</td>
                                                 <td>{r.sellingPrice === "" ? <span className="text-danger">—</span> : r.sellingPrice}</td>
                                                 <td><strong>{r.openingQty === "" ? <span className="text-danger">—</span> : r.openingQty}</strong></td>
                                             </tr>
@@ -719,7 +738,7 @@ export default function SystemConfiguration() {
                                 </Table>
                             </div>
                             <p className="text-muted mt-1 mb-0" style={{ fontSize: 11 }}>
-                                Rows highlighted in yellow are missing required fields and will be skipped.
+                                Blank quantity is imported as 0. Multiple suppliers can be separated with /.
                             </p>
                         </div>
                     )}

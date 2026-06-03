@@ -64,6 +64,9 @@ const POPrint = () => {
     }, 0);
 
     const grandTotal = subTotal + taxTotal;
+    const inquiryRef = po.inquiryNumber || po.projectInquiryNumber || po.projectId || po.projectRef || "";
+    const jobRef = po.jobNumber || po.projectJobNumber || "";
+    const requestRef = po.prLinks && po.prLinks.length > 0 ? po.prLinks[0].prNumber : "";
 
     return (
         <div className="bg-white min-vh-100 p-4" style={{ color: "#000", fontFamily: "Arial, sans-serif" }}>
@@ -153,8 +156,17 @@ const POPrint = () => {
                         <div>{po.quotationRef || "-"}</div>
                     </div>
                     <div className="col-6">
-                        <h6 className="fw-bold text-uppercase" style={{ fontSize: "0.85rem" }}>PROJECT NO</h6>
-                        <div>{po.projectRef || (po.prLinks && po.prLinks.length > 0 ? po.prLinks[0].prNumber : "-")}</div>
+                        {inquiryRef || jobRef ? (
+                            <>
+                                <h6 className="fw-bold text-uppercase" style={{ fontSize: "0.85rem" }}>INQUIRY / JOB NO</h6>
+                                <div>{inquiryRef || "-"}{jobRef ? ` / ${jobRef}` : ""}</div>
+                            </>
+                        ) : (
+                            <>
+                                <h6 className="fw-bold text-uppercase" style={{ fontSize: "0.85rem" }}>REQUEST NO</h6>
+                                <div>{requestRef || "-"}</div>
+                            </>
+                        )}
                     </div>
                 </div>
 

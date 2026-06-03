@@ -104,8 +104,10 @@ const QuotationPrint = () => {
     const today = new Date();
     const validUntil = new Date();
     validUntil.setDate(today.getDate() + 30);
-    const projectRef = project?.jobNumber || project?.projectNumber || project?.projectCode || project?.id || projectId;
-    const poRef = project?.poNumber || project?.customerPoNo || project?.purchaseOrderNo || "Verbally confirmed";
+    const inquiryRef = project?.id || project?.inquiryNumber || project?.referenceNumber || projectId || "-";
+    const jobRef = project?.jobNumber || "-";
+    const subtitleParts = [`Inquiry: ${inquiryRef}`];
+    if (project?.jobNumber) subtitleParts.push(`Job: ${project.jobNumber}`);
     const activeInvoice = invoices.find(i => i.status !== "CANCELLED");
 
     return (
@@ -154,7 +156,7 @@ const QuotationPrint = () => {
             <ReportLayout
                 title="Quotation"
                 orientation="portrait"
-                subtitle={`Ref: ${projectRef} - v${estimation.version || 1}`}
+                subtitle={`${subtitleParts.join(" | ")} - v${estimation.version || 1}`}
             >
                 <div className="mb-4 d-flex justify-content-between gap-4">
                     <div style={{ maxWidth: "55%" }}>
@@ -172,8 +174,8 @@ const QuotationPrint = () => {
                     <div className="text-end" style={{ minWidth: 240 }}>
                         <div><strong>Date:</strong> {formatDate(today)}</div>
                         <div><strong>Valid Until:</strong> {formatDate(validUntil)}</div>
-                        <div><strong>PO No:</strong> {poRef}</div>
-                        <div><strong>Project No:</strong> {projectRef}</div>
+                        <div><strong>Inquiry No:</strong> {inquiryRef}</div>
+                        <div><strong>Job No:</strong> {jobRef}</div>
                     </div>
                 </div>
 

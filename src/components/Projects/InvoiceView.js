@@ -121,8 +121,8 @@ const InvoiceView = () => {
     const balanceDue = (invoice.totalAmount || 0) - totalReceived;
     const isTaxInvoice = Number(invoice.vatAmount || 0) > 0 && invoice.status !== "PENDING";
     const documentTitle = isTaxInvoice ? "Tax Invoice" : "Proforma Invoice";
-    const projectRef = project?.jobNumber || project?.projectNumber || project?.projectCode || project?.id || invoice.projectId;
-    const poRef = project?.poNumber || project?.customerPoNo || project?.purchaseOrderNo || "Verbally confirmed";
+    const inquiryRef = project?.id || project?.inquiryNumber || project?.referenceNumber || invoice.projectId || "-";
+    const jobRef = project?.jobNumber || "-";
     const groupedItems = estimation?.components?.length
         ? estimation.components.map((comp) => ({
             description: comp.name,
@@ -183,8 +183,8 @@ const InvoiceView = () => {
                     <div className="text-end" style={{ minWidth: 250 }}>
                         <div><strong>Date:</strong> {formatDate(invoice.issuedDate)}</div>
                         <div><strong>Due Date:</strong> {formatDate(invoice.dueDate)}</div>
-                        <div><strong>PO No:</strong> {poRef}</div>
-                        <div><strong>Project No:</strong> {projectRef}</div>
+                        <div><strong>Inquiry No:</strong> {inquiryRef}</div>
+                        <div><strong>Job No:</strong> {jobRef}</div>
                         <div><strong>Status:</strong> <Badge bg={getStatusVariant(invoice.status)}>{invoice.status}</Badge></div>
                     </div>
                 </div>

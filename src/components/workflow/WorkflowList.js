@@ -114,7 +114,7 @@ export default function WorkflowList() {
                                         <Link to={`/admin/workflow/${wf.id}`} className="text-decoration-none">
                                             {wf.id}
                                         </Link>
-                                        {wf.id === 'active' && <Badge bg="success" className="ms-2">Active</Badge>}
+                                        {wf.active && <Badge bg="success" className="ms-2">Active</Badge>}
                                     </td>
                                     <td>{wf.version}</td>
                                     <td>{wf.updatedAt ? new Date(wf.updatedAt).toLocaleString() : "-"}</td>
@@ -137,7 +137,7 @@ export default function WorkflowList() {
                                         >
                                             Duplicate
                                         </Button>
-                                        {wf.id !== 'active' && (
+                                        {!wf.active && (
                                             <Button
                                                 size="sm"
                                                 variant="outline-success"
