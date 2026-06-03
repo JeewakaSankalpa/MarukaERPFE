@@ -106,6 +106,7 @@ export default function POListView({ onOpenGRN }) {
                         <tr>
                             <th>PO No</th>
                             <th>Supplier</th>
+                            <th>For</th>
                             <th>Items</th>
                             <th>Status</th>
                             <th>Approval</th>
@@ -120,6 +121,16 @@ export default function POListView({ onOpenGRN }) {
                                 <tr key={po.id}>
                                     <td>{po.poNumber}</td>
                                     <td>{po.supplierNameSnapshot || po.supplierName}</td>
+                                    <td>
+                                        {po.originType === "PROJECT" || po.projectId ? (
+                                            <>
+                                                <Badge bg="success" className="me-1">{po.jobNumber || "MJN -"}</Badge>
+                                                <div className="small text-muted">{po.inquiryNumber || po.projectId}</div>
+                                            </>
+                                        ) : (
+                                            <Badge bg="secondary">Main Store</Badge>
+                                        )}
+                                    </td>
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
                                     </td>

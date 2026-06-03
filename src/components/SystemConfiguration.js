@@ -35,6 +35,7 @@ export default function SystemConfiguration() {
         "app.notification.enable.approval": "true",
         "app.notification.enable.general": "true",
         "app.notification.enable.project.transition": "true",
+        "app.project.revision.requireApproval": "true",
         "app.estimation.vat": "18",
         "app.estimation.tax": "0",
         "app.estimation.margin": "15",
@@ -487,6 +488,15 @@ export default function SystemConfiguration() {
                                 name="app.notification.enable.project.digest"
                                 checked={config["app.notification.enable.project.digest"] !== "false"}
                                 onChange={(e) => setConfig({ ...config, "app.notification.enable.project.digest": String(e.target.checked) })}
+                                className="mb-2"
+                            />
+                            <Form.Check
+                                type="switch"
+                                id="pj-revision-approval"
+                                label="Require Approval for Project Revisions"
+                                name="app.project.revision.requireApproval"
+                                checked={config["app.project.revision.requireApproval"] !== "false"}
+                                onChange={(e) => setConfig({ ...config, "app.project.revision.requireApproval": String(e.target.checked) })}
                             />
                         </Col>
                     </Row>

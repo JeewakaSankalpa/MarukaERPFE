@@ -64,6 +64,7 @@ const POPrint = () => {
     }, 0);
 
     const grandTotal = subTotal + taxTotal;
+    const isStorePo = po.originType === "STORES" || (!po.projectId && !po.inquiryNumber && !po.jobNumber);
     const inquiryRef = po.inquiryNumber || po.projectInquiryNumber || po.projectId || po.projectRef || "";
     const jobRef = po.jobNumber || po.projectJobNumber || "";
     const requestRef = po.prLinks && po.prLinks.length > 0 ? po.prLinks[0].prNumber : "";
@@ -156,10 +157,15 @@ const POPrint = () => {
                         <div>{po.quotationRef || "-"}</div>
                     </div>
                     <div className="col-6">
-                        {inquiryRef || jobRef ? (
+                        {isStorePo ? (
+                            <>
+                                <h6 className="fw-bold text-uppercase" style={{ fontSize: "0.85rem" }}>PURCHASE FOR</h6>
+                                <div>Main Store</div>
+                            </>
+                        ) : inquiryRef || jobRef ? (
                             <>
                                 <h6 className="fw-bold text-uppercase" style={{ fontSize: "0.85rem" }}>INQUIRY / JOB NO</h6>
-                                <div>{inquiryRef || "-"}{jobRef ? ` / ${jobRef}` : ""}</div>
+                                <div>MIN: {inquiryRef || "-"}{jobRef ? ` / MJN: ${jobRef}` : ""}</div>
                             </>
                         ) : (
                             <>
@@ -186,7 +192,14 @@ const POPrint = () => {
                             const amount = (item.orderedQty || 0) * (item.unitPrice || 0);
                             return (
                                 <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
-                                    <td style={{ padding: "12px" }}>{item.productNameSnapshot || item.productName}</td>
+                                    <td style={{ padding: "12px" }}>
+                                        <div>{item.productNameSnapshot || item.productName}</div>
+                                        {(item.projectId || item.jobNumber || item.inquiryNumber) && (
+                                            <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                                                MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                            </div>
+                                        )}
+                                    </td>
                                     <td style={{ padding: "12px", textAlign: "center" }}>{item.orderedQty}</td>
                                     <td style={{ padding: "12px", textAlign: "right" }}>
                                         {item.unitPrice ? item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }) : "-"}

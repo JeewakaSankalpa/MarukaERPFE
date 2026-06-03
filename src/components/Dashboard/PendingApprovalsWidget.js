@@ -80,11 +80,24 @@ export default function PendingApprovalsWidget() {
                                             <tr key={i}>
                                                 <td>
                                                     <div className="fw-semibold">{p.projectName}</div>
-                                                    <div className="small text-muted">{p.customerName}</div>
+                                                    <div className="small text-muted">
+                                                        {p.customerName}
+                                                        {p.approvalType === "REVISION" && (
+                                                            <span className="d-block text-warning">
+                                                                Revision v{p.revisionNumber}: {p.reasonForRevision || "No reason provided"}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
-                                                <td><Badge bg="info">{p.stageType}</Badge></td>
                                                 <td>
-                                                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/projects/manage/${p.projectId}`)}>
+                                                    <Badge bg={p.approvalType === "REVISION" ? "warning" : "info"}>
+                                                        {p.approvalType === "REVISION"
+                                                            ? `${p.stageType || "-"} -> ${p.targetStage || "-"}`
+                                                            : p.stageType}
+                                                    </Badge>
+                                                </td>
+                                                <td>
+                                                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/projects/manage/${p.projectId}?tab=REVISIONS`)}>
                                                         Review
                                                     </Button>
                                                 </td>

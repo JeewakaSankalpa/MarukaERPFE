@@ -66,9 +66,23 @@ export default function IRFulfilmentPage() {
         (async () => {
             const [d, p] = await Promise.all([listDepartments(), listProjects()]);
             setDeptMap(d.reduce((m, x) => ({ ...m, [x.id]: x.name }), {}));
-            setProjMap(p.reduce((m, x) => ({ ...m, [x.id]: x.name }), {}));
+            setProjMap(p.reduce((m, x) => ({
+                ...m,
+                [x.id]: {
+                    name: x.projectName || x.name || x.id,
+                    jobNumber: x.jobNumber || "",
+                    inquiryNumber: x.id
+                }
+            }), {}));
         })();
     }, []);
+
+    const projectLabel = (projectId) => {
+        if (!projectId) return "-";
+        const p = projMap[projectId];
+        if (!p) return projectId;
+        return p.jobNumber ? `${p.jobNumber} / ${p.inquiryNumber}` : `MIN: ${p.inquiryNumber}`;
+    };
 
     // Load List
     useEffect(() => {
@@ -104,6 +118,10 @@ export default function IRFulfilmentPage() {
 
     const addShortagesForIR = async () => {
         if (!selected) return;
+        if (selected.projectId) {
+            toast.info("Project shortages are sent to Pending Purchase automatically");
+            return;
+        }
         const shortages = {};
         let hasShortage = false;
 
@@ -457,8 +475,8 @@ export default function IRFulfilmentPage() {
                                     <Form.Label className="small">Project</Form.Label>
                                     <SafeSelect value={fProj} onChange={(e) => setFProj(e.target.value)}>
                                         <option value="">All</option>
-                                        {Object.entries(projMap).map(([id, name]) => (
-                                            <option key={id} value={id}>{name}</option>
+                                        {Object.entries(projMap).map(([id, project]) => (
+                                            <option key={id} value={id}>{project.jobNumber ? `${project.jobNumber} / ${project.inquiryNumber}` : project.name}</option>
                                         ))}
                                     </SafeSelect>
                                 </Form.Group>
@@ -492,7 +510,7 @@ export default function IRFulfilmentPage() {
                                         <td>{ir.irNumber}</td>
                                         <td><Badge bg={ir.status === "SUBMITTED" ? "secondary" : ir.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{ir.status}</Badge></td>
                                         <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>
-                                        <td>{projMap[ir.projectId] || ir.projectId || "-"}</td>
+                                        <td>{projectLabel(ir.projectId)}</td>
                                         <td>{ir.createdBy || "-"}</td>
                                         <td>{ir.createdAt ? new Date(ir.createdAt).toLocaleString() : "-"}</td>
                                     </tr>
@@ -528,7 +546,7 @@ export default function IRFulfilmentPage() {
                                     <Badge bg={selected.status === "SUBMITTED" ? "secondary" : selected.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{selected.status}</Badge>
                                     <div className="small text-muted">
                                         Dept: {deptMap[selected.departmentId] || selected.departmentId || "-"} &nbsp;|&nbsp; Project:{" "}
-                                        {projMap[selected.projectId] || selected.projectId || "-"} &nbsp;|&nbsp; Requester:{" "}
+                                        {projectLabel(selected.projectId)} &nbsp;|&nbsp; Requester:{" "}
                                         {selected.createdBy || "-"}
                                     </div>
                                 </div>
@@ -619,8 +637,8 @@ export default function IRFulfilmentPage() {
                                 </Table>
 
                                 <div className="d-flex justify-content-end gap-2 mt-3">
-                                    <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected || selected.status === "PENDING_PURCHASE"}>
-                                        {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : selected?.status === "PENDING_PURCHASE" ? "Shortages Already Added" : "Add Shortages to Pending"}
+                                    <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected || selected.status === "PENDING_PURCHASE" || !!selected.projectId}>
+                                        {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : selected?.status === "PENDING_PURCHASE" ? "Shortages Already Added" : selected?.projectId ? "Project Shortages Auto-Added" : "Add Shortages to Pending"}
                                     </Button>
                                     <Button onClick={doIssue} disabled={!selected || isIssuing || isAddingShortages}>
                                         {isIssuing ? <><Spinner size="sm" animation="border" className="me-2" />Issuing...</> : "Issue from Main Store"}

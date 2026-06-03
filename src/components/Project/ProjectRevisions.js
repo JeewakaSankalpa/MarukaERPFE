@@ -64,7 +64,7 @@ export default function ProjectRevisions({ projectId, versions, stages, workflow
                 { reason, targetStage },
                 { headers: roleHeader }
             );
-            toast.success("Revision Triggered!");
+            toast.success("Revision request submitted");
             setShowReviseModal(false);
             setReason('');
             if (onRevise) onRevise();
@@ -73,6 +73,30 @@ export default function ProjectRevisions({ projectId, versions, stages, workflow
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handleRevisionDecision = async (revisionId, status) => {
+        const comment = window.prompt(status === "APPROVED" ? "Approval comment" : "Rejection reason") || "";
+        setSubmitting(true);
+        try {
+            await api.post(
+                `/projects/${projectId}/revisions/${revisionId}/decision`,
+                { status, comment },
+                { headers: roleHeader }
+            );
+            toast.success(status === "APPROVED" ? "Revision approved" : "Revision rejected");
+            if (onRevise) onRevise();
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Failed to update revision approval");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const getRevisionBadge = (status) => {
+        if (status === "PENDING_APPROVAL") return <Badge bg="warning">Pending Approval</Badge>;
+        if (status === "REJECTED") return <Badge bg="danger">Rejected</Badge>;
+        return <Badge bg="success">Approved</Badge>;
     };
 
     const handleRestoreClick = (v) => {
@@ -115,30 +139,45 @@ export default function ProjectRevisions({ projectId, versions, stages, workflow
                             <th>Date</th>
                             <th>Stage</th>
                             <th>Reason</th>
+                            <th>Status</th>
                             <th>Files Snapshot</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {(!versions || versions.length === 0) && (
-                            <tr><td colSpan="6" className="text-center text-muted p-3">No revisions yet.</td></tr>
+                            <tr><td colSpan="7" className="text-center text-muted p-3">No revisions yet.</td></tr>
                         )}
                         {(versions || []).map((v, idx) => (
                             <tr key={idx}>
                                 <td><Badge bg="secondary">v{v.revisionNumber}</Badge></td>
-                                <td>{new Date(v.snapshotDate).toLocaleString()}</td>
-                                <td>{v.stageType || '-'}</td>
+                                <td>{v.snapshotDate ? new Date(v.snapshotDate).toLocaleString() : (v.requestedAt ? new Date(v.requestedAt).toLocaleString() : '-')}</td>
+                                <td>{v.targetStage ? `${v.stageType || '-'} -> ${v.targetStage}` : (v.stageType || '-')}</td>
                                 <td>{v.reasonForRevision}</td>
+                                <td>{getRevisionBadge(v.approvalStatus)}</td>
                                 <td>
                                     <small>{(v.fileList || []).join(", ")}</small>
                                 </td>
                                 <td>
-                                    <Button size="sm" variant="info" onClick={() => onViewSnapshot && onViewSnapshot(v.revisionNumber)} className="me-2">
-                                        View Snapshot
-                                    </Button>
-                                    <Button size="sm" variant="outline-warning" onClick={() => handleRestoreClick(v)}>
-                                        Restore
-                                    </Button>
+                                    {v.approvalStatus === "PENDING_APPROVAL" ? (
+                                        <>
+                                            <Button size="sm" variant="outline-success" onClick={() => handleRevisionDecision(v.id, "APPROVED")} className="me-2" disabled={submitting || !v.id}>
+                                                Approve
+                                            </Button>
+                                            <Button size="sm" variant="outline-danger" onClick={() => handleRevisionDecision(v.id, "REJECTED")} disabled={submitting || !v.id}>
+                                                Reject
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Button size="sm" variant="info" onClick={() => onViewSnapshot && onViewSnapshot(v.revisionNumber)} className="me-2">
+                                                View Snapshot
+                                            </Button>
+                                            <Button size="sm" variant="outline-warning" onClick={() => handleRestoreClick(v)}>
+                                                Restore
+                                            </Button>
+                                        </>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -151,7 +190,7 @@ export default function ProjectRevisions({ projectId, versions, stages, workflow
                 <Modal.Header closeButton><Modal.Title>Request Revision</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <p className="small text-muted">
-                        This will create a read-only snapshot of the current project state and move the project back to the selected stage.
+                        This will request approval for a revision when revision approval is enabled. Once approved, the system creates a read-only snapshot and moves the project back to the selected stage.
                     </p>
                     <Form.Group className="mb-3">
                         <Form.Label>Reason / Change Request</Form.Label>

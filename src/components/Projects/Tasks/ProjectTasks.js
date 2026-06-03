@@ -9,6 +9,7 @@ import SafeDatePicker from '../../ReusableComponents/SafeDatePicker';
 const ProjectTasks = ({ projectId }) => {
     const [tasks, setTasks] = useState([]);
     const [employees, setEmployees] = useState([]);
+    const [workLogs, setWorkLogs] = useState([]);
 
     // Modals
     const [showTaskModal, setShowTaskModal] = useState(false);
@@ -21,16 +22,19 @@ const ProjectTasks = ({ projectId }) => {
 
     // Log Data
     const [logTask, setLogTask] = useState(null);
-    const [logForm, setLogForm] = useState({ userId: "", durationHours: "", note: "", logDate: new Date().toISOString().split('T')[0] });
+    const [logForm, setLogForm] = useState({ logDate: new Date().toISOString().split('T')[0] });
+    const [logRows, setLogRows] = useState([]);
 
     const loadData = React.useCallback(async () => {
         try {
-            const [tRes, eRes] = await Promise.all([
+            const [tRes, eRes, wlRes] = await Promise.all([
                 api.get(`/tasks/by-project/${projectId}`),
-                api.get("/employee/all")
+                api.get("/employee/all"),
+                api.get(`/tasks/worklogs/by-project/${projectId}`)
             ]);
             setTasks(tRes.data);
             setEmployees(eRes.data);
+            setWorkLogs(wlRes.data || []);
         } catch (e) {
             console.error(e);
         }
@@ -66,12 +70,23 @@ const ProjectTasks = ({ projectId }) => {
     const handleLogSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post(`/tasks/${logTask.id}/log-work`, {
-                ...logForm,
-                employeeName: getEmployeeName(logForm.userId),
-                durationHours: parseFloat(logForm.durationHours)
-            });
-            toast.success("Work Logged");
+            const rowsToSave = logRows
+                .map(row => ({ ...row, durationHours: parseFloat(row.durationHours) }))
+                .filter(row => row.userId && row.durationHours > 0);
+
+            if (!rowsToSave.length) {
+                toast.warn("Enter time for at least one worker");
+                return;
+            }
+
+            await Promise.all(rowsToSave.map(row => api.post(`/tasks/${logTask.id}/log-work`, {
+                userId: row.userId,
+                employeeName: getEmployeeName(row.userId),
+                durationHours: row.durationHours,
+                note: row.note,
+                logDate: logForm.logDate
+            })));
+            toast.success(`${rowsToSave.length} work log${rowsToSave.length > 1 ? "s" : ""} saved`);
             setShowLogModal(false);
             loadData();
         } catch (e) {
@@ -98,7 +113,8 @@ const ProjectTasks = ({ projectId }) => {
     const openLog = (t) => {
         const assignedToIds = getAssignedIds(t);
         setLogTask(t);
-        setLogForm({ userId: assignedToIds[0] || "", durationHours: "", note: "", logDate: new Date().toISOString().split('T')[0] });
+        setLogForm({ logDate: new Date().toISOString().split('T')[0] });
+        setLogRows(assignedToIds.map(id => ({ userId: id, durationHours: "", note: "" })));
         setShowLogModal(true);
     };
 
@@ -128,6 +144,19 @@ const ProjectTasks = ({ projectId }) => {
         (taskForm.assignedToIds || []).map(String).includes(option.value)
     );
 
+    const totalEstimatedHours = tasks.reduce((s, t) => s + (parseFloat(t.estimatedHours) || 0), 0);
+    const totalLoggedHours = workLogs.reduce((s, log) => s + (parseFloat(log.durationHours) || 0), 0);
+    const workerTotals = workLogs.reduce((acc, log) => {
+        if (!log.userId) return acc;
+        const key = String(log.userId);
+        acc[key] = (acc[key] || 0) + (parseFloat(log.durationHours) || 0);
+        return acc;
+    }, {});
+
+    const updateLogRow = (index, updates) => {
+        setLogRows(rows => rows.map((row, i) => i === index ? { ...row, ...updates } : row));
+    };
+
     return (
         <div className="p-3">
             {/* Summary Cards */}
@@ -150,7 +179,7 @@ const ProjectTasks = ({ projectId }) => {
                         <div className="card-body">
                             <div className="text-muted small mb-1">⏱ Total Estimated Time</div>
                             <div className="fs-3 fw-bold text-warning" style={{ color: '#92400e' }}>
-                                {tasks.reduce((s, t) => s + (parseFloat(t.estimatedHours) || 0), 0).toFixed(1)} hrs
+                                {totalEstimatedHours.toFixed(1)} hrs
                             </div>
                             <div className="small text-muted mt-1">
                                 Across {tasks.filter(t => t.estimatedHours).length} task(s) with estimates
@@ -163,11 +192,11 @@ const ProjectTasks = ({ projectId }) => {
                         <div className="card-body">
                             <div className="text-muted small mb-1">⏳ Total Time Taken</div>
                             <div className="fs-3 fw-bold" style={{ color: '#166534' }}>
-                                {tasks.reduce((s, t) => s + (parseFloat(t.loggedHours) || 0), 0).toFixed(1)} hrs
+                                {totalLoggedHours.toFixed(1)} hrs
                             </div>
                             {(() => {
-                                const est = tasks.reduce((s, t) => s + (parseFloat(t.estimatedHours) || 0), 0);
-                                const logged = tasks.reduce((s, t) => s + (parseFloat(t.loggedHours) || 0), 0);
+                                const est = totalEstimatedHours;
+                                const logged = totalLoggedHours;
                                 const pct = est > 0 ? Math.min((logged / est) * 100, 100) : 0;
                                 const over = est > 0 && logged > est;
                                 return (
@@ -179,6 +208,13 @@ const ProjectTasks = ({ projectId }) => {
                                     </div>
                                 );
                             })()}
+                            {Object.keys(workerTotals).length > 0 && (
+                                <div className="small text-muted mt-2">
+                                    {Object.entries(workerTotals)
+                                        .map(([id, hours]) => `${getEmployeeName(id)}: ${hours.toFixed(1)}h`)
+                                        .join(" | ")}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -314,37 +350,57 @@ const ProjectTasks = ({ projectId }) => {
             {/* Log Modal */}
             <Modal show={showLogModal} onHide={() => setShowLogModal(false)}>
                 <Form onSubmit={handleLogSubmit}>
-                    <Modal.Header closeButton><Modal.Title>Log Work: {logTask?.name}</Modal.Title></Modal.Header>
+                    <Modal.Header closeButton><Modal.Title>Log Worker Time: {logTask?.name}</Modal.Title></Modal.Header>
                     <Modal.Body>
-                        <Form.Group className="mb-2">
-                            <Form.Label>Credit Time To</Form.Label>
-                            <SafeSelect required value={logForm.userId} onChange={e => setLogForm({ ...logForm, userId: e.target.value })}>
-                                <option value="">Select assigned worker</option>
-                                {getAssignedIds(logTask).map(id => <option key={id} value={id}>{getEmployeeName(id)}</option>)}
-                            </SafeSelect>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Date Worked</Form.Label>
+                            <SafeDatePicker
+                                name="logDate"
+                                value={logForm.logDate}
+                                onChange={e => setLogForm({ ...logForm, logDate: e.target.value })}
+                                required
+                            />
                         </Form.Group>
-                        <div className="d-flex gap-2">
-                            <Form.Group className="mb-2 flex-grow-1">
-                                <Form.Label>Date Worked</Form.Label>
-                                <SafeDatePicker 
-                                    name="logDate" 
-                                    value={logForm.logDate} 
-                                    onChange={e => setLogForm({ ...logForm, logDate: e.target.value })} 
-                                    required 
-                                />
-                            </Form.Group>
-                            <Form.Group className="mb-2 flex-grow-1">
-                                <Form.Label>Hours Worked</Form.Label>
-                                <Form.Control type="number" step="0.25" required value={logForm.durationHours} onChange={e => setLogForm({ ...logForm, durationHours: e.target.value })} />
-                            </Form.Group>
-                        </div>
-                        <Form.Group className="mb-2">
-                            <Form.Label>Note</Form.Label>
-                            <Form.Control as="textarea" value={logForm.note} onChange={e => setLogForm({ ...logForm, note: e.target.value })} />
-                        </Form.Group>
+                        {logRows.length ? (
+                            <div className="d-flex flex-column gap-3">
+                                {logRows.map((row, index) => (
+                                    <div key={row.userId || index} className="border rounded p-3 bg-light">
+                                        <div className="fw-semibold mb-2">{getEmployeeName(row.userId)}</div>
+                                        <div className="d-flex gap-2">
+                                            <Form.Group className="mb-2" style={{ width: 140 }}>
+                                                <Form.Label>Hours</Form.Label>
+                                                <Form.Control
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.25"
+                                                    value={row.durationHours}
+                                                    onChange={e => updateLogRow(index, { durationHours: e.target.value })}
+                                                    placeholder="0.00"
+                                                />
+                                            </Form.Group>
+                                            <Form.Group className="mb-2 flex-grow-1">
+                                                <Form.Label>Note</Form.Label>
+                                                <Form.Control
+                                                    value={row.note}
+                                                    onChange={e => updateLogRow(index, { note: e.target.value })}
+                                                    placeholder="Work details"
+                                                />
+                                            </Form.Group>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="text-end small text-muted">
+                                    Total being added: {logRows.reduce((s, row) => s + (parseFloat(row.durationHours) || 0), 0).toFixed(2)} hrs
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-3 bg-light rounded text-muted">
+                                Assign workers to this task before logging time.
+                            </div>
+                        )}
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button type="submit" variant="success">Log Time</Button>
+                        <Button type="submit" variant="success" disabled={!logRows.length}>Log Time</Button>
                     </Modal.Footer>
                 </Form>
             </Modal>

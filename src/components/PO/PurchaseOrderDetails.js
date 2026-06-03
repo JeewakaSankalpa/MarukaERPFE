@@ -249,6 +249,16 @@ export default function PurchaseOrderDetails() {
                             <div>
                                 <h3 className="mb-1">Purchase Order: {po.poNumber}</h3>
                                 <div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
+                                <div className="mt-2">
+                                    {po.originType === "PROJECT" || po.projectId ? (
+                                        <>
+                                            <Badge bg="success" className="me-2">MJN: {po.jobNumber || "-"}</Badge>
+                                            <Badge bg="primary">MIN: {po.inquiryNumber || po.projectId || "-"}</Badge>
+                                        </>
+                                    ) : (
+                                        <Badge bg="secondary">For Main Store</Badge>
+                                    )}
+                                </div>
                             </div>
                             <div className="text-end">
                                 <Button size="sm" variant="outline-primary" className="mb-2" onClick={() => setShowAddressModal(true)}>
@@ -288,7 +298,14 @@ export default function PurchaseOrderDetails() {
                                     const total = qty * price;
                                     return (
                                         <tr key={idx}>
-                                            <td>{item.productNameSnapshot}</td>
+                                            <td>
+                                                <div>{item.productNameSnapshot}</div>
+                                                {(item.projectId || item.jobNumber || item.inquiryNumber) && (
+                                                    <div className="small text-muted">
+                                                        MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td>{item.sku}</td>
                                             <td>{item.unit}</td>
                                             <td className="text-end">{qty}</td>

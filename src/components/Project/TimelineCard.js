@@ -16,6 +16,32 @@ export default function TimelineCard({ projectId, project, readOnly, onRefresh }
     const [showDates, setShowDates] = useState(false);
     const [dates, setDates] = useState({ start: '', end: '', due: '' });
 
+    const stageHistory = useMemo(() => {
+        const stages = Array.isArray(project?.stages) ? project.stages : [];
+        return [...stages].sort((a, b) => new Date(a?.createdAt || 0) - new Date(b?.createdAt || 0));
+    }, [project]);
+
+    const formatDateTime = (value) => {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '-';
+        return date.toLocaleString([], {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const formatStageName = (value) => {
+        if (!value) return 'Unknown Stage';
+        return String(value)
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, char => char.toUpperCase());
+    };
+
     // Calculate Progress
     const dueMeta = useMemo(() => {
         if (!project?.dueDate) return null;
@@ -115,6 +141,67 @@ export default function TimelineCard({ projectId, project, readOnly, onRefresh }
                         No due date set
                     </div>
                 )}
+
+                <div className="mt-4">
+                    <div className="d-flex align-items-center gap-2 mb-3">
+                        <i className="bi bi-clock-history text-primary"></i>
+                        <span className="fw-bold text-dark small text-uppercase">Stage Movement History</span>
+                    </div>
+                    {stageHistory.length ? (
+                        <div className="d-flex flex-column gap-3">
+                            {stageHistory.map((stage, index) => {
+                                const isCurrent = stage.id && project?.currentStage?.id === stage.id;
+                                const approvals = Array.isArray(stage.approvals) ? stage.approvals : [];
+                                const latestApproval = approvals
+                                    .filter(a => a?.timestamp)
+                                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+                                return (
+                                    <div key={stage.id || `${stage.stageType}-${index}`} className="d-flex gap-3">
+                                        <div className="d-flex flex-column align-items-center">
+                                            <div
+                                                className={`rounded-circle ${isCurrent ? 'bg-primary' : 'bg-secondary'}`}
+                                                style={{ width: 12, height: 12, marginTop: 4 }}
+                                            />
+                                            {index < stageHistory.length - 1 && (
+                                                <div className="bg-light border-start" style={{ width: 1, flex: 1, minHeight: 38 }} />
+                                            )}
+                                        </div>
+                                        <div className="flex-grow-1 pb-2">
+                                            <div className="d-flex justify-content-between align-items-start gap-2">
+                                                <div>
+                                                    <div className="fw-semibold text-dark">
+                                                        {formatStageName(stage.stageType)}
+                                                        {isCurrent && <span className="badge bg-primary-subtle text-primary ms-2">Current</span>}
+                                                    </div>
+                                                    <div className="text-muted small">Moved on {formatDateTime(stage.createdAt)}</div>
+                                                </div>
+                                                {stage.updatedAt && stage.updatedAt !== stage.createdAt && (
+                                                    <small className="text-muted text-end">Updated {formatDateTime(stage.updatedAt)}</small>
+                                                )}
+                                            </div>
+                                            {latestApproval && (
+                                                <div className="small text-muted mt-1">
+                                                    Last approval: {latestApproval.status || 'Recorded'}
+                                                    {latestApproval.approverName ? ` by ${latestApproval.approverName}` : ''}
+                                                    {latestApproval.timestamp ? ` on ${formatDateTime(latestApproval.timestamp)}` : ''}
+                                                </div>
+                                            )}
+                                            {latestApproval?.comments && (
+                                                <div className="small bg-light rounded-2 px-2 py-1 mt-2 text-secondary">
+                                                    {latestApproval.comments}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-3 bg-light rounded-3 text-muted small">
+                            No stage movement recorded yet
+                        </div>
+                    )}
+                </div>
             </Card.Body>
 
             <Modal show={showDates} onHide={() => setShowDates(false)} centered>

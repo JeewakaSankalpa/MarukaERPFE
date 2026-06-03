@@ -3,8 +3,10 @@ import { Card, Table, Button, Badge, Modal, Form } from "react-bootstrap";
 import { FaPlay, FaPause, FaCheck, FaClock } from "react-icons/fa";
 import { toast } from "react-toastify";
 import api from "../../../api/api"; // Adjust path as needed
+import { useNavigate } from "react-router-dom";
 
 const MyTasksWidget = () => {
+    const navigate = useNavigate();
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showLogModal, setShowLogModal] = useState(false);
@@ -48,6 +50,11 @@ const MyTasksWidget = () => {
         }
     };
 
+    const openTask = (task) => {
+        if (!task?.projectId) return;
+        navigate(`/projects/manage/${task.projectId}?tab=TASKS`);
+    };
+
     if (loading) return <div>Loading tasks...</div>;
 
     return (
@@ -74,8 +81,22 @@ const MyTasksWidget = () => {
                             tasks.map(t => (
                                 <tr key={t.id}>
                                     <td>
-                                        <div className="fw-bold text-truncate" style={{ maxWidth: '150px' }}>{t.name}</div>
-                                        <small className="text-muted">{t.projectName}</small> {/* Ensure backend sends this or fetch it */}
+                                        <button
+                                            type="button"
+                                            className="btn btn-link p-0 fw-bold text-start text-truncate"
+                                            style={{ maxWidth: '150px' }}
+                                            onClick={() => openTask(t)}
+                                            title="Open task project"
+                                        >
+                                            {t.name}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-link p-0 d-block small text-muted text-start text-decoration-none"
+                                            onClick={() => openTask(t)}
+                                        >
+                                            {t.projectName || t.projectId || "Project"}
+                                        </button>
                                     </td>
                                     <td><Badge bg={getStatusBadge(t.status)}>{t.status}</Badge></td>
                                     <td>
@@ -85,6 +106,9 @@ const MyTasksWidget = () => {
                                     </td>
                                     <td>{t.dueDate}</td>
                                     <td>
+                                        <Button size="sm" variant="outline-primary" className="me-2" onClick={() => openTask(t)}>
+                                            Open
+                                        </Button>
                                         <Button size="sm" variant="outline-success" onClick={() => { 
                                             setSelectedTask(t); 
                                             setLogData({ durationHours: 0, note: "", logDate: new Date().toISOString().split('T')[0] });

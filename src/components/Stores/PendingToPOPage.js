@@ -29,12 +29,24 @@ export default function PendingToPOPage() {
     const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
     const [editRecord, setEditRecord] = useState(null);
 
+    const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
+
+    const getOriginLabel = (line) => {
+        if (line.originType === 'PROJECT' || line.projectId) {
+            return {
+                title: line.jobNumber || 'No MJN',
+                subtitle: `MIN: ${line.inquiryNumber || line.projectId || '-'}`
+            };
+        }
+        return { title: 'From Stores', subtitle: 'Main Store' };
+    };
+
     useEffect(() => {
         (async () => {
             try {
                 const p = await getLatestPending();
                 setPlan(p);
-                setChoices(Object.fromEntries((p?.lines||[]).map(l => [l.productId, { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
+                setChoices(Object.fromEntries((p?.lines||[]).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
             } catch { toast.error("Failed to load pending purchases"); }
         })();
     }, []);
@@ -42,10 +54,15 @@ export default function PendingToPOPage() {
     const groupedAllocation = useMemo(() => {
         // supplierId => [{ productId, qty, unitPrice?, taxPercent? }]
         const map = {};
-        Object.entries(choices).forEach(([pid, c]) => {
+        Object.entries(choices).forEach(([key, c]) => {
             if (!c?.supplierId || !(c.qty>0)) return;
+            const line = (plan?.lines || []).find(l => getLineKey(l) === key);
+            if (!line) return;
             (map[c.supplierId] ||= []).push({
-                productId: pid,
+                lineKey: key,
+                productId: line.productId,
+                originType: line.originType,
+                projectId: line.projectId,
                 qty: Number(c.qty),
                 ...(c.unitPrice? { unitPrice: String(c.unitPrice) } : {}),
                 ...(c.taxPercent? { taxPercent: String(c.taxPercent) } : {})
@@ -100,7 +117,7 @@ export default function PendingToPOPage() {
             // refresh
             const p = await getLatestPending();
             setPlan(p);
-            setChoices(Object.fromEntries((p?.lines||[]).map(l => [l.productId, { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
+            setChoices(Object.fromEntries((p?.lines||[]).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to create POs");
         } finally {
@@ -144,6 +161,7 @@ export default function PendingToPOPage() {
                     <thead>
                     <tr>
                         <th>Product</th>
+                        <th>Source</th>
                         <th className="text-end">Shortage</th>
                         <th>Supplier</th>
                         <th style={{width:120}}>Qty</th>
@@ -153,16 +171,24 @@ export default function PendingToPOPage() {
                     </thead>
                     <tbody>
                     {(plan.lines||[]).map(l => {
-                        const c = choices[l.productId] || {};
+                        const key = getLineKey(l);
+                        const c = choices[key] || {};
+                        const origin = getOriginLabel(l);
                         return (
-                            <tr key={l.productId}>
+                            <tr key={key}>
                                 <td>
                                     <div>{l.productNameSnapshot}</div>
                                     <div className="text-muted" style={{fontSize:12}}>{l.sku}</div>
                                 </td>
+                                <td>
+                                    <Badge bg={l.originType === 'PROJECT' || l.projectId ? 'primary' : 'secondary'}>
+                                        {origin.title}
+                                    </Badge>
+                                    <div className="text-muted" style={{fontSize:12}}>{origin.subtitle}</div>
+                                </td>
                                 <td className="text-end">{l.shortageQty}</td>
                                 <td>
-                                    <SafeSelect value={c.supplierId || ""} onChange={e=>setChoices(s=>({ ...s, [l.productId]: { ...c, supplierId: e.target.value } }))}>
+                                    <SafeSelect value={c.supplierId || ""} onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, supplierId: e.target.value } }))}>
                                         <option value="">Select supplier</option>
                                         {(l.suppliers||[]).filter(s=>s.active!==false).map(s =>
                                             <option key={s.supplierId} value={s.supplierId}>
@@ -173,15 +199,15 @@ export default function PendingToPOPage() {
                                 </td>
                                 <td>
                                     <Form.Control type="number" min="0" value={c.qty||""}
-                                                  onChange={e=>setChoices(s=>({ ...s, [l.productId]: { ...c, qty: e.target.value } }))} />
+                                                  onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, qty: e.target.value } }))} />
                                 </td>
                                 <td>
                                     <Form.Control value={c.unitPrice||""}
-                                                  onChange={e=>setChoices(s=>({ ...s, [l.productId]: { ...c, unitPrice: e.target.value } }))} />
+                                                  onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, unitPrice: e.target.value } }))} />
                                 </td>
                                 <td>
                                     <Form.Control value={c.taxPercent||""}
-                                                  onChange={e=>setChoices(s=>({ ...s, [l.productId]: { ...c, taxPercent: e.target.value } }))} />
+                                                  onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, taxPercent: e.target.value } }))} />
                                 </td>
                             </tr>
                         );

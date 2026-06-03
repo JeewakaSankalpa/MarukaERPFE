@@ -19,6 +19,25 @@ const extractFileName = (urlOrName) => {
 // Normalize labels like "file1 (need 2)" -> "file1"
 const normalizeLabel = (s) => (String(s || '').split(' (need')[0].trim());
 
+const invoiceTypeLabels = {
+    proforma: 'Proforma Invoice',
+    normal: 'Invoice',
+    tax: 'Tax Invoice',
+};
+
+const isDrawingFile = (file) => {
+    const haystack = `${file.docType || ''} ${file.stage || ''} ${file.displayName || ''}`.toLowerCase();
+    return haystack.includes('drawing') || haystack.includes('design');
+};
+
+const drawingGroupKey = (file) =>
+    `${String(file.stage || '').toLowerCase()}::${String(file.docType || '').toLowerCase()}`;
+
+const uploadedTime = (file) => {
+    const date = file.uploadedAt ? new Date(file.uploadedAt) : null;
+    return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
+};
+
 /* ---------- Upload overlay ---------- */
 function UploadOverlay({ text }) {
     return (
@@ -65,6 +84,11 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
     const [docType, setDocType] = useState('');
     const [uploading, setUploading] = useState(false);
     const [uploadPct, setUploadPct] = useState(0);
+    const [invoiceChoice, setInvoiceChoice] = useState('proforma');
+    const [invoiceChoiceId, setInvoiceChoiceId] = useState('');
+    const [invoiceSaving, setInvoiceSaving] = useState(false);
+    const [drawingHistory, setDrawingHistory] = useState([]);
+    const [showDrawingHistory, setShowDrawingHistory] = useState(false);
 
     // Confirmation Modal state
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -119,8 +143,10 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
             const projectFiles = rawList.map(x => {
                 const name = extractFileName(x.url || x.storedName || x.originalName);
                 return {
+                    id: x.id,
                     displayName: name,
                     url: x.url,
+                    stage: x.stage || '',
                     docType: x.docType || '',
                     uploadedAt: x.uploadedAt,
                     uploadedBy: x.uploadedBy,
@@ -147,9 +173,48 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                 // ignore if not ready
             }
 
-            const list = [...projectFiles, ...paymentFiles];
-            list.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
-            setFiles(list);
+            let generatedFiles = [];
+            try {
+                const estRes = await api.get(`/estimations/by-project/${id}`);
+                if (estRes.data) {
+                    generatedFiles.push({
+                        displayName: `Quotation${estRes.data.version ? ` v${estRes.data.version}` : ''}`,
+                        url: `/projects/${id}/quotation`,
+                        docType: 'Quotation',
+                        _kind: 'quotation',
+                        uploadedAt: estRes.data.updatedAt || estRes.data.createdAt
+                    });
+                }
+            } catch {
+                // ignore projects without an estimation/quotation
+            }
+
+            try {
+                const invRes = await api.get(`/invoices/by-project/${id}`);
+                const invoices = Array.isArray(invRes.data) ? invRes.data : [];
+                const activeInvoices = invoices.filter(inv => inv.status !== 'CANCELLED');
+                const preferredInvoice = activeInvoices[0];
+                if (preferredInvoice) {
+                    setInvoiceChoiceId(preferredInvoice.id);
+                    setInvoiceChoice(preferredInvoice.downloadDocumentType || 'proforma');
+                } else {
+                    setInvoiceChoiceId('');
+                }
+                generatedFiles = generatedFiles.concat(activeInvoices
+                    .filter(inv => inv.downloadDocumentType)
+                    .map(inv => ({
+                        displayName: invoiceTypeLabels[inv.downloadDocumentType] || 'Invoice',
+                        url: `/invoices/${inv.id}?type=${inv.downloadDocumentType}`,
+                        docType: invoiceTypeLabels[inv.downloadDocumentType] || 'Invoice',
+                        _kind: 'invoice',
+                        uploadedAt: inv.issuedDate || inv.createdAt
+                    })));
+            } catch {
+                // ignore if invoices are not available yet
+            }
+
+            const list = [...projectFiles, ...paymentFiles, ...generatedFiles];
+            setFiles(prepareDisplayFiles(list));
             // toast.success('Files loaded'); // Silent load better
         } catch (e) {
             console.error(e);
@@ -157,6 +222,35 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
         } finally {
             setFilesLoading(false);
         }
+    };
+
+    const prepareDisplayFiles = (list) => {
+        const drawingGroups = new Map();
+        const visible = [];
+
+        list.forEach(file => {
+            if (!isDrawingFile(file) || file._kind !== 'file') {
+                visible.push(file);
+                return;
+            }
+
+            const key = drawingGroupKey(file);
+            if (!drawingGroups.has(key)) drawingGroups.set(key, []);
+            drawingGroups.get(key).push(file);
+        });
+
+        drawingGroups.forEach(group => {
+            group.sort((a, b) => uploadedTime(b) - uploadedTime(a));
+            const latest = group[0];
+            visible.push({
+                ...latest,
+                _drawingHistory: group,
+                _drawingHistoryCount: Math.max(0, group.length - 1),
+            });
+        });
+
+        visible.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+        return visible;
     };
 
     useEffect(() => {
@@ -274,6 +368,24 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    const addSelectedInvoiceToDownloads = async () => {
+        if (!invoiceChoiceId) {
+            toast.warn('No generated invoice found for this project yet.');
+            return;
+        }
+        setInvoiceSaving(true);
+        try {
+            await api.post(`/invoices/${invoiceChoiceId}/download-document/${invoiceChoice}`);
+            toast.success(`${invoiceTypeLabels[invoiceChoice]} added to downloads`);
+            await loadFiles();
+        } catch (err) {
+            console.error(err);
+            toast.error(err?.response?.data?.message || 'Failed to add invoice to downloads');
+        } finally {
+            setInvoiceSaving(false);
+        }
+    };
+
     return (
         <>
             {uploading && <UploadOverlay text={`Uploading… ${uploadPct}%`} />}
@@ -335,6 +447,31 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     {uploading ? 'Uploading…' : 'Upload Files'}
                 </Button>
 
+                {invoiceChoiceId && (
+                    <>
+                        <SafeSelect
+                            size="sm"
+                            value={invoiceChoice}
+                            onChange={(e) => setInvoiceChoice(e.target.value)}
+                            style={{ width: 180 }}
+                            title="Choose which generated invoice appears in downloads"
+                            disabled={invoiceSaving || readOnly}
+                        >
+                            <option value="proforma">Proforma Invoice</option>
+                            <option value="normal">Invoice</option>
+                            <option value="tax">Tax Invoice</option>
+                        </SafeSelect>
+                        <Button
+                            size="sm"
+                            variant="outline-success"
+                            disabled={invoiceSaving || readOnly}
+                            onClick={addSelectedInvoiceToDownloads}
+                        >
+                            {invoiceSaving ? 'Adding...' : 'Add Invoice'}
+                        </Button>
+                    </>
+                )}
+
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -363,7 +500,23 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                             <tr key={(f.url || '') + (f.displayName || '') + idx}>
                                 <td className="text-break">
                                     {f._kind === 'payment' ? <Badge bg="success" className="me-2">Payment</Badge> : null}
+                                    {f._kind === 'quotation' ? <Badge bg="info" className="me-2">Quotation</Badge> : null}
+                                    {f._kind === 'invoice' ? <Badge bg="primary" className="me-2">Invoice</Badge> : null}
+                                    {f._drawingHistoryCount ? <Badge bg="warning" text="dark" className="me-2">Latest Drawing</Badge> : null}
                                     {f.displayName}
+                                    {f._drawingHistoryCount ? (
+                                        <Button
+                                            size="sm"
+                                            variant="link"
+                                            className="p-0 ms-2 align-baseline"
+                                            onClick={() => {
+                                                setDrawingHistory(f._drawingHistory || []);
+                                                setShowDrawingHistory(true);
+                                            }}
+                                        >
+                                            History ({f._drawingHistory.length})
+                                        </Button>
+                                    ) : null}
                                 </td>
                                 <td>
                                     {f.uploadedAt ? (
@@ -377,7 +530,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                                         View
                                     </a>
                                     <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download>
-                                        Download
+                                        {f._kind === 'quotation' || f._kind === 'invoice' ? 'Open' : 'Download'}
                                     </a>
                                 </td>
                             </tr>
@@ -405,6 +558,38 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     <Button variant="secondary" onClick={cancelUpload}>Cancel</Button>
                     <Button variant="primary" onClick={proceedWithUpload}>Confirm Upload</Button>
                 </Modal.Footer>
+            </Modal>
+
+            <Modal show={showDrawingHistory} onHide={() => setShowDrawingHistory(false)} size="lg" centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Drawing History</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Table size="sm" bordered responsive className="mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Uploaded At</th>
+                                <th style={{ width: 150 }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {drawingHistory.map((f, idx) => (
+                                <tr key={(f.url || '') + idx}>
+                                    <td>
+                                        {idx === 0 ? <Badge bg="warning" text="dark" className="me-2">Latest</Badge> : null}
+                                        {f.displayName}
+                                    </td>
+                                    <td>{f.uploadedAt ? new Date(f.uploadedAt).toLocaleString() : '-'}</td>
+                                    <td className="d-flex gap-2 justify-content-center">
+                                        <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">View</a>
+                                        <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download>Download</a>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                </Modal.Body>
             </Modal>
         </>
     );
