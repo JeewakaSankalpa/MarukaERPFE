@@ -25,6 +25,19 @@ const invoiceTypeLabels = {
     tax: 'Tax Invoice',
 };
 
+const invoiceTypeOptions = [
+    { value: 'proforma', label: invoiceTypeLabels.proforma, field: 'proformaInvoiceNumber' },
+    { value: 'normal', label: invoiceTypeLabels.normal, field: 'normalInvoiceNumber' },
+    { value: 'tax', label: invoiceTypeLabels.tax, field: 'taxInvoiceNumber' },
+];
+
+const appRoute = (path) => `/#${path.startsWith('/') ? path : `/${path}`}`;
+
+const isGeneratedDocument = (file) => file?._kind === 'quotation' || file?._kind === 'invoice';
+
+const generatedInvoiceOptions = (invoice) =>
+    invoiceTypeOptions.filter(option => Boolean(invoice?.[option.field]));
+
 const isDrawingFile = (file) => {
     const haystack = `${file.docType || ''} ${file.stage || ''} ${file.displayName || ''}`.toLowerCase();
     return haystack.includes('drawing') || haystack.includes('design');
@@ -86,6 +99,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
     const [uploadPct, setUploadPct] = useState(0);
     const [invoiceChoice, setInvoiceChoice] = useState('proforma');
     const [invoiceChoiceId, setInvoiceChoiceId] = useState('');
+    const [invoiceChoices, setInvoiceChoices] = useState([]);
     const [invoiceSaving, setInvoiceSaving] = useState(false);
     const [drawingHistory, setDrawingHistory] = useState([]);
     const [showDrawingHistory, setShowDrawingHistory] = useState(false);
@@ -179,7 +193,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                 if (estRes.data) {
                     generatedFiles.push({
                         displayName: `Quotation${estRes.data.version ? ` v${estRes.data.version}` : ''}`,
-                        url: `/projects/${id}/quotation`,
+                        url: appRoute(`/projects/${id}/quotation`),
                         docType: 'Quotation',
                         _kind: 'quotation',
                         uploadedAt: estRes.data.updatedAt || estRes.data.createdAt
@@ -195,16 +209,22 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                 const activeInvoices = invoices.filter(inv => inv.status !== 'CANCELLED');
                 const preferredInvoice = activeInvoices[0];
                 if (preferredInvoice) {
+                    const availableTypes = generatedInvoiceOptions(preferredInvoice);
+                    const preferredType = availableTypes.some(option => option.value === preferredInvoice.downloadDocumentType)
+                        ? preferredInvoice.downloadDocumentType
+                        : availableTypes[0]?.value || 'proforma';
                     setInvoiceChoiceId(preferredInvoice.id);
-                    setInvoiceChoice(preferredInvoice.downloadDocumentType || 'proforma');
+                    setInvoiceChoices(availableTypes);
+                    setInvoiceChoice(preferredType);
                 } else {
                     setInvoiceChoiceId('');
+                    setInvoiceChoices([]);
                 }
                 generatedFiles = generatedFiles.concat(activeInvoices
                     .filter(inv => inv.downloadDocumentType)
                     .map(inv => ({
                         displayName: invoiceTypeLabels[inv.downloadDocumentType] || 'Invoice',
-                        url: `/invoices/${inv.id}?type=${inv.downloadDocumentType}`,
+                        url: appRoute(`/invoices/${inv.id}?type=${inv.downloadDocumentType}`),
                         docType: invoiceTypeLabels[inv.downloadDocumentType] || 'Invoice',
                         _kind: 'invoice',
                         uploadedAt: inv.issuedDate || inv.createdAt
@@ -455,11 +475,11 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                             onChange={(e) => setInvoiceChoice(e.target.value)}
                             style={{ width: 180 }}
                             title="Choose which generated invoice appears in downloads"
-                            disabled={invoiceSaving || readOnly}
+                            disabled={invoiceSaving || readOnly || invoiceChoices.length <= 1}
                         >
-                            <option value="proforma">Proforma Invoice</option>
-                            <option value="normal">Invoice</option>
-                            <option value="tax">Tax Invoice</option>
+                            {(invoiceChoices.length ? invoiceChoices : invoiceTypeOptions.slice(0, 1)).map(option => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
                         </SafeSelect>
                         <Button
                             size="sm"
@@ -529,9 +549,15 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                                     <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">
                                         View
                                     </a>
-                                    <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download>
-                                        {f._kind === 'quotation' || f._kind === 'invoice' ? 'Open' : 'Download'}
-                                    </a>
+                                    {isGeneratedDocument(f) ? (
+                                        <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer">
+                                            Open
+                                        </a>
+                                    ) : (
+                                        <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download>
+                                            Download
+                                        </a>
+                                    )}
                                 </td>
                             </tr>
                         ))}

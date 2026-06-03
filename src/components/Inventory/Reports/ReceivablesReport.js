@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import api from "../../../api/api";
 import { Button, Form, Table, Spinner, Row, Col } from "react-bootstrap";
 import ReportLayout from "../../ReusableComponents/ReportLayout";
@@ -42,7 +42,55 @@ const ReceivablesReport = () => {
         fetchReport(range);
     };
 
-    const totalReceivable = data.reduce((sum, item) => sum + (item.balance || 0), 0);
+    const asOfDate = new Date();
+    const agingBuckets = [
+        { key: "age0to30", label: "0-30 days" },
+        { key: "age30to60", label: "30-60 days" },
+        { key: "age60to90", label: "60-90 days" },
+        { key: "age90Plus", label: "90+ days" }
+    ];
+
+    const money = (value) => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const daysBetween = (dateText) => {
+        if (!dateText) return 0;
+        const due = new Date(`${dateText}T00:00:00`);
+        if (Number.isNaN(due.getTime())) return 0;
+        const today = new Date(asOfDate.getFullYear(), asOfDate.getMonth(), asOfDate.getDate());
+        return Math.max(0, Math.floor((today - due) / (1000 * 60 * 60 * 24)));
+    };
+    const bucketKeyForAge = (days) => {
+        if (days <= 30) return "age0to30";
+        if (days <= 60) return "age30to60";
+        if (days <= 90) return "age60to90";
+        return "age90Plus";
+    };
+
+    const agingRows = useMemo(() => data.map(item => {
+        const balance = Number(item.balance || 0);
+        const ageDays = daysBetween(item.endDate);
+        const bucketKey = bucketKeyForAge(ageDays);
+        return {
+            ...item,
+            balance,
+            ageDays,
+            age0to30: bucketKey === "age0to30" ? balance : 0,
+            age30to60: bucketKey === "age30to60" ? balance : 0,
+            age60to90: bucketKey === "age60to90" ? balance : 0,
+            age90Plus: bucketKey === "age90Plus" ? balance : 0
+        };
+    }), [data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const totals = useMemo(() => agingRows.reduce((acc, item) => {
+        acc.totalAmount += Number(item.totalAmount || 0);
+        acc.paidAmount += Number(item.paidAmount || 0);
+        acc.balance += Number(item.balance || 0);
+        agingBuckets.forEach(bucket => {
+            acc[bucket.key] += Number(item[bucket.key] || 0);
+        });
+        return acc;
+    }, { totalAmount: 0, paidAmount: 0, balance: 0, age0to30: 0, age30to60: 0, age60to90: 0, age90Plus: 0 }), [agingRows]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const percentage = (value) => totals.balance > 0 ? `${((Number(value || 0) / totals.balance) * 100).toFixed(1)}%` : "0.0%";
 
     return (
         <div className="p-4 bg-white min-vh-100">
@@ -88,44 +136,74 @@ const ReceivablesReport = () => {
             </div>
 
             {loading ? <div className="text-center p-5"><Spinner animation="border" /></div> : (
-                <ReportLayout title="Accounts Receivable Report" orientation="portrait">
-                    <div className="mb-3">
-                        <strong>Period: </strong> {startDate || "Begining"} to {endDate || "Now"}
+                <ReportLayout title="Customer Aging Details" orientation="landscape">
+                    <div className="mb-3 small">
+                        <div><strong>Aged as of:</strong> {asOfDate.toLocaleDateString()}</div>
+                        <div><strong>Aged by:</strong> Due Date</div>
+                        <div><strong>Due Date Filter:</strong> {startDate || "Beginning"} to {endDate || "Now"}</div>
+                        <div><strong>All Amounts in LKR</strong></div>
                     </div>
-                    <Table bordered size="sm">
+                    <Table bordered size="sm" className="aging-report-table">
                         <thead className="table-light">
                             <tr>
                                 <th>Invoice #</th>
                                 <th>Customer Name</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
+                                <th>Invoice Date</th>
+                                <th>Due Date</th>
+                                <th className="text-end">Age Days</th>
                                 <th className="text-end">Total Amt</th>
                                 <th className="text-end">Paid</th>
-                                <th className="text-end">Balance Due</th>
+                                <th className="text-end">Remaining Amount</th>
+                                {agingBuckets.map(bucket => (
+                                    <th key={bucket.key} className="text-end">{bucket.label}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {data.length === 0 ? (
-                                <tr><td colSpan="7" className="text-center">No records found</td></tr>
+                            {agingRows.length === 0 ? (
+                                <tr><td colSpan="12" className="text-center">No records found</td></tr>
                             ) : (
-                                data.map((item, i) => (
+                                agingRows.map((item, i) => (
                                     <tr key={i}>
                                         <td>{item.invoiceNumber}</td>
                                         <td>{item.customerName}</td>
                                         <td>{item.startDate}</td>
                                         <td>{item.endDate}</td>
-                                        <td className="text-end">{item.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        <td className="text-end">{item.paidAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        <td className="text-end fw-bold text-success">{item.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td className="text-end">{item.ageDays}</td>
+                                        <td className="text-end">{money(item.totalAmount)}</td>
+                                        <td className="text-end">{money(item.paidAmount)}</td>
+                                        <td className="text-end fw-bold">{money(item.balance)}</td>
+                                        {agingBuckets.map(bucket => (
+                                            <td key={bucket.key} className="text-end">{item[bucket.key] ? money(item[bucket.key]) : "0.00"}</td>
+                                        ))}
                                     </tr>
                                 ))
                             )}
                             <tr className="table-light fw-bold border-top border-dark">
-                                <td colSpan="6" className="text-end">GRAND TOTAL</td>
-                                <td className="text-end text-success" style={{ fontSize: "1.2em" }}>{totalReceivable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                <td colSpan="5" className="text-end">TOTAL RECEIVABLE</td>
+                                <td className="text-end">{money(totals.totalAmount)}</td>
+                                <td className="text-end">{money(totals.paidAmount)}</td>
+                                <td className="text-end">{money(totals.balance)}</td>
+                                {agingBuckets.map(bucket => (
+                                    <td key={bucket.key} className="text-end">{money(totals[bucket.key])}</td>
+                                ))}
+                            </tr>
+                            <tr className="fw-semibold">
+                                <td colSpan="8" className="text-end">AGING %</td>
+                                {agingBuckets.map(bucket => (
+                                    <td key={bucket.key} className="text-end">{percentage(totals[bucket.key])}</td>
+                                ))}
                             </tr>
                         </tbody>
                     </Table>
+                    <style>{`
+                        .aging-report-table th,
+                        .aging-report-table td {
+                            font-size: 11px;
+                            white-space: nowrap;
+                            vertical-align: middle;
+                        }
+                    `}</style>
                 </ReportLayout>
             )}
         </div>

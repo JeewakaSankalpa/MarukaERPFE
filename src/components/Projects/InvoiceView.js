@@ -4,6 +4,7 @@ import api from "../../api/api";
 import { Button, Spinner, Badge, Form } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import logo from "../../assets/logo.jpeg";
 
 const money = (value) => Number(value || 0).toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -21,10 +22,20 @@ const DOC_TYPES = {
     TAX: "tax",
 };
 
-const company = {
+const DOC_TYPE_OPTIONS = [
+    { value: DOC_TYPES.PROFORMA, label: "Proforma Invoice", field: "proformaInvoiceNumber" },
+    { value: DOC_TYPES.NORMAL, label: "Invoice", field: "normalInvoiceNumber" },
+    { value: DOC_TYPES.TAX, label: "Tax Invoice", field: "taxInvoiceNumber" },
+];
+
+const getAvailableDocTypes = (invoice) =>
+    DOC_TYPE_OPTIONS.filter(option => Boolean(invoice?.[option.field]));
+
+const fallbackCompany = {
     name: "Maruka Technologies (Pvt) Ltd",
-    addressLines: ["558/7 ,  Sethsiri Place", "Pannipitiya, Sri Lanka  10230"],
+    address: "558/7 ,  Sethsiri Place\nPannipitiya, Sri Lanka  10230",
     email: "rohan@maruka.lk",
+    phone: "",
     vatNo: "174038295-7000",
 };
 
@@ -37,6 +48,11 @@ const bankDetails = [
 
 const componentAmount = (component) =>
     Number(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
+
+const splitLines = (value) => String(value || "")
+    .split(/\r?\n|,/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
 const getInvoiceGroups = (items = []) => {
     const groups = new Map();
@@ -71,13 +87,19 @@ const getInvoiceGroups = (items = []) => {
     return Array.from(groups.values());
 };
 
+const cleanDescription = (description) => {
+    const value = String(description || "Item");
+    const parts = value.split(":");
+    return parts.length > 1 ? parts.slice(1).join(":").trim() || value : value;
+};
+
 const getCustomerLines = (customer) => {
     if (!customer) return ["N/A"];
     return [
         customer.comName || customer.name,
-        customer.pAddr || customer.address,
-        customer.pContact || customer.contactNo,
-        customer.email || customer.comEmail,
+        ...(splitLines(customer.comAddress || customer.pAddr || customer.address)),
+        customer.comContactNumber || customer.pContact || customer.contactNo,
+        customer.comEmail || customer.email,
         customer.vatNumber ? `VAT No. ${customer.vatNumber}` : null,
     ].filter(Boolean);
 };
@@ -116,10 +138,12 @@ const InvoiceView = () => {
     const [customer, setCustomer] = useState(null);
     const [payments, setPayments] = useState([]);
     const [estimation, setEstimation] = useState(null);
+    const [settings, setSettings] = useState({});
     const [poDraft, setPoDraft] = useState("");
     const [savingPo, setSavingPo] = useState(false);
 
     const selectedType = searchParams.get("type") || DOC_TYPES.PROFORMA;
+    const isProforma = selectedType === DOC_TYPES.PROFORMA;
 
     useEffect(() => {
         const fetchData = async () => {
@@ -127,6 +151,13 @@ const InvoiceView = () => {
                 const invRes = await api.get(`/invoices/${id}`);
                 setInvoice(invRes.data);
                 setPoDraft(invRes.data.poNumber || "");
+
+                try {
+                    const settingsRes = await api.get("/settings/map");
+                    setSettings(settingsRes.data || {});
+                } catch (settingsErr) {
+                    console.warn("Could not fetch invoice company settings", settingsErr);
+                }
 
                 if (invRes.data.projectId) {
                     try {
@@ -162,28 +193,14 @@ const InvoiceView = () => {
 
     useEffect(() => {
         if (!invoice?.id) return;
+        const availableTypes = getAvailableDocTypes(invoice);
+        const fallbackType = invoice.downloadDocumentType || availableTypes[0]?.value;
+        if (!fallbackType || availableTypes.some(option => option.value === selectedType)) return;
 
-        const fieldByType = {
-            [DOC_TYPES.PROFORMA]: "proformaInvoiceNumber",
-            [DOC_TYPES.NORMAL]: "normalInvoiceNumber",
-            [DOC_TYPES.TAX]: "taxInvoiceNumber",
-        };
-
-        const field = fieldByType[selectedType];
-        if (!field || invoice[field]) return;
-
-        const ensureNumber = async () => {
-            try {
-                const res = await api.post(`/invoices/${id}/document-number/${selectedType}`);
-                setInvoice(res.data);
-            } catch (error) {
-                console.error("Failed to assign invoice document number", error);
-                toast.error("Failed to assign invoice number");
-            }
-        };
-
-        ensureNumber();
-    }, [id, invoice, selectedType]);
+        const params = new URLSearchParams(searchParams);
+        params.set("type", fallbackType);
+        setSearchParams(params, { replace: true });
+    }, [invoice, searchParams, selectedType, setSearchParams]);
 
     const groupedItems = useMemo(() => {
         if (estimation?.components?.length) {
@@ -204,6 +221,37 @@ const InvoiceView = () => {
 
         return getInvoiceGroups(invoice?.items || []);
     }, [estimation, invoice]);
+
+    const invoiceRows = useMemo(() => {
+        if (isProforma) return groupedItems;
+        if (invoice?.items?.length) {
+            return invoice.items.map((item, idx) => ({
+                key: `invoice-item-${idx}`,
+                description: cleanDescription(item.description),
+                quantity: item.quantity,
+                unitPrice: Number(item.unitPrice || 0),
+                total: Number(item.total || 0),
+            }));
+        }
+        return groupedItems.flatMap((group, groupIdx) => {
+            if (group.items?.length) {
+                return group.items.map((item, itemIdx) => ({
+                    key: `${groupIdx}-${itemIdx}`,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: Number(item.unitPrice || 0),
+                    total: Number(item.total || 0),
+                }));
+            }
+            return [{
+                key: `group-${groupIdx}`,
+                description: group.description,
+                quantity: group.quantity,
+                unitPrice: Number(group.unitPrice || 0),
+                total: Number(group.total || 0),
+            }];
+        });
+    }, [groupedItems, invoice, isProforma]);
 
     const handleDocTypeChange = (value) => {
         const params = new URLSearchParams(searchParams);
@@ -231,10 +279,9 @@ const InvoiceView = () => {
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
     if (!invoice) return <div className="text-center p-5">Invoice not found.</div>;
 
-    const isProforma = selectedType === DOC_TYPES.PROFORMA;
     const isTaxInvoice = selectedType === DOC_TYPES.TAX;
+    const availableDocTypes = getAvailableDocTypes(invoice);
     const showTax = isProforma || isTaxInvoice;
-    const showDetails = !isProforma;
     const documentTitle = isProforma ? "PROFORMA INVOICE:" : isTaxInvoice ? "TAX INVOICE NO:" : "INVOICE";
     const addressTitle = isProforma ? "ADDRESS" : "BILL TO";
     const rawDocumentNumber = isProforma
@@ -251,7 +298,14 @@ const InvoiceView = () => {
     const documentTotal = showTax ? Number(invoice.totalAmount || 0) : subtotal;
     const balanceDue = Math.max(documentTotal - totalReceived, 0);
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
-    const inquiryText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
+    const projectText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
+    const company = {
+        name: settings["app.company.name"] || fallbackCompany.name,
+        addressLines: splitLines(settings["app.company.address"] || fallbackCompany.address),
+        email: settings["app.company.email"] || fallbackCompany.email,
+        phone: settings["app.company.phone"] || fallbackCompany.phone,
+        vatNo: settings["app.company.vatNo"] || settings["app.company.vat"] || fallbackCompany.vatNo,
+    };
 
     return (
         <div className="invoice-page bg-white min-vh-100 p-4">
@@ -261,57 +315,143 @@ const InvoiceView = () => {
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     body * { visibility: hidden; }
                     .invoice-sheet, .invoice-sheet * { visibility: visible; }
-                    .invoice-sheet { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; padding: 0 !important; }
+                    .invoice-sheet { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
                     .no-print { display: none !important; }
                 }
                 .invoice-sheet {
                     max-width: 820px;
                     min-height: 1040px;
                     margin: 0 auto;
-                    padding: 26px 34px;
+                    padding: 46px 26px 46px;
                     background: #fff;
                     color: #111;
                     font-family: Arial, Helvetica, sans-serif;
-                    font-size: 12px;
-                    line-height: 1.35;
+                    font-size: 14px;
+                    line-height: 1.28;
                     box-shadow: 0 0 0 1px #e5e7eb, 0 14px 35px rgba(15, 23, 42, 0.08);
                 }
-                .invoice-company { font-size: 12px; }
-                .invoice-company-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-                .invoice-top-grid { display: grid; grid-template-columns: 1fr 300px; gap: 42px; margin-top: 28px; }
-                .invoice-address-title { font-weight: 700; font-size: 12px; margin-bottom: 10px; }
-                .invoice-address-line { min-height: 16px; }
-                .invoice-meta { width: 100%; border-collapse: collapse; }
-                .invoice-meta td { padding: 2px 0 6px 12px; vertical-align: top; }
-                .invoice-meta td:first-child { font-weight: 700; text-align: right; white-space: nowrap; padding-left: 0; }
-                .invoice-project-meta { width: 100%; border-collapse: collapse; margin-top: 18px; }
-                .invoice-project-meta th { font-weight: 700; text-align: left; padding: 0 0 4px; border-bottom: 1px solid #111; }
-                .invoice-project-meta td { padding: 7px 14px 0 0; vertical-align: top; }
-                .invoice-items { width: 100%; border-collapse: collapse; margin-top: 26px; }
-                .invoice-items th {
-                    border-top: 1px solid #111;
-                    border-bottom: 1px solid #111;
-                    font-weight: 700;
-                    padding: 6px 8px;
-                    text-align: left;
+                .invoice-accent { color: #3f929b; }
+                .invoice-header {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) 340px;
+                    align-items: start;
+                    gap: 40px;
+                    margin: 0 48px 56px;
                 }
-                .invoice-items th.qty, .invoice-items td.qty { width: 64px; text-align: right; }
+                .invoice-company { font-size: 16px; }
+                .invoice-company-name { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+                .invoice-company div { min-height: 21px; }
+                .invoice-logo-wrap { text-align: right; padding-top: 2px; }
+                .invoice-logo { width: 240px; max-height: 110px; object-fit: contain; }
+                .invoice-top-grid {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) 342px;
+                    gap: 40px;
+                    align-items: end;
+                    margin: 0 0 0 48px;
+                }
+                .invoice-address { min-height: 132px; }
+                .invoice-address-title { font-weight: 800; font-size: 16px; margin-bottom: 4px; letter-spacing: 0; }
+                .invoice-address-line { min-height: 21px; font-size: 16px; }
+                .invoice-meta-panel { display: grid; gap: 14px; }
+                .invoice-title,
+                .invoice-meta-row {
+                    background: #3f929b;
+                    color: #fff;
+                    min-height: 42px;
+                    display: flex;
+                    align-items: center;
+                    padding: 0 6px;
+                }
+                .invoice-title {
+                    font-size: 22px;
+                    font-weight: 800;
+                    line-height: 1.1;
+                }
+                .invoice-meta-row {
+                    gap: 4px;
+                    font-size: 16px;
+                }
+                .invoice-meta-label { font-weight: 800; }
+                .invoice-reference-rule {
+                    height: 10px;
+                    background: #3f929b;
+                    margin: 0px 0px 14px 0;
+                }
+                .invoice-project-meta {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 70px;
+                    margin: 0 48px 42px;
+                }
+                .invoice-project-label { font-weight: 800; margin-bottom: 2px; font-size: 16px; }
+                .invoice-project-value { min-height: 20px; font-size: 16px; }
+                .invoice-items { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                .invoice-items th {
+                    background: #3f929b;
+                    color: #fff;
+                    font-weight: 800;
+                    padding: 8px 8px;
+                    text-align: left;
+                    font-size: 14px;
+                }
+                .invoice-items th:first-child, .invoice-items td:first-child { padding-left: 48px; }
+                .invoice-items th.qty, .invoice-items td.qty { width: 70px; text-align: right; }
                 .invoice-items th.rate, .invoice-items td.rate,
-                .invoice-items th.amount, .invoice-items td.amount { width: 128px; text-align: right; }
-                .invoice-items td { padding: 6px 8px; vertical-align: top; }
-                .invoice-component-row td { font-weight: ${showDetails ? 700 : 400}; }
-                .invoice-sub-row td:first-child { padding-left: 24px; }
-                .invoice-footer-grid { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 24px; margin-top: 34px; align-items: start; }
-                .invoice-notes p { margin: 0 0 6px; }
+                .invoice-items th.amount, .invoice-items td.amount { width: 86px; text-align: right; }
+                .invoice-items td {
+                    padding: 3px 8px;
+                    vertical-align: top;
+                    font-size: 16px;
+                    border-bottom: 1px solid #a9c2c6;
+                }
+                .invoice-footer-grid {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) 398px;
+                    gap: 30px;
+                    margin-top: 28px;
+                    align-items: start;
+                    padding: 0 0 0 46px;
+                }
+                .invoice-notes { font-size: 16px; }
+                .invoice-notes p { margin: 0 0 2px; }
                 .bank-table td { padding: 1px 8px 3px 0; }
-                .bank-table td:first-child { font-weight: 700; white-space: nowrap; }
-                .invoice-totals { width: 100%; border-collapse: collapse; margin-left: auto; }
-                .invoice-totals td { padding: 5px 0 5px 14px; }
-                .invoice-totals td:first-child { font-weight: 700; text-align: right; white-space: nowrap; }
-                .invoice-grand td { font-size: 15px; font-weight: 800; padding-top: 8px; }
-                .invoice-due td { font-size: 14px; font-weight: 800; padding-top: 10px; }
-                .acceptance { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 54px; }
-                .acceptance div { border-top: 1px solid #111; padding-top: 5px; font-weight: 700; }
+                .bank-table td:first-child { white-space: nowrap; }
+                .invoice-summary { font-size: 14px; }
+                .invoice-summary-row {
+                    display: grid;
+                    grid-template-columns: 1fr 160px;
+                    gap: 20px;
+                    margin-bottom: 8px;
+                    text-align: right;
+                }
+                .invoice-due {
+                    display: grid;
+                    grid-template-columns: 185px 1fr;
+                    margin-top: 10px;
+                    align-items: stretch;
+                }
+                .invoice-due-label,
+                .invoice-due-value {
+                    background: #3f929b;
+                    color: #fff;
+                    min-height: 41px;
+                    display: flex;
+                    align-items: center;
+                }
+                .invoice-due-label {
+                    justify-content: flex-start;
+                    padding-left: 6px;
+                    font-size: 16px;
+                }
+                .invoice-due-value {
+                    justify-content: flex-end;
+                    padding-right: 48px;
+                    font-size: 22px;
+                    font-weight: 800;
+                }
+                .acceptance { display: grid; grid-template-columns: 1fr 1fr; gap: 86px; margin-top: 72px; max-width: 560px; }
+                .acceptance div { padding-top: 5px; }
             `}</style>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="no-print" />
@@ -326,10 +466,11 @@ const InvoiceView = () => {
                         value={selectedType}
                         onChange={(e) => handleDocTypeChange(e.target.value)}
                         aria-label="Invoice type"
+                        disabled={availableDocTypes.length <= 1}
                     >
-                        <option value={DOC_TYPES.PROFORMA}>Proforma Invoice</option>
-                        <option value={DOC_TYPES.NORMAL}>Invoice</option>
-                        <option value={DOC_TYPES.TAX}>Tax Invoice</option>
+                        {(availableDocTypes.length ? availableDocTypes : DOC_TYPE_OPTIONS.slice(0, 1)).map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                     </Form.Select>
                     <Form.Control
                         size="sm"
@@ -346,54 +487,49 @@ const InvoiceView = () => {
             </div>
 
             <section className="invoice-sheet">
-                <header className="invoice-company">
-                    <div className="invoice-company-name">{company.name}</div>
-                    {company.addressLines.map((line) => <div key={line}>{line}</div>)}
-                    <div>{company.email}</div>
-                    <div>Govt. UID VAT Reg: {company.vatNo}</div>
+                <header className="invoice-header">
+                    <div className="invoice-company">
+                        <div className="invoice-company-name">{company.name}</div>
+                        {company.addressLines.map((line) => <div key={line}>{line}</div>)}
+                        {company.phone && <div>{company.phone}</div>}
+                        {company.email && <div>{company.email}</div>}
+                        {company.vatNo && <div>Govt. UID VAT Reg: {company.vatNo}</div>}
+                    </div>
+                    <div className="invoice-logo-wrap">
+                        <img className="invoice-logo" src={logo} alt="Maruka Technologies" />
+                    </div>
                 </header>
 
                 <div className="invoice-top-grid">
-                    <div>
+                    <div className="invoice-address">
                         <div className="invoice-address-title">{addressTitle}</div>
                         {getCustomerLines(customer).map((line, idx) => (
                             <div className="invoice-address-line" key={`${line}-${idx}`}>{line}</div>
                         ))}
                     </div>
-                    <div>
-                        <table className="invoice-meta">
-                            <tbody>
-                                <tr>
-                                    <td>{documentTitle}</td>
-                                    <td>{invoiceNo}</td>
-                                </tr>
-                                <tr>
-                                    <td>DATE</td>
-                                    <td>{formatDate(invoice.issuedDate)}</td>
-                                </tr>
-                                <tr>
-                                    <td>{dueDateLabel}</td>
-                                    <td>{formatDate(invoice.dueDate)}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div className="invoice-meta-panel">
+                        <div className="invoice-title">{documentTitle} {invoiceNo}</div>
+                        <div className="invoice-meta-row">
+                            <span className="invoice-meta-label">DATE</span>
+                            <span>{formatDate(invoice.issuedDate)}</span>
+                        </div>
+                        <div className="invoice-meta-row">
+                            <span className="invoice-meta-label">{dueDateLabel}</span>
+                            <span>{formatDate(invoice.dueDate)}</span>
+                        </div>
+                    </div>
+                </div>
 
-                        <table className="invoice-project-meta">
-                            <thead>
-                                <tr>
-                                    <th>PO NO</th>
-                                    <th>INQUIRY NO</th>
-                                    <th>JOB NO</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{invoice.poNumber || "-"}</td>
-                                    <td>{inquiryText}</td>
-                                    <td>{jobRef}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <div className="invoice-reference-rule" />
+
+                <div className="invoice-project-meta">
+                    <div>
+                        <div className="invoice-project-label">PO NO</div>
+                        <div className="invoice-project-value">{invoice.poNumber || "-"}</div>
+                    </div>
+                    <div>
+                        <div className="invoice-project-label">PROJECT NO</div>
+                        <div className="invoice-project-value">{jobRef !== "-" ? `${jobRef} (${projectText})` : projectText}</div>
                     </div>
                 </div>
 
@@ -407,23 +543,13 @@ const InvoiceView = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {groupedItems.map((group, index) => (
-                            <React.Fragment key={`${group.description}-${index}`}>
-                                <tr className="invoice-component-row">
-                                    <td>{group.description}</td>
-                                    <td className="qty">1</td>
-                                    <td className="rate">{money(group.unitPrice)}</td>
-                                    <td className="amount">{money(group.total)}</td>
-                                </tr>
-                                {showDetails && group.items?.map((item) => (
-                                    <tr className="invoice-sub-row" key={item.key}>
-                                        <td>{item.description}</td>
-                                        <td className="qty">{item.quantity || ""}</td>
-                                        <td className="rate">{money(item.unitPrice)}</td>
-                                        <td className="amount">{money(item.total)}</td>
-                                    </tr>
-                                ))}
-                            </React.Fragment>
+                        {invoiceRows.map((item, index) => (
+                            <tr key={item.key || `${item.description}-${index}`}>
+                                <td>{item.description}</td>
+                                <td className="qty">{item.quantity || ""}</td>
+                                <td className="rate">{money(item.unitPrice)}</td>
+                                <td className="amount">{money(item.total)}</td>
+                            </tr>
                         ))}
                     </tbody>
                 </table>
@@ -449,36 +575,36 @@ const InvoiceView = () => {
                         )}
                     </div>
 
-                    <table className="invoice-totals">
-                        <tbody>
-                            <tr>
-                                <td>SUBTOTAL</td>
-                                <td className="text-end">{money(subtotal)}</td>
-                            </tr>
-                            {showTax && (
-                                <tr>
-                                    <td>TAX</td>
-                                    <td className="text-end">{money(taxTotal)}</td>
-                                </tr>
-                            )}
-                            <tr className="invoice-grand">
-                                <td>TOTAL</td>
-                                <td className="text-end">{money(documentTotal)}</td>
-                            </tr>
-                            {!isProforma && totalReceived > 0 && (
-                                <tr>
-                                    <td>PAYMENT</td>
-                                    <td className="text-end">{money(totalReceived)}</td>
-                                </tr>
-                            )}
-                            {!isProforma && (
-                                <tr className="invoice-due">
-                                    <td>LKR</td>
-                                    <td className="text-end">{money(balanceDue)} TOTAL DUE</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="invoice-summary">
+                        {(showTax || isProforma || totalReceived > 0) && (
+                            <>
+                                <div className="invoice-summary-row">
+                                    <span>SUBTOTAL</span>
+                                    <span>{money(subtotal)}</span>
+                                </div>
+                                {showTax && (
+                                    <div className="invoice-summary-row">
+                                        <span>TAX</span>
+                                        <span>{money(taxTotal)}</span>
+                                    </div>
+                                )}
+                                <div className="invoice-summary-row">
+                                    <span>TOTAL</span>
+                                    <span>{money(documentTotal)}</span>
+                                </div>
+                                {!isProforma && totalReceived > 0 && (
+                                    <div className="invoice-summary-row">
+                                        <span>PAYMENT</span>
+                                        <span>{money(totalReceived)}</span>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                        <div className="invoice-due">
+                            <div className="invoice-due-label">{isProforma ? "LKR" : "TOTAL DUE"}</div>
+                            <div className="invoice-due-value">LKR {money(isProforma ? documentTotal : balanceDue)}</div>
+                        </div>
+                    </div>
                 </div>
 
                 {isProforma && (

@@ -23,6 +23,26 @@ const PRINT_FORMATS = {
     TOTALS_ONLY: "totalsOnly",
 };
 
+const INVOICE_TYPES = {
+    PROFORMA: "proforma",
+    NORMAL: "normal",
+    TAX: "tax",
+};
+
+const invoiceTypeLabels = {
+    [INVOICE_TYPES.PROFORMA]: "Proforma Invoice",
+    [INVOICE_TYPES.NORMAL]: "Invoice",
+    [INVOICE_TYPES.TAX]: "Tax Invoice",
+};
+
+const getInvoiceDocumentType = (invoice) => {
+    if (!invoice) return INVOICE_TYPES.PROFORMA;
+    if (invoice.downloadDocumentType) return invoice.downloadDocumentType;
+    if (invoice.taxInvoiceNumber) return INVOICE_TYPES.TAX;
+    if (invoice.normalInvoiceNumber) return INVOICE_TYPES.NORMAL;
+    return INVOICE_TYPES.PROFORMA;
+};
+
 const componentAmount = (component) =>
     component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0;
 
@@ -36,6 +56,7 @@ const QuotationPrint = () => {
     const [invoices, setInvoices] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [printFormat, setPrintFormat] = useState(PRINT_FORMATS.ALL);
+    const [invoiceType, setInvoiceType] = useState(INVOICE_TYPES.PROFORMA);
 
     const fetchData = async () => {
         try {
@@ -79,11 +100,12 @@ const QuotationPrint = () => {
     };
 
     const handleGenerateInvoice = async () => {
-        if (!window.confirm("Generate a proforma invoice from this quotation?")) return;
+        const label = invoiceTypeLabels[invoiceType] || "invoice";
+        if (!window.confirm(`Generate ${label} from this quotation?`)) return;
         setIsGenerating(true);
         try {
-            await api.post(`/invoices/generate-from-estimation/${estimation.id}`);
-            toast.success("Proforma invoice generated successfully!");
+            await api.post(`/invoices/generate-from-estimation/${estimation.id}?type=${invoiceType}`);
+            toast.success(`${label} generated successfully!`);
             fetchData();
         } catch (error) {
             console.error(error);
@@ -109,6 +131,8 @@ const QuotationPrint = () => {
     const subtitleParts = [`Inquiry: ${inquiryRef}`];
     if (project?.jobNumber) subtitleParts.push(`Job: ${project.jobNumber}`);
     const activeInvoice = invoices.find(i => i.status !== "CANCELLED");
+    const activeInvoiceType = getInvoiceDocumentType(activeInvoice);
+    const activeInvoiceLabel = invoiceTypeLabels[activeInvoiceType] || "Invoice";
 
     return (
         <div className="bg-white min-vh-100 p-4">
@@ -140,10 +164,27 @@ const QuotationPrint = () => {
                         <Button variant="success" onClick={handleFinalize}>Finalize Quote</Button>
                     )}
                     {isFinalized && !hasActiveInvoice && (
-                        <Button variant="warning" onClick={handleGenerateInvoice}>Generate Proforma Invoice</Button>
+                        <>
+                            <Form.Select
+                                size="sm"
+                                className="w-auto"
+                                value={invoiceType}
+                                onChange={(e) => setInvoiceType(e.target.value)}
+                                aria-label="Invoice type to generate"
+                            >
+                                <option value={INVOICE_TYPES.PROFORMA}>Proforma Invoice</option>
+                                <option value={INVOICE_TYPES.NORMAL}>Invoice</option>
+                                <option value={INVOICE_TYPES.TAX}>Tax Invoice</option>
+                            </Form.Select>
+                            <Button variant="warning" onClick={handleGenerateInvoice}>
+                                Generate {invoiceTypeLabels[invoiceType]}
+                            </Button>
+                        </>
                     )}
                     {isFinalized && activeInvoice && (
-                        <Button variant="success" onClick={() => navigate(`/invoices/${activeInvoice.id}`)}>View Proforma Invoice</Button>
+                        <Button variant="success" onClick={() => navigate(`/invoices/${activeInvoice.id}?type=${activeInvoiceType}`)}>
+                            View {activeInvoiceLabel}
+                        </Button>
                     )}
                     <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
                 </div>

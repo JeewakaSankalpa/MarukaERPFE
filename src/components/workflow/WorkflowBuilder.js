@@ -69,6 +69,8 @@ export default function WorkflowBuilder() {
     // Backend Data
     const [roles, setRoles] = useState([]);
     const [availableStages, setAvailableStages] = useState([]);
+    const [adminConfig, setAdminConfig] = useState({});
+    const [savingAdminConfig, setSavingAdminConfig] = useState(false);
 
     // React Flow State
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -132,10 +134,11 @@ export default function WorkflowBuilder() {
                 // Fetch Data needed
                 const fetchFlow = (!isNew) ? getWorkflow(id).catch(() => null) : Promise.resolve(null);
 
-                const [wf, stagesRes, rolesRes] = await Promise.all([
+                const [wf, stagesRes, rolesRes, adminConfigRes] = await Promise.all([
                     fetchFlow,
                     api.get("/workflow/stages").catch(() => ({ data: [] })),
                     api.get("/projects/workflow/roles").catch(() => ({ data: [] })), // Use workflow roles
+                    api.get("/admin/config").catch(() => ({ data: {} })),
                 ]);
 
                 // Merge with emptyFlow to ensure all fields exist
@@ -165,6 +168,7 @@ export default function WorkflowBuilder() {
 
                 setAvailableStages(stagesRes.data || []);
                 setRoles(rolesRes.data || []);
+                setAdminConfig(adminConfigRes.data || {});
 
             } catch (e) {
                 console.error(e);
@@ -185,6 +189,28 @@ export default function WorkflowBuilder() {
             toast.success("Role added globally");
         } catch (e) {
             toast.error("Failed to add role");
+        }
+    };
+
+    const updateProjectRevisionApproval = async (checked) => {
+        const nextValue = String(checked);
+        const previousConfig = adminConfig;
+        const nextConfig = {
+            ...adminConfig,
+            "app.project.revision.requireApproval": nextValue,
+        };
+        setAdminConfig(nextConfig);
+        setSavingAdminConfig(true);
+        try {
+            await api.post("/admin/config", {
+                "app.project.revision.requireApproval": nextValue,
+            });
+            toast.success("Project revision approval setting saved");
+        } catch (e) {
+            setAdminConfig(previousConfig);
+            toast.error("Failed to save project revision approval setting");
+        } finally {
+            setSavingAdminConfig(false);
         }
     };
 
@@ -551,6 +577,18 @@ export default function WorkflowBuilder() {
                     <Modal.Title>Global Workflow Settings</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
+                    <div className="mb-4 border-bottom pb-3">
+                        <label className="fw-bold mb-2">Project Revision Controls</label>
+                        <Form.Check
+                            type="switch"
+                            id="workflow-project-revision-approval"
+                            label="Require approval before project revisions are applied"
+                            checked={adminConfig["app.project.revision.requireApproval"] !== "false"}
+                            disabled={savingAdminConfig}
+                            onChange={(e) => updateProjectRevisionApproval(e.target.checked)}
+                        />
+                    </div>
+
                     {/* Role Management Section */}
                     <div className="mb-4 border-bottom pb-3">
                         <label className="fw-bold mb-2">Global Roles</label>

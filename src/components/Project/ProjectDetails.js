@@ -271,7 +271,7 @@ export default function ProjectDetails() {
 
     const handleAcceptQuotation = async () => {
         if (!acceptFile) {
-            toast.warn("Please upload the signed quotation document.");
+            toast.warn("Please upload the customer Purchase Order.");
             return;
         }
         setAccepting(true);
@@ -282,13 +282,13 @@ export default function ProjectDetails() {
             await api.post(`/projects/${id}/accept-quotation`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            toast.success("Quotation accepted! Job number generated.");
+            toast.success("Customer PO recorded. Job number generated.");
             setShowAcceptModal(false);
             setAcceptFile(null);
             await refresh();
         } catch (e) {
             console.error(e);
-            toast.error("Failed to accept quotation: " + (e.response?.data?.message || e.message));
+            toast.error("Failed to record customer PO: " + (e.response?.data?.message || e.message));
         } finally {
             setAccepting(false);
         }
@@ -485,7 +485,7 @@ export default function ProjectDetails() {
                         <div className="d-flex gap-2 align-items-center mt-2 mt-md-0">
                             {!project?.jobNumber && effectiveActions?.canAcceptQuotation && (
                                 <Button variant="outline-success" className="me-2" onClick={() => setShowAcceptModal(true)}>
-                                    Mark as Accepted by Customer
+                                    Record Customer PO
                                 </Button>
                             )}
                             {effectiveActions.missingFiles && effectiveActions.missingFiles.length > 0 && (
@@ -670,17 +670,17 @@ export default function ProjectDetails() {
                 </Modal.Footer>
             </Modal>
 
-            {/* Accept Quotation Modal */}
+            {/* Customer PO Modal */}
             <Modal show={showAcceptModal} onHide={() => { if (!accepting) setShowAcceptModal(false); }} centered>
                 <Modal.Header closeButton>
-                    <Modal.Title>Accept Quotation</Modal.Title>
+                    <Modal.Title>Record Customer Purchase Order</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <p>Marking this quotation as <strong>Accepted by Customer</strong> will generate a permanent Job Number (MJN).</p>
-                    <p className="text-danger small"><strong>Requirement:</strong> You must upload a scanned copy of the signed quotation from the customer.</p>
+                    <p>Recording the customer's <strong>Purchase Order</strong> will generate a permanent Job Number (MJN).</p>
+                    <p className="text-danger small"><strong>Requirement:</strong> Upload the customer PO or written purchase order document.</p>
 
                     <Form.Group className="mb-3">
-                        <Form.Label>Signed Quotation Document</Form.Label>
+                        <Form.Label>Customer Purchase Order</Form.Label>
                         <Form.Control
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"

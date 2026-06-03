@@ -37,6 +37,7 @@ export default function POCreateManual({ onCreated }) {
     const [productData, setProductData] = useState({ content: [], totalPages: 0 });
 
     const [etaDate, setEtaDate] = useState("");
+    const [quotationRef, setQuotationRef] = useState("");
     const [note, setNote] = useState("");
 
     // Rows: { productId, name, sku, unit, qty, unitPrice, taxPercent, taxAmount, note }
@@ -321,6 +322,7 @@ export default function POCreateManual({ onCreated }) {
 
             const payload = {
                 supplierId: supplier.id,
+                quotationRef: quotationRef.trim() || null,
                 etaDate: etaDate || null,
                 note: note || null,
                 items,
@@ -419,10 +421,23 @@ export default function POCreateManual({ onCreated }) {
                             <Row>
                                 <Col md={6}>
                                     <Form.Group className="mb-2">
+                                        <Form.Label>Quotation No</Form.Label>
+                                        <Form.Control
+                                            type="text"
+                                            value={quotationRef}
+                                            onChange={e => setQuotationRef(e.target.value)}
+                                            placeholder="Enter supplier quotation no"
+                                        />
+                                    </Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                    <Form.Group className="mb-2">
                                         <Form.Label>ETA Date</Form.Label>
                                         <SafeDatePicker name="etaDate" value={etaDate} onChange={e => setEtaDate(e.target.value)} />
                                     </Form.Group>
                                 </Col>
+                            </Row>
+                            <Row>
                                 <Col md={6}>
                                     <Form.Group className="mb-2">
                                         <Form.Label>Note</Form.Label>

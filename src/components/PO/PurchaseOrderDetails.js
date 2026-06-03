@@ -249,6 +249,7 @@ export default function PurchaseOrderDetails() {
                             <div>
                                 <h3 className="mb-1">Purchase Order: {po.poNumber}</h3>
                                 <div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
+                                <div className="text-muted">Quotation No: <strong>{po.quotationRef || "-"}</strong></div>
                                 <div className="mt-2">
                                     {po.originType === "PROJECT" || po.projectId ? (
                                         <>

@@ -23,6 +23,7 @@ export default function PendingToPOPage() {
     const navigate = useNavigate();
     const [plan, setPlan] = useState(null); // {id, lines:[{productId, productNameSnapshot, shortageQty, suppliers:[...] }]}
     const [choices, setChoices] = useState({}); // productId -> { supplierId, qty, unitPrice, taxPercent }
+    const [quotationRefs, setQuotationRefs] = useState({}); // supplierId -> quotation no
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [completenessIssues, setCompletenessIssues] = useState([]);
     const [showCompletenessModal, setShowCompletenessModal] = useState(false);
@@ -64,12 +65,13 @@ export default function PendingToPOPage() {
                 originType: line.originType,
                 projectId: line.projectId,
                 qty: Number(c.qty),
+                ...(quotationRefs[c.supplierId]?.trim() ? { quotationRef: quotationRefs[c.supplierId].trim() } : {}),
                 ...(c.unitPrice? { unitPrice: String(c.unitPrice) } : {}),
                 ...(c.taxPercent? { taxPercent: String(c.taxPercent) } : {})
             });
         });
         return map;
-    }, [choices]);
+    }, [choices, quotationRefs, plan?.lines]);
 
     const openCompletenessModal = (issues, proceed = null) => {
         setCompletenessIssues(issues);
@@ -164,6 +166,7 @@ export default function PendingToPOPage() {
                         <th>Source</th>
                         <th className="text-end">Shortage</th>
                         <th>Supplier</th>
+                        <th style={{width:160}}>Quotation No</th>
                         <th style={{width:120}}>Qty</th>
                         <th style={{width:130}}>Unit Price</th>
                         <th style={{width:120}}>Tax %</th>
@@ -196,6 +199,17 @@ export default function PendingToPOPage() {
                                             </option>
                                         )}
                                     </SafeSelect>
+                                </td>
+                                <td>
+                                    <Form.Control
+                                        value={c.supplierId ? quotationRefs[c.supplierId] || "" : ""}
+                                        placeholder="Quotation no"
+                                        disabled={!c.supplierId}
+                                        onChange={e => {
+                                            const value = e.target.value;
+                                            setQuotationRefs(prev => ({ ...prev, [c.supplierId]: value }));
+                                        }}
+                                    />
                                 </td>
                                 <td>
                                     <Form.Control type="number" min="0" value={c.qty||""}

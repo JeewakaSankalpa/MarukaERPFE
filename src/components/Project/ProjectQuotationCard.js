@@ -25,7 +25,7 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
     const handleAcceptQuotation = async (e) => {
         e.preventDefault();
         if (!file) {
-            toast.warn("Please upload the signed quotation document.");
+            toast.warn("Please upload the customer Purchase Order.");
             return;
         }
 
@@ -40,7 +40,7 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                     ...(roleHeader || {})
                 }
             });
-            toast.success("Quotation accepted successfully! Project is now a Job.");
+            toast.success("Customer PO recorded successfully. Project is now a Job.");
             setShowModal(false);
             if (reloadKey && typeof reloadKey === 'function') {
                 reloadKey(); // If it's a function
@@ -49,7 +49,7 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                 window.location.reload();
             }
         } catch (error) {
-            toast.error("Failed to accept quotation: " + (error.response?.data?.message || error.message));
+            toast.error("Failed to record customer PO: " + (error.response?.data?.message || error.message));
         } finally {
             setIsAccepting(false);
         }
@@ -65,13 +65,13 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                     </h5>
                     <div className="d-flex gap-2">
                         {project?.status === "APPROVED" && <Badge bg="success">Approved</Badge>}
-                    <Badge bg="info">Quotation / Proforma</Badge>
+                    <Badge bg="info">Quotation / Customer PO</Badge>
                     </div>
                 </div>
             </Card.Header>
             <Card.Body>
                 <p className="text-muted small">
-                    View the customer-facing quotation, generate the proforma invoice after final approval, and keep the detailed costing inside the estimation record.
+                    View the customer-facing quotation and record the customer's Purchase Order when the quotation is accepted.
                 </p>
                 <div className="d-flex gap-2">
                     <Button variant="primary" onClick={handleViewQuotation} disabled={!targetId}>
@@ -79,24 +79,24 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                     </Button>
                     {(!project?.jobNumber) && actions?.canAcceptQuotation && (
                         <Button variant="success" onClick={() => setShowModal(true)} disabled={!targetId}>
-                            <CheckCircle size={16} className="me-1" /> Mark as Accepted by Customer
+                            <CheckCircle size={16} className="me-1" /> Record Customer PO
                         </Button>
                     )}
                 </div>
             </Card.Body>
 
-            {/* Accept Quotation Modal */}
+            {/* Customer PO Modal */}
             <Modal show={showModal} onHide={() => setShowModal(false)}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Accept Quotation</Modal.Title>
+                    <Modal.Title>Record Customer Purchase Order</Modal.Title>
                 </Modal.Header>
                 <Form onSubmit={handleAcceptQuotation}>
                     <Modal.Body>
                         <p className="text-muted small mb-3">
-                            Accepting this quotation will generate an official Maruka Job Number (MJN) and mark this inquiry as a Job.
+                            Uploading the customer Purchase Order will generate an official Maruka Job Number (MJN) and mark this inquiry as a Job.
                         </p>
                         <Form.Group>
-                            <Form.Label>Upload Signed Quotation Document <span className="text-danger">*</span></Form.Label>
+                            <Form.Label>Upload Customer Purchase Order <span className="text-danger">*</span></Form.Label>
                             <Form.Control
                                 type="file"
                                 accept=".pdf,.doc,.docx,.jpg,.png"
@@ -104,7 +104,7 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                                 required
                             />
                             <Form.Text className="text-muted">
-                                Please upload the scanned copy of the quotation signed by the customer.
+                                Please upload the customer's PO or written purchase order document.
                             </Form.Text>
                         </Form.Group>
                     </Modal.Body>
