@@ -31,13 +31,19 @@ const StockValuationReport = () => {
     };
 
     const calculateTotals = () => {
-        return stock.reduce((acc, item) => ({
-            qty: acc.qty + (item.quantity || 0),
-            value: acc.value + (item.totalValue || 0)
-        }), { qty: 0, value: 0 });
+        let qty = 0;
+        let value = 0;
+        let batchCount = 0;
+        stock.forEach(item => {
+            qty += (item.quantity || 0);
+            value += (item.totalValue || 0);
+            batchCount += (item.batches || []).length;
+        });
+        return { qty, value, batchCount };
     };
 
     const totals = calculateTotals();
+    const averageUnitCost = totals.qty > 0 ? (totals.value / totals.qty) : 0;
 
     return (
         <div className="p-4 bg-white min-vh-100">
@@ -49,6 +55,42 @@ const StockValuationReport = () => {
 
             {loading ? <div className="text-center p-5"><Spinner animation="border" /></div> : (
                 <ReportLayout title="Stock Valuation Report" orientation="portrait">
+                    {/* Confidential Stock Metrics Panel */}
+                    <div className="row g-3 mb-4">
+                        <div className="col-md-3">
+                            <div className="p-3 border rounded bg-light text-center">
+                                <small className="text-muted text-uppercase d-block mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Total Stock Valuation</small>
+                                <h5 className="mb-0 fw-bold text-primary">
+                                    Rs. {totals.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </h5>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="p-3 border rounded bg-light text-center">
+                                <small className="text-muted text-uppercase d-block mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Total Quantity</small>
+                                <h5 className="mb-0 fw-bold text-dark">
+                                    {totals.qty.toLocaleString()}
+                                </h5>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="p-3 border rounded bg-light text-center">
+                                <small className="text-muted text-uppercase d-block mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Average Unit Cost</small>
+                                <h5 className="mb-0 fw-bold text-dark">
+                                    Rs. {averageUnitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </h5>
+                            </div>
+                        </div>
+                        <div className="col-md-3">
+                            <div className="p-3 border rounded bg-light text-center">
+                                <small className="text-muted text-uppercase d-block mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>Active Batches</small>
+                                <h5 className="mb-0 fw-bold text-dark">
+                                    {totals.batchCount.toLocaleString()}
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+
                     <Table bordered size="sm" style={{ fontSize: "12px" }}>
                         <thead>
                             <tr className="table-light">

@@ -221,11 +221,11 @@ const InventoryDashboard = () => {
       <Row className="g-3 mb-4">
         <Col md={4}>
           <StatCard
-            title="Total Cost Value"
-            value={`Rs. ${(stats?.totalInventoryValue || 0).toLocaleString()}`}
-            icon={<FaClipboardList size={24} />}
+            title="Total Stock Quantity"
+            value={(stats?.totalStockQty || 0).toLocaleString()}
+            icon={<FaBoxes size={24} />}
             color="primary"
-            subtext="Buying cost across all locations"
+            subtext="Total items across all locations"
           />
         </Col>
         <Col md={4}>
