@@ -490,14 +490,6 @@ export default function SystemConfiguration() {
                                 onChange={(e) => setConfig({ ...config, "app.notification.enable.project.digest": String(e.target.checked) })}
                                 className="mb-2"
                             />
-                            <Form.Check
-                                type="switch"
-                                id="pj-revision-approval"
-                                label="Require Approval for Project Revisions"
-                                name="app.project.revision.requireApproval"
-                                checked={config["app.project.revision.requireApproval"] !== "false"}
-                                onChange={(e) => setConfig({ ...config, "app.project.revision.requireApproval": String(e.target.checked) })}
-                            />
                         </Col>
                     </Row>
                 </Card.Body>

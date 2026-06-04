@@ -21,6 +21,7 @@ import Select from "react-select";
 import SafeSelect from "../ReusableComponents/SafeSelect";
 import CompletenessModal from "../ReusableComponents/CompletenessModal";
 import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
+import { CustomerForm } from "../Customer/CustomerCreate";
 
 const ProjectForm = () => {
   const { id: routeId } = useParams();
@@ -55,6 +56,7 @@ const ProjectForm = () => {
   const [completenessIssues, setCompletenessIssues] = useState([]);
   const [showCompletenessModal, setShowCompletenessModal] = useState(false);
   const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
+  const [editCustomerRecord, setEditCustomerRecord] = useState(null); // { id, name }
   const [quickCustomer, setQuickCustomer] = useState({
     comName: "",
     contactPersonName: "",
@@ -714,12 +716,38 @@ const ProjectForm = () => {
         issues={completenessIssues}
         title="Complete Customer Details"
         onClose={() => setShowCompletenessModal(false)}
-        onEditIssue={(issue) => issue?.entityId && navigate(`/customer/edit/${issue.entityId}`)}
+        onEditIssue={(issue) => {
+          if (!issue?.entityId) return;
+          setShowCompletenessModal(false);
+          setEditCustomerRecord({ id: issue.entityId, name: issue.name });
+        }}
         onProceed={pendingCompletenessProceed ? () => {
           setShowCompletenessModal(false);
           pendingCompletenessProceed();
         } : null}
       />
+
+      {/* Inline customer edit modal — fixes missing details without leaving the page */}
+      <Modal show={Boolean(editCustomerRecord)} onHide={() => setEditCustomerRecord(null)} size="xl" centered scrollable>
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Customer: {editCustomerRecord?.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {editCustomerRecord && (
+            <CustomerForm
+              id={editCustomerRecord.id}
+              compact
+              startEditing
+              onClose={() => setEditCustomerRecord(null)}
+              onSaved={(savedCustomer) => {
+                // Refresh customer list so the updated data is reflected
+                setCustomers(prev => prev.map(c => c.id === savedCustomer.id ? savedCustomer : c));
+                setEditCustomerRecord(null);
+              }}
+            />
+          )}
+        </Modal.Body>
+      </Modal>
     </div >
   );
 };

@@ -190,7 +190,7 @@ export default function ProjectRevisions({ projectId, versions, stages, workflow
                 <Modal.Header closeButton><Modal.Title>Request Revision</Modal.Title></Modal.Header>
                 <Modal.Body>
                     <p className="small text-muted">
-                        This will request approval for a revision when revision approval is enabled. Once approved, the system creates a read-only snapshot and moves the project back to the selected stage.
+                        This will request approval for a revision. Once approved, the system creates a read-only snapshot and moves the project back to the selected stage.
                     </p>
                     <Form.Group className="mb-3">
                         <Form.Label>Reason / Change Request</Form.Label>

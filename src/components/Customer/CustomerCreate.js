@@ -1,11 +1,244 @@
 import { ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from "react";
-import { Form, Button, Container, Row, Spinner } from "react-bootstrap";
+import { Form, Button, Container, Row, Col, Spinner } from "react-bootstrap";
 import api from "../../api/api";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import SafeSelect from '../ReusableComponents/SafeSelect';
+
+/* ============================================================
+ * CustomerForm — embeddable form (use inside a Modal or page)
+ * id        : if set, loads & updates that customer (PUT)
+ * onClose   : called when user clicks back / cancel
+ * onSaved   : called with the saved Customer object
+ * startEditing : open in edit mode immediately
+ * compact   : removes outer card shadow/padding (for modal use)
+ * ============================================================ */
+export function CustomerForm({ id, onClose, onSaved, startEditing = false, compact = false }) {
+    const isEdit = Boolean(id);
+    const [isEditMode, setIsEditMode] = useState(!id || startEditing);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [validated, setValidated] = useState(false);
+    const [errors, setErrors] = useState({});
+
+    const [form, setForm] = useState({
+        comName: "",
+        comAddress: "",
+        comEmail: "",
+        comContactNumber: "",
+        businessRegNumber: "",
+        currency: "",
+        creditPeriod: "",
+        vatType: "",
+        vatNumber: "",
+        contactPersonData: { name: "", contactNumber: "", email: "" },
+    });
+
+    useEffect(() => {
+        if (!id) { setIsEditMode(true); return; }
+        api.get(`/customer/${id}`)
+            .then(res => {
+                const d = res.data || {};
+                setForm({
+                    comName:           d.comName || "",
+                    comAddress:        d.comAddress || "",
+                    comEmail:          d.comEmail || "",
+                    comContactNumber:  d.comContactNumber || "",
+                    businessRegNumber: d.businessRegNumber || "",
+                    currency:          d.currency || "",
+                    creditPeriod:      d.creditPeriod || "",
+                    vatType:           d.vatType || "",
+                    vatNumber:         d.vatNumber || "",
+                    contactPersonData: d.contactPersonData || { name: "", contactNumber: "", email: "" },
+                });
+                setIsEditMode(Boolean(startEditing));
+            })
+            .catch(() => toast.error("Failed to load customer"));
+    }, [id, startEditing]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        if (name.includes('.')) {
+            const [parent, child] = name.split('.');
+            setForm(prev => ({ ...prev, [parent]: { ...prev[parent], [child]: value } }));
+        } else {
+            setForm(prev => ({ ...prev, [name]: value }));
+        }
+        setErrors(prev => ({ ...prev, [name.replace('.', '_')]: null }));
+    };
+
+    const validate = () => {
+        const e = {};
+        const mobileRegex = /^[+]?[0-9 ()-]{7,20}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!form.comName) e.comName = "Company Name is required";
+        if (!form.comAddress) e.comAddress = "Company Address is required";
+        if (!form.comEmail) e.comEmail = "Company Email is required";
+        else if (!emailRegex.test(form.comEmail)) e.comEmail = "Invalid email format";
+        if (!form.comContactNumber) e.comContactNumber = "Contact number is required";
+        else if (!mobileRegex.test(form.comContactNumber)) e.comContactNumber = "Invalid phone number";
+        if (!form.businessRegNumber) e.businessRegNumber = "BR Number is required";
+        if (!form.currency) e.currency = "Currency is required";
+        if (!form.creditPeriod) e.creditPeriod = "Credit Period is required";
+        if (!form.contactPersonData.name) e.contactPersonData_name = "Contact Person Name is required";
+        if (!form.contactPersonData.contactNumber) e.contactPersonData_contactNumber = "Contact mobile is required";
+        else if (!mobileRegex.test(form.contactPersonData.contactNumber)) e.contactPersonData_contactNumber = "Invalid phone number";
+        if (!form.contactPersonData.email) e.contactPersonData_email = "Contact email is required";
+        else if (!emailRegex.test(form.contactPersonData.email)) e.contactPersonData_email = "Invalid email format";
+        setErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setValidated(true);
+        if (!validate()) return;
+        setIsSubmitting(true);
+        try {
+            const payload = { ...form };
+            const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+            const fd = new FormData();
+            fd.append("customer", blob);
+            const config = { headers: { "Content-Type": "multipart/form-data" } };
+            let saved;
+            if (isEdit) {
+                saved = (await api.put(`/customer/update/${id}`, fd, config)).data;
+            } else {
+                fd.append("password", "TestP");
+                saved = (await api.post("/customer/add", fd, config)).data;
+            }
+            toast.success(isEdit ? "Customer updated!" : "Customer saved!");
+            onSaved?.(saved);
+            onClose?.();
+        } catch (err) {
+            toast.error("Failed to save: " + (err.response?.data?.message || err.message));
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className={compact ? "" : "bg-white shadow rounded p-4"}>
+            {!compact && (
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div className="d-flex align-items-center">
+                        <button type="button" className="btn btn-light me-3" onClick={onClose}><ArrowLeft size={18} /></button>
+                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>{isEdit ? (isEditMode ? "Edit Customer" : "View Customer") : "Add Customer"}</h2>
+                    </div>
+                    {isEdit && (
+                        <Button size="sm" variant={isEditMode ? "secondary" : "primary"} onClick={() => setIsEditMode(v => !v)}>
+                            {isEditMode ? "Cancel Edit" : "Edit"}
+                        </Button>
+                    )}
+                </div>
+            )}
+
+            <Form noValidate validated={validated} onSubmit={handleSubmit}>
+                <Row className="g-3">
+                    <Col md={6}>
+                        <Form.Group>
+                            <Form.Label>Company Name <span className="text-danger">*</span></Form.Label>
+                            <Form.Control name="comName" value={form.comName} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.comName} />
+                            <Form.Control.Feedback type="invalid">{errors.comName}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group>
+                            <Form.Label>Company Address <span className="text-danger">*</span></Form.Label>
+                            <Form.Control name="comAddress" value={form.comAddress} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.comAddress} />
+                            <Form.Control.Feedback type="invalid">{errors.comAddress}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group>
+                            <Form.Label>Company Email <span className="text-danger">*</span></Form.Label>
+                            <Form.Control type="email" name="comEmail" value={form.comEmail} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.comEmail} />
+                            <Form.Control.Feedback type="invalid">{errors.comEmail}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group>
+                            <Form.Label>Company Contact Number <span className="text-danger">*</span></Form.Label>
+                            <Form.Control name="comContactNumber" value={form.comContactNumber} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.comContactNumber} />
+                            <Form.Control.Feedback type="invalid">{errors.comContactNumber}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group>
+                            <Form.Label>Business Reg. Number <span className="text-danger">*</span></Form.Label>
+                            <Form.Control name="businessRegNumber" value={form.businessRegNumber} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.businessRegNumber} />
+                            <Form.Control.Feedback type="invalid">{errors.businessRegNumber}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                        <Form.Group>
+                            <Form.Label>Currency <span className="text-danger">*</span></Form.Label>
+                            <SafeSelect name="currency" value={form.currency} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.currency}>
+                                <option value="">-- Select --</option>
+                                <option value="LKR">LKR (Rupees)</option>
+                                <option value="USD">USD</option>
+                            </SafeSelect>
+                        </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                        <Form.Group>
+                            <Form.Label>Credit Period (days) <span className="text-danger">*</span></Form.Label>
+                            <Form.Control type="number" name="creditPeriod" value={form.creditPeriod} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.creditPeriod} />
+                            <Form.Control.Feedback type="invalid">{errors.creditPeriod}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                        <Form.Group>
+                            <Form.Label>Contact Person Name <span className="text-danger">*</span></Form.Label>
+                            <Form.Control name="contactPersonData.name" value={form.contactPersonData.name} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.contactPersonData_name} />
+                            <Form.Control.Feedback type="invalid">{errors.contactPersonData_name}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                        <Form.Group>
+                            <Form.Label>Contact Mobile <span className="text-danger">*</span></Form.Label>
+                            <Form.Control name="contactPersonData.contactNumber" value={form.contactPersonData.contactNumber} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.contactPersonData_contactNumber} />
+                            <Form.Control.Feedback type="invalid">{errors.contactPersonData_contactNumber}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                        <Form.Group>
+                            <Form.Label>Contact Email <span className="text-danger">*</span></Form.Label>
+                            <Form.Control type="email" name="contactPersonData.email" value={form.contactPersonData.email} onChange={handleChange} disabled={!isEditMode} isInvalid={!!errors.contactPersonData_email} />
+                            <Form.Control.Feedback type="invalid">{errors.contactPersonData_email}</Form.Control.Feedback>
+                        </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Group>
+                            <Form.Label>VAT Type</Form.Label>
+                            <SafeSelect name="vatType" value={form.vatType} onChange={handleChange} disabled={!isEditMode}>
+                                <option value="">-- Select --</option>
+                                <option value="VAT">VAT</option>
+                                <option value="SVAT">SVAT</option>
+                            </SafeSelect>
+                        </Form.Group>
+                    </Col>
+                    {form.vatType && (
+                        <Col md={6}>
+                            <Form.Group>
+                                <Form.Label>{form.vatType} Number</Form.Label>
+                                <Form.Control name="vatNumber" value={form.vatNumber} onChange={handleChange} disabled={!isEditMode} />
+                            </Form.Group>
+                        </Col>
+                    )}
+                </Row>
+
+                {isEditMode && (
+                    <Button type="submit" className="w-100 mt-3" disabled={isSubmitting}>
+                        {isSubmitting ? <Spinner as="span" animation="border" size="sm" className="me-2" /> : null}
+                        {isEdit ? "Update Customer" : "Save Customer"}
+                    </Button>
+                )}
+            </Form>
+        </div>
+    );
+}
 
 function CustomerCreate() {
   const navigate = useNavigate();

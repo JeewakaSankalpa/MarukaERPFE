@@ -46,6 +46,7 @@ const emptyFlow = {
     stockAuditApproverRoles: [],
     payrollApproverRoles: [],
     quotationAcceptanceRoles: [],
+    projectRevisionApproverRoles: [],
     visualLayout: {} // { "STAGE": { x: 0, y: 0 } }
 };
 
@@ -70,7 +71,6 @@ export default function WorkflowBuilder() {
     const [roles, setRoles] = useState([]);
     const [availableStages, setAvailableStages] = useState([]);
     const [adminConfig, setAdminConfig] = useState({});
-    const [savingAdminConfig, setSavingAdminConfig] = useState(false);
 
     // React Flow State
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -160,6 +160,7 @@ export default function WorkflowBuilder() {
                     stockAuditApproverRoles: wf?.stockAuditApproverRoles || [],
                     payrollApproverRoles: wf?.payrollApproverRoles || [],
                     quotationAcceptanceRoles: wf?.quotationAcceptanceRoles || [],
+                    projectRevisionApproverRoles: wf?.projectRevisionApproverRoles || [],
                     visualLayout: wf?.visualLayout || {}
                 };
 
@@ -192,27 +193,8 @@ export default function WorkflowBuilder() {
         }
     };
 
-    const updateProjectRevisionApproval = async (checked) => {
-        const nextValue = String(checked);
-        const previousConfig = adminConfig;
-        const nextConfig = {
-            ...adminConfig,
-            "app.project.revision.requireApproval": nextValue,
-        };
-        setAdminConfig(nextConfig);
-        setSavingAdminConfig(true);
-        try {
-            await api.post("/admin/config", {
-                "app.project.revision.requireApproval": nextValue,
-            });
-            toast.success("Project revision approval setting saved");
-        } catch (e) {
-            setAdminConfig(previousConfig);
-            toast.error("Failed to save project revision approval setting");
-        } finally {
-            setSavingAdminConfig(false);
-        }
-    };
+    // updateProjectRevisionApproval removed — revision approval is always on;
+    // who can approve is controlled by projectRevisionApproverRoles in the workflow.
 
     const removeGlobalRole = async (val) => {
         if (!window.confirm(`Delete global role "${val}"? This will remove it from the list for all workflows.`)) return;
@@ -577,17 +559,6 @@ export default function WorkflowBuilder() {
                     <Modal.Title>Global Workflow Settings</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <div className="mb-4 border-bottom pb-3">
-                        <label className="fw-bold mb-2">Project Revision Controls</label>
-                        <Form.Check
-                            type="switch"
-                            id="workflow-project-revision-approval"
-                            label="Require approval before project revisions are applied"
-                            checked={adminConfig["app.project.revision.requireApproval"] !== "false"}
-                            disabled={savingAdminConfig}
-                            onChange={(e) => updateProjectRevisionApproval(e.target.checked)}
-                        />
-                    </div>
 
                     {/* Role Management Section */}
                     <div className="mb-4 border-bottom pb-3">
@@ -636,9 +607,11 @@ export default function WorkflowBuilder() {
                         { label: 'Stock Audit Approvers', field: 'stockAuditApproverRoles' },
                         { label: 'Payroll Approvers', field: 'payrollApproverRoles' },
                         { label: 'Quotation Acceptance Approvers', field: 'quotationAcceptanceRoles' },
-                    ].map(({ label, field }) => (
+                        { label: 'Project Revision Approvers', field: 'projectRevisionApproverRoles', note: 'Project revision controls are always enabled. Select who can approve revisions.' },
+                    ].map(({ label, field, note }) => (
                         <div key={field} className="mb-3">
                             <label className="fw-bold mb-1">{label}</label>
+                            {note && <p className="text-muted small mb-1" style={{ fontSize: '0.78rem' }}>{note}</p>}
                             <div className="d-flex flex-wrap gap-2">
                                 {roles.map(r => {
                                     const active = (flow[field] || []).includes(r);
@@ -653,6 +626,7 @@ export default function WorkflowBuilder() {
                                         </div>
                                     );
                                 })}
+                                {roles.length === 0 && <small className="text-muted">No roles defined yet. Add roles above first.</small>}
                             </div>
                         </div>
                     ))}
