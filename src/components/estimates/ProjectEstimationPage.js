@@ -8,6 +8,9 @@ import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
+import CompletenessModal from "../ReusableComponents/CompletenessModal";
+import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
+import { CustomerForm } from "../Customer/CustomerCreate";
 
 /* ------------ API helpers ------------ */
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
@@ -15,11 +18,13 @@ const listTemplates = async () => (await api.get(`/component-templates`)).data;
 const listProductsAPI = async () => (await api.get(`/products`, { params: { page: 0, size: 1000, sort: "name,asc" } })).data?.content ?? [];
 const listAvailableAPI = async () => (await api.get(`/inventory/available-quantities`)).data;
 const listProjectsAPI = async () => (await api.get(`/projects`, { params: { page: 0, size: 1000, sort: "createdAt,desc" } })).data?.content ?? [];
+const getCustomerAPI = async (id) => (await api.get(`/customer/${id}`)).data;
 const getAvailOneAPI = async (productId) => (await api.get(`/inventory/available-quantities/${productId}`)).data; // optional
 // OPTIONAL fallback for cost if your product doesn’t carry it:
 const getLastCostAPI = async (productId) => (await api.get(`/products/${productId}/last-cost`)).data; // {unitCost:number}
 // NEW: Fetch employees for approval (Restored for display)
 const listEmployeesAPI = async () => (await api.get(`/employee/all`)).data ?? [];
+const getProjectAPI = async (id) => (await api.get(`/projects/${id}`)).data;
 
 // NEW: Approval Actions
 const submitApprovalAPI = async (id, payload) => (await api.post(`/estimations/${id}/submit-approval`, payload)).data;
@@ -114,6 +119,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [submittingApproveAction, setSubmittingApproveAction] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [completenessIssues, setCompletenessIssues] = useState([]);
+    const [showCompletenessModal, setShowCompletenessModal] = useState(false);
+    const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
+    const [editCustomerRecord, setEditCustomerRecord] = useState(null);
 
     const [revisionReason, setRevisionReason] = useState("");
     // const [rejectComment, setRejectComment] = useState("");
@@ -352,6 +362,51 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         () => products.map(p => ({ value: p.id, label: buildProductLabel(p) })),
         [products]
     );
+
+    useEffect(() => {
+        const pid = projectOpt?.value || propProjectId;
+        const project = projects.find(p => p.id === pid);
+        const customerId = project?.customerId;
+        if (!customerId) {
+            if (pid) {
+                getProjectAPI(pid)
+                    .then(fullProject => fullProject?.customerId ? getCustomerAPI(fullProject.customerId) : null)
+                    .then(customer => setSelectedCustomer(customer || null))
+                    .catch(() => setSelectedCustomer(null));
+            } else {
+                setSelectedCustomer(null);
+            }
+            return;
+        }
+        getCustomerAPI(customerId)
+            .then(setSelectedCustomer)
+            .catch(() => setSelectedCustomer(null));
+    }, [projectOpt?.value, propProjectId, projects]);
+
+    const openCompletenessModal = (issues, proceed = null) => {
+        setCompletenessIssues(issues);
+        setPendingCompletenessProceed(() => proceed);
+        setShowCompletenessModal(true);
+    };
+
+    const validateCustomerForQuotation = async (pid) => {
+        let customer = selectedCustomer;
+        let project = projects.find(p => p.id === pid);
+
+        if (!project?.customerId) {
+            project = await getProjectAPI(pid).catch(() => project);
+        }
+
+        if (project?.customerId && customer?.id !== project.customerId) {
+            customer = null;
+        }
+
+        if (!customer && project?.customerId) {
+            customer = await getCustomerAPI(project.customerId).catch(() => null);
+            setSelectedCustomer(customer);
+        }
+        return buildCompletenessIssues('customerProject', customer, item => item?.comName || 'Customer');
+    };
 
     /* ------------ matrix ops ------------ */
     const addComponent = () => {
@@ -702,7 +757,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         };
     };
 
-    const saveEstimation = async (silent = false) => {
+    const performSaveEstimation = async (silent = false) => {
         const pid = projectOpt?.value;
         if (!pid) { toast.warn("Select a project"); return false; }
         try {
@@ -732,6 +787,23 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             toast.error(e?.response?.data?.message || "Failed to save estimation");
             return false;
         }
+    };
+
+    const saveEstimation = async (silent = false) => {
+        const pid = projectOpt?.value;
+        if (!pid) { toast.warn("Select a project"); return false; }
+
+        const issues = await validateCustomerForQuotation(pid);
+        if (issues.length > 0) {
+            if (hasBlockingIssues(issues)) {
+                openCompletenessModal(issues);
+                return false;
+            }
+            openCompletenessModal(issues, () => performSaveEstimation(silent));
+            return false;
+        }
+
+        return performSaveEstimation(silent);
     };
 
 
@@ -1551,6 +1623,42 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         }
                     </Button>
                 </Modal.Footer>
+            </Modal>
+
+            <CompletenessModal
+                show={showCompletenessModal}
+                issues={completenessIssues}
+                title="Complete Customer Details for Quotation"
+                onClose={() => setShowCompletenessModal(false)}
+                onEditIssue={(issue) => {
+                    if (!issue?.entityId) return;
+                    setShowCompletenessModal(false);
+                    setEditCustomerRecord({ id: issue.entityId, name: issue.name });
+                }}
+                onProceed={pendingCompletenessProceed ? () => {
+                    setShowCompletenessModal(false);
+                    pendingCompletenessProceed();
+                } : null}
+            />
+
+            <Modal show={Boolean(editCustomerRecord)} onHide={() => setEditCustomerRecord(null)} size="xl" centered scrollable>
+                <Modal.Header closeButton>
+                    <Modal.Title>Edit Customer: {editCustomerRecord?.name}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {editCustomerRecord && (
+                        <CustomerForm
+                            id={editCustomerRecord.id}
+                            compact
+                            startEditing
+                            onClose={() => setEditCustomerRecord(null)}
+                            onSaved={(savedCustomer) => {
+                                setSelectedCustomer(savedCustomer);
+                                setEditCustomerRecord(null);
+                            }}
+                        />
+                    )}
+                </Modal.Body>
             </Modal>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />

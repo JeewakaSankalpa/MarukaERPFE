@@ -19,9 +19,6 @@ import "react-toastify/dist/ReactToastify.css";
 import { listWorkflows } from "../../services/workflowApi";
 import Select from "react-select";
 import SafeSelect from "../ReusableComponents/SafeSelect";
-import CompletenessModal from "../ReusableComponents/CompletenessModal";
-import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
-import { CustomerForm } from "../Customer/CustomerCreate";
 
 const ProjectForm = () => {
   const { id: routeId } = useParams();
@@ -53,10 +50,6 @@ const ProjectForm = () => {
   // Quick Customer Add State
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [addingCustomer, setAddingCustomer] = useState(false);
-  const [completenessIssues, setCompletenessIssues] = useState([]);
-  const [showCompletenessModal, setShowCompletenessModal] = useState(false);
-  const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
-  const [editCustomerRecord, setEditCustomerRecord] = useState(null); // { id, name }
   const [quickCustomer, setQuickCustomer] = useState({
     comName: "",
     contactPersonName: "",
@@ -215,12 +208,6 @@ const ProjectForm = () => {
     // (add GB if you want)
   };
 
-  const openCompletenessModal = (issues, proceed = null) => {
-    setCompletenessIssues(issues);
-    setPendingCompletenessProceed(() => proceed);
-    setShowCompletenessModal(true);
-  };
-
   const performSubmit = async () => {
     const { projectName, customerId, salesRep, comment } = projectData;
     setIsSubmitting(true);
@@ -316,17 +303,6 @@ const ProjectForm = () => {
 
     const { projectName, customerId, salesRep, comment } = projectData;
     if (!projectName || !customerId || !salesRep || !comment) return;
-
-    const selectedCustomer = customers.find(c => c.id === customerId);
-    const issues = buildCompletenessIssues('customerProject', selectedCustomer, item => item?.comName || 'Customer');
-    if (issues.length > 0) {
-      if (hasBlockingIssues(issues)) {
-        openCompletenessModal(issues);
-        return;
-      }
-      openCompletenessModal(issues, performSubmit);
-      return;
-    }
 
     await performSubmit();
   };
@@ -711,43 +687,8 @@ const ProjectForm = () => {
       </Modal>
 
       <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
-      <CompletenessModal
-        show={showCompletenessModal}
-        issues={completenessIssues}
-        title="Complete Customer Details"
-        onClose={() => setShowCompletenessModal(false)}
-        onEditIssue={(issue) => {
-          if (!issue?.entityId) return;
-          setShowCompletenessModal(false);
-          setEditCustomerRecord({ id: issue.entityId, name: issue.name });
-        }}
-        onProceed={pendingCompletenessProceed ? () => {
-          setShowCompletenessModal(false);
-          pendingCompletenessProceed();
-        } : null}
-      />
 
       {/* Inline customer edit modal — fixes missing details without leaving the page */}
-      <Modal show={Boolean(editCustomerRecord)} onHide={() => setEditCustomerRecord(null)} size="xl" centered scrollable>
-        <Modal.Header closeButton>
-          <Modal.Title>Edit Customer: {editCustomerRecord?.name}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {editCustomerRecord && (
-            <CustomerForm
-              id={editCustomerRecord.id}
-              compact
-              startEditing
-              onClose={() => setEditCustomerRecord(null)}
-              onSaved={(savedCustomer) => {
-                // Refresh customer list so the updated data is reflected
-                setCustomers(prev => prev.map(c => c.id === savedCustomer.id ? savedCustomer : c));
-                setEditCustomerRecord(null);
-              }}
-            />
-          )}
-        </Modal.Body>
-      </Modal>
     </div >
   );
 };
