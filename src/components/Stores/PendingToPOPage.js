@@ -81,9 +81,15 @@ export default function PendingToPOPage() {
 
     const runCompletenessChecks = async () => {
         const selectedSupplierIds = [...new Set(Object.values(choices).map(c => c?.supplierId).filter(Boolean))];
-        const selectedProductIds = Object.entries(choices)
-            .filter(([, c]) => c?.supplierId && Number(c.qty) > 0)
-            .map(([productId]) => productId);
+        const selectedProductIds = [...new Set(
+            Object.entries(choices)
+                .filter(([, c]) => c?.supplierId && Number(c.qty) > 0)
+                .map(([key]) => {
+                    const line = (plan?.lines || []).find(l => getLineKey(l) === key);
+                    return line?.productId;
+                })
+                .filter(Boolean)
+        )];
 
         const suppliers = await Promise.all(selectedSupplierIds.map(id => getSupplier(id).catch(() => ({ id }))));
         const products = await Promise.all(selectedProductIds.map(id => getProduct(id).catch(() => {
