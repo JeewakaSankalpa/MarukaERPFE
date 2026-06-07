@@ -141,7 +141,7 @@ export default function SystemConfiguration() {
                 .map((r, i) => ({
                     rowNum: headerRow + i + 2,
                     name: String(r[nameCol] || "").trim(),
-                    sku: String(r[skuCol] || "").trim() || String(i + 1).padStart(3, '0'),
+                    sku: String(r[skuCol] || "").trim(),
                     sellingPrice: r[rateCol] !== undefined ? r[rateCol] : "",
                     costPrice: r[costCol] !== undefined ? r[costCol] : "",
                     openingQty: r[qtyCol] !== undefined && String(r[qtyCol]).trim() !== "" ? r[qtyCol] : 0,
@@ -642,7 +642,7 @@ export default function SystemConfiguration() {
                         <p className="mb-2 fw-semibold small text-secondary">Expected Excel columns:</p>
                         <div className="d-flex flex-wrap gap-2">
                             {[
-                                { col: "A", label: "ITEM CODE / SKU" },
+                                { col: "A", label: "ITEM CODE / SKU *" },
                                 { col: "B", label: "ITEM DESCRIPTION / Item name *" },
                                 { col: "C", label: "QTY / Stock, blank = 0" },
                                 { col: "D", label: "RATE / Buy & sell price" },
@@ -656,7 +656,7 @@ export default function SystemConfiguration() {
                                 </span>
                             ))}
                         </div>
-                        <p className="mb-0 mt-2 text-muted" style={{ fontSize: 12 }}>* Item Description is required. Empty QTY imports as 0 stock. RATE is used as both buying and selling price.</p>
+                        <p className="mb-0 mt-2 text-muted" style={{ fontSize: 12 }}>* Item Code / SKU is the unique product key. Item Description is required. Empty QTY imports as 0 stock. RATE is used as both buying and selling price.</p>
                     </div>
 
                     <Row className="g-3 align-items-end mb-3">
@@ -727,10 +727,10 @@ export default function SystemConfiguration() {
                                     </thead>
                                     <tbody>
                                         {importPreview.map(r => (
-                                            <tr key={r.rowNum} className={!r.name ? "table-warning" : ""}>
+                                            <tr key={r.rowNum} className={(!r.name || !r.sku) ? "table-warning" : ""}>
                                                 <td className="text-muted">{r.rowNum}</td>
                                                 <td>{r.name || <span className="text-danger">—</span>}</td>
-                                                <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
+                                                <td>{r.sku ? <code style={{ fontSize: 12 }}>{r.sku}</code> : <span className="text-danger">-</span>}</td>
                                                 <td>{r.costPrice === "" ? 0 : r.costPrice}</td>
                                                 <td>{r.sellingPrice === "" ? <span className="text-danger">—</span> : r.sellingPrice}</td>
                                                 <td><strong>{r.openingQty === "" ? <span className="text-danger">—</span> : r.openingQty}</strong></td>
@@ -740,7 +740,7 @@ export default function SystemConfiguration() {
                                 </Table>
                             </div>
                             <p className="text-muted mt-1 mb-0" style={{ fontSize: 11 }}>
-                                Blank quantity is imported as 0. Multiple suppliers can be separated with /.
+                                Item Code / SKU decides whether a product is created, updated, or skipped. Blank quantity is imported as 0. Multiple suppliers can be separated with /.
                             </p>
                         </div>
                     )}
