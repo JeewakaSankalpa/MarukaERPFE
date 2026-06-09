@@ -10,7 +10,7 @@ import api from "../api/api";
  * @returns {Promise<ProjectFlowDTO>}
  */
 export async function getWorkflow(id) {
-    const url = id ? `/workflow/${id}` : "/workflow";
+    const url = id ? `/workflow/${encodeURIComponent(id)}` : "/workflow";
     const { data } = await api.get(url);
     return data;
 }
@@ -29,13 +29,28 @@ export async function listWorkflows() {
  * @returns {Promise<ProjectFlowDTO>}
  */
 export async function saveWorkflow(flow, id) {
-    // If flow has an ID and we want to enforce it, or if 'active'
     const targetId = id || flow.id || "active";
-    const { data } = await api.put(`/workflow/${targetId}`, flow);
+    const { data } = await api.put(`/workflow/${encodeURIComponent(targetId)}`, flow);
+    return data;
+}
+
+export async function createWorkflow(flow, id) {
+    const targetId = id || flow.id;
+    const { data } = await api.post(`/workflow/${encodeURIComponent(targetId)}`, {
+        ...flow,
+        id: targetId,
+        version: null
+    });
     return data;
 }
 
 export async function activateWorkflow(id) {
-    await api.post(`/workflow/${id}/activate`);
+    await api.post(`/workflow/${encodeURIComponent(id)}/activate`);
+}
+
+export async function setWorkflowEnabled(id, enabled) {
+    await api.post(`/workflow/${encodeURIComponent(id)}/enabled`, null, {
+        params: { enabled }
+    });
 }
 

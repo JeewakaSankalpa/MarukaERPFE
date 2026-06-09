@@ -15,7 +15,7 @@ import { toast } from "react-toastify";
 import { Undo2, Redo2 } from 'lucide-react';
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
-import { getWorkflow, saveWorkflow } from "../../services/workflowApi";
+import { createWorkflow, getWorkflow, saveWorkflow } from "../../services/workflowApi";
 
 // Custom Components
 import StageNode from "./StageNode";
@@ -53,7 +53,7 @@ const emptyFlow = {
 export default function WorkflowBuilder() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const isNew = !id || id === 'new';
+    const isNew = !id;
 
     // --- State ---
     // We use a local state 'flow' which represents the current workflow definition
@@ -399,9 +399,18 @@ export default function WorkflowBuilder() {
     }, [flow, setFlow]);
 
 
-    const save = async () => {
-        if (!workflowIdInput) {
+    const save = async (saveAsNew = false) => {
+        let targetId = workflowIdInput.trim();
+        if (saveAsNew) {
+            targetId = window.prompt("Enter an ID for the new workflow:", `${id}_copy`)?.trim() || "";
+        }
+
+        if (!targetId) {
             toast.error("Workflow ID is required.");
+            return;
+        }
+        if (saveAsNew && targetId === id) {
+            toast.error("Choose a different workflow ID.");
             return;
         }
 
@@ -431,17 +440,19 @@ export default function WorkflowBuilder() {
             // Ensure initialStage is populated in payload
             const payload = {
                 ...flow,
-                id: workflowIdInput,
+                id: targetId,
                 initialStage: flow.initialStage || flow.stages[0]
             };
 
-            const savedFlow = await saveWorkflow(payload, workflowIdInput);
+            const savedFlow = (isNew || saveAsNew)
+                ? await createWorkflow(payload, targetId)
+                : await saveWorkflow(payload, targetId);
 
             setLocalFlow(savedFlow); // direct update
-            toast.success("Workflow updated successfully.");
+            toast.success(saveAsNew ? "Workflow saved as new." : "Workflow saved successfully.");
 
-            if (isNew) {
-                navigate(`/admin/workflow/${workflowIdInput}`, { replace: true });
+            if (isNew || saveAsNew) {
+                navigate(`/admin/workflow/${encodeURIComponent(targetId)}`, { replace: true });
             }
         } catch (e) {
             console.error(e);
@@ -488,9 +499,14 @@ export default function WorkflowBuilder() {
                         onChange={e => setWorkflowIdInput(e.target.value)}
                         style={{ width: 150 }}
                     />
-                    <Button size="sm" variant="primary" onClick={save} disabled={saving}>
+                    <Button size="sm" variant="primary" onClick={() => save(false)} disabled={saving}>
                         {saving ? "Saving..." : "Save"}
                     </Button>
+                    {!isNew && (
+                        <Button size="sm" variant="outline-primary" onClick={() => save(true)} disabled={saving}>
+                            Save As New
+                        </Button>
+                    )}
                 </div>
             </div>
 

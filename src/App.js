@@ -318,7 +318,7 @@ function App() {
                         <Route path="/admin/workflows" element={<WorkflowList />} />
                         <Route path="/admin/notification-rules" element={<NotificationRulesPage />} />
                         <Route path="/admin/roles" element={<RoleManagement />} />
-                        <Route path="/admin/workflow/new" element={<WorkflowBuilder />} />
+                        <Route path="/admin/workflow" element={<WorkflowBuilder />} />
                         <Route path="/admin/workflow/:id" element={<WorkflowBuilder />} />
                         <Route path="/departments" element={<DepartmentListRouteWrapper />} />
                         <Route path="/departments/new" element={<DepartmentFormNewRouteWrapper />} />

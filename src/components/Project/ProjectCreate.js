@@ -121,7 +121,7 @@ const ProjectForm = () => {
       .catch(() => toast.error("Failed to load employees"));
 
     listWorkflows()
-      .then((data) => setWorkflows(data || []))
+      .then((data) => setWorkflows((data || []).filter((wf) => wf.enabled)))
       .catch(() => console.error("Failed to load workflows"));
   }, []);
 

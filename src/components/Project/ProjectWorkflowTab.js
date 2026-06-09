@@ -24,7 +24,7 @@ export default function ProjectWorkflowTab({ projectId, currentWorkflow, current
         setLoading(true);
         try {
             const data = await listWorkflows();
-            setWorkflows(data || []);
+            setWorkflows((data || []).filter(w => w.enabled));
         } catch (e) {
             console.error(e);
             toast.error("Failed to load available workflows");

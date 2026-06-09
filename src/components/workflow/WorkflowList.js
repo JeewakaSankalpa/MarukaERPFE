@@ -1,7 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState } from "react";
 import { Table, Button, Card, Badge, Spinner, Alert } from "react-bootstrap";
-import { listWorkflows, activateWorkflow } from "../../services/workflowApi";
+import {
+    listWorkflows,
+    getWorkflow,
+    createWorkflow,
+    activateWorkflow,
+    setWorkflowEnabled
+} from "../../services/workflowApi";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -13,20 +19,13 @@ export default function WorkflowList() {
     const navigate = useNavigate();
 
     const handleDuplicate = async (wf) => {
-        const newId = prompt("Enter ID for the new duplicated workflow:", wf.id + "_copy");
-        if (!newId) return;
+        const newId = prompt("Enter ID for the new duplicated workflow:", wf.id + "_copy")?.trim();
+        if (!newId || newId === wf.id) return;
 
         try {
             setLoading(true);
-            // 1. Fetch full details of source
-            const { getWorkflow, saveWorkflow } = require("../../services/workflowApi"); // Lazy import to allow updates
             const source = await getWorkflow(wf.id);
-
-            // 2. Prepare copy
-            const copy = { ...source, id: newId, version: 0 };
-
-            // 3. Save as new
-            await saveWorkflow(copy, newId);
+            await createWorkflow(source, newId);
 
             toast.success("Workflow duplicated successfully!");
             await loadData();
@@ -58,6 +57,25 @@ export default function WorkflowList() {
         }
     };
 
+    const handleSetEnabled = async (wf, enabled) => {
+        const action = enabled ? "enable" : "disable";
+        if (!window.confirm(`${action[0].toUpperCase() + action.slice(1)} workflow "${wf.id}"?`)) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await setWorkflowEnabled(wf.id, enabled);
+            toast.success(`Workflow ${enabled ? "enabled" : "disabled"} successfully`);
+            await loadData();
+        } catch (e) {
+            console.error(e);
+            const message = e.response?.data?.message || e.response?.data || `Failed to ${action} workflow`;
+            toast.error(message);
+            setLoading(false);
+        }
+    };
+
     const loadData = async () => {
         try {
             setLoading(true);
@@ -82,7 +100,7 @@ export default function WorkflowList() {
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h3 className="mb-0">Workflow Configuration</h3>
                         </div>
-<Button onClick={() => navigate("/admin/workflow/new")}>
+<Button onClick={() => navigate("/admin/workflow")}>
                     Create New Workflow
                 </Button>
             </div>
@@ -94,6 +112,8 @@ export default function WorkflowList() {
                     <thead className="bg-light">
                         <tr>
                             <th>ID</th>
+                            <th>Default</th>
+                            <th>Availability</th>
                             <th>Version</th>
                             <th>Updated At</th>
                             <th>Updated By</th>
@@ -103,7 +123,7 @@ export default function WorkflowList() {
                     <tbody>
                         {workflows.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="text-center text-muted p-4">
+                                <td colSpan={7} className="text-center text-muted p-4">
                                     No workflows found.
                                 </td>
                             </tr>
@@ -111,10 +131,19 @@ export default function WorkflowList() {
                             workflows.map((wf) => (
                                 <tr key={wf.id}>
                                     <td className="fw-semibold">
-                                        <Link to={`/admin/workflow/${wf.id}`} className="text-decoration-none">
+                                        <Link to={`/admin/workflow/${encodeURIComponent(wf.id)}`} className="text-decoration-none">
                                             {wf.id}
                                         </Link>
-                                        {wf.active && <Badge bg="success" className="ms-2">Active</Badge>}
+                                    </td>
+                                    <td>
+                                        <Badge bg={wf.active ? "success" : "secondary"}>
+                                            {wf.active ? "Active (Default)" : "Not Default"}
+                                        </Badge>
+                                    </td>
+                                    <td>
+                                        <Badge bg={wf.enabled ? "primary" : "dark"}>
+                                            {wf.enabled ? "Enabled" : "Disabled"}
+                                        </Badge>
                                     </td>
                                     <td>{wf.version}</td>
                                     <td>{wf.updatedAt ? new Date(wf.updatedAt).toLocaleString() : "-"}</td>
@@ -124,7 +153,7 @@ export default function WorkflowList() {
                                             size="sm"
                                             variant="outline-primary"
                                             as={Link}
-                                            to={`/admin/workflow/${wf.id}`}
+                                            to={`/admin/workflow/${encodeURIComponent(wf.id)}`}
                                             className="me-2"
                                         >
                                             Edit
@@ -141,11 +170,21 @@ export default function WorkflowList() {
                                             <Button
                                                 size="sm"
                                                 variant="outline-success"
+                                                className="me-2"
                                                 onClick={() => handleSetActive(wf.id)}
                                             >
                                                 Set Active
                                             </Button>
                                         )}
+                                        <Button
+                                            size="sm"
+                                            variant={wf.enabled ? "outline-warning" : "outline-primary"}
+                                            disabled={wf.active && wf.enabled}
+                                            title={wf.active && wf.enabled ? "Set another workflow as active before disabling this one" : ""}
+                                            onClick={() => handleSetEnabled(wf, !wf.enabled)}
+                                        >
+                                            {wf.enabled ? "Disable" : "Enable"}
+                                        </Button>
                                     </td>
                                 </tr>
                             ))
