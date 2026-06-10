@@ -118,25 +118,10 @@ export default function IRFulfilmentPage() {
 
     const addShortagesForIR = async () => {
         if (!selected) return;
-        if (selected.projectId) {
-            toast.info("Project shortages are sent to Pending Purchase automatically");
-            return;
-        }
-        const shortages = {};
-        let hasShortage = false;
-
-        (selected.items || []).forEach(it => {
+        const hasShortage = (selected.items || []).some(it => {
             const remaining = Math.max(0, (it.requestedQty || 0) - (it.fulfilledQty || 0));
-            const avail = Number(onHand[it.productId] || 0);
-
-            // If we don't have enough to fulfill remaining, that's a shortage
-            if (remaining > avail) {
-                const diff = remaining - avail;
-                shortages[it.productId] = diff;
-                hasShortage = true;
-            }
+            return remaining > Number(onHand[it.productId] || 0);
         });
-
         if (!hasShortage) {
             toast.info("No shortages found (Available >= Remaining)");
             return;
@@ -144,7 +129,10 @@ export default function IRFulfilmentPage() {
 
         setIsAddingShortages(true);
         try {
-            await api.post("/stores/pending-purchase", shortages);
+            await api.post(`/stores/pending-purchase/item-request/${selected.id}`);
+            const updated = await getIR(selected.id);
+            setSelected(updated);
+            setIrs(await listIRs(page, 20, statusFilter === "ALL" ? null : [statusFilter]));
             toast.success("Shortages added to Pending Purchase Plan");
         } catch (e) {
             toast.error("Failed to add shortages");
@@ -637,8 +625,8 @@ export default function IRFulfilmentPage() {
                                 </Table>
 
                                 <div className="d-flex justify-content-end gap-2 mt-3">
-                                    <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected || selected.status === "PENDING_PURCHASE" || !!selected.projectId}>
-                                        {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : selected?.status === "PENDING_PURCHASE" ? "Shortages Already Added" : selected?.projectId ? "Project Shortages Auto-Added" : "Add Shortages to Pending"}
+                                    <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected || selected.status === "PENDING_PURCHASE"}>
+                                        {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : selected?.status === "PENDING_PURCHASE" ? "Shortages Already Added" : "Add Shortages to Pending"}
                                     </Button>
                                     <Button onClick={doIssue} disabled={!selected || isIssuing || isAddingShortages}>
                                         {isIssuing ? <><Spinner size="sm" animation="border" className="me-2" />Issuing...</> : "Issue from Main Store"}
