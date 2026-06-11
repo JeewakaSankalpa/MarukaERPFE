@@ -2,6 +2,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Spinner, Button, Form, Table, Badge } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
+import { FaFilePdf } from "react-icons/fa";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 
@@ -71,7 +74,9 @@ export default function IRFulfilmentPage() {
                 [x.id]: {
                     name: x.projectName || x.name || x.id,
                     jobNumber: x.jobNumber || "",
-                    inquiryNumber: x.id
+                    inquiryNumber: x.inquiryNumber || x.id,
+                    customerName: x.customerName || "",
+                    location: x.location || x.siteAddress || ""
                 }
             }), {}));
         })();
@@ -139,6 +144,161 @@ export default function IRFulfilmentPage() {
         } finally {
             setIsAddingShortages(false);
         }
+    };
+
+    const shortageLines = useMemo(() => {
+        if (!selected) return [];
+
+        return (selected.items || []).map((item) => {
+            const requestedQty = Number(item.requestedQty || 0);
+            const fulfilledQty = Number(item.fulfilledQty || 0);
+            const remainingQty = Math.max(0, requestedQty - fulfilledQty);
+            const availableQty = Math.max(0, Number(onHand[item.productId] || 0));
+            const issuableQty = Math.min(remainingQty, availableQty);
+
+            return {
+                ...item,
+                requestedQty,
+                fulfilledQty,
+                remainingQty,
+                availableQty,
+                issuableQty,
+                shortageQty: Math.max(0, remainingQty - availableQty)
+            };
+        }).filter((item) => item.shortageQty > 0);
+    }, [selected, onHand]);
+
+    const exportShortageReport = () => {
+        if (!selected || shortageLines.length === 0) {
+            toast.info("No shortages are available to print for this request");
+            return;
+        }
+
+        const project = projMap[selected.projectId] || {};
+        const jobReference = project.jobNumber || selected.projectId || "Unassigned";
+        const reportNumber = selected.irNumber || selected.id;
+        const generatedAt = new Date();
+        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+        doc.setProperties({
+            title: `Job Shortage Report - ${jobReference}`,
+            subject: `Shortages for item request ${reportNumber}`
+        });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(17);
+        doc.text("JOB SHORTAGE REPORT", 14, 16);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(90);
+        doc.text(`Generated: ${generatedAt.toLocaleString()}`, 283, 16, { align: "right" });
+
+        doc.setTextColor(30);
+        doc.setFontSize(10);
+        const details = [
+            ["Job No.", project.jobNumber || "-"],
+            ["Project", project.name || selected.projectId || "-"],
+            ["Inquiry No.", project.inquiryNumber || "-"],
+            ["Customer", project.customerName || "-"],
+            ["Site", project.location || "-"],
+            ["Item Request", reportNumber || "-"],
+            ["Status", selected.status || "-"],
+            ["Department", deptMap[selected.departmentId] || selected.departmentId || "-"],
+            ["Requested By", selected.createdBy || "-"],
+            ["Request Date", selected.createdAt ? new Date(selected.createdAt).toLocaleString() : "-"]
+        ];
+
+        const leftDetails = details.slice(0, 5);
+        const rightDetails = details.slice(5);
+        leftDetails.forEach(([label, value], index) => {
+            const y = 27 + (index * 6);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${label}:`, 14, y);
+            doc.setFont("helvetica", "normal");
+            doc.text(String(value), 42, y);
+        });
+        rightDetails.forEach(([label, value], index) => {
+            const y = 27 + (index * 6);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${label}:`, 154, y);
+            doc.setFont("helvetica", "normal");
+            doc.text(String(value), 184, y);
+        });
+
+        doc.autoTable({
+            startY: 61,
+            head: [[
+                "#", "Item", "SKU", "Unit", "Requested", "Issued",
+                "Balance", "Main Store", "Can Issue", "Shortage", "Note"
+            ]],
+            body: shortageLines.map((item, index) => [
+                index + 1,
+                item.productNameSnapshot || item.productId,
+                item.sku || "-",
+                item.unit || "-",
+                item.requestedQty,
+                item.fulfilledQty,
+                item.remainingQty,
+                item.availableQty,
+                item.issuableQty,
+                item.shortageQty,
+                item.note || "-"
+            ]),
+            theme: "grid",
+            headStyles: {
+                fillColor: [31, 41, 55],
+                textColor: 255,
+                fontStyle: "bold",
+                halign: "center"
+            },
+            bodyStyles: { fontSize: 8.5, cellPadding: 2.2, valign: "middle" },
+            columnStyles: {
+                0: { halign: "center", cellWidth: 9 },
+                1: { cellWidth: 52 },
+                2: { cellWidth: 25 },
+                3: { halign: "center", cellWidth: 16 },
+                4: { halign: "right", cellWidth: 18 },
+                5: { halign: "right", cellWidth: 16 },
+                6: { halign: "right", cellWidth: 16 },
+                7: { halign: "right", cellWidth: 20 },
+                8: { halign: "right", cellWidth: 17 },
+                9: { halign: "right", cellWidth: 17, fontStyle: "bold", textColor: [185, 28, 28] },
+                10: { cellWidth: 45 }
+            },
+            didDrawPage: (data) => {
+                const pageHeight = doc.internal.pageSize.height;
+                doc.setFontSize(8);
+                doc.setTextColor(100);
+                doc.text(
+                    `Item Request ${reportNumber} | Page ${doc.internal.getNumberOfPages()}`,
+                    14,
+                    pageHeight - 8
+                );
+                doc.text(
+                    "Shortage = outstanding request quantity less current main-store availability.",
+                    283,
+                    pageHeight - 8,
+                    { align: "right" }
+                );
+            }
+        });
+
+        const totalShortage = shortageLines.reduce((sum, item) => sum + item.shortageQty, 0);
+        let summaryY = doc.lastAutoTable.finalY + 8;
+        if (summaryY > doc.internal.pageSize.height - 14) {
+            doc.addPage();
+            summaryY = 18;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(30);
+        doc.text(`Shortage item lines: ${shortageLines.length}`, 14, summaryY);
+        doc.text(`Total shortage quantity: ${totalShortage}`, 78, summaryY);
+
+        const safeJobReference = String(jobReference).replace(/[^a-z0-9_-]+/gi, "_");
+        const safeReportNumber = String(reportNumber).replace(/[^a-z0-9_-]+/gi, "_");
+        doc.save(`Job_Shortage_${safeJobReference}_${safeReportNumber}.pdf`);
     };
 
     // Scan Input State
@@ -624,7 +784,16 @@ export default function IRFulfilmentPage() {
                                     </tbody>
                                 </Table>
 
-                                <div className="d-flex justify-content-end gap-2 mt-3">
+                                <div className="d-flex flex-wrap justify-content-end gap-2 mt-3">
+                                    <Button
+                                        variant="outline-danger"
+                                        onClick={exportShortageReport}
+                                        disabled={shortageLines.length === 0 || isAddingShortages || isIssuing}
+                                        title={shortageLines.length === 0 ? "This request has no current shortages" : "Download a job-wise shortage PDF"}
+                                    >
+                                        <FaFilePdf className="me-2" />
+                                        Print Shortage Report ({shortageLines.length})
+                                    </Button>
                                     <Button variant="outline-primary" onClick={addShortagesForIR} disabled={isAddingShortages || isIssuing || !selected || selected.status === "PENDING_PURCHASE"}>
                                         {isAddingShortages ? <><Spinner size="sm" animation="border" className="me-2" />Processing...</> : selected?.status === "PENDING_PURCHASE" ? "Shortages Already Added" : "Add Shortages to Pending"}
                                     </Button>
