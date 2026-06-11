@@ -1,10 +1,10 @@
 // src/components/Stores/IRFulfilmentPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Row, Col, Spinner, Button, Form, Table, Badge } from "react-bootstrap";
+import { Container, Row, Col, Spinner, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
-import { FaFilePdf } from "react-icons/fa";
+import { FaDownload, FaFilePdf, FaPrint } from "react-icons/fa";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { autoTable } from "jspdf-autotable";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 
@@ -63,6 +63,13 @@ export default function IRFulfilmentPage() {
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [isAddingShortages, setIsAddingShortages] = useState(false);
     const [isIssuing, setIsIssuing] = useState(false);
+    const [shortageReport, setShortageReport] = useState(null);
+
+    useEffect(() => {
+        return () => {
+            if (shortageReport?.url) URL.revokeObjectURL(shortageReport.url);
+        };
+    }, [shortageReport]);
 
     // Initial Load
     useEffect(() => {
@@ -174,131 +181,160 @@ export default function IRFulfilmentPage() {
             return;
         }
 
-        const project = projMap[selected.projectId] || {};
-        const jobReference = project.jobNumber || selected.projectId || "Unassigned";
-        const reportNumber = selected.irNumber || selected.id;
-        const generatedAt = new Date();
-        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        try {
+            const project = projMap[selected.projectId] || {};
+            const jobReference = project.jobNumber || selected.projectId || "Unassigned";
+            const reportNumber = selected.irNumber || selected.id;
+            const generatedAt = new Date();
+            const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
-        doc.setProperties({
-            title: `Job Shortage Report - ${jobReference}`,
-            subject: `Shortages for item request ${reportNumber}`
-        });
+            doc.setProperties({
+                title: `Job Shortage Report - ${jobReference}`,
+                subject: `Shortages for item request ${reportNumber}`
+            });
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(17);
-        doc.text("JOB SHORTAGE REPORT", 14, 16);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(90);
-        doc.text(`Generated: ${generatedAt.toLocaleString()}`, 283, 16, { align: "right" });
-
-        doc.setTextColor(30);
-        doc.setFontSize(10);
-        const details = [
-            ["Job No.", project.jobNumber || "-"],
-            ["Project", project.name || selected.projectId || "-"],
-            ["Inquiry No.", project.inquiryNumber || "-"],
-            ["Customer", project.customerName || "-"],
-            ["Site", project.location || "-"],
-            ["Item Request", reportNumber || "-"],
-            ["Status", selected.status || "-"],
-            ["Department", deptMap[selected.departmentId] || selected.departmentId || "-"],
-            ["Requested By", selected.createdBy || "-"],
-            ["Request Date", selected.createdAt ? new Date(selected.createdAt).toLocaleString() : "-"]
-        ];
-
-        const leftDetails = details.slice(0, 5);
-        const rightDetails = details.slice(5);
-        leftDetails.forEach(([label, value], index) => {
-            const y = 27 + (index * 6);
             doc.setFont("helvetica", "bold");
-            doc.text(`${label}:`, 14, y);
-            doc.setFont("helvetica", "normal");
-            doc.text(String(value), 42, y);
-        });
-        rightDetails.forEach(([label, value], index) => {
-            const y = 27 + (index * 6);
-            doc.setFont("helvetica", "bold");
-            doc.text(`${label}:`, 154, y);
-            doc.setFont("helvetica", "normal");
-            doc.text(String(value), 184, y);
-        });
+            doc.setFontSize(17);
+            doc.text("JOB SHORTAGE REPORT", 14, 16);
 
-        doc.autoTable({
-            startY: 61,
-            head: [[
-                "#", "Item", "SKU", "Unit", "Requested", "Issued",
-                "Balance", "Main Store", "Can Issue", "Shortage", "Note"
-            ]],
-            body: shortageLines.map((item, index) => [
-                index + 1,
-                item.productNameSnapshot || item.productId,
-                item.sku || "-",
-                item.unit || "-",
-                item.requestedQty,
-                item.fulfilledQty,
-                item.remainingQty,
-                item.availableQty,
-                item.issuableQty,
-                item.shortageQty,
-                item.note || "-"
-            ]),
-            theme: "grid",
-            headStyles: {
-                fillColor: [31, 41, 55],
-                textColor: 255,
-                fontStyle: "bold",
-                halign: "center"
-            },
-            bodyStyles: { fontSize: 8.5, cellPadding: 2.2, valign: "middle" },
-            columnStyles: {
-                0: { halign: "center", cellWidth: 9 },
-                1: { cellWidth: 52 },
-                2: { cellWidth: 25 },
-                3: { halign: "center", cellWidth: 16 },
-                4: { halign: "right", cellWidth: 18 },
-                5: { halign: "right", cellWidth: 16 },
-                6: { halign: "right", cellWidth: 16 },
-                7: { halign: "right", cellWidth: 20 },
-                8: { halign: "right", cellWidth: 17 },
-                9: { halign: "right", cellWidth: 17, fontStyle: "bold", textColor: [185, 28, 28] },
-                10: { cellWidth: 45 }
-            },
-            didDrawPage: (data) => {
-                const pageHeight = doc.internal.pageSize.height;
-                doc.setFontSize(8);
-                doc.setTextColor(100);
-                doc.text(
-                    `Item Request ${reportNumber} | Page ${doc.internal.getNumberOfPages()}`,
-                    14,
-                    pageHeight - 8
-                );
-                doc.text(
-                    "Shortage = outstanding request quantity less current main-store availability.",
-                    283,
-                    pageHeight - 8,
-                    { align: "right" }
-                );
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(90);
+            doc.text(`Generated: ${generatedAt.toLocaleString()}`, 283, 16, { align: "right" });
+
+            doc.setTextColor(30);
+            doc.setFontSize(10);
+            const details = [
+                ["Job No.", project.jobNumber || "-"],
+                ["Project", project.name || selected.projectId || "-"],
+                ["Inquiry No.", project.inquiryNumber || "-"],
+                ["Customer", project.customerName || "-"],
+                ["Site", project.location || "-"],
+                ["Item Request", reportNumber || "-"],
+                ["Status", selected.status || "-"],
+                ["Department", deptMap[selected.departmentId] || selected.departmentId || "-"],
+                ["Requested By", selected.createdBy || "-"],
+                ["Request Date", selected.createdAt ? new Date(selected.createdAt).toLocaleString() : "-"]
+            ];
+
+            const leftDetails = details.slice(0, 5);
+            const rightDetails = details.slice(5);
+            leftDetails.forEach(([label, value], index) => {
+                const y = 27 + (index * 6);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${label}:`, 14, y);
+                doc.setFont("helvetica", "normal");
+                doc.text(String(value), 42, y);
+            });
+            rightDetails.forEach(([label, value], index) => {
+                const y = 27 + (index * 6);
+                doc.setFont("helvetica", "bold");
+                doc.text(`${label}:`, 154, y);
+                doc.setFont("helvetica", "normal");
+                doc.text(String(value), 184, y);
+            });
+
+            autoTable(doc, {
+                startY: 61,
+                head: [[
+                    "#", "Item", "SKU", "Unit", "Requested", "Issued",
+                    "Balance", "Main Store", "Can Issue", "Shortage", "Note"
+                ]],
+                body: shortageLines.map((item, index) => [
+                    index + 1,
+                    item.productNameSnapshot || item.productId,
+                    item.sku || "-",
+                    item.unit || "-",
+                    item.requestedQty,
+                    item.fulfilledQty,
+                    item.remainingQty,
+                    item.availableQty,
+                    item.issuableQty,
+                    item.shortageQty,
+                    item.note || "-"
+                ]),
+                theme: "grid",
+                headStyles: {
+                    fillColor: [31, 41, 55],
+                    textColor: 255,
+                    fontStyle: "bold",
+                    halign: "center"
+                },
+                bodyStyles: { fontSize: 8.5, cellPadding: 2.2, valign: "middle" },
+                columnStyles: {
+                    0: { halign: "center", cellWidth: 9 },
+                    1: { cellWidth: 52 },
+                    2: { cellWidth: 25 },
+                    3: { halign: "center", cellWidth: 16 },
+                    4: { halign: "right", cellWidth: 18 },
+                    5: { halign: "right", cellWidth: 16 },
+                    6: { halign: "right", cellWidth: 16 },
+                    7: { halign: "right", cellWidth: 20 },
+                    8: { halign: "right", cellWidth: 17 },
+                    9: { halign: "right", cellWidth: 17, fontStyle: "bold", textColor: [185, 28, 28] },
+                    10: { cellWidth: 45 }
+                },
+                didDrawPage: () => {
+                    const pageHeight = doc.internal.pageSize.height;
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(
+                        `Item Request ${reportNumber} | Page ${doc.internal.getNumberOfPages()}`,
+                        14,
+                        pageHeight - 8
+                    );
+                    doc.text(
+                        "Shortage = outstanding request quantity less current main-store availability.",
+                        283,
+                        pageHeight - 8,
+                        { align: "right" }
+                    );
+                }
+            });
+
+            const totalShortage = shortageLines.reduce((sum, item) => sum + item.shortageQty, 0);
+            let summaryY = doc.lastAutoTable.finalY + 8;
+            if (summaryY > doc.internal.pageSize.height - 14) {
+                doc.addPage();
+                summaryY = 18;
             }
-        });
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(30);
+            doc.text(`Shortage item lines: ${shortageLines.length}`, 14, summaryY);
+            doc.text(`Total shortage quantity: ${totalShortage}`, 78, summaryY);
 
-        const totalShortage = shortageLines.reduce((sum, item) => sum + item.shortageQty, 0);
-        let summaryY = doc.lastAutoTable.finalY + 8;
-        if (summaryY > doc.internal.pageSize.height - 14) {
-            doc.addPage();
-            summaryY = 18;
+            const safeJobReference = String(jobReference).replace(/[^a-z0-9_-]+/gi, "_");
+            const safeReportNumber = String(reportNumber).replace(/[^a-z0-9_-]+/gi, "_");
+            const fileName = `Job_Shortage_${safeJobReference}_${safeReportNumber}.pdf`;
+            const url = URL.createObjectURL(doc.output("blob"));
+            setShortageReport({ url, fileName });
+            toast.success("Shortage report is ready");
+        } catch (error) {
+            console.error("Failed to generate shortage report", error);
+            toast.error("Could not generate the shortage report");
         }
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(30);
-        doc.text(`Shortage item lines: ${shortageLines.length}`, 14, summaryY);
-        doc.text(`Total shortage quantity: ${totalShortage}`, 78, summaryY);
+    };
 
-        const safeJobReference = String(jobReference).replace(/[^a-z0-9_-]+/gi, "_");
-        const safeReportNumber = String(reportNumber).replace(/[^a-z0-9_-]+/gi, "_");
-        doc.save(`Job_Shortage_${safeJobReference}_${safeReportNumber}.pdf`);
+    const downloadShortageReport = () => {
+        if (!shortageReport) return;
+        const link = document.createElement("a");
+        link.href = shortageReport.url;
+        link.download = shortageReport.fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Shortage report downloaded");
+    };
+
+    const printShortageReport = () => {
+        const preview = document.getElementById("shortage-report-preview");
+        if (!preview?.contentWindow) {
+            toast.error("Report preview is not ready");
+            return;
+        }
+        preview.contentWindow.focus();
+        preview.contentWindow.print();
     };
 
     // Scan Input State
@@ -896,6 +932,41 @@ export default function IRFulfilmentPage() {
                     </div>
                 </div>
             </div>
+
+            <Modal
+                show={Boolean(shortageReport)}
+                onHide={() => setShortageReport(null)}
+                size="xl"
+                centered
+                dialogClassName="shortage-report-modal"
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>Job Shortage Report Preview</Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="p-0 bg-light">
+                    {shortageReport && (
+                        <iframe
+                            id="shortage-report-preview"
+                            src={shortageReport.url}
+                            title="Job shortage report PDF preview"
+                            style={{ width: "100%", height: "72vh", border: 0, display: "block" }}
+                        />
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShortageReport(null)}>
+                        Close
+                    </Button>
+                    <Button variant="outline-dark" onClick={printShortageReport}>
+                        <FaPrint className="me-2" />
+                        Print Report
+                    </Button>
+                    <Button variant="primary" onClick={downloadShortageReport}>
+                        <FaDownload className="me-2" />
+                        Download PDF
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
