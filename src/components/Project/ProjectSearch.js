@@ -14,6 +14,7 @@ function ProjectSearch() {
     const navigate = useNavigate();
     // Filters
     const [projectId, setProjectId] = useState('');
+    const [projectName, setProjectName] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [salesRepName, setSalesRepName] = useState('');
     const [status, setStatus] = useState(''); // optional
@@ -37,7 +38,7 @@ function ProjectSearch() {
 
         return () => clearTimeout(delayDebounceFn);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [projectId, customerName, salesRepName, status, mjnStatus]);
+    }, [projectId, projectName, customerName, salesRepName, status, mjnStatus]);
 
     const cycleColumnMode = () => setColumnMode((prev) => (prev + 1) % 3);
 
@@ -67,6 +68,7 @@ function ProjectSearch() {
             setLoading(true);
             const params = {};
             if (projectId.trim()) params.projectId = projectId.trim();
+            if (projectName.trim()) params.projectName = projectName.trim();
             if (customerName.trim()) params.customerName = customerName.trim();
             if (salesRepName.trim()) params.salesRepName = salesRepName.trim();
             if (status) params.status = status;
@@ -86,6 +88,7 @@ function ProjectSearch() {
 
     const clearFilters = () => {
         setProjectId('');
+        setProjectName('');
         setCustomerName('');
         setSalesRepName('');
         setStatus('');
@@ -108,28 +111,36 @@ function ProjectSearch() {
 
             <Form className="mb-3">
                 <Row className="g-2">
-                    <Col md={2}>
+                    <Col lg={3} md={6}>
+                        <Form.Control
+                            aria-label="Search by project name"
+                            placeholder="Search by project name"
+                            value={projectName}
+                            onChange={(e) => setProjectName(e.target.value)}
+                        />
+                    </Col>
+                    <Col lg={3} md={6}>
                         <Form.Control
                             placeholder="Project ID"
                             value={projectId}
                             onChange={(e) => setProjectId(e.target.value)}
                         />
                     </Col>
-                    <Col md={2}>
+                    <Col lg={3} md={6}>
                         <Form.Control
                             placeholder="Client name"
                             value={customerName}
                             onChange={(e) => setCustomerName(e.target.value)}
                         />
                     </Col>
-                    <Col md={2}>
+                    <Col lg={3} md={6}>
                         <Form.Control
                             placeholder="Sales rep name"
                             value={salesRepName}
                             onChange={(e) => setSalesRepName(e.target.value)}
                         />
                     </Col>
-                    <Col md={2}>
+                    <Col lg={4} md={6}>
                         <Select
                             options={[
                                 { value: '', label: 'Status (any)' },
@@ -143,7 +154,7 @@ function ProjectSearch() {
                             classNamePrefix="modern-select"
                         />
                     </Col>
-                    <Col md={2}>
+                    <Col lg={4} md={6}>
                         <Select
                             options={[
                                 { value: '', label: 'Job Status (any)' },
@@ -162,7 +173,7 @@ function ProjectSearch() {
                             classNamePrefix="modern-select"
                         />
                     </Col>
-                    <Col md={2} className="d-flex gap-2">
+                    <Col lg={4} md={12} className="d-flex gap-2">
                         <Button variant="outline-secondary" onClick={clearFilters} className="w-100">Reset Filters</Button>
                     </Col>
                 </Row>

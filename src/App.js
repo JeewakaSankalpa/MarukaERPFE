@@ -14,6 +14,7 @@ import {
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import InteractiveDashboard from "./components/Dashboard/InteractiveDashboard";
+import ExecutiveDashboard from "./components/Dashboard/ExecutiveDashboard";
 import SupplierCustomerDashboard from "./components/Dashboard/SupplierCustomerDashboard";
 import SystemConfiguration from "./components/SystemConfiguration";
 
@@ -202,6 +203,10 @@ function App() {
                         <Route path="/my-notifications" element={<MyNotificationsPage />} />
                         <Route path="/user/profile" element={<EmployeeProfile />} />
                         <Route path="/employee/profile" element={<EmployeeProfile />} />
+                    </Route>
+
+                    <Route element={<PrivateRoute roles={["ADMIN"]} />}>
+                        <Route path="/executive-dashboard" element={<ExecutiveDashboard />} />
                     </Route>
 
                     {/* Admin */}

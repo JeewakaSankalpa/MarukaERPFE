@@ -28,6 +28,8 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
 
   const hasAccess = (item) => {
 
+    if (item.adminOnly && userRole !== "ADMIN") return false;
+    if (item.roles?.length && !item.roles.includes(userRole)) return false;
 
     // Check if ID is in access list
     if (!item.id) return true;
@@ -39,6 +41,10 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
 
     // Exact Match
     if (userModules.includes(item.id)) return true;
+
+    // The executive dashboard is role-protected and should appear for all admins,
+    // including existing installations that predate this menu permission.
+    if (item.id === "executive.dashboard" && userRole === "ADMIN") return true;
 
     // Role inheritance for newly appended menus not yet seeded in DB
     if (item.id === "inventory.supplier_approvals" && userModules.includes("inventory.approvals")) return true;
@@ -61,7 +67,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
     ...menu,
     icon: iconMap[menu.icon] || <FaHome size={18} />, // Fallback
 
-    submenus: menu.subItems.map(item => ({ ...item, name: item.title })) // Map 'title' to 'name' to fix display issue
+    submenus: (menu.subItems || []).map(item => ({ ...item, name: item.title })) // Map 'title' to 'name' to fix display issue
   })).map(menu => {
     // 1. Filter submenus based on access
     const visibleSubmenus = menu.submenus.filter(sub => hasAccess(sub) && !sub.hidden);
@@ -165,7 +171,13 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
                   backgroundColor: isActiveGroup ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                   cursor: 'pointer'
                 }}
-                onClick={() => !collapsed && handleMobileNav(menu.submenus[0]?.path || menu.path)}
+                onClick={() => {
+                  if (menu.path) {
+                    handleMobileNav(menu.path);
+                  } else if (!collapsed && menu.submenus[0]?.path) {
+                    handleMobileNav(menu.submenus[0].path);
+                  }
+                }}
               >
                 <span className={isActiveGroup ? 'text-info' : ''}>{menu.icon}</span>
                 {!collapsed && (
