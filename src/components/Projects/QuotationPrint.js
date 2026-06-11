@@ -225,9 +225,12 @@ const QuotationPrint = () => {
                         <thead className="table-light">
                             <tr>
                                 <th>Description</th>
+                                {(printFormat === PRINT_FORMATS.ALL ||
+                                    printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS) && (
+                                    <th className="text-end" style={{ width: "100px" }}>Qty</th>
+                                )}
                                 {printFormat === PRINT_FORMATS.ALL && (
                                     <>
-                                        <th className="text-end" style={{ width: "100px" }}>Qty</th>
                                         <th className="text-end" style={{ width: "150px" }}>Unit Price</th>
                                     </>
                                 )}
@@ -240,6 +243,7 @@ const QuotationPrint = () => {
                                     <tr className="table-secondary">
                                         <td><strong>{comp.name}</strong></td>
                                         {printFormat === PRINT_FORMATS.ALL && <td colSpan="2" />}
+                                        {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && <td />}
                                         <td className="text-end fw-bold">{money(componentAmount(comp))}</td>
                                     </tr>
                                     {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && comp.items?.map((item, i) => (
@@ -252,7 +256,12 @@ const QuotationPrint = () => {
                                                     <td className="text-end">{money((item.quantity || 0) * (item.estUnitCost || 0))}</td>
                                                 </>
                                             )}
-                                            {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && <td />}
+                                            {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && (
+                                                <>
+                                                    <td className="text-end">{item.quantity}</td>
+                                                    <td />
+                                                </>
+                                            )}
                                         </tr>
                                     ))}
                                 </React.Fragment>
