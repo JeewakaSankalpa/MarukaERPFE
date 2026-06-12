@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Button, Table, Spinner, Badge, Modal } from 'react-bootstrap';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Card, Button, Table, Spinner, Badge, Modal, Form, Nav, ProgressBar } from 'react-bootstrap';
+import { Boxes, CircleAlert, ClipboardList, PackageCheck, Search, Truck } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import ReportLayout from '../ReusableComponents/ReportLayout';
+import './ProjectInventoryCard.css';
 
 /**
  * Component to display project inventory, consumption, and transfers.
@@ -18,6 +20,10 @@ import ReportLayout from '../ReusableComponents/ReportLayout';
 export default function ProjectInventoryCard({ projectId, project }) {
     const navigate = useNavigate();
     const [inventory, setInventory] = useState([]);
+    const [panelInventory, setPanelInventory] = useState([]);
+    const [activeInventoryView, setActiveInventoryView] = useState('ALL');
+    const [inventorySearch, setInventorySearch] = useState('');
+    const [inventoryStatus, setInventoryStatus] = useState('ALL');
     const [loading, setLoading] = useState(false);
     const [showConsumedReport, setShowConsumedReport] = useState(false);
     const [consumptionRecords, setConsumptionRecords] = useState([]);
@@ -66,12 +72,14 @@ export default function ProjectInventoryCard({ projectId, project }) {
         if (!projectId) return;
         try {
             setLoading(true);
-            const [invRes, trRes] = await Promise.all([
+            const [invRes, panelRes, trRes] = await Promise.all([
                 api.get(`/inventory/project/${projectId}`),
+                api.get(`/inventory/project/${projectId}/panels`).catch(() => ({ data: [] })),
                 api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`)
             ]);
 
             setInventory(invRes.data || []);
+            setPanelInventory(panelRes.data || []);
             setPendingTransfers(trRes.data || []);
         } catch (e) {
             console.error('Failed to load inventory or transfers:', e);
@@ -406,17 +414,77 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const [cancelData, setCancelData] = useState({ productId: '', productName: '', reason: '' });
 
     const getReceiptStatusBadge = (status) => {
-        if (status === 'CANCELED') return <span className="badge bg-danger">CANCELED</span>;
-        if (status === 'FULLY_RECEIVED') return <span className="badge bg-success">Fully Received</span>;
-        if (status === 'PARTIALLY_RECEIVED') return <span className="badge bg-warning text-dark">Partially Received</span>;
-        return <span className="badge bg-secondary">Not Received</span>;
+        if (status === 'CANCELED' || status === 'CANCELLED') return <Badge bg="danger">Cancelled</Badge>;
+        if (status === 'FULLY_RECEIVED') return <Badge bg="success">Fully received</Badge>;
+        if (status === 'COVERED') return <Badge bg="success">Covered</Badge>;
+        if (status === 'PARTIALLY_RECEIVED') return <Badge bg="warning" text="dark">Partially received</Badge>;
+        if (status === 'PARTIALLY_COVERED') return <Badge bg="warning" text="dark">Partially covered</Badge>;
+        if (status === 'NOT_RECEIVED') return <Badge bg="secondary">Not received</Badge>;
+        return <Badge bg="secondary">Not covered</Badge>;
     };
 
+    const activeInventory = useMemo(() => inventory.filter(item => !item.isCancelled), [inventory]);
+    const cancelledInventory = useMemo(() => inventory.filter(item => item.isCancelled), [inventory]);
+    const activePanel = useMemo(
+        () => panelInventory.find(panel => panel.panelName === activeInventoryView),
+        [panelInventory, activeInventoryView]
+    );
+    const isPanelView = activeInventoryView !== 'ALL';
+
+    const displayedInventory = useMemo(() => {
+        const source = isPanelView ? (activePanel?.items || []) : activeInventory;
+        const search = inventorySearch.trim().toLowerCase();
+        return source.filter(item => {
+            if (item.cancelled) return false;
+            const status = isPanelView ? item.coverageStatus : item.orderStatus;
+            const matchesSearch = !search
+                || String(item.productName || '').toLowerCase().includes(search)
+                || String(item.sku || '').toLowerCase().includes(search);
+            const matchesStatus = inventoryStatus === 'ALL'
+                || (inventoryStatus === 'SHORTFALL'
+                    ? (isPanelView ? item.shortfallQty > 0 : item.receivedQty < item.requestedQty)
+                    : status === inventoryStatus);
+            return matchesSearch && matchesStatus;
+        });
+    }, [activeInventory, activePanel, inventorySearch, inventoryStatus, isPanelView]);
+
+    const inventorySummary = useMemo(() => {
+        if (isPanelView) {
+            return {
+                products: activePanel?.productCount || 0,
+                requested: activePanel?.requestedQty || 0,
+                received: activePanel?.coveredQty || 0,
+                onHand: (activePanel?.items || []).reduce((sum, item) => sum + Number(item.projectOnHandQty || 0), 0),
+                shortfall: activePanel?.shortfallQty || 0
+            };
+        }
+        return {
+            products: activeInventory.length,
+            requested: activeInventory.reduce((sum, item) => sum + Number(item.requestedQty || 0), 0),
+            received: activeInventory.reduce((sum, item) => sum + Number(item.receivedQty || 0), 0),
+            onHand: activeInventory.reduce((sum, item) => sum + Number(item.onHandQty || 0), 0),
+            shortfall: activeInventory.reduce((sum, item) =>
+                sum + Math.max(0, Number(item.requestedQty || 0) - Number(item.receivedQty || 0)), 0)
+        };
+    }, [activeInventory, activePanel, isPanelView]);
+
+    const coveragePercent = inventorySummary.requested > 0
+        ? Math.min(100, Math.round((inventorySummary.received / inventorySummary.requested) * 100))
+        : 0;
+
     return (
-        <Card className="h-100 mt-3">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-                <span>Project Inventory</span>
-                <div className="d-flex gap-2">
+        <Card className="project-inventory h-100 mt-3 shadow-sm">
+            <Card.Header className="project-inventory__header d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                <div>
+                    <div className="d-flex align-items-center gap-2">
+                        <Boxes size={20} className="text-primary" />
+                        <h5 className="mb-0">Project Inventory</h5>
+                    </div>
+                    <div className="text-muted small mt-1">
+                        Track material coverage, shared project stock, consumption, and incoming transfers.
+                    </div>
+                </div>
+                <div className="d-flex gap-2 flex-wrap">
                     <Button size="sm" variant="outline-primary" onClick={() => navigate(`/item/requests?projectId=${projectId}`)} disabled={!projectId}>
                         Request Item
                     </Button>
@@ -429,55 +497,167 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 </div>
             </Card.Header>
             <Card.Body>
-                {loading && <div className="text-muted small"><Spinner size="sm" /> Loading...</div>}
-                {!loading && inventory.length === 0 && <div className="text-muted">No inventory records found.</div>}
-                
-                {!loading && inventory.filter(i => !i.isCancelled).length > 0 && (
-                    <div className="mb-4">
-                        <Table size="sm" bordered hover responsive>
+                {loading ? (
+                    <div className="py-5 text-center text-muted">
+                        <Spinner size="sm" className="me-2" />
+                        Loading project inventory...
+                    </div>
+                ) : (
+                    <>
+                        <div className="project-inventory__summary mb-4">
+                            <div className="project-inventory__metric">
+                                <div className="project-inventory__metric-label"><Boxes size={15} /> Products</div>
+                                <div className="project-inventory__metric-value">{inventorySummary.products}</div>
+                            </div>
+                            <div className="project-inventory__metric">
+                                <div className="project-inventory__metric-label"><ClipboardList size={15} /> Requested</div>
+                                <div className="project-inventory__metric-value">{inventorySummary.requested}</div>
+                            </div>
+                            <div className="project-inventory__metric">
+                                <div className="project-inventory__metric-label"><PackageCheck size={15} /> {isPanelView ? 'Covered' : 'Received'}</div>
+                                <div className="project-inventory__metric-value">{inventorySummary.received}</div>
+                            </div>
+                            <div className="project-inventory__metric">
+                                <div className="project-inventory__metric-label"><Boxes size={15} /> Project on hand</div>
+                                <div className="project-inventory__metric-value">{inventorySummary.onHand}</div>
+                            </div>
+                            <div className={`project-inventory__metric ${inventorySummary.shortfall > 0 ? 'project-inventory__metric--danger' : ''}`}>
+                                <div className="project-inventory__metric-label"><CircleAlert size={15} /> Shortfall</div>
+                                <div className="project-inventory__metric-value">{inventorySummary.shortfall}</div>
+                            </div>
+                        </div>
+
+                        <div className="d-flex align-items-center justify-content-between gap-3 mb-2 flex-wrap">
+                            <div>
+                                <div className="fw-semibold">{isPanelView ? activeInventoryView : 'All Products'}</div>
+                                <div className="small text-muted">
+                                    {isPanelView
+                                        ? 'Panel demand with project-wide stock shown for reference.'
+                                        : 'Combined material position across the whole project.'}
+                                </div>
+                            </div>
+                            <div style={{ minWidth: 190 }}>
+                                <div className="d-flex justify-content-between small mb-1">
+                                    <span className="text-muted">Coverage</span>
+                                    <span className="fw-semibold">{coveragePercent}%</span>
+                                </div>
+                                <ProgressBar now={coveragePercent} variant={coveragePercent < 50 ? 'danger' : coveragePercent < 100 ? 'warning' : 'success'} style={{ height: 7 }} />
+                            </div>
+                        </div>
+
+                        <Nav className="project-inventory__views" activeKey={activeInventoryView}>
+                            <Nav.Item>
+                                <Nav.Link eventKey="ALL" onClick={() => { setActiveInventoryView('ALL'); setInventoryStatus('ALL'); }}>
+                                    All Products <Badge bg="light" text="dark">{activeInventory.length}</Badge>
+                                </Nav.Link>
+                            </Nav.Item>
+                            {panelInventory.map(panel => (
+                                <Nav.Item key={panel.panelName}>
+                                    <Nav.Link eventKey={panel.panelName} onClick={() => { setActiveInventoryView(panel.panelName); setInventoryStatus('ALL'); }}>
+                                        {panel.panelName} <Badge bg={panel.shortfallQty > 0 ? 'danger' : 'light'} text={panel.shortfallQty > 0 ? undefined : 'dark'}>
+                                            {panel.productCount}
+                                        </Badge>
+                                    </Nav.Link>
+                                </Nav.Item>
+                            ))}
+                        </Nav>
+
+                        <div className="project-inventory__toolbar">
+                            <div className="project-inventory__search">
+                                <Search size={16} />
+                                <Form.Control
+                                    size="sm"
+                                    value={inventorySearch}
+                                    onChange={event => setInventorySearch(event.target.value)}
+                                    placeholder="Search product or SKU"
+                                />
+                            </div>
+                            <Form.Select
+                                size="sm"
+                                value={inventoryStatus}
+                                onChange={event => setInventoryStatus(event.target.value)}
+                                style={{ width: 190 }}
+                            >
+                                <option value="ALL">All statuses</option>
+                                <option value="SHORTFALL">Has shortfall</option>
+                                {isPanelView ? (
+                                    <>
+                                        <option value="COVERED">Covered</option>
+                                        <option value="PARTIALLY_COVERED">Partially covered</option>
+                                        <option value="NOT_COVERED">Not covered</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="FULLY_RECEIVED">Fully received</option>
+                                        <option value="PARTIALLY_RECEIVED">Partially received</option>
+                                        <option value="NOT_RECEIVED">Not received</option>
+                                    </>
+                                )}
+                            </Form.Select>
+                        </div>
+
+                        {displayedInventory.length > 0 ? (
+                            <Table size="sm" hover responsive className="project-inventory__table mb-4">
                         <thead>
                             <tr>
                                 <th>Product</th>
                                 <th className="text-end">Requested</th>
-                                <th className="text-end">Received</th>
-                                <th className="text-end">Consumed</th>
-                                <th className="text-end">On Hand</th>
-                                <th className="text-center">Order Status</th>
+                                <th className="text-end">{isPanelView ? 'Coverage' : 'Received'}</th>
+                                <th className="text-end">{isPanelView ? 'Project consumed' : 'Consumed'}</th>
+                                <th className="text-end">{isPanelView ? 'Project on hand' : 'On hand'}</th>
+                                <th className="text-end">Shortfall</th>
+                                <th className="text-center">Status</th>
                                 <th className="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {inventory.filter(i => !i.isCancelled).map((i, idx) => {
-                                const canCancel = i.orderStatus === 'NOT_RECEIVED';
-                                const canReturn = (i.orderStatus === 'FULLY_RECEIVED' || i.orderStatus === 'PARTIALLY_RECEIVED');
+                            {displayedInventory.map((i, idx) => {
+                                const receivedQty = isPanelView ? i.coverageQty : i.receivedQty;
+                                const consumedQty = isPanelView ? i.projectConsumedQty : i.consumedQty;
+                                const onHandQty = isPanelView ? i.projectOnHandQty : i.onHandQty;
+                                const shortfallQty = isPanelView
+                                    ? i.shortfallQty
+                                    : Math.max(0, Number(i.requestedQty || 0) - Number(i.receivedQty || 0));
+                                const statusValue = isPanelView ? i.coverageStatus : i.orderStatus;
+                                const canCancel = !isPanelView && i.orderStatus === 'NOT_RECEIVED';
+                                const canReturn = onHandQty > 0;
 
                                 return (
                                     <tr key={`${i.productId}-active-${idx}`}>
-                                        <td>{i.productName}</td>
+                                        <td className="project-inventory__product">
+                                            <div className="fw-semibold">{i.productName}</div>
+                                            <div className="project-inventory__sku">{i.sku || i.productId} · {i.unit || 'unit'}</div>
+                                        </td>
                                         <td className="text-end">{i.requestedQty}</td>
-                                        <td className="text-end">{i.receivedQty}</td>
-                                        <td className="text-end">{i.consumedQty}</td>
-                                        <td className="text-end fw-bold">{i.onHandQty}</td>
+                                        <td className="text-end fw-semibold">{receivedQty}</td>
+                                        <td className="text-end">{consumedQty}</td>
+                                        <td className="text-end fw-bold">{onHandQty}</td>
+                                        <td className={`text-end fw-semibold ${shortfallQty > 0 ? 'text-danger' : 'text-success'}`}>
+                                            {shortfallQty}
+                                        </td>
                                         <td className="text-center">
-                                            {getReceiptStatusBadge(i.orderStatus)}
+                                            {getReceiptStatusBadge(statusValue)}
+                                            {isPanelView && (
+                                                <div className="project-inventory__stock-note mt-1">Shared project stock</div>
+                                            )}
                                         </td>
                                         <td className="text-center d-flex gap-1 justify-content-center flex-wrap">
                                             <Button size="sm" variant="light" onClick={() => handleViewBatches(i)} title="View QR & Batches">
-                                                <i className="bi bi-qr-code"></i> View
+                                                Batches
                                             </Button>
 
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline-danger" 
-                                                title="Cancel Order" 
-                                                disabled={!canCancel}
-                                                style={{ display: canCancel ? 'inline-block' : 'none' }}
-                                                onClick={() => {
-                                                    setCancelData({ productId: i.productId, productName: i.productName, reason: '' });
-                                                    setShowCancelModal(true);
-                                                }}>
-                                                Cancel
-                                            </Button>
+                                            {canCancel && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline-danger"
+                                                    title="Cancel project-wide request"
+                                                    onClick={() => {
+                                                        setCancelData({ productId: i.productId, productName: i.productName, reason: '' });
+                                                        setShowCancelModal(true);
+                                                    }}>
+                                                    Cancel
+                                                </Button>
+                                            )}
 
                                             {canReturn && (
                                                 <Button size="sm" variant="outline-warning" title="Return" onClick={() => handleRowReturnClick(i)}>
@@ -490,14 +670,19 @@ export default function ProjectInventoryCard({ projectId, project }) {
                             })}
                         </tbody>
                     </Table>
-                    </div>
-                )}
+                        ) : (
+                            <div className="project-inventory__empty mb-4">
+                                <Boxes size={28} className="mb-2" />
+                                <div className="fw-semibold">No matching inventory lines</div>
+                                <div className="small mt-1">Try another panel, status, or search term.</div>
+                            </div>
+                        )}
 
                 {/* Cancelled Inventory Table */}
-                {!loading && inventory.filter(i => i.isCancelled).length > 0 && (
+                {!isPanelView && cancelledInventory.length > 0 && (
                     <div className="mb-4 mt-2">
-                        <h6 className="text-danger fw-bold border-bottom pb-2 mb-3">Cancelled Requests</h6>
-                        <Table size="sm" bordered hover responsive className="table-light">
+                        <h6 className="text-danger fw-bold mb-2">Cancelled requests</h6>
+                        <Table size="sm" hover responsive className="project-inventory__table table-light">
                             <thead>
                                 <tr>
                                     <th>Product</th>
@@ -506,7 +691,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {inventory.filter(i => i.isCancelled).map((i, idx) => (
+                                {cancelledInventory.map((i, idx) => (
                                     <tr key={`${i.productId}-cancelled-${idx}`} style={{ opacity: 0.7 }}>
                                         <td>{i.productName}</td>
                                         <td className="text-end text-danger fw-bold">{i.requestedQty}</td>
@@ -518,6 +703,8 @@ export default function ProjectInventoryCard({ projectId, project }) {
                             </tbody>
                         </Table>
                     </div>
+                )}
+                    </>
                 )}
 
                 {/* Cancel Modal */}
@@ -617,11 +804,22 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     </div>
                 )}
 
-                <h5 className="mt-4">Incoming Transfers (Pending Acceptance)</h5>
+                <div className="project-inventory__transfer d-flex justify-content-between align-items-center gap-2 mt-4 mb-2">
+                    <div>
+                        <h6 className="mb-0 d-flex align-items-center gap-2">
+                            <Truck size={17} className="text-primary" />
+                            Incoming transfers
+                            <Badge bg={pendingTransfers.length > 0 ? 'primary' : 'light'} text={pendingTransfers.length > 0 ? undefined : 'dark'}>
+                                {pendingTransfers.length}
+                            </Badge>
+                        </h6>
+                        <div className="small text-muted mt-1">Items waiting for project acceptance.</div>
+                    </div>
+                </div>
                 {loading && <div className="text-muted small"><Spinner size="sm" /> Loading transfers...</div>}
                 {!loading && pendingTransfers.length === 0 && <div className="text-muted small">No pending transfers.</div>}
                 {!loading && pendingTransfers.length > 0 && (
-                    <Table size="sm" bordered hover responsive>
+                    <Table size="sm" hover responsive className="project-inventory__table">
                         <thead>
                             <tr>
                                 <th>TR No</th>

@@ -252,6 +252,7 @@ function App() {
                         <Route path="/product/create" element={<ProductCreate />} />
                         <Route path="/inventory/pr" element={<PurchaseRequestPage />} />
                         <Route path="/item/requests" element={<ItemRequestForm />} />
+                        <Route path="/item/requests/:id" element={<ItemRequestForm />} />
                         <Route path="/item/my-requests" element={<MyRequestList />} /> {/* NEW */}
                         <Route path="/stores/fulfil-requests" element={<IRFulfilmentPage />} />
                         <Route path="/reports/stock" element={<StockValuationReport />} />

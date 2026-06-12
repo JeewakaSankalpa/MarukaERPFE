@@ -1,0 +1,155 @@
+.project-inventory {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.project-inventory__header {
+    padding: 1rem 1.15rem;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.project-inventory__summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.project-inventory__metric {
+    min-width: 0;
+    padding: 0.85rem 1rem;
+    border-right: 1px solid #e5e7eb;
+}
+
+.project-inventory__metric:last-child {
+    border-right: 0;
+}
+
+.project-inventory__metric-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.project-inventory__metric-value {
+    margin-top: 0.25rem;
+    color: #0f172a;
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.project-inventory__metric--danger .project-inventory__metric-value {
+    color: #b91c1c;
+}
+
+.project-inventory__views {
+    border-bottom: 1px solid #e5e7eb;
+    gap: 0.25rem;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+}
+
+.project-inventory__views .nav-link {
+    color: #475569;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.project-inventory__views .nav-link.active {
+    color: #1d4ed8;
+    background: transparent;
+    border-bottom-color: #2563eb;
+}
+
+.project-inventory__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+}
+
+.project-inventory__search {
+    position: relative;
+    flex: 1;
+}
+
+.project-inventory__search svg {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    pointer-events: none;
+}
+
+.project-inventory__search input {
+    padding-left: 2.25rem;
+}
+
+.project-inventory__table thead th {
+    color: #475569;
+    background: #f8fafc;
+    border-bottom-width: 1px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.project-inventory__table td {
+    vertical-align: middle;
+}
+
+.project-inventory__product {
+    min-width: 190px;
+}
+
+.project-inventory__sku {
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+.project-inventory__stock-note {
+    color: #64748b;
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.project-inventory__empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: #64748b;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.project-inventory__transfer {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 1rem;
+}
+
+@media (max-width: 900px) {
+    .project-inventory__summary {
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+    }
+
+    .project-inventory__metric {
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .project-inventory__toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

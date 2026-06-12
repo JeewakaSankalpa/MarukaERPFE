@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Table, Card, Badge, Spinner } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 
 const MyRequestList = () => {
+    const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -62,16 +64,19 @@ const MyRequestList = () => {
                                 </tr>
                             ) : (
                                 requests.map(ir => (
-                                    <tr key={ir.id}>
+                                    <tr key={ir.id}
+                                        onClick={() => ir.status === "DRAFT" && navigate(`/item/requests/${ir.id}`)}
+                                        style={{ cursor: ir.status === "DRAFT" ? "pointer" : "default" }}>
                                         <td>{ir.irNumber}</td>
                                         <td>{new Date(ir.createdAt).toLocaleDateString()}</td>
                                         <td>
                                             <ul className="list-unstyled mb-0" style={{ fontSize: '0.9em' }}>
-                                                {ir.items.map((it, idx) => (
+                                                {(ir.items || []).map((it, idx) => (
                                                     <li key={idx}>
                                                         {it.productNameSnapshot} <Badge bg="light" text="dark">x{it.requestedQty} {it.unit}</Badge>
                                                     </li>
                                                 ))}
+                                                {ir.status === "DRAFT" && <li className="text-primary mt-1">Open draft</li>}
                                             </ul>
                                         </td>
                                         <td>
