@@ -26,6 +26,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const [inventoryStatus, setInventoryStatus] = useState('ALL');
     const [loading, setLoading] = useState(false);
     const [showConsumedReport, setShowConsumedReport] = useState(false);
+    const [showComponentReport, setShowComponentReport] = useState(false);
     const [consumptionRecords, setConsumptionRecords] = useState([]);
     const [loadingConsumption, setLoadingConsumption] = useState(false);
 
@@ -471,6 +472,16 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const coveragePercent = inventorySummary.requested > 0
         ? Math.min(100, Math.round((inventorySummary.received / inventorySummary.requested) * 100))
         : 0;
+    const componentReportSummary = useMemo(() => ({
+        components: panelInventory.length,
+        itemLines: panelInventory.reduce(
+            (sum, panel) => sum + (panel.items || []).filter(item => !item.cancelled).length,
+            0
+        ),
+        requested: panelInventory.reduce((sum, panel) => sum + Number(panel.requestedQty || 0), 0),
+        covered: panelInventory.reduce((sum, panel) => sum + Number(panel.coveredQty || 0), 0),
+        shortage: panelInventory.reduce((sum, panel) => sum + Number(panel.shortfallQty || 0), 0)
+    }), [panelInventory]);
 
     return (
         <Card className="project-inventory h-100 mt-3 shadow-sm">
@@ -490,6 +501,9 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     </Button>
                     <Button size="sm" variant="outline-secondary" onClick={openConsumedReport} disabled={!projectId}>
                         Print Consumed Items
+                    </Button>
+                    <Button size="sm" variant="outline-secondary" onClick={() => setShowComponentReport(true)} disabled={!projectId || loading}>
+                        Print Component Report
                     </Button>
                     <Button size="sm" variant="primary" onClick={() => setShowConsume(true)} disabled={!projectId}>
                         Consume Items
@@ -865,7 +879,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 )}
             </Card.Body>
 
-            <Modal show={showConsumedReport} onHide={() => setShowConsumedReport(false)} size="xl">
+            <Modal show={showConsumedReport} onHide={() => setShowConsumedReport(false)} size="xl" className="report-print-modal">
                 <Modal.Header closeButton className="no-print">
                     <Modal.Title>Consumed Items Report</Modal.Title>
                 </Modal.Header>
@@ -940,6 +954,127 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 <Modal.Footer className="no-print">
                     <Button variant="secondary" onClick={() => setShowConsumedReport(false)}>Close</Button>
                     <Button variant="primary" onClick={() => window.print()} disabled={loadingConsumption}>
+                        Print
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showComponentReport} onHide={() => setShowComponentReport(false)} size="xl" className="report-print-modal">
+                <Modal.Header closeButton className="no-print">
+                    <Modal.Title>Component Material Report</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <ReportLayout
+                        title="Component Material Status"
+                        subtitle={`${project?.projectName || project?.name || 'Project'} | Job: ${project?.jobNumber || projectId}`}
+                        orientation="landscape"
+                    >
+                        <Table bordered size="sm" className="mb-4">
+                            <tbody>
+                                <tr>
+                                    <th style={{ width: '13%' }}>Project</th>
+                                    <td>{project?.projectName || project?.name || projectId}</td>
+                                    <th style={{ width: '13%' }}>Job Number</th>
+                                    <td>{project?.jobNumber || '-'}</td>
+                                    <th style={{ width: '13%' }}>Customer</th>
+                                    <td>{project?.customerName || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Components</th>
+                                    <td>{componentReportSummary.components}</td>
+                                    <th>Item Lines</th>
+                                    <td>{componentReportSummary.itemLines}</td>
+                                    <th>Total Shortage</th>
+                                    <td className={componentReportSummary.shortage > 0 ? 'text-danger fw-bold' : 'text-success fw-bold'}>
+                                        {componentReportSummary.shortage}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Required Qty</th>
+                                    <td>{componentReportSummary.requested}</td>
+                                    <th>Allocated Qty</th>
+                                    <td>{componentReportSummary.covered}</td>
+                                    <th>Overall Status</th>
+                                    <td>
+                                        {componentReportSummary.shortage > 0
+                                            ? <Badge bg="danger">Shortage</Badge>
+                                            : <Badge bg="success">Fully covered</Badge>}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </Table>
+
+                        {panelInventory.length === 0 ? (
+                            <div className="text-center text-muted py-4 border rounded">
+                                No component allocations are recorded for this project.
+                            </div>
+                        ) : panelInventory.map(panel => {
+                            const activeItems = (panel.items || []).filter(item => !item.cancelled);
+                            const coverage = Number(panel.requestedQty || 0) > 0
+                                ? Math.min(100, Math.round((Number(panel.coveredQty || 0) / Number(panel.requestedQty)) * 100))
+                                : 0;
+
+                            return (
+                                <section key={panel.panelName} className="mb-4">
+                                    <div className="d-flex justify-content-between align-items-center bg-light border rounded-top px-3 py-2">
+                                        <div>
+                                            <strong>{panel.panelName}</strong>
+                                            <span className="text-muted ms-2">{panel.productCount} item(s)</span>
+                                        </div>
+                                        <div className="small">
+                                            Required: <strong>{panel.requestedQty}</strong>
+                                            <span className="mx-2">|</span>
+                                            Allocated: <strong>{panel.coveredQty}</strong>
+                                            <span className="mx-2">|</span>
+                                            Coverage: <strong>{coverage}%</strong>
+                                            <span className="mx-2">|</span>
+                                            Shortage: <strong className={panel.shortfallQty > 0 ? 'text-danger' : 'text-success'}>{panel.shortfallQty}</strong>
+                                        </div>
+                                    </div>
+                                    <Table bordered size="sm" className="mb-0">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th>Item</th>
+                                                <th style={{ width: '11%' }}>SKU</th>
+                                                <th style={{ width: '7%' }}>Unit</th>
+                                                <th className="text-end" style={{ width: '9%' }}>Required</th>
+                                                <th className="text-end" style={{ width: '9%' }}>Allocated</th>
+                                                <th className="text-end" style={{ width: '11%' }}>Project Consumed</th>
+                                                <th className="text-end" style={{ width: '11%' }}>Project On Hand</th>
+                                                <th className="text-end" style={{ width: '9%' }}>Shortage</th>
+                                                <th className="text-center" style={{ width: '12%' }}>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {activeItems.map(item => (
+                                                <tr key={`${panel.panelName}-${item.productId}`}>
+                                                    <td className="fw-semibold">{item.productName || item.productId}</td>
+                                                    <td>{item.sku || '-'}</td>
+                                                    <td>{item.unit || '-'}</td>
+                                                    <td className="text-end">{item.requestedQty}</td>
+                                                    <td className="text-end">{item.coverageQty}</td>
+                                                    <td className="text-end">{item.projectConsumedQty}</td>
+                                                    <td className="text-end">{item.projectOnHandQty}</td>
+                                                    <td className={`text-end fw-bold ${item.shortfallQty > 0 ? 'text-danger' : 'text-success'}`}>
+                                                        {item.shortfallQty}
+                                                    </td>
+                                                    <td className="text-center">{getReceiptStatusBadge(item.coverageStatus)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                </section>
+                            );
+                        })}
+
+                        <div className="small text-muted border-top pt-2">
+                            Allocated quantities are distributed once across components. Project Consumed and Project On Hand are shared project-wide figures because consumption records are not assigned to a specific component.
+                        </div>
+                    </ReportLayout>
+                </Modal.Body>
+                <Modal.Footer className="no-print">
+                    <Button variant="secondary" onClick={() => setShowComponentReport(false)}>Close</Button>
+                    <Button variant="primary" onClick={() => window.print()} disabled={loading || panelInventory.length === 0}>
                         Print
                     </Button>
                 </Modal.Footer>

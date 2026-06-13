@@ -22,6 +22,8 @@ const searchProducts = async (q, page = 0, size = 40) =>
     (await api.get(`/products?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
 const getIR = async (id) => (await api.get(`/item-requests/${id}`)).data;
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
+const getSubmittedComponents = async (sourceEstimationId) =>
+    (await api.get("/item-requests/submitted-components", { params: { sourceEstimationId } })).data;
 
 const listDepartments = async () => {
     try {
@@ -80,6 +82,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const [components, setComponents] = useState([GENERAL_COMPONENT]);
     const [activeComponent, setActiveComponent] = useState(GENERAL_COMPONENT);
     const [rows, setRows] = useState([]);
+    const [submittedComponents, setSubmittedComponents] = useState({});
 
     const [q, setQ] = useState("");
     const [searchData, setSearchData] = useState({ content: [], totalPages: 0 });
@@ -89,6 +92,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
 
     const isEditable = !routeId || status === "DRAFT";
+    const isActiveComponentSubmitted = Boolean(submittedComponents[activeComponent]);
+    const canEditActiveComponent = isEditable && !isActiveComponentSubmitted;
 
     useEffect(() => {
         (async () => {
@@ -148,6 +153,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 setComponents(nextComponents);
                 setActiveComponent(nextComponents[0]);
                 setRows(mappedRows);
+                setSubmittedComponents({});
             } catch {
                 toast.error("Failed to load item request");
             } finally {
@@ -173,6 +179,9 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
                 const names = estimationComponents.map((component, index) =>
                     component.name?.trim() || `Component ${index + 1}`);
+                const completedComponents = estimation.id
+                    ? await getSubmittedComponents(estimation.id)
+                    : {};
                 const rowMap = new Map();
                 estimationComponents.forEach((component, componentIndex) => {
                     const componentName = names[componentIndex];
@@ -195,8 +204,9 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 });
                 setSourceEstimationId(estimation.id || null);
                 setComponents(names);
-                setActiveComponent(names[0]);
+                setActiveComponent(names.find(name => !completedComponents[name]) || names[0]);
                 setRows([...rowMap.values()]);
+                setSubmittedComponents(completedComponents);
                 toast.info(`Loaded ${rowMap.size} products from the estimation`);
             } catch (error) {
                 if (error.response?.status !== 404) toast.error("Could not load the project estimation");
@@ -238,14 +248,14 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         [rows, activeComponent]
     );
     const selectedLineCount = useMemo(
-        () => rows.reduce((total, row) => total + components.filter(component =>
+        () => rows.reduce((total, row) => total + components.filter(component => !submittedComponents[component] &&
             row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0).length, 0),
-        [rows, components]
+        [rows, components, submittedComponents]
     );
     const selectedProductCount = useMemo(
-        () => rows.filter(row => components.some(component =>
+        () => rows.filter(row => components.some(component => !submittedComponents[component] &&
             row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)).length,
-        [rows, components]
+        [rows, components, submittedComponents]
     );
 
     const componentSelectedCount = (componentName) => rows.filter(row =>
@@ -293,26 +303,27 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         return Object.keys(quantities).length ? [{ ...row, quantities, selectedComponents }] : [];
     }));
 
-    const buildItems = () => rows.flatMap(row => {
-        const componentAllocations = components
-            .filter(component => row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)
-            .map(component => ({ componentName: component, quantity: Number(row.quantities[component]) }));
-        if (!componentAllocations.length) return [];
-        return [{
-            productId: row.productId,
-            unit: row.unit,
-            note: row.note || "",
-            componentAllocations
-        }];
-    });
+    const buildItems = (componentNames = components.filter(component => !submittedComponents[component])) =>
+        rows.flatMap(row => {
+            const componentAllocations = componentNames
+                .filter(component => row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)
+                .map(component => ({ componentName: component, quantity: Number(row.quantities[component]) }));
+            if (!componentAllocations.length) return [];
+            return [{
+                productId: row.productId,
+                unit: row.unit,
+                note: row.note || "",
+                componentAllocations
+            }];
+        });
 
-    const buildPayload = () => ({
+    const buildPayload = ({ componentNames, requestStatus = "DRAFT" } = {}) => ({
         departmentId: departmentId || null,
         projectId: projectId || null,
         sourceEstimationId,
         comment,
-        items: buildItems(),
-        status: "DRAFT"
+        items: buildItems(componentNames),
+        status: requestStatus
     });
 
     const validateTarget = () => {
@@ -343,21 +354,52 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         }
     };
 
-    const submitRequest = async () => {
+    const submitComponent = async () => {
         if (!validateTarget()) return;
-        if (!buildItems().length) {
-            toast.warn("Select at least one product with a quantity");
+        const componentItems = buildItems([activeComponent]);
+        if (!componentItems.length) {
+            toast.warn(`Select at least one product for ${activeComponent}`);
             return;
         }
         setIsSubmitting(true);
         try {
-            const draft = await saveDraft({ quiet: true });
-            if (!draft) return;
-            const response = await api.post(`/item-requests/${draft.id}/submit`);
-            setStatus(response.data.status);
-            toast.success(`Item Request submitted (${response.data.irNumber})`);
+            const latestSubmittedComponents = sourceEstimationId
+                ? await getSubmittedComponents(sourceEstimationId)
+                : submittedComponents;
+            if (latestSubmittedComponents[activeComponent]) {
+                setSubmittedComponents(latestSubmittedComponents);
+                const nextComponent = components.find(component => !latestSubmittedComponents[component]);
+                if (nextComponent) setActiveComponent(nextComponent);
+                toast.warn(`${activeComponent} has already been submitted`);
+                return;
+            }
+
+            const response = await api.post("/item-requests", buildPayload({
+                componentNames: [activeComponent],
+                requestStatus: "SUBMITTED"
+            }));
+            const nextSubmittedComponents = {
+                ...submittedComponents,
+                [activeComponent]: response.data.irNumber
+            };
+            setSubmittedComponents(nextSubmittedComponents);
+
+            if (routeId && status === "DRAFT") {
+                const remainingComponents = components.filter(component => !nextSubmittedComponents[component]);
+                try {
+                    await api.put(`/item-requests/${routeId}`, buildPayload({
+                        componentNames: remainingComponents
+                    }));
+                } catch {
+                    toast.warn("Component submitted, but the remaining draft could not be updated");
+                }
+            }
+
+            const nextComponent = components.find(component => !nextSubmittedComponents[component]);
+            if (nextComponent) setActiveComponent(nextComponent);
+            toast.success(`${activeComponent} submitted (${response.data.irNumber})`);
         } catch (error) {
-            toast.error(error?.response?.data?.message || "Failed to submit request");
+            toast.error(error?.response?.data?.message || `Failed to submit ${activeComponent}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -383,7 +425,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                 {status && <Badge bg={status === "DRAFT" ? "secondary" : "primary"}>{status}</Badge>}
                             </div>
                             <div className="text-muted small mt-1">
-                                Select products component by component, save the draft, then submit when ready.
+                                Select and submit one component at a time, in any order.
                             </div>
                         </div>
                     </div>
@@ -438,7 +480,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                     {sourceEstimationId && (
                         <Alert variant="success" className="d-flex align-items-center gap-2 mt-4 mb-0 py-2">
                             <CheckCircle2 size={18} />
-                            Estimation components are ready. Uncheck anything that should not be requested yet.
+                            Estimation components are ready. Open a tab and submit only that component when it is ready.
                         </Alert>
                     )}
 
@@ -454,7 +496,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                 {components.map(component => (
                                     <Nav.Item key={component}>
                                         <Nav.Link eventKey={component} onClick={() => setActiveComponent(component)}>
-                                            {component} <Badge bg="light" text="dark">{componentSelectedCount(component)}</Badge>
+                                            {component}{" "}
+                                            {submittedComponents[component]
+                                                ? <Badge bg="success">Completed</Badge>
+                                                : <Badge bg="light" text="dark">{componentSelectedCount(component)}</Badge>}
                                         </Nav.Link>
                                     </Nav.Item>
                                 ))}
@@ -462,7 +507,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         </div>
 
                         <div className="p-3">
-                            {isEditable && (
+                            {canEditActiveComponent && (
                                 <>
                                     <div className="d-flex gap-2 mb-2">
                                         <Form.Control placeholder={`Search products for ${activeComponent}`}
@@ -513,7 +558,9 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
                             <div className="d-flex justify-content-between align-items-center mb-2">
                                 <h5 className="mb-0">{activeComponent} Items</h5>
-                                <Badge bg="light" text="dark">{componentSelectedCount(activeComponent)} selected</Badge>
+                                {isActiveComponentSubmitted
+                                    ? <Badge bg="success">Completed as {submittedComponents[activeComponent]}</Badge>
+                                    : <Badge bg="light" text="dark">{componentSelectedCount(activeComponent)} selected</Badge>}
                             </div>
                             <Table hover responsive className="align-middle mb-0">
                                 <thead>
@@ -535,7 +582,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                             <td>
                                                 <Form.Check checked={Boolean(row.selectedComponents[activeComponent])}
                                                     onChange={event => toggleComponentSelection(row.productId, event.target.checked)}
-                                                    disabled={!isEditable} aria-label={`Select ${row.name}`} />
+                                                    disabled={!canEditActiveComponent} aria-label={`Select ${row.name}`} />
                                             </td>
                                             <td className="fw-semibold">{row.name}</td>
                                             <td>{row.sku || "-"}</td>
@@ -545,18 +592,18 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                                     <Form.Control type="number" min="0"
                                                         value={row.quantities[activeComponent] ?? ""}
                                                         onChange={event => setComponentQuantity(row.productId, event.target.value)}
-                                                        disabled={!isEditable || !row.selectedComponents[activeComponent]} />
+                                                        disabled={!canEditActiveComponent || !row.selectedComponents[activeComponent]} />
                                                     <InputGroup.Text>{row.unit}</InputGroup.Text>
                                                 </InputGroup>
                                             </td>
                                             <td>
                                                 <Form.Control value={row.note}
                                                     onChange={event => updateRow(row.productId, current => ({ ...current, note: event.target.value }))}
-                                                    disabled={!isEditable} />
+                                                    disabled={!canEditActiveComponent} />
                                             </td>
                                             {status !== "DRAFT" && <td>{row.fulfilledQty}</td>}
                                             <td>
-                                                {isEditable && (
+                                                {canEditActiveComponent && (
                                                     <Button size="sm" variant="link" className="text-danger px-0"
                                                         onClick={() => removeFromComponent(row.productId)}>Remove</Button>
                                                 )}
@@ -578,16 +625,17 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                     {isEditable && (
                         <div className="d-flex justify-content-between align-items-center gap-2 mt-4 flex-wrap">
                             <div className="small text-muted">
-                                Saving keeps every component as a draft. Submitting sends only checked products.
+                                Saving keeps the unsubmitted components as a draft. Submission sends only the active component.
                             </div>
                             <div className="d-flex gap-2">
                                 <Button variant="outline-primary" onClick={() => saveDraft()} disabled={isSaving || isSubmitting}>
                                     {isSaving ? <Spinner size="sm" animation="border" className="me-2" /> : <FilePenLine size={17} className="me-2" />}
                                     Save Draft
                                 </Button>
-                                <Button onClick={submitRequest} disabled={isSaving || isSubmitting || selectedProductCount === 0}>
+                                <Button onClick={submitComponent}
+                                    disabled={isSaving || isSubmitting || isActiveComponentSubmitted || componentSelectedCount(activeComponent) === 0}>
                                     {isSubmitting && <Spinner size="sm" animation="border" className="me-2" />}
-                                    Submit Item Request
+                                    Submit {activeComponent}
                                 </Button>
                             </div>
                         </div>

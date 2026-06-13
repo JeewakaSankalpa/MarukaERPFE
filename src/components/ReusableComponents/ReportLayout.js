@@ -27,6 +27,11 @@ const ReportLayout = ({ title, subtitle, children, orientation = "portrait" }) =
             <style>{`
         @media print {
           @page { size: ${orientation}; margin: 10mm; }
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+          }
+
           body { -webkit-print-color-adjust: exact; }
 
           /* Hide everything by default */
@@ -39,16 +44,54 @@ const ReportLayout = ({ title, subtitle, children, orientation = "portrait" }) =
             visibility: visible;
           }
 
-          /* Position report at top left of page */
+          /*
+           * Reports are commonly rendered inside a Bootstrap modal. Its fixed
+           * viewport and overflow rules clip multi-page print jobs unless the
+           * modal is returned to normal document flow for printing.
+           */
+          .report-print-modal {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          .report-print-modal .modal-dialog,
+          .report-print-modal .modal-content,
+          .report-print-modal .modal-body {
+            position: static !important;
+            width: 100% !important;
+            max-width: none !important;
+            height: auto !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            transform: none !important;
+            border: 0 !important;
+            box-shadow: none !important;
+          }
+
+          .modal-backdrop {
+            display: none !important;
+          }
+
+          /* Keep the report in normal flow so the browser can paginate it. */
           .report-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
+            position: static !important;
+            width: 100% !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
             background: white;
-            min-height: 100vh;
+          }
+
+          .report-container section,
+          .report-container tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
 
           .no-print { display: none !important; }
