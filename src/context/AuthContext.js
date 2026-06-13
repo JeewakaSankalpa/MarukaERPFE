@@ -81,7 +81,19 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("role");
         localStorage.removeItem("username");
         localStorage.removeItem("moduleAccess");
-        setAuth({ token: null, username: null, role: null, userType: null, moduleAccess: [] });
+        localStorage.removeItem("projectRoles");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("employeeId");
+        setAuth({
+            token: null,
+            username: null,
+            role: null,
+            userType: null,
+            userId: null,
+            employeeId: null,
+            projectRoles: [],
+            moduleAccess: []
+        });
     };
 
     const isAuthenticated = !!auth.token;

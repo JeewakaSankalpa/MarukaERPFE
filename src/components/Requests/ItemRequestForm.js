@@ -22,8 +22,8 @@ const searchProducts = async (q, page = 0, size = 40) =>
     (await api.get(`/products?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
 const getIR = async (id) => (await api.get(`/item-requests/${id}`)).data;
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
-const getSubmittedComponents = async (sourceEstimationId) =>
-    (await api.get("/item-requests/submitted-components", { params: { sourceEstimationId } })).data;
+const getComponentHistory = async (sourceEstimationId) =>
+    (await api.get("/item-requests/component-history", { params: { sourceEstimationId } })).data;
 
 const listDepartments = async () => {
     try {
@@ -54,6 +54,7 @@ const emptyProductRow = (product) => ({
     note: "",
     fulfilledQty: 0,
     quantities: {},
+    estimatedQuantities: {},
     selectedComponents: {}
 });
 
@@ -82,7 +83,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const [components, setComponents] = useState([GENERAL_COMPONENT]);
     const [activeComponent, setActiveComponent] = useState(GENERAL_COMPONENT);
     const [rows, setRows] = useState([]);
-    const [submittedComponents, setSubmittedComponents] = useState({});
+    const [componentHistory, setComponentHistory] = useState({});
 
     const [q, setQ] = useState("");
     const [searchData, setSearchData] = useState({ content: [], totalPages: 0 });
@@ -92,8 +93,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
 
     const isEditable = !routeId || status === "DRAFT";
-    const isActiveComponentSubmitted = Boolean(submittedComponents[activeComponent]);
-    const canEditActiveComponent = isEditable && !isActiveComponentSubmitted;
+    const canEditActiveComponent = isEditable;
+    const activeHistory = componentHistory[activeComponent] || [];
 
     useEffect(() => {
         (async () => {
@@ -146,6 +147,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         note: item.note || "",
                         fulfilledQty: item.fulfilledQty || 0,
                         quantities,
+                        estimatedQuantities: {},
                         selectedComponents
                     };
                 });
@@ -153,7 +155,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 setComponents(nextComponents);
                 setActiveComponent(nextComponents[0]);
                 setRows(mappedRows);
-                setSubmittedComponents({});
+                setComponentHistory({});
             } catch {
                 toast.error("Failed to load item request");
             } finally {
@@ -179,9 +181,14 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
                 const names = estimationComponents.map((component, index) =>
                     component.name?.trim() || `Component ${index + 1}`);
-                const completedComponents = estimation.id
-                    ? await getSubmittedComponents(estimation.id)
-                    : {};
+                let history = {};
+                if (estimation.id) {
+                    try {
+                        history = await getComponentHistory(estimation.id);
+                    } catch {
+                        toast.warn("The estimation loaded, but previous request history is temporarily unavailable");
+                    }
+                }
                 const rowMap = new Map();
                 estimationComponents.forEach((component, componentIndex) => {
                     const componentName = names[componentIndex];
@@ -195,18 +202,21 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                             note: "",
                             fulfilledQty: 0,
                             quantities: {},
+                            estimatedQuantities: {},
                             selectedComponents: {}
                         };
-                        current.quantities[componentName] = Number(item.quantity);
-                        current.selectedComponents[componentName] = true;
+                        const estimatedQty = Number(item.quantity);
+                        current.estimatedQuantities[componentName] = estimatedQty;
+                        current.quantities[componentName] = history[componentName]?.length ? 0 : estimatedQty;
+                        current.selectedComponents[componentName] = !history[componentName]?.length;
                         rowMap.set(item.productId, current);
                     });
                 });
                 setSourceEstimationId(estimation.id || null);
                 setComponents(names);
-                setActiveComponent(names.find(name => !completedComponents[name]) || names[0]);
+                setActiveComponent(names[0]);
                 setRows([...rowMap.values()]);
-                setSubmittedComponents(completedComponents);
+                setComponentHistory(history);
                 toast.info(`Loaded ${rowMap.size} products from the estimation`);
             } catch (error) {
                 if (error.response?.status !== 404) toast.error("Could not load the project estimation");
@@ -248,14 +258,14 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         [rows, activeComponent]
     );
     const selectedLineCount = useMemo(
-        () => rows.reduce((total, row) => total + components.filter(component => !submittedComponents[component] &&
+        () => rows.reduce((total, row) => total + components.filter(component =>
             row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0).length, 0),
-        [rows, components, submittedComponents]
+        [rows, components]
     );
     const selectedProductCount = useMemo(
-        () => rows.filter(row => components.some(component => !submittedComponents[component] &&
+        () => rows.filter(row => components.some(component =>
             row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)).length,
-        [rows, components, submittedComponents]
+        [rows, components]
     );
 
     const componentSelectedCount = (componentName) => rows.filter(row =>
@@ -303,7 +313,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         return Object.keys(quantities).length ? [{ ...row, quantities, selectedComponents }] : [];
     }));
 
-    const buildItems = (componentNames = components.filter(component => !submittedComponents[component])) =>
+    const buildItems = (componentNames = components) =>
         rows.flatMap(row => {
             const componentAllocations = componentNames
                 .filter(component => row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)
@@ -363,29 +373,43 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         }
         setIsSubmitting(true);
         try {
-            const latestSubmittedComponents = sourceEstimationId
-                ? await getSubmittedComponents(sourceEstimationId)
-                : submittedComponents;
-            if (latestSubmittedComponents[activeComponent]) {
-                setSubmittedComponents(latestSubmittedComponents);
-                const nextComponent = components.find(component => !latestSubmittedComponents[component]);
-                if (nextComponent) setActiveComponent(nextComponent);
-                toast.warn(`${activeComponent} has already been submitted`);
-                return;
-            }
-
             const response = await api.post("/item-requests", buildPayload({
                 componentNames: [activeComponent],
                 requestStatus: "SUBMITTED"
             }));
-            const nextSubmittedComponents = {
-                ...submittedComponents,
-                [activeComponent]: response.data.irNumber
-            };
-            setSubmittedComponents(nextSubmittedComponents);
+            let nextHistory = componentHistory;
+            if (sourceEstimationId) {
+                try {
+                    nextHistory = await getComponentHistory(sourceEstimationId);
+                } catch {
+                    nextHistory = {
+                        ...componentHistory,
+                        [activeComponent]: [
+                            ...(componentHistory[activeComponent] || []),
+                            ...(response.data.items || []).map(item => ({
+                                requestId: response.data.id,
+                                irNumber: response.data.irNumber,
+                                status: response.data.status,
+                                productId: item.productId,
+                                productName: item.productNameSnapshot,
+                                sku: item.sku,
+                                unit: item.unit,
+                                requestedQty: item.requestedQty,
+                                fulfilledQty: item.fulfilledQty || 0
+                            }))
+                        ]
+                    };
+                }
+            }
+            setComponentHistory(nextHistory);
+            setRows(previous => previous.map(row => ({
+                ...row,
+                quantities: { ...row.quantities, [activeComponent]: 0 },
+                selectedComponents: { ...row.selectedComponents, [activeComponent]: false }
+            })));
 
             if (routeId && status === "DRAFT") {
-                const remainingComponents = components.filter(component => !nextSubmittedComponents[component]);
+                const remainingComponents = components.filter(component => component !== activeComponent);
                 try {
                     await api.put(`/item-requests/${routeId}`, buildPayload({
                         componentNames: remainingComponents
@@ -395,8 +419,6 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 }
             }
 
-            const nextComponent = components.find(component => !nextSubmittedComponents[component]);
-            if (nextComponent) setActiveComponent(nextComponent);
             toast.success(`${activeComponent} submitted (${response.data.irNumber})`);
         } catch (error) {
             toast.error(error?.response?.data?.message || `Failed to submit ${activeComponent}`);
@@ -497,8 +519,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                     <Nav.Item key={component}>
                                         <Nav.Link eventKey={component} onClick={() => setActiveComponent(component)}>
                                             {component}{" "}
-                                            {submittedComponents[component]
-                                                ? <Badge bg="success">Completed</Badge>
+                                            {componentHistory[component]?.length
+                                                ? <Badge bg="success">{componentHistory[component].length} requested</Badge>
                                                 : <Badge bg="light" text="dark">{componentSelectedCount(component)}</Badge>}
                                         </Nav.Link>
                                     </Nav.Item>
@@ -507,6 +529,42 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         </div>
 
                         <div className="p-3">
+                            {activeHistory.length > 0 && (
+                                <Alert variant="light" className="border mb-3">
+                                    <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+                                        <div>
+                                            <div className="fw-semibold">Previously requested items</div>
+                                            <div className="small text-muted">
+                                                These lines stay visible for reference. Enter only the additional quantity needed below.
+                                            </div>
+                                        </div>
+                                        <Badge bg="success">{activeHistory.length} item lines</Badge>
+                                    </div>
+                                    <Table size="sm" responsive className="mb-0 align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Request</th>
+                                                <th>Product</th>
+                                                <th className="text-end">Requested</th>
+                                                <th className="text-end">Fulfilled</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {activeHistory.map((item, index) => (
+                                                <tr key={`${item.requestId || item.irNumber}-${item.productId}-${index}`}>
+                                                    <td className="fw-semibold">{item.irNumber || "-"}</td>
+                                                    <td>{item.productName || item.productId}</td>
+                                                    <td className="text-end">{item.requestedQty} {item.unit}</td>
+                                                    <td className="text-end">{item.fulfilledQty} {item.unit}</td>
+                                                    <td><Badge bg={item.status === "FULFILLED" ? "success" : "secondary"}>{item.status}</Badge></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                </Alert>
+                            )}
+
                             {canEditActiveComponent && (
                                 <>
                                     <div className="d-flex gap-2 mb-2">
@@ -558,9 +616,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
                             <div className="d-flex justify-content-between align-items-center mb-2">
                                 <h5 className="mb-0">{activeComponent} Items</h5>
-                                {isActiveComponentSubmitted
-                                    ? <Badge bg="success">Completed as {submittedComponents[activeComponent]}</Badge>
-                                    : <Badge bg="light" text="dark">{componentSelectedCount(activeComponent)} selected</Badge>}
+                                <Badge bg="light" text="dark">{componentSelectedCount(activeComponent)} selected for this request</Badge>
                             </div>
                             <Table hover responsive className="align-middle mb-0">
                                 <thead>
@@ -569,7 +625,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                         <th>Product</th>
                                         <th>SKU</th>
                                         <th>Unit</th>
-                                        <th style={{ width: 170 }}>Quantity</th>
+                                        <th className="text-end">Estimated</th>
+                                        <th style={{ width: 170 }}>Additional quantity</th>
                                         <th>Note</th>
                                         {status !== "DRAFT" && <th>Fulfilled</th>}
                                         <th style={{ width: 80 }}></th>
@@ -587,6 +644,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                             <td className="fw-semibold">{row.name}</td>
                                             <td>{row.sku || "-"}</td>
                                             <td>{row.unit}</td>
+                                            <td className="text-end">{row.estimatedQuantities?.[activeComponent] ?? "-"}</td>
                                             <td>
                                                 <InputGroup>
                                                     <Form.Control type="number" min="0"
@@ -612,7 +670,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                     ))}
                                     {!activeRows.length && (
                                         <tr>
-                                            <td colSpan={status !== "DRAFT" ? 8 : 7} className="text-center text-muted py-4">
+                                            <td colSpan={status !== "DRAFT" ? 9 : 8} className="text-center text-muted py-4">
                                                 No products in this component yet.
                                             </td>
                                         </tr>
@@ -633,7 +691,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                     Save Draft
                                 </Button>
                                 <Button onClick={submitComponent}
-                                    disabled={isSaving || isSubmitting || isActiveComponentSubmitted || componentSelectedCount(activeComponent) === 0}>
+                                    disabled={isSaving || isSubmitting || componentSelectedCount(activeComponent) === 0}>
                                     {isSubmitting && <Spinner size="sm" animation="border" className="me-2" />}
                                     Submit {activeComponent}
                                 </Button>

@@ -5,15 +5,15 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function NotificationBell() {
     const [count, setCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
-    const [visible, setVisible] = useState(false);
     const navigate = useNavigate();
-    const { userId, username } = useAuth();
+    const { userId } = useAuth();
 
     // Initial fetch
     useEffect(() => {
@@ -31,36 +31,29 @@ export default function NotificationBell() {
             (typeof window !== 'undefined' && window.__API_URL__) ||
             'http://localhost:8080/api';
 
-        // Convert to WebSocket URL
-        // 1. Replace http/https with ws/wss
-        // 2. Remove trailing /api if present
-        // 3. Append /ws/websocket
-        let wsUrl = apiBase.replace(/^http/, 'ws');
-        if (wsUrl.endsWith('/api')) {
-            wsUrl = wsUrl.slice(0, -4);
-        }
-        // Ensure no trailing slash before appending
-        if (wsUrl.endsWith('/')) {
-            wsUrl = wsUrl.slice(0, -1);
-        }
-        wsUrl += '/ws/websocket';
-
-        console.log("Connecting to WebSocket:", wsUrl);
+        const wsBase = apiBase.replace(/\/api\/?$/, '').replace(/\/$/, '');
+        const socketUrl = `${wsBase}/ws`;
 
         const client = new Client({
-            brokerURL: wsUrl,
+            // The backend registers /ws with SockJS, so a raw STOMP WebSocket
+            // connection to /ws/websocket is not protocol-compatible.
+            webSocketFactory: () => new SockJS(socketUrl),
             reconnectDelay: 5000,
             debug: (str) => {
-                console.log('[WS Debug]:', str);
+                if (process.env.NODE_ENV === 'development' &&
+                    !str.includes('Client has been marked inactive')) {
+                    console.debug('[WS Debug]:', str);
+                }
             },
             onConnect: () => {
-                console.log('Connected to WebSocket');
-                console.log('Subscribing to topic:', `/topic/notifications/${username}`);
-                client.subscribe(`/topic/notifications/${username}`, (message) => {
-                    console.log('Received WebSocket Message:', message.body);
-                    const newNotification = JSON.parse(message.body);
-                    setCount(prev => prev + 1);
-                    setNotifications(prev => [newNotification, ...prev]);
+                client.subscribe(`/topic/notifications/${userId}`, (message) => {
+                    try {
+                        const newNotification = JSON.parse(message.body);
+                        setCount(prev => prev + 1);
+                        setNotifications(prev => [newNotification, ...prev]);
+                    } catch (error) {
+                        console.error('Failed to parse notification message', error);
+                    }
                 });
             },
             onStompError: (frame) => {
@@ -75,7 +68,7 @@ export default function NotificationBell() {
         client.activate();
 
         return () => {
-            client.deactivate();
+            void client.deactivate();
         };
     }, [userId]);
 
@@ -99,7 +92,6 @@ export default function NotificationBell() {
     };
 
     const handleToggle = (nextShow) => {
-        setVisible(nextShow);
         if (nextShow) {
             fetchNotifications();
         }

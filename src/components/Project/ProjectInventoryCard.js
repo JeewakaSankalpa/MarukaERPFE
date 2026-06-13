@@ -21,6 +21,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const navigate = useNavigate();
     const [inventory, setInventory] = useState([]);
     const [panelInventory, setPanelInventory] = useState([]);
+    const [estimationComponents, setEstimationComponents] = useState([]);
     const [activeInventoryView, setActiveInventoryView] = useState('ALL');
     const [inventorySearch, setInventorySearch] = useState('');
     const [inventoryStatus, setInventoryStatus] = useState('ALL');
@@ -73,15 +74,17 @@ export default function ProjectInventoryCard({ projectId, project }) {
         if (!projectId) return;
         try {
             setLoading(true);
-            const [invRes, panelRes, trRes] = await Promise.all([
+            const [invRes, panelRes, trRes, estimationRes] = await Promise.all([
                 api.get(`/inventory/project/${projectId}`),
                 api.get(`/inventory/project/${projectId}/panels`).catch(() => ({ data: [] })),
-                api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`)
+                api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`),
+                api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null }))
             ]);
 
             setInventory(invRes.data || []);
             setPanelInventory(panelRes.data || []);
             setPendingTransfers(trRes.data || []);
+            setEstimationComponents(estimationRes.data?.components || []);
         } catch (e) {
             console.error('Failed to load inventory or transfers:', e);
             console.error('Error response:', e?.response?.data);
@@ -420,11 +423,57 @@ export default function ProjectInventoryCard({ projectId, project }) {
         if (status === 'COVERED') return <Badge bg="success">Covered</Badge>;
         if (status === 'PARTIALLY_RECEIVED') return <Badge bg="warning" text="dark">Partially received</Badge>;
         if (status === 'PARTIALLY_COVERED') return <Badge bg="warning" text="dark">Partially covered</Badge>;
+        if (status === 'NOT_REQUESTED') return <Badge bg="light" text="dark">Not requested</Badge>;
         if (status === 'NOT_RECEIVED') return <Badge bg="secondary">Not received</Badge>;
         return <Badge bg="secondary">Not covered</Badge>;
     };
 
-    const activeInventory = useMemo(() => inventory.filter(item => !item.isCancelled), [inventory]);
+    const estimatedByProduct = useMemo(() => {
+        const products = new Map();
+        estimationComponents.forEach(component => {
+            (component.items || []).forEach(item => {
+                if (!item.productId || Number(item.quantity || 0) <= 0) return;
+                const current = products.get(item.productId) || {
+                    productId: item.productId,
+                    productName: item.productNameSnapshot || item.productId,
+                    estimatedQty: 0
+                };
+                current.estimatedQty += Number(item.quantity || 0);
+                products.set(item.productId, current);
+            });
+        });
+        return products;
+    }, [estimationComponents]);
+
+    const activeInventory = useMemo(() => {
+        const products = new Map();
+        inventory.filter(item => !item.isCancelled).forEach(item => {
+            const estimatedQty = estimatedByProduct.get(item.productId)?.estimatedQty || 0;
+            products.set(item.productId, {
+                ...item,
+                estimatedQty,
+                extraQty: Math.max(0, Number(item.requestedQty || 0) - estimatedQty),
+                outsideEstimate: estimatedQty === 0 && Number(item.requestedQty || 0) > 0
+            });
+        });
+        estimatedByProduct.forEach((estimated, productId) => {
+            if (products.has(productId)) return;
+            products.set(productId, {
+                ...estimated,
+                sku: '',
+                unit: '',
+                requestedQty: 0,
+                receivedQty: 0,
+                consumedQty: 0,
+                onHandQty: 0,
+                extraQty: 0,
+                outsideEstimate: false,
+                orderStatus: 'NOT_REQUESTED'
+            });
+        });
+        return [...products.values()].sort((left, right) =>
+            String(left.productName || '').localeCompare(String(right.productName || '')));
+    }, [estimatedByProduct, inventory]);
     const cancelledInventory = useMemo(() => inventory.filter(item => item.isCancelled), [inventory]);
     const activePanel = useMemo(
         () => panelInventory.find(panel => panel.panelName === activeInventoryView),
@@ -615,7 +664,9 @@ export default function ProjectInventoryCard({ projectId, project }) {
                         <thead>
                             <tr>
                                 <th>Product</th>
+                                <th className="text-end">Estimated</th>
                                 <th className="text-end">Requested</th>
+                                <th className="text-end">Extra</th>
                                 <th className="text-end">{isPanelView ? 'Coverage' : 'Received'}</th>
                                 <th className="text-end">{isPanelView ? 'Project consumed' : 'Consumed'}</th>
                                 <th className="text-end">{isPanelView ? 'Project on hand' : 'On hand'}</th>
@@ -635,14 +686,23 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                 const statusValue = isPanelView ? i.coverageStatus : i.orderStatus;
                                 const canCancel = !isPanelView && i.orderStatus === 'NOT_RECEIVED';
                                 const canReturn = onHandQty > 0;
+                                const estimatedQty = isPanelView ? null : Number(i.estimatedQty || 0);
+                                const extraQty = isPanelView ? null : Number(i.extraQty || 0);
 
                                 return (
                                     <tr key={`${i.productId}-active-${idx}`}>
                                         <td className="project-inventory__product">
                                             <div className="fw-semibold">{i.productName}</div>
+                                            {!isPanelView && i.outsideEstimate && (
+                                                <Badge bg="info" text="dark" className="mt-1">Not in estimate</Badge>
+                                            )}
                                             <div className="project-inventory__sku">{i.sku || i.productId} · {i.unit || 'unit'}</div>
                                         </td>
+                                        <td className="text-end">{isPanelView ? '-' : estimatedQty}</td>
                                         <td className="text-end">{i.requestedQty}</td>
+                                        <td className={`text-end fw-semibold ${extraQty > 0 ? 'text-warning' : 'text-muted'}`}>
+                                            {isPanelView ? '-' : extraQty}
+                                        </td>
                                         <td className="text-end fw-semibold">{receivedQty}</td>
                                         <td className="text-end">{consumedQty}</td>
                                         <td className="text-end fw-bold">{onHandQty}</td>
@@ -656,9 +716,11 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                             )}
                                         </td>
                                         <td className="text-center d-flex gap-1 justify-content-center flex-wrap">
-                                            <Button size="sm" variant="light" onClick={() => handleViewBatches(i)} title="View QR & Batches">
-                                                Batches
-                                            </Button>
+                                            {(Number(i.requestedQty || 0) > 0 || Number(receivedQty || 0) > 0) && (
+                                                <Button size="sm" variant="light" onClick={() => handleViewBatches(i)} title="View QR & Batches">
+                                                    Batches
+                                                </Button>
+                                            )}
 
                                             {canCancel && (
                                                 <Button

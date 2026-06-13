@@ -185,7 +185,7 @@ function ProjectEstimationRouteWrapper() {
 /* ------------------- App ------------------- */
 function App() {
     return (
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <ToastContainer position="top-right" autoClose={3000} style={{ zIndex: 99999 }} />
             <Layout>
                 <Routes>
