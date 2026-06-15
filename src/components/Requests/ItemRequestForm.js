@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, FilePenLine, PackagePlus } from "lucide-react";
 import {
@@ -58,6 +58,38 @@ const emptyProductRow = (product) => ({
     selectedComponents: {}
 });
 
+const mapRequestItems = (items = []) => {
+    const componentNames = [];
+    const mappedRows = items.map(item => {
+        const allocations = item.componentAllocations?.length
+            ? item.componentAllocations
+            : [{ componentName: GENERAL_COMPONENT, quantity: item.requestedQty }];
+        const quantities = {};
+        const selectedComponents = {};
+        allocations.forEach(allocation => {
+            const name = allocation.componentName || GENERAL_COMPONENT;
+            if (!componentNames.includes(name)) componentNames.push(name);
+            quantities[name] = allocation.quantity;
+            selectedComponents[name] = true;
+        });
+        return {
+            productId: item.productId,
+            name: item.productNameSnapshot,
+            sku: item.sku,
+            unit: item.unit || "pcs",
+            note: item.note || "",
+            fulfilledQty: item.fulfilledQty || 0,
+            quantities,
+            estimatedQuantities: {},
+            selectedComponents
+        };
+    });
+    return {
+        componentNames: componentNames.length ? componentNames : [GENERAL_COMPONENT],
+        mappedRows
+    };
+};
+
 export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProjectId }) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -84,6 +116,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const [activeComponent, setActiveComponent] = useState(GENERAL_COMPONENT);
     const [rows, setRows] = useState([]);
     const [componentHistory, setComponentHistory] = useState({});
+    const [projectDrafts, setProjectDrafts] = useState([]);
+    const [loadingDrafts, setLoadingDrafts] = useState(false);
+    const [inlineDraftId, setInlineDraftId] = useState(null);
+    const draftOverviewRef = useRef(null);
 
     const [q, setQ] = useState("");
     const [searchData, setSearchData] = useState({ content: [], totalPages: 0 });
@@ -126,35 +162,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 setSourceEstimationId(ir.sourceEstimationId || null);
                 setComment(ir.comment || "");
 
-                const componentNames = [];
-                const mappedRows = (ir.items || []).map(item => {
-                    const allocations = item.componentAllocations?.length
-                        ? item.componentAllocations
-                        : [{ componentName: GENERAL_COMPONENT, quantity: item.requestedQty }];
-                    const quantities = {};
-                    const selectedComponents = {};
-                    allocations.forEach(allocation => {
-                        const name = allocation.componentName || GENERAL_COMPONENT;
-                        if (!componentNames.includes(name)) componentNames.push(name);
-                        quantities[name] = allocation.quantity;
-                        selectedComponents[name] = true;
-                    });
-                    return {
-                        productId: item.productId,
-                        name: item.productNameSnapshot,
-                        sku: item.sku,
-                        unit: item.unit || "pcs",
-                        note: item.note || "",
-                        fulfilledQty: item.fulfilledQty || 0,
-                        quantities,
-                        estimatedQuantities: {},
-                        selectedComponents
-                    };
-                });
-                const nextComponents = componentNames.length ? componentNames : [GENERAL_COMPONENT];
-                setComponents(nextComponents);
-                setActiveComponent(nextComponents[0]);
-                setRows(mappedRows);
+                const mapped = mapRequestItems(ir.items);
+                setComponents(mapped.componentNames);
+                setActiveComponent(mapped.componentNames[0]);
+                setRows(mapped.mappedRows);
                 setComponentHistory({});
             } catch {
                 toast.error("Failed to load item request");
@@ -163,6 +174,36 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             }
         })();
     }, [initialRequestId]);
+
+    useEffect(() => {
+        const draftProjectId = urlProjectId || projectId;
+        if (!draftProjectId || routeId) {
+            setProjectDrafts([]);
+            return;
+        }
+
+        let active = true;
+        (async () => {
+            setLoadingDrafts(true);
+            try {
+                const response = await api.get("/item-requests/my");
+                if (!active) return;
+                const drafts = (Array.isArray(response.data) ? response.data : [])
+                    .filter(request => request.status === "DRAFT" && request.projectId === draftProjectId)
+                    .sort((a, b) =>
+                        new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+                setProjectDrafts(drafts);
+            } catch {
+                if (active) setProjectDrafts([]);
+            } finally {
+                if (active) setLoadingDrafts(false);
+            }
+        })();
+
+        return () => {
+            active = false;
+        };
+    }, [projectId, routeId, urlProjectId]);
 
     useEffect(() => {
         if (!projectId || routeId) return;
@@ -267,9 +308,103 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)).length,
         [rows, components]
     );
+    const draftComponents = useMemo(() => {
+        const draftsByComponent = {};
+        projectDrafts.forEach(draft => {
+            (draft.items || []).forEach(item => {
+                const allocations = item.componentAllocations?.length
+                    ? item.componentAllocations
+                    : [{ componentName: GENERAL_COMPONENT }];
+                allocations.forEach(allocation => {
+                    const componentName = allocation.componentName || GENERAL_COMPONENT;
+                    if (!draftsByComponent[componentName]) draftsByComponent[componentName] = new Set();
+                    draftsByComponent[componentName].add(draft.id);
+                });
+            });
+        });
+        return Object.fromEntries(
+            Object.entries(draftsByComponent).map(([componentName, draftIds]) => [componentName, draftIds.size])
+        );
+    }, [projectDrafts]);
+    const activeComponentDrafts = useMemo(() => projectDrafts.flatMap(draft => {
+        const items = (draft.items || []).flatMap(item => {
+            const allocations = item.componentAllocations?.length
+                ? item.componentAllocations
+                : [{ componentName: GENERAL_COMPONENT, quantity: item.requestedQty }];
+            const allocation = allocations.find(current =>
+                (current.componentName || GENERAL_COMPONENT) === activeComponent);
+            if (!allocation || Number(allocation.quantity || 0) <= 0) return [];
+            return [{
+                productId: item.productId,
+                productName: item.productNameSnapshot || item.productId,
+                sku: item.sku || "",
+                unit: item.unit || "pcs",
+                quantity: Number(allocation.quantity),
+                note: item.note || ""
+            }];
+        });
+        return items.length ? [{ ...draft, componentItems: items }] : [];
+    }), [activeComponent, projectDrafts]);
 
     const componentSelectedCount = (componentName) => rows.filter(row =>
         row.selectedComponents[componentName] && Number(row.quantities[componentName] || 0) > 0).length;
+
+    const continueDraftHere = (draft) => {
+        const selectedComponent = activeComponent;
+        const mapped = mapRequestItems(draft.items);
+        const estimatesByProduct = new Map(rows.map(row => [row.productId, row.estimatedQuantities || {}]));
+
+        draftOverviewRef.current = {
+            components,
+            rows,
+            activeComponent: selectedComponent,
+            departmentId,
+            projectId,
+            sourceEstimationId,
+            comment,
+            componentHistory,
+            projectDrafts
+        };
+        setInlineDraftId(draft.id);
+        setRouteId(draft.id);
+        setStatus(draft.status);
+        setDepartmentId(draft.departmentId || "");
+        setProjectId(draft.projectId || "");
+        setSourceEstimationId(draft.sourceEstimationId || null);
+        setComment(draft.comment || "");
+        setComponents(previous => Array.from(new Set([...previous, ...mapped.componentNames])));
+        setRows(mapped.mappedRows.map(row => ({
+            ...row,
+            estimatedQuantities: estimatesByProduct.get(row.productId) || {}
+        })));
+        setActiveComponent(
+            mapped.componentNames.includes(selectedComponent) ? selectedComponent : mapped.componentNames[0]
+        );
+        setValidated(false);
+        toast.success(`${draft.irNumber} loaded`);
+    };
+
+    const restoreDraftOverview = (updatedDraft) => {
+        if (!draftOverviewRef.current) return;
+
+        const overview = draftOverviewRef.current;
+        setComponents(overview.components);
+        setRows(overview.rows);
+        setActiveComponent(overview.activeComponent);
+        setDepartmentId(overview.departmentId);
+        setProjectId(overview.projectId);
+        setSourceEstimationId(overview.sourceEstimationId);
+        setComment(overview.comment);
+        setComponentHistory(overview.componentHistory);
+        setProjectDrafts(overview.projectDrafts
+            .map(draft => draft.id === updatedDraft?.id ? updatedDraft : draft)
+            .sort((a, b) =>
+                new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0)));
+        setRouteId(null);
+        setStatus("DRAFT");
+        setInlineDraftId(null);
+        draftOverviewRef.current = null;
+    };
 
     const addProduct = (product) => {
         setRows(previous => {
@@ -352,8 +487,12 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             const response = routeId
                 ? await api.put(`/item-requests/${routeId}`, buildPayload())
                 : await api.post("/item-requests", buildPayload());
-            setRouteId(response.data.id);
-            setStatus(response.data.status);
+            if (inlineDraftId && draftOverviewRef.current) {
+                restoreDraftOverview(response.data);
+            } else {
+                setRouteId(response.data.id);
+                setStatus(response.data.status);
+            }
             if (!quiet) toast.success(`Draft saved (${response.data.irNumber})`);
             return response.data;
         } catch (error) {
@@ -408,17 +547,22 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 selectedComponents: { ...row.selectedComponents, [activeComponent]: false }
             })));
 
+            let updatedDraft = null;
             if (routeId && status === "DRAFT") {
                 const remainingComponents = components.filter(component => component !== activeComponent);
                 try {
-                    await api.put(`/item-requests/${routeId}`, buildPayload({
+                    const draftResponse = await api.put(`/item-requests/${routeId}`, buildPayload({
                         componentNames: remainingComponents
                     }));
+                    updatedDraft = draftResponse.data;
                 } catch {
                     toast.warn("Component submitted, but the remaining draft could not be updated");
                 }
             }
 
+            if (inlineDraftId && draftOverviewRef.current) {
+                restoreDraftOverview(updatedDraft);
+            }
             toast.success(`${activeComponent} submitted (${response.data.irNumber})`);
         } catch (error) {
             toast.error(error?.response?.data?.message || `Failed to submit ${activeComponent}`);
@@ -505,7 +649,6 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                             Estimation components are ready. Open a tab and submit only that component when it is ready.
                         </Alert>
                     )}
-
                     <div className="mt-4 border rounded overflow-hidden">
                         <div className="bg-light border-bottom px-3 pt-3">
                             <div className="d-flex justify-content-between align-items-center mb-2">
@@ -519,6 +662,11 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                     <Nav.Item key={component}>
                                         <Nav.Link eventKey={component} onClick={() => setActiveComponent(component)}>
                                             {component}{" "}
+                                            {draftComponents[component] > 0 && (
+                                                <Badge bg="danger" className="me-1">
+                                                    Draft {draftComponents[component]}
+                                                </Badge>
+                                            )}
                                             {componentHistory[component]?.length
                                                 ? <Badge bg="success">{componentHistory[component].length} requested</Badge>
                                                 : <Badge bg="light" text="dark">{componentSelectedCount(component)}</Badge>}
@@ -529,6 +677,55 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         </div>
 
                         <div className="p-3">
+                            {loadingDrafts && (
+                                <Alert variant="light" className="border mb-3 py-2">
+                                    <Spinner animation="border" size="sm" className="me-2" />
+                                    Checking saved drafts for {activeComponent}...
+                                </Alert>
+                            )}
+                            {!loadingDrafts && activeComponentDrafts.map(draft => (
+                                <Alert key={draft.id} variant="danger" className="mb-3">
+                                    <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
+                                        <div>
+                                            <div className="d-flex align-items-center gap-2 flex-wrap">
+                                                <Badge bg="danger">DRAFT</Badge>
+                                                <span className="fw-bold">Draft of {activeComponent}</span>
+                                                <span className="small text-muted">{draft.irNumber}</span>
+                                            </div>
+                                            <div className="small mt-1">
+                                                Saved {new Date(draft.updatedAt || draft.createdAt).toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="danger"
+                                            onClick={() => continueDraftHere(draft)}
+                                        >
+                                            Continue Draft
+                                        </Button>
+                                    </div>
+                                    <Table size="sm" responsive className="mb-0 align-middle bg-white">
+                                        <thead>
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>SKU</th>
+                                                <th className="text-end">Draft quantity</th>
+                                                <th>Note</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {draft.componentItems.map(item => (
+                                                <tr key={`${draft.id}-${activeComponent}-${item.productId}`}>
+                                                    <td className="fw-semibold">{item.productName}</td>
+                                                    <td>{item.sku || "-"}</td>
+                                                    <td className="text-end">{item.quantity} {item.unit}</td>
+                                                    <td>{item.note || "-"}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                </Alert>
+                            ))}
                             {activeHistory.length > 0 && (
                                 <Alert variant="light" className="border mb-3">
                                     <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">

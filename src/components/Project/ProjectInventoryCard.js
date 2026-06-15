@@ -25,6 +25,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const [activeInventoryView, setActiveInventoryView] = useState('ALL');
     const [inventorySearch, setInventorySearch] = useState('');
     const [inventoryStatus, setInventoryStatus] = useState('ALL');
+    const [draftRequests, setDraftRequests] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showConsumedReport, setShowConsumedReport] = useState(false);
     const [showComponentReport, setShowComponentReport] = useState(false);
@@ -74,17 +75,20 @@ export default function ProjectInventoryCard({ projectId, project }) {
         if (!projectId) return;
         try {
             setLoading(true);
-            const [invRes, panelRes, trRes, estimationRes] = await Promise.all([
+            const [invRes, panelRes, trRes, estimationRes, draftsRes] = await Promise.all([
                 api.get(`/inventory/project/${projectId}`),
                 api.get(`/inventory/project/${projectId}/panels`).catch(() => ({ data: [] })),
                 api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`),
-                api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null }))
+                api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null })),
+                api.get('/item-requests/my').catch(() => ({ data: [] }))
             ]);
 
             setInventory(invRes.data || []);
             setPanelInventory(panelRes.data || []);
             setPendingTransfers(trRes.data || []);
             setEstimationComponents(estimationRes.data?.components || []);
+            setDraftRequests((Array.isArray(draftsRes.data) ? draftsRes.data : [])
+                .filter(request => request.status === 'DRAFT' && request.projectId === projectId));
         } catch (e) {
             console.error('Failed to load inventory or transfers:', e);
             console.error('Error response:', e?.response?.data);
@@ -545,8 +549,16 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     </div>
                 </div>
                 <div className="d-flex gap-2 flex-wrap">
-                    <Button size="sm" variant="outline-primary" onClick={() => navigate(`/item/requests?projectId=${projectId}`)} disabled={!projectId}>
+                    <Button
+                        size="sm"
+                        variant={draftRequests.length > 0 ? "outline-danger" : "outline-primary"}
+                        onClick={() => navigate(`/item/requests?projectId=${projectId}`)}
+                        disabled={!projectId}
+                    >
                         Request Item
+                        {draftRequests.length > 0 && (
+                            <Badge bg="danger" pill className="ms-2">{draftRequests.length} Draft</Badge>
+                        )}
                     </Button>
                     <Button size="sm" variant="outline-secondary" onClick={openConsumedReport} disabled={!projectId}>
                         Print Consumed Items

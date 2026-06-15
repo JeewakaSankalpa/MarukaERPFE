@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Card, Badge, Spinner } from "react-bootstrap";
+import { Table, Card, Badge, Button, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 
@@ -16,7 +16,12 @@ const MyRequestList = () => {
         try {
             setLoading(true);
             const res = await api.get("/item-requests/my");
-            setRequests(res.data);
+            const rows = Array.isArray(res.data) ? res.data : [];
+            setRequests([...rows].sort((a, b) => {
+                if (a.status === "DRAFT" && b.status !== "DRAFT") return -1;
+                if (a.status !== "DRAFT" && b.status === "DRAFT") return 1;
+                return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+            }));
         } catch (error) {
             console.error(error);
         } finally {
@@ -55,12 +60,13 @@ const MyRequestList = () => {
                                 <th>Items</th>
                                 <th>Status</th>
                                 <th>Requested For</th>
+                                <th className="text-end">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {requests.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="text-center py-4 text-muted">No requests found</td>
+                                    <td colSpan="6" className="text-center py-4 text-muted">No requests found</td>
                                 </tr>
                             ) : (
                                 requests.map(ir => (
@@ -84,6 +90,20 @@ const MyRequestList = () => {
                                         </td>
                                         <td>
                                             {ir.projectId ? `Project: ${ir.projectId}` : `Dept: ${ir.departmentId}`}
+                                        </td>
+                                        <td className="text-end">
+                                            {ir.status === "DRAFT" && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline-primary"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        navigate(`/item/requests/${ir.id}`);
+                                                    }}
+                                                >
+                                                    Continue Draft
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))

@@ -16,7 +16,10 @@ const fetchMainAvail = async () => {
 
 const listIRs = async (page, size, status) => {
     const params = { page, size, sort: "createdAt,desc" };
-    if (status) params.status = status.join(",");
+    const actionableStatuses = status?.length
+        ? status
+        : ["SUBMITTED", "PENDING_PURCHASE", "PARTIALLY_FULFILLED"];
+    params.status = actionableStatuses.join(",");
     return (await api.get("/item-requests", { params })).data;
 };
 
@@ -101,7 +104,7 @@ export default function IRFulfilmentPage() {
         (async () => {
             setLoadingList(true);
             try {
-                const s = statusFilter === "ALL" ? null : [statusFilter];
+                const s = statusFilter === "ACTIONABLE" ? null : [statusFilter];
                 setIrs(await listIRs(page, 20, s));
             } catch { toast.error("Failed to load requests"); }
             setLoadingList(false);
@@ -144,7 +147,7 @@ export default function IRFulfilmentPage() {
             await api.post(`/stores/pending-purchase/item-request/${selected.id}`);
             const updated = await getIR(selected.id);
             setSelected(updated);
-            setIrs(await listIRs(page, 20, statusFilter === "ALL" ? null : [statusFilter]));
+            setIrs(await listIRs(page, 20, statusFilter === "ACTIONABLE" ? null : [statusFilter]));
             toast.success("Shortages added to Pending Purchase Plan");
         } catch (e) {
             toast.error("Failed to add shortages");
@@ -630,14 +633,10 @@ export default function IRFulfilmentPage() {
                                     value={statusFilter}
                                     onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
                                 >
-                                    <option value="ALL">All Statuses</option>
+                                    <option value="ACTIONABLE">All Submitted Requests</option>
                                     <option value="SUBMITTED">Submitted</option>
                                     <option value="PENDING_PURCHASE">Pending Purchase</option>
                                     <option value="PARTIALLY_FULFILLED">Partially Fulfilled</option>
-                                    <option value="FULFILLED">Fulfilled</option>
-                                    <option value="CANCELLED">Cancelled</option>
-                                    <option value="CLOSED">Closed</option>
-                                    <option value="DRAFT">Draft</option>
                                 </SafeSelect>
                             </Form.Group>
                         </div>
