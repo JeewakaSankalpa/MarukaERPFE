@@ -113,7 +113,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
     const ruleOptions = useMemo(() => {
         const reqs = stageType ? (actions?.fileRequirements?.[stageType] || []) : [];
         if (Array.isArray(reqs) && reqs.length > 0) {
-            return reqs
+            const options = reqs
                 .map(r => {
                     const label = normalizeLabel(r?.label ?? r?.key ?? '');
                     if (!label) return null;
@@ -121,6 +121,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                     return { value: label, label, min };
                 })
                 .filter(Boolean);
+            return [...new Map(options.map(option => [option.value, option])).values()];
         }
         const missing = Array.isArray(actions?.missingFiles) ? actions.missingFiles : [];
         const uniq = [...new Set(missing.map(normalizeLabel).filter(Boolean))];

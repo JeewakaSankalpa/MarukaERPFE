@@ -44,7 +44,9 @@ export default function StagePropertyPanel({
     const normalizeKey = (s) => s.trim().toUpperCase().replace(/[^A-Z0-9_]+/g, "_");
 
     const addFileRule = () => {
-        const rules = [...fileRules, { key: "NEW_DOC", label: "New Doc", required: true }];
+        const nextNumber = fileRules.filter(rule => (rule.key || "").startsWith("NEW_DOC")).length + 1;
+        const suffix = nextNumber === 1 ? "" : ` ${nextNumber}`;
+        const rules = [...fileRules, { key: `NEW_DOC_${Date.now()}`, label: `New Doc${suffix}`, required: true }];
         onUpdateFlow({
             ...flow,
             fileRequirements: { ...(flow.fileRequirements || {}), [stage]: rules }

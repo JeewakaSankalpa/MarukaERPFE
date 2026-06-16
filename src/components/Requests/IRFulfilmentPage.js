@@ -14,13 +14,16 @@ const fetchMainAvail = async () => {
     return (res.data || []).map(r => ({ ...r, availableQty: r.quantity }));
 };
 
-const listIRs = async (page, size, status) => {
+const listIRs = async (page, size, status, filters = {}) => {
     const params = { page, size, sort: "createdAt,desc" };
     const actionableStatuses = status?.length
         ? status
         : ["SUBMITTED", "PENDING_PURCHASE", "PARTIALLY_FULFILLED"];
     params.status = actionableStatuses.join(",");
-    return (await api.get("/item-requests", { params })).data;
+    if (filters.projectName?.trim()) params.projectName = filters.projectName.trim();
+    if (filters.projectNumber?.trim()) params.projectNumber = filters.projectNumber.trim();
+    if (filters.requester?.trim()) params.requester = filters.requester.trim();
+    return (await api.get("/item-requests/fulfilment", { params })).data;
 };
 
 const getIR = async (id) => (await api.get(`/item-requests/${id}`)).data;
@@ -50,8 +53,8 @@ export default function IRFulfilmentPage() {
     const [statusFilter, setStatusFilter] = useState("SUBMITTED");
 
     // Filters
-    const [fDept, setFDept] = useState("");
-    const [fProj, setFProj] = useState("");
+    const [fProjectName, setFProjectName] = useState("");
+    const [fProjectNumber, setFProjectNumber] = useState("");
     const [fRequester, setFRequester] = useState("");
 
     // Lookups
@@ -84,7 +87,8 @@ export default function IRFulfilmentPage() {
                 [x.id]: {
                     name: x.projectName || x.name || x.id,
                     jobNumber: x.jobNumber || "",
-                    inquiryNumber: x.inquiryNumber || x.id,
+                    inquiryNumber: x.inquiryNumber || x.referenceNumber || x.id,
+                    projectNumber: x.projectNumber || x.referenceNumber || x.inquiryNumber || x.id,
                     customerName: x.customerName || "",
                     location: x.location || x.siteAddress || ""
                 }
@@ -105,11 +109,15 @@ export default function IRFulfilmentPage() {
             setLoadingList(true);
             try {
                 const s = statusFilter === "ACTIONABLE" ? null : [statusFilter];
-                setIrs(await listIRs(page, 20, s));
+                setIrs(await listIRs(page, 20, s, {
+                    projectName: fProjectName,
+                    projectNumber: fProjectNumber,
+                    requester: fRequester
+                }));
             } catch { toast.error("Failed to load requests"); }
             setLoadingList(false);
         })();
-    }, [page, statusFilter]);
+    }, [page, statusFilter, fProjectName, fProjectNumber, fRequester]);
 
     const openIR = async (id) => {
         setLoadingDetail(true);
@@ -147,7 +155,11 @@ export default function IRFulfilmentPage() {
             await api.post(`/stores/pending-purchase/item-request/${selected.id}`);
             const updated = await getIR(selected.id);
             setSelected(updated);
-            setIrs(await listIRs(page, 20, statusFilter === "ACTIONABLE" ? null : [statusFilter]));
+            setIrs(await listIRs(page, 20, statusFilter === "ACTIONABLE" ? null : [statusFilter], {
+                projectName: fProjectName,
+                projectNumber: fProjectNumber,
+                requester: fRequester
+            }));
             toast.success("Shortages added to Pending Purchase Plan");
         } catch (e) {
             toast.error("Failed to add shortages");
@@ -608,12 +620,19 @@ export default function IRFulfilmentPage() {
     const filteredIRs = useMemo(() => {
         const rows = irs.content || [];
         return rows.filter((ir) => {
-            const deptOk = !fDept || ir.departmentId === fDept;
-            const projOk = !fProj || ir.projectId === fProj;
+            const project = projMap[ir.projectId];
+            const projectNameOk = !fProjectName || !project || (project.name || "").toLowerCase().includes(fProjectName.toLowerCase());
+            const projectNumberText = [
+                project?.jobNumber,
+                project?.projectNumber,
+                project?.inquiryNumber,
+                ir.projectId
+            ].filter(Boolean).join(" ").toLowerCase();
+            const projectNumberOk = !fProjectNumber || !project || projectNumberText.includes(fProjectNumber.toLowerCase());
             const reqOk = !fRequester || (ir.createdBy || "").toLowerCase().includes(fRequester.toLowerCase());
-            return deptOk && projOk && reqOk;
+            return projectNameOk && projectNumberOk && reqOk;
         });
-    }, [irs, fDept, fProj, fRequester]);
+    }, [irs, fProjectName, fProjectNumber, fRequester, projMap]);
 
     return (
         <Container fluid style={{ maxWidth: 1600, paddingTop: 24, paddingLeft: 24, paddingRight: 24 }}>
@@ -640,37 +659,35 @@ export default function IRFulfilmentPage() {
                                 </SafeSelect>
                             </Form.Group>
                         </div>
-                        {/* Other Filters (Keep existing) */}
+                        {/* Project and requester filters */}
                         <Row className="g-2 mb-3">
                             <Col md={4}>
                                 <Form.Group>
-                                    <Form.Label className="small">Department</Form.Label>
-                                    <SafeSelect value={fDept} onChange={(e) => setFDept(e.target.value)}>
-                                        <option value="">All</option>
-                                        {Object.entries(deptMap).map(([id, name]) => (
-                                            <option key={id} value={id}>{name}</option>
-                                        ))}
-                                    </SafeSelect>
+                                    <Form.Label className="small">Project Name</Form.Label>
+                                    <Form.Control
+                                        placeholder="Project name..."
+                                        value={fProjectName}
+                                        onChange={(e) => { setFProjectName(e.target.value); setPage(0); }}
+                                    />
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
                                 <Form.Group>
-                                    <Form.Label className="small">Project</Form.Label>
-                                    <SafeSelect value={fProj} onChange={(e) => setFProj(e.target.value)}>
-                                        <option value="">All</option>
-                                        {Object.entries(projMap).map(([id, project]) => (
-                                            <option key={id} value={id}>{project.jobNumber ? `${project.jobNumber} / ${project.inquiryNumber}` : project.name}</option>
-                                        ))}
-                                    </SafeSelect>
+                                    <Form.Label className="small">Job / Project No.</Form.Label>
+                                    <Form.Control
+                                        placeholder="MJN, MIN, project no..."
+                                        value={fProjectNumber}
+                                        onChange={(e) => { setFProjectNumber(e.target.value); setPage(0); }}
+                                    />
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small">Requester</Form.Label>
                                     <Form.Control
-                                        placeholder="username..."
+                                        placeholder="Requester name..."
                                         value={fRequester}
-                                        onChange={(e) => setFRequester(e.target.value)}
+                                        onChange={(e) => { setFRequester(e.target.value); setPage(0); }}
                                     />
                                 </Form.Group>
                             </Col>

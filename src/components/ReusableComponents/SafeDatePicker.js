@@ -49,7 +49,7 @@ export default function SafeDatePicker({
                 allowClear
                 style={{ width: '100%' }}
                 getPopupContainer={trigger => trigger.parentElement}
-                popupStyle={{ zIndex: 10000 }}
+                styles={{ popup: { root: { zIndex: 10000 } } }}
                 {...rest}
             />
             {/* Hidden native input to trigger HTML5 required validation seamlessly */}
