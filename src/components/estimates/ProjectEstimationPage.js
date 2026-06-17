@@ -58,6 +58,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const [estimationId, setEstimationId] = useState(null); // NEW: to store actual DB ID
     const [components, setComponents] = useState(["Component A"]);
+    const [editingComponentNames, setEditingComponentNames] = useState({});
     // rows: { productId, productOption, estUnitCost:"", suggestedCost:number|undefined, storeAvail:number|undefined, quantities:{[comp]: number} }
     const [rows, setRows] = useState([]);
 
@@ -127,6 +128,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const [revisionReason, setRevisionReason] = useState("");
     // const [rejectComment, setRejectComment] = useState("");
+
+    useEffect(() => {
+        setEditingComponentNames({});
+    }, [projectOpt?.value, propProjectId]);
 
     /* ------------ load reference data ------------ */
     useEffect(() => {
@@ -416,6 +421,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const exists = new Set(components);
         while (exists.has(name)) { i += 1; name = `${base} ${i}`; }
         setComponents(cols => [...cols, name]);
+        setEditingComponentNames(s => {
+            const next = { ...s };
+            delete next[components.length];
+            return next;
+        });
 
         // Auto-set margin
         const cfg = window._sysConfig || {};
@@ -425,14 +435,30 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     // Called on every keystroke — allows empty string so user can freely delete all characters
     const renameComponentLive = (idx, rawValue) => {
-        setComponents(cols => cols.map((c, i) => (i === idx ? rawValue : c)));
+        setEditingComponentNames(s => ({ ...s, [idx]: rawValue }));
     };
 
     // Called on blur — migrates all keyed state from oldName to newName,
     // and falls back to oldName if the user left the field empty
-    const renameComponentCommit = (idx, rawValue, oldName) => {
+    const renameComponentCommit = (idx, rawValue) => {
+        const oldName = components[idx];
+        if (oldName == null) return;
         const newName = rawValue.trim() || oldName;
+        if (components.some((name, i) => i !== idx && name === newName)) {
+            toast.warn("Component name already exists.");
+            setEditingComponentNames(s => {
+                const next = { ...s };
+                delete next[idx];
+                return next;
+            });
+            return;
+        }
         setComponents(cols => cols.map((c, i) => (i === idx ? newName : c)));
+        setEditingComponentNames(s => {
+            const next = { ...s };
+            delete next[idx];
+            return next;
+        });
         if (oldName !== newName) {
             setRows(rs => rs.map(r => {
                 const q = { ...(r.quantities || {}) };
@@ -476,6 +502,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const removeComponent = (idx) => {
         const name = components[idx];
         setComponents(cols => cols.filter((_, i) => i !== idx));
+        setEditingComponentNames(s => Object.fromEntries(
+            Object.entries(s)
+                .filter(([key]) => Number(key) !== idx)
+                .map(([key, value]) => [Number(key) > idx ? Number(key) - 1 : Number(key), value])
+        ));
         setRows(rs => rs.map(r => {
             const q = { ...(r.quantities || {}) };
             delete q[name];
@@ -1028,9 +1059,15 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         <th key={idx} style={{ width: 140 }}>
                                             <div className="d-flex gap-1 align-items-center">
                                                 <Form.Control
-                                                    value={c}
+                                                    value={Object.prototype.hasOwnProperty.call(editingComponentNames, idx) ? editingComponentNames[idx] : c}
                                                     onChange={(e) => renameComponentLive(idx, e.target.value)}
-                                                    onBlur={(e) => renameComponentCommit(idx, e.target.value, components[idx])}
+                                                    onBlur={(e) => renameComponentCommit(idx, e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            e.preventDefault();
+                                                            e.currentTarget.blur();
+                                                        }
+                                                    }}
                                                     disabled={isLocked}
                                                 />
                                                 {!isLocked && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>}
