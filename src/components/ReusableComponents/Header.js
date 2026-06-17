@@ -24,17 +24,21 @@ const Header = ({ onToggleSidebar }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch Unread Count (Initial)
-  const fetchCount = async () => {
-    try {
-      const res = await api.get("/notifications/unread-count");
-      setUnreadCount(res.data || 0);
-    } catch (e) { console.error(e); }
-  };
-
   useEffect(() => {
+    const fetchCount = async () => {
+      if (!userId && !username) return;
+      try {
+        const res = await api.get("/notifications/unread-count");
+        setUnreadCount(res.data || 0);
+      } catch (e) {
+        if (e?.response) {
+          console.warn("Notification count unavailable", e.response.status);
+        }
+      }
+    };
+
     fetchCount();
-  }, []);
+  }, [userId, username]);
 
   // WebSocket Connection
   useEffect(() => {
@@ -56,6 +60,7 @@ const Header = ({ onToggleSidebar }) => {
         // const uid = profile.data.id; 
         // For prototype, assuming username == userId or passed in context
         const uid = userId || username;
+        if (!uid) return;
 
         webSocketService.connect(() => {
           // Subscribe to personal notifications
@@ -66,7 +71,7 @@ const Header = ({ onToggleSidebar }) => {
             setUnreadCount(prev => prev + 1);
           });
         });
-      } catch (e) { console.error("WS Setup Failed", e); }
+      } catch (e) { console.warn("WS setup skipped", e); }
     };
 
     connectWS();

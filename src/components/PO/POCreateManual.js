@@ -23,6 +23,20 @@ const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
 const updateProduct = async (id, payload) => (await api.put(`/products/${id}`, payload)).data;
 
 const createPOManual = async (payload) => (await api.post(`/pos`, payload)).data;
+const MANUAL_PO_DRAFTS_KEY = "maruka.manualPoDrafts";
+
+const readManualPODrafts = () => {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(MANUAL_PO_DRAFTS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const writeManualPODrafts = (drafts) => {
+    localStorage.setItem(MANUAL_PO_DRAFTS_KEY, JSON.stringify(drafts));
+};
 
 /* ========== PAGE ========== */
 export default function POCreateManual({ onCreated }) {
@@ -52,6 +66,8 @@ export default function POCreateManual({ onCreated }) {
     const [supplierAssistLoading, setSupplierAssistLoading] = useState(false);
     const [commonSuppliers, setCommonSuppliers] = useState([]);
     const [showQuickSupplierCreate, setShowQuickSupplierCreate] = useState(false);
+    const [drafts, setDrafts] = useState([]);
+    const [activeDraftId, setActiveDraftId] = useState(null);
     // Settings & Toggles
     const [globalSettings, setGlobalSettings] = useState({});
     const [enableVat, setEnableVat] = useState(false);
@@ -72,6 +88,7 @@ export default function POCreateManual({ onCreated }) {
             }
         };
         loadSettings();
+        setDrafts(readManualPODrafts());
     }, []);
 
     // Load suppliers
@@ -123,6 +140,78 @@ export default function POCreateManual({ onCreated }) {
 
     const setRow = (i, k, v) => setRows(prev => { const cp = [...prev]; cp[i] = { ...cp[i], [k]: v }; return cp; });
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
+
+    const resetForm = () => {
+        setSupplier(null);
+        setQuotationRef("");
+        setEtaDate("");
+        setNote("");
+        setRows([]);
+        setEnableVat(false);
+        setEnableOtherTax(false);
+        setDeliveryCharge("");
+        setActiveDraftId(null);
+    };
+
+    const buildDraftSnapshot = () => ({
+        supplier,
+        quotationRef,
+        etaDate,
+        note,
+        rows,
+        enableVat,
+        enableOtherTax,
+        deliveryCharge
+    });
+
+    const refreshDrafts = (nextDrafts) => {
+        setDrafts(nextDrafts);
+        writeManualPODrafts(nextDrafts);
+    };
+
+    const saveDraft = () => {
+        if (!supplier?.id && rows.length === 0 && !quotationRef.trim() && !etaDate && !note.trim()) {
+            toast.warn("Add PO details before saving a draft");
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const fallbackName = supplier?.name || (rows[0]?.name ? `${rows[0].name} draft` : "Manual PO draft");
+        const draft = {
+            id: activeDraftId || `manual-po-draft-${Date.now()}`,
+            title: `${fallbackName}`,
+            updatedAt: now,
+            createdAt: drafts.find(d => d.id === activeDraftId)?.createdAt || now,
+            data: buildDraftSnapshot()
+        };
+        const nextDrafts = [
+            draft,
+            ...drafts.filter(d => d.id !== draft.id)
+        ].slice(0, 25);
+        refreshDrafts(nextDrafts);
+        setActiveDraftId(draft.id);
+        toast.success("Draft saved");
+    };
+
+    const loadDraft = (draft) => {
+        const data = draft?.data || {};
+        setSupplier(data.supplier || null);
+        setQuotationRef(data.quotationRef || "");
+        setEtaDate(data.etaDate || "");
+        setNote(data.note || "");
+        setRows(Array.isArray(data.rows) ? data.rows : []);
+        setEnableVat(Boolean(data.enableVat));
+        setEnableOtherTax(Boolean(data.enableOtherTax));
+        setDeliveryCharge(data.deliveryCharge || "");
+        setActiveDraftId(draft.id);
+        toast.info("Draft loaded");
+    };
+
+    const deleteDraft = (draftId) => {
+        refreshDrafts(drafts.filter(d => d.id !== draftId));
+        if (activeDraftId === draftId) setActiveDraftId(null);
+        toast.success("Draft deleted");
+    };
 
     // Calculation Logic
     const totals = useMemo(() => {
@@ -334,6 +423,10 @@ export default function POCreateManual({ onCreated }) {
             };
 
             const po = await createPOManual(payload);
+            if (activeDraftId) {
+                refreshDrafts(drafts.filter(d => d.id !== activeDraftId));
+                setActiveDraftId(null);
+            }
             toast.success(`PO ${po.poNumber} created`);
             onCreated?.(po.id);
         } catch (e) {
@@ -372,6 +465,45 @@ export default function POCreateManual({ onCreated }) {
                         <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
                     </div>
                     <Badge bg="info" className="p-2">Format: MT/PO-{new Date().getFullYear().toString().slice(-2)}-MM-XXXXXX</Badge>
+                </div>
+                <div className="border rounded p-3 mb-4 bg-light">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h5 className="mb-0">Created Drafts</h5>
+                            <small className="text-muted">Manual PO drafts stay here until you create the final PO.</small>
+                        </div>
+                        <div className="d-flex gap-2">
+                            <Button size="sm" variant="outline-secondary" onClick={resetForm}>New Draft</Button>
+                            <Button size="sm" variant="outline-primary" onClick={saveDraft}>Save Draft</Button>
+                        </div>
+                    </div>
+                    {drafts.length > 0 ? (
+                        <Table size="sm" hover responsive className="mb-0 bg-white">
+                            <tbody>
+                                {drafts.map(draft => {
+                                    const lineCount = draft.data?.rows?.length || 0;
+                                    const updated = draft.updatedAt ? new Date(draft.updatedAt).toLocaleString() : "-";
+                                    return (
+                                        <tr key={draft.id}>
+                                            <td>
+                                                <div className="fw-semibold">
+                                                    {draft.title}
+                                                    {activeDraftId === draft.id && <Badge bg="primary" className="ms-2">Editing</Badge>}
+                                                </div>
+                                                <small className="text-muted">{lineCount} item{lineCount === 1 ? "" : "s"} | Updated {updated}</small>
+                                            </td>
+                                            <td className="text-end align-middle">
+                                                <Button size="sm" variant="outline-primary" className="me-2" onClick={() => loadDraft(draft)}>Continue</Button>
+                                                <Button size="sm" variant="outline-danger" onClick={() => deleteDraft(draft.id)}>Delete</Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </Table>
+                    ) : (
+                        <div className="text-muted small py-2">No manual PO drafts saved yet.</div>
+                    )}
                 </div>
                 {/* Supplier select */}
                 <Row className="g-3">
