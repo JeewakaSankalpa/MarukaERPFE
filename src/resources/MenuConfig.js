@@ -16,7 +16,16 @@ export const MenuConfig = [
         title: "Executive Dashboard",
         icon: "FaChartLine",
         path: "/executive-dashboard",
-        roles: ["ADMIN"],
+        roles: ["ADMIN", "SUPER_ADMIN"],
+        adminOnly: true,
+        subItems: []
+    },
+    {
+        id: "project.summary.dashboard",
+        title: "Project Summary Dashboard",
+        icon: "FaChartLine",
+        path: "/project-summary-dashboard",
+        roles: ["ADMIN", "SUPER_ADMIN"],
         adminOnly: true,
         subItems: []
     },

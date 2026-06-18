@@ -28,7 +28,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
 
   const hasAccess = (item) => {
 
-    if (item.adminOnly && userRole !== "ADMIN") return false;
+    if (item.adminOnly && !["ADMIN", "SUPER_ADMIN"].includes(userRole)) return false;
     if (item.roles?.length && !item.roles.includes(userRole)) return false;
 
     // Check if ID is in access list
@@ -42,9 +42,9 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
     // Exact Match
     if (userModules.includes(item.id)) return true;
 
-    // The executive dashboard is role-protected and should appear for all admins,
-    // including existing installations that predate this menu permission.
-    if (item.id === "executive.dashboard" && userRole === "ADMIN") return true;
+    // Admin dashboards are role-protected and should appear for all admins,
+    // including existing installations that predate these menu permissions.
+    if ((item.id === "executive.dashboard" || item.id === "project.summary.dashboard") && ["ADMIN", "SUPER_ADMIN"].includes(userRole)) return true;
 
     // Role inheritance for newly appended menus not yet seeded in DB
     if (item.id === "inventory.supplier_approvals" && userModules.includes("inventory.approvals")) return true;

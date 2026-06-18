@@ -10,6 +10,14 @@ import { MenuConfig } from "../../resources/MenuConfig";
 import { DatePicker, ConfigProvider } from "antd";
 import dayjs from "dayjs";
 
+const EXECUTIVE_DASHBOARD_ACCESS_IDS = new Set([
+  "executive.dashboard",
+  "project.summary.dashboard"
+]);
+
+const isExecutiveDashboardAccessItem = (item) => EXECUTIVE_DASHBOARD_ACCESS_IDS.has(item?.id);
+const canReceiveExecutiveDashboardAccess = (role) => ["ADMIN", "SUPER_ADMIN"].includes((role || "").toUpperCase());
+
 function EmployeeCreate({ mode }) {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -167,7 +175,13 @@ function EmployeeCreate({ mode }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "role" && !canReceiveExecutiveDashboardAccess(value)) {
+        next.moduleAccess = (prev.moduleAccess || []).filter(id => !EXECUTIVE_DASHBOARD_ACCESS_IDS.has(id));
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -398,7 +412,9 @@ function EmployeeCreate({ mode }) {
         <div className="mb-3">
           <Form.Label>System Access Control</Form.Label>
           <div className="border rounded p-3 bg-white" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {MenuConfig.map(menu => (
+            {MenuConfig.filter(menu => (
+              !isExecutiveDashboardAccessItem(menu) || canReceiveExecutiveDashboardAccess(formData.role)
+            )).map(menu => (
               <div key={menu.id} className="mb-3">
                 <Form.Check
                   type="checkbox"

@@ -21,8 +21,10 @@ const searchProducts = async (q, supplierId, page = 0, size = 100) =>
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
 const updateProduct = async (id, payload) => (await api.put(`/products/${id}`, payload)).data;
+const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
 
 const createPOManual = async (payload) => (await api.post(`/pos`, payload)).data;
+const updatePOManual = async (id, payload) => (await api.put(`/pos/${id}`, payload)).data;
 const MANUAL_PO_DRAFTS_KEY = "maruka.manualPoDrafts";
 
 const readManualPODrafts = () => {
@@ -39,8 +41,10 @@ const writeManualPODrafts = (drafts) => {
 };
 
 /* ========== PAGE ========== */
-export default function POCreateManual({ onCreated }) {
+export default function POCreateManual({ poId, onCreated }) {
     const navigate = useNavigate();
+    const isEditMode = Boolean(poId);
+    const [poNumber, setPoNumber] = useState("");
     const [supplierQ, setSupplierQ] = useState("");
     const [supplierPage, setSupplierPage] = useState(0);
     const [supplierData, setSupplierData] = useState({ content: [], totalPages: 0 });
@@ -74,6 +78,64 @@ export default function POCreateManual({ onCreated }) {
     const [enableOtherTax, setEnableOtherTax] = useState(false);
 
     const [deliveryCharge, setDeliveryCharge] = useState(""); // User input
+
+    useEffect(() => {
+        if (!poId) return;
+
+        const loadPOForEdit = async () => {
+            try {
+                const po = await getPO(poId);
+                setPoNumber(po.poNumber || "");
+                setQuotationRef(po.quotationRef || "");
+                setEtaDate(po.etaDate || "");
+                setNote(po.note || "");
+                setDeliveryCharge(po.deliveryCharge ?? "");
+                setEnableVat(Number(po.vatAmount || 0) > 0);
+                setEnableOtherTax(Number(po.otherTaxAmount || 0) > 0);
+                setActiveDraftId(null);
+
+                if (po.supplierId) {
+                    try {
+                        setSupplier(await getSupplier(po.supplierId));
+                    } catch {
+                        setSupplier({ id: po.supplierId, name: po.supplierNameSnapshot || po.supplierId });
+                    }
+                }
+
+                const loadedRows = await Promise.all((po.items || []).map(async (item) => {
+                    let product = null;
+                    try {
+                        product = await getProduct(item.productId);
+                    } catch {
+                        product = null;
+                    }
+                    return {
+                        productId: item.productId,
+                        name: product?.name || item.productNameSnapshot,
+                        sku: product?.sku || item.sku,
+                        unit: product?.unit || item.unit || "",
+                        status: product?.status,
+                        originalCostPrice: product?.originalCostPrice,
+                        reorderLevel: product?.reorderLevel,
+                        suppliers: product?.suppliers || [],
+                        defaultSellingPrice: product?.defaultSellingPrice,
+                        barcode: product?.barcode,
+                        categoryId: product?.categoryId,
+                        qty: item.orderedQty || "",
+                        unitPrice: item.unitPrice ?? "",
+                        taxPercent: item.taxPercent ?? "",
+                        note: item.note || ""
+                    };
+                }));
+                setRows(loadedRows);
+            } catch (e) {
+                toast.error(e?.response?.data?.message || "Failed to load PO for editing");
+                navigate(`/pos/${poId}`);
+            }
+        };
+
+        loadPOForEdit();
+    }, [poId, navigate]);
 
     // Load Settings on Mount
     useEffect(() => {
@@ -415,6 +477,7 @@ export default function POCreateManual({ onCreated }) {
                 etaDate: etaDate || null,
                 note: note || null,
                 items,
+                subTotal: totals.sub,
                 deliveryCharge: totals.delivery,
                 vatAmount: totals.vat,
                 otherTaxAmount: totals.other,
@@ -422,15 +485,15 @@ export default function POCreateManual({ onCreated }) {
                 taxTotal: totals.vat + totals.other
             };
 
-            const po = await createPOManual(payload);
+            const po = isEditMode ? await updatePOManual(poId, payload) : await createPOManual(payload);
             if (activeDraftId) {
                 refreshDrafts(drafts.filter(d => d.id !== activeDraftId));
                 setActiveDraftId(null);
             }
-            toast.success(`PO ${po.poNumber} created`);
+            toast.success(`PO ${po.poNumber} ${isEditMode ? 'updated' : 'created'}`);
             onCreated?.(po.id);
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to create PO");
+            toast.error(e?.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} PO`);
         } finally {
             setIsSubmitting(false);
         }
@@ -462,11 +525,15 @@ export default function POCreateManual({ onCreated }) {
                 <div className="d-flex align-items-center justify-content-between mb-4">
                     <div className="d-flex align-items-center">
                         <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Order (Manual)</h2>
+                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>
+                            {isEditMode ? `Edit Purchase Order${poNumber ? `: ${poNumber}` : ""}` : "Create Purchase Order (Manual)"}
+                        </h2>
                     </div>
-                    <Badge bg="info" className="p-2">Format: MT/PO-{new Date().getFullYear().toString().slice(-2)}-MM-XXXXXX</Badge>
+                    {!isEditMode && (
+                        <Badge bg="info" className="p-2">Format: MT/PO-{new Date().getFullYear().toString().slice(-2)}-MM-XXXXXX</Badge>
+                    )}
                 </div>
-                <div className="border rounded p-3 mb-4 bg-light">
+                {!isEditMode && <div className="border rounded p-3 mb-4 bg-light">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                         <div>
                             <h5 className="mb-0">Created Drafts</h5>
@@ -504,7 +571,7 @@ export default function POCreateManual({ onCreated }) {
                     ) : (
                         <div className="text-muted small py-2">No manual PO drafts saved yet.</div>
                     )}
-                </div>
+                </div>}
                 {/* Supplier select */}
                 <Row className="g-3">
                     <Col md={6}>
@@ -712,7 +779,7 @@ export default function POCreateManual({ onCreated }) {
                                 </tbody>
                             </Table>
                             <Button className="w-100 mt-2" variant="success" size="lg" onClick={save} disabled={isSubmitting}>
-                                {isSubmitting ? 'Creating...' : 'Create PO'}
+                                {isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update PO' : 'Create PO')}
                             </Button>
                         </Col>
                     </Row>

@@ -15,6 +15,7 @@ import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import InteractiveDashboard from "./components/Dashboard/InteractiveDashboard";
 import ExecutiveDashboard from "./components/Dashboard/ExecutiveDashboard";
+import ProjectSummaryDashboard from "./components/Dashboard/ProjectSummaryDashboard";
 import SupplierCustomerDashboard from "./components/Dashboard/SupplierCustomerDashboard";
 import SystemConfiguration from "./components/SystemConfiguration";
 
@@ -172,6 +173,12 @@ function POCreateManualRouteWrapper() {
     return <POCreateManual onCreated={() => navigate(`/pos`)} />;
 }
 
+function POEditManualRouteWrapper() {
+    const navigate = useNavigate();
+    const { id } = useParams();
+    return <POCreateManual poId={id} onCreated={(poId) => navigate(`/pos/${poId || id}`)} />;
+}
+
 function CustomerViewRouteWrapper() {
     const navigate = useNavigate();
     return <CustomerView onEditCustomer={(customer) => navigate(`/customer/edit/${customer.id}`)} />;
@@ -205,8 +212,9 @@ function App() {
                         <Route path="/employee/profile" element={<EmployeeProfile />} />
                     </Route>
 
-                    <Route element={<PrivateRoute roles={["ADMIN"]} />}>
+                    <Route element={<PrivateRoute roles={["ADMIN", "SUPER_ADMIN"]} />}>
                         <Route path="/executive-dashboard" element={<ExecutiveDashboard />} />
+                        <Route path="/project-summary-dashboard" element={<ProjectSummaryDashboard />} />
                     </Route>
 
                     {/* Admin */}
@@ -267,6 +275,7 @@ function App() {
                         <Route path="/pos" element={<POListRouteWrapper />} />
                         <Route path="/pos/create" element={<POCreateManualRouteWrapper />} />
                         <Route path="/pos/:id/print" element={<POPrint />} />
+                        <Route path="/pos/:id/edit" element={<POEditManualRouteWrapper />} />
                         <Route path="/pos/:id" element={<PurchaseOrderDetails />} />
                         <Route path="/grn" element={<GRNRouteWrapper />} />
                         <Route path="/grns" element={<GRNListView />} />

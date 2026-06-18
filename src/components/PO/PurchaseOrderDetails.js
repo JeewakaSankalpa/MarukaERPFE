@@ -182,7 +182,8 @@ export default function PurchaseOrderDetails() {
     if (!po) return <Container className="pt-4 text-center">Purchase Order not found</Container>;
 
     const { approvalStatus, approverIds = [], approvals = [] } = po;
-    const isDraft = !approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED';
+    const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
+    const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
 
     return (
         <Container className="py-4">
@@ -195,6 +196,9 @@ export default function PurchaseOrderDetails() {
                 <div className="d-flex gap-2">
                     {isDraft && (
                         <>
+                            <Button variant="outline-primary" onClick={() => navigate(`/pos/${id}/edit`)}>
+                                Edit PO
+                            </Button>
                             <Button variant="outline-secondary" onClick={() => {
                                 const taxableBase = (po.subTotal || 0) + (po.deliveryCharge || 0);
                                 const currentVatRate = taxableBase > 0 && po.vatAmount > 0 ? (po.vatAmount / taxableBase * 100).toFixed(2) : '';

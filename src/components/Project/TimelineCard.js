@@ -132,7 +132,7 @@ export default function TimelineCard({ projectId, project, readOnly, onRefresh }
                             animated={dueMeta.pct < 100}
                         />
                         <div className="d-flex justify-content-between mt-1">
-                            <small className="text-muted" style={{ fontSize: '0.7rem' }}>0%</small>
+                            <small className="text-muted" style={{ fontSize: '0.7rem' }}>{dueMeta.pct}% elapsed</small>
                             <small className="text-muted" style={{ fontSize: '0.7rem' }}>100%</small>
                         </div>
                     </div>

@@ -27,8 +27,10 @@ const ExecutiveDashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [accessDenied, setAccessDenied] = useState(false);
 
     const load = useCallback(async ({ background = false } = {}) => {
+        if (accessDenied) return;
         try {
             if (!background) {
                 setLoading(true);
@@ -37,16 +39,19 @@ const ExecutiveDashboard = () => {
             const response = await api.get("/executive-dashboard");
             setData(response.data);
             setError("");
+            setAccessDenied(false);
         } catch (requestError) {
-            if (!background) {
-                setError(requestError.response?.status === 403
-                    ? "Administrator access is required."
-                    : "The executive summary could not be loaded.");
+            const forbidden = requestError.response?.status === 403;
+            if (forbidden) {
+                setAccessDenied(true);
+                setError("Administrator access is required. Please sign in again with an administrator account.");
+            } else if (!background) {
+                setError("The executive summary could not be loaded.");
             }
         } finally {
             if (!background) setLoading(false);
         }
-    }, []);
+    }, [accessDenied]);
 
     useEffect(() => {
         load();
