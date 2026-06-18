@@ -1,5 +1,5 @@
-import { ArrowLeft } from 'lucide-react';
-import React, { useEffect, useState, useMemo } from "react";
+import { ArrowLeft, Paperclip, Upload } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { Container, Row, Col, Button, Table, Badge, Modal, Form } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -18,6 +18,13 @@ const listSavedAddressesAPI = async () => (await api.get(`/addresses`)).data;
 const createSavedAddressAPI = async (payload) => (await api.post(`/addresses`, payload)).data;
 const updatePOAddressAPI = async (id, payload) => (await api.patch(`/pos/${id}/address`, payload)).data;
 const updateFinancialsAPI = async (id, payload) => (await api.patch(`/pos/${id}/financials`, payload)).data;
+const uploadQuotationAttachmentsAPI = async (id, files) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append("files", file, file.name));
+    return (await api.post(`/pos/${id}/quotation-attachments`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    })).data;
+};
 
 export default function PurchaseOrderDetails() {
     const { id } = useParams();
@@ -27,6 +34,8 @@ export default function PurchaseOrderDetails() {
     const [po, setPo] = useState(null);
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
+    const quotationInputRef = useRef(null);
+    const [uploadingQuotations, setUploadingQuotations] = useState(false);
 
     // Modals
     const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -148,6 +157,23 @@ export default function PurchaseOrderDetails() {
         }
     };
 
+    const handleQuotationFilesPicked = async (event) => {
+        const files = Array.from(event.target.files || []);
+        if (files.length === 0) return;
+
+        setUploadingQuotations(true);
+        try {
+            const updated = await uploadQuotationAttachmentsAPI(id, files);
+            setPo(updated);
+            toast.success(files.length === 1 ? "Quotation uploaded" : "Quotations uploaded");
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Failed to upload quotation files");
+        } finally {
+            setUploadingQuotations(false);
+            if (quotationInputRef.current) quotationInputRef.current.value = "";
+        }
+    };
+
     const handleUpdateAddress = async () => {
         try {
             let addrToSave = { ...addressForm };
@@ -182,6 +208,7 @@ export default function PurchaseOrderDetails() {
     if (!po) return <Container className="pt-4 text-center">Purchase Order not found</Container>;
 
     const { approvalStatus, approverIds = [], approvals = [] } = po;
+    const quotationAttachments = po.quotationAttachments || [];
     const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
     const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
 
@@ -392,6 +419,68 @@ export default function PurchaseOrderDetails() {
                 </Col>
 
                 <Col md={4}>
+                    <div className="bg-white shadow rounded p-3 mb-3">
+                        <div className="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                            <h6 className="mb-0">Quotation Attachments</h6>
+                            <Button
+                                size="sm"
+                                variant="outline-primary"
+                                className="d-inline-flex align-items-center gap-1"
+                                disabled={uploadingQuotations}
+                                onClick={() => quotationInputRef.current?.click()}
+                            >
+                                {uploadingQuotations
+                                    ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    : <Upload size={14} />}
+                                {uploadingQuotations ? "Uploading" : "Upload"}
+                            </Button>
+                        </div>
+
+                        <input
+                            ref={quotationInputRef}
+                            type="file"
+                            multiple
+                            className="d-none"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                            onChange={handleQuotationFilesPicked}
+                        />
+
+                        {quotationAttachments.length > 0 ? (
+                            <div className="d-flex flex-column gap-2">
+                                {quotationAttachments.map((file, idx) => (
+                                    <div key={file.id || idx} className="border rounded p-2 bg-light">
+                                        <div className="d-flex justify-content-between align-items-start gap-2">
+                                            <div className="min-w-0">
+                                                <div className="fw-semibold small text-truncate" title={file.originalName || `Quotation ${idx + 1}`}>
+                                                    <Paperclip size={14} className="me-1" />
+                                                    {file.originalName || `Quotation ${idx + 1}`}
+                                                </div>
+                                                <div className="small text-muted">
+                                                    {file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : "Uploaded"}
+                                                    {file.uploadedBy ? ` by ${file.uploadedBy}` : ""}
+                                                </div>
+                                            </div>
+                                            {file.url ? (
+                                                <Button
+                                                    size="sm"
+                                                    variant="link"
+                                                    className="p-0"
+                                                    onClick={() => window.open(file.url, "_blank", "noopener,noreferrer")}
+                                                >
+                                                    View
+                                                </Button>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-muted small">
+                                No quotation files uploaded.
+                            </div>
+                        )}
+                    </div>
+
                     <div className="bg-white shadow rounded p-3 mb-3">
                         <h6 className="mb-3 border-bottom pb-2">Approval Workflow</h6>
                         {(approverIds.length > 0) ? (

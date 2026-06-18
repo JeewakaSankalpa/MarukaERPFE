@@ -18,6 +18,14 @@ const createPOsFromPending = async (pendingId, allocation) =>
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
 
+const getProjectSearchText = (line) => [
+    line.jobNumber,
+    line.inquiryNumber,
+    line.projectNumber,
+    line.referenceNumber,
+    line.projectId
+].filter(Boolean).join(" ").toLowerCase();
+
 /* ========== PAGE ========== */
 export default function PendingToPOPage() {
     const navigate = useNavigate();
@@ -29,6 +37,7 @@ export default function PendingToPOPage() {
     const [showCompletenessModal, setShowCompletenessModal] = useState(false);
     const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
     const [editRecord, setEditRecord] = useState(null);
+    const [projectFilter, setProjectFilter] = useState("");
 
     const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
 
@@ -52,12 +61,19 @@ export default function PendingToPOPage() {
         })();
     }, []);
 
+    const filteredLines = useMemo(() => {
+        const lines = plan?.lines || [];
+        const query = projectFilter.trim().toLowerCase();
+        if (!query) return lines;
+        return lines.filter(line => getProjectSearchText(line).includes(query));
+    }, [plan?.lines, projectFilter]);
+
     const groupedAllocation = useMemo(() => {
         // supplierId => [{ productId, qty, unitPrice?, taxPercent? }]
         const map = {};
         Object.entries(choices).forEach(([key, c]) => {
             if (!c?.supplierId || !(c.qty>0)) return;
-            const line = (plan?.lines || []).find(l => getLineKey(l) === key);
+            const line = filteredLines.find(l => getLineKey(l) === key);
             if (!line) return;
             (map[c.supplierId] ||= []).push({
                 lineKey: key,
@@ -71,7 +87,7 @@ export default function PendingToPOPage() {
             });
         });
         return map;
-    }, [choices, quotationRefs, plan?.lines]);
+    }, [choices, quotationRefs, filteredLines]);
 
     const openCompletenessModal = (issues, proceed = null) => {
         setCompletenessIssues(issues);
@@ -85,7 +101,7 @@ export default function PendingToPOPage() {
             Object.entries(choices)
                 .filter(([, c]) => c?.supplierId && Number(c.qty) > 0)
                 .map(([key]) => {
-                    const line = (plan?.lines || []).find(l => getLineKey(l) === key);
+                    const line = filteredLines.find(l => getLineKey(l) === key);
                     return line?.productId;
                 })
                 .filter(Boolean)
@@ -165,6 +181,24 @@ export default function PendingToPOPage() {
                         <h2 className="mb-0" style={{ fontSize:"1.5rem" }}>Pending Purchases → Create POs</h2>
                     </div>
                 </div>
+                <div className="d-flex flex-wrap align-items-end gap-2 mb-3">
+                    <Form.Group style={{ minWidth: 260, maxWidth: 360 }}>
+                        <Form.Label className="small fw-bold">Filter by Project / Job No.</Form.Label>
+                        <Form.Control
+                            value={projectFilter}
+                            placeholder="MJN, MIN, project no..."
+                            onChange={e => setProjectFilter(e.target.value)}
+                        />
+                    </Form.Group>
+                    {projectFilter.trim() && (
+                        <Button variant="outline-secondary" onClick={() => setProjectFilter("")}>
+                            Clear
+                        </Button>
+                    )}
+                    <div className="ms-auto text-muted small pb-2">
+                        {filteredLines.length} of {(plan.lines || []).length} pending item(s)
+                    </div>
+                </div>
                 <Table hover responsive>
                     <thead>
                     <tr>
@@ -179,7 +213,7 @@ export default function PendingToPOPage() {
                     </tr>
                     </thead>
                     <tbody>
-                    {(plan.lines||[]).map(l => {
+                    {filteredLines.map(l => {
                         const key = getLineKey(l);
                         const c = choices[key] || {};
                         const origin = getOriginLabel(l);
@@ -232,6 +266,13 @@ export default function PendingToPOPage() {
                             </tr>
                         );
                     })}
+                    {filteredLines.length === 0 && (
+                        <tr>
+                            <td colSpan={8} className="text-center text-muted py-4">
+                                No pending items match this project filter.
+                            </td>
+                        </tr>
+                    )}
                     </tbody>
                 </Table>
 
