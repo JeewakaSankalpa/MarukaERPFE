@@ -4,11 +4,10 @@ export const MenuConfig = [
         title: "Dashboard",
         icon: "FaHome",
         path: "/dashboard", // Direct Link
-        roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "CUSTOMER"],
         subItems: [
             // Hidden logical items
-            { id: "dashboard.pending_approvals", title: "Widget: Pending Approvals", path: "#", hidden: true, roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] },
-            { id: "dashboard.my_attendance", title: "Widget: My Attendance", path: "#", hidden: true, roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] },
+            { id: "dashboard.pending_approvals", title: "Widget: Pending Approvals", path: "#", hidden: true },
+            { id: "dashboard.my_attendance", title: "Widget: My Attendance", path: "#", hidden: true },
         ]
     },
     {
@@ -16,7 +15,6 @@ export const MenuConfig = [
         title: "Executive Dashboard",
         icon: "FaChartLine",
         path: "/executive-dashboard",
-        roles: ["ADMIN", "SUPER_ADMIN"],
         adminOnly: true,
         subItems: []
     },
@@ -25,7 +23,6 @@ export const MenuConfig = [
         title: "Project Summary Dashboard",
         icon: "FaChartLine",
         path: "/project-summary-dashboard",
-        roles: ["ADMIN", "SUPER_ADMIN"],
         adminOnly: true,
         subItems: []
     },
@@ -33,7 +30,6 @@ export const MenuConfig = [
         id: "projects",
         title: "Projects",
         icon: "FaProjectDiagram",
-        roles: ["ADMIN", "MANAGER", "EMPLOYEE"],
         subItems: [
             { id: "projects.my_projects", title: "My Projects", path: "/projects/search" },
             { id: "projects.create", title: "New Project", path: "/projects/create" },
@@ -49,7 +45,6 @@ export const MenuConfig = [
         id: "inventory",
         title: "Inventory",
         icon: "FaBoxes",
-        roles: ["ADMIN", "MANAGER", "STORE_KEEPER", "EMPLOYEE"],
         subItems: [
             { id: "inventory.dashboard", title: "Dashboard", path: "/inventory/dashboard" }, // NEW
             { id: "inventory.search", title: "Stock Search", path: "/inventory/search" },
@@ -69,7 +64,6 @@ export const MenuConfig = [
         id: "procurement",
         title: "Procurement",
         icon: "FaChartLine",
-        roles: ["ADMIN", "STORE_KEEPER", "MANAGER", "EMPLOYEE"],
         subItems: [
             { id: "procurement.dashboard", title: "Dashboard", path: "/procurement/dashboard" }, // NEW
             { id: "procurement.planning", title: "Stores Planning", path: "/stores/planning" },
@@ -85,21 +79,20 @@ export const MenuConfig = [
         id: "hr",
         title: "HR & Team",
         icon: "FaUsers",
-        roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
         subItems: [
-            { id: "hr.directory", title: "Directory", path: "/employee/list", roles: ["ADMIN", "HR", "MANAGER"] },
-            { id: "hr.stats", title: "Statistics", path: "/hr/dashboard", roles: ["ADMIN", "HR", "MANAGER"] }, // NEW Link
+            { id: "hr.directory", title: "Directory", path: "/employee/list" },
+            { id: "hr.stats", title: "Statistics", path: "/hr/dashboard" }, // NEW Link
             { id: "hr.attendance", title: "Attendance", path: "/attendance" },
             { id: "hr.leave", title: "Leave", path: "/leave" },
-            { id: "hr.payroll", title: "Payroll", path: "/salary", roles: ["ADMIN", "HR", "MANAGER"] },
-            { id: "hr.config", title: "Configuration", path: "/hr/config", roles: ["ADMIN", "HR", "MANAGER"] },
+            { id: "hr.leave_approvals", title: "Leave Approvals", path: "#", hidden: true },
+            { id: "hr.payroll", title: "Payroll", path: "/salary" },
+            { id: "hr.config", title: "Configuration", path: "/hr/config" },
         ]
     },
     {
         id: "partners",
         title: "Partners",
         icon: "FaBriefcase",
-        roles: ["ADMIN", "SALES", "MANAGER"],
         subItems: [
             { id: "partners.dashboard", title: "Dashboard", path: "/partners/dashboard" },
             { id: "partners.customers", title: "Customers", path: "/customer/view" },
@@ -110,7 +103,6 @@ export const MenuConfig = [
         id: "reports",
         title: "Reports",
         icon: "FaChartLine",
-        roles: ["ADMIN", "MANAGER", "HR", "STORE_KEEPER", "EMPLOYEE"],
         subItems: [
             { id: "reports.interactive", title: "Interactive Dashboard", path: "/dashboard/interactive" },
             { id: "reports.dashboard", title: "Reports Dashboard", path: "/reports" },
@@ -127,7 +119,6 @@ export const MenuConfig = [
         id: "finance",
         title: "Sales & Finance",
         icon: "FaBriefcase",
-        roles: ["ADMIN", "MANAGER"],
         subItems: [
             { id: "finance.dashboard", title: "Finance Dashboard", path: "/finance/dashboard" },
             { id: "finance.expenses", title: "Expenses", path: "/finance/expenses" },
@@ -144,17 +135,16 @@ export const MenuConfig = [
         id: "settings",
         title: "Settings",
         icon: "FaCogs",
-        roles: ["ADMIN", "MANAGER", "HR", "EMPLOYEE"],
         subItems: [
             { id: "settings.notifications", title: "My Notification Preferences", path: "/my-notifications" },
-            { id: "settings.rules", title: "Notification Logic (Admin)", path: "/admin/notification-rules", roles: ["ADMIN"] },
-            { id: "settings.roles", title: "Role Management", path: "/admin/roles", roles: ["ADMIN", "HR"] },
-            { id: "settings.config", title: "System Config", path: "/admin/config", roles: ["ADMIN"] },
-            { id: "settings.workflows", title: "Workflows", path: "/admin/workflows", roles: ["ADMIN"] },
-            { id: "settings.estimation", title: "Estimation Settings", path: "/settings", roles: ["ADMIN", "MANAGER"] },
-            { id: "settings.departments", title: "Departments", path: "/departments", roles: ["ADMIN", "HR"] },
-            { id: "settings.new_department", title: "New Department", path: "/departments/new", roles: ["ADMIN", "HR"] },
-            { id: "settings.super_admin", title: "System Reset (DANGER)", path: "/admin/super-admin", roles: ["ADMIN"] },
+            { id: "settings.rules", title: "Notification Logic (Admin)", path: "/admin/notification-rules" },
+            { id: "settings.roles", title: "Role Management", path: "/admin/roles" },
+            { id: "settings.config", title: "System Config", path: "/admin/config" },
+            { id: "settings.workflows", title: "Workflows", path: "/admin/workflows" },
+            { id: "settings.estimation", title: "Estimation Settings", path: "/settings" },
+            { id: "settings.departments", title: "Departments", path: "/departments" },
+            { id: "settings.new_department", title: "New Department", path: "/departments/new" },
+            { id: "settings.super_admin", title: "System Reset (DANGER)", path: "/admin/super-admin" },
         ]
     }
 ];

@@ -10,8 +10,12 @@ export default function PrivateRoute({ children, module, roles }) {
         return <Navigate to="/login" replace state={{ from: location }} />;
     }
 
-    if (roles?.length && !roles.includes(role)) {
-        return <Navigate to="/dashboard" replace />;
+    if (roles?.length) {
+        const currentRole = (role || "").toUpperCase();
+        const allowedRoles = roles.map(r => (r || "").toUpperCase());
+        if (!allowedRoles.includes(currentRole)) {
+            return <Navigate to="/dashboard" replace />;
+        }
     }
 
     // Check Module Access if 'module' prop is passed

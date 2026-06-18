@@ -23,13 +23,14 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
   const location = useLocation();
 
   // Role Access
-  const userRole = localStorage.getItem("role") || "EMPLOYEE";
+  const userRole = (localStorage.getItem("role") || "EMPLOYEE").toUpperCase();
   const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
 
   const hasAccess = (item) => {
+    const isAdminDashboard =
+      item.id === "executive.dashboard" || item.id === "project.summary.dashboard";
 
-    if (item.adminOnly && !["ADMIN", "SUPER_ADMIN"].includes(userRole)) return false;
-    if (item.roles?.length && !item.roles.includes(userRole)) return false;
+    if ((item.adminOnly || isAdminDashboard) && !["ADMIN", "SUPER_ADMIN"].includes(userRole)) return false;
 
     // Check if ID is in access list
     if (!item.id) return true;
@@ -39,12 +40,12 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
       return userModules.includes("settings.super_admin");
     }
 
-    // Exact Match
-    if (userModules.includes(item.id)) return true;
-
     // Admin dashboards are role-protected and should appear for all admins,
     // including existing installations that predate these menu permissions.
-    if ((item.id === "executive.dashboard" || item.id === "project.summary.dashboard") && ["ADMIN", "SUPER_ADMIN"].includes(userRole)) return true;
+    if (isAdminDashboard) return true;
+
+    // Exact Match
+    if (userModules.includes(item.id)) return true;
 
     // Role inheritance for newly appended menus not yet seeded in DB
     if (item.id === "inventory.supplier_approvals" && userModules.includes("inventory.approvals")) return true;

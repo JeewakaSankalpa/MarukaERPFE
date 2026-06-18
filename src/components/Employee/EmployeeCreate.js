@@ -17,11 +17,15 @@ const EXECUTIVE_DASHBOARD_ACCESS_IDS = new Set([
 
 const isExecutiveDashboardAccessItem = (item) => EXECUTIVE_DASHBOARD_ACCESS_IDS.has(item?.id);
 const canReceiveExecutiveDashboardAccess = (role) => ["ADMIN", "SUPER_ADMIN"].includes((role || "").toUpperCase());
+const removeExecutiveDashboardAccess = (moduleAccess = []) =>
+  moduleAccess.filter(id => !EXECUTIVE_DASHBOARD_ACCESS_IDS.has(id));
 
 function EmployeeCreate({ mode }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = mode === "edit";
+  const currentUserRole = (localStorage.getItem("role") || "").toUpperCase();
+  const canGrantExecutiveDashboardAccess = canReceiveExecutiveDashboardAccess(currentUserRole);
 
   // State
   const [formData, setFormData] = useState({
@@ -177,8 +181,8 @@ function EmployeeCreate({ mode }) {
     const { name, value } = e.target;
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
-      if (name === "role" && !canReceiveExecutiveDashboardAccess(value)) {
-        next.moduleAccess = (prev.moduleAccess || []).filter(id => !EXECUTIVE_DASHBOARD_ACCESS_IDS.has(id));
+      if (name === "role" && (!canGrantExecutiveDashboardAccess || !canReceiveExecutiveDashboardAccess(value))) {
+        next.moduleAccess = removeExecutiveDashboardAccess(prev.moduleAccess || []);
       }
       return next;
     });
@@ -190,6 +194,9 @@ function EmployeeCreate({ mode }) {
 
     try {
       const payload = { ...formData };
+      if (!canGrantExecutiveDashboardAccess || !canReceiveExecutiveDashboardAccess(payload.role)) {
+        payload.moduleAccess = removeExecutiveDashboardAccess(payload.moduleAccess || []);
+      }
       if (!payload.password && !isEditMode) {
         toast.error("Password is required for new employees");
         setLoading(false);
@@ -412,9 +419,10 @@ function EmployeeCreate({ mode }) {
         <div className="mb-3">
           <Form.Label>System Access Control</Form.Label>
           <div className="border rounded p-3 bg-white" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {MenuConfig.filter(menu => (
-              !isExecutiveDashboardAccessItem(menu) || canReceiveExecutiveDashboardAccess(formData.role)
-            )).map(menu => (
+            {MenuConfig.filter(menu => {
+              if (!isExecutiveDashboardAccessItem(menu)) return true;
+              return canGrantExecutiveDashboardAccess && canReceiveExecutiveDashboardAccess(formData.role);
+            }).map(menu => (
               <div key={menu.id} className="mb-3">
                 <Form.Check
                   type="checkbox"

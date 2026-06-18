@@ -15,7 +15,8 @@ function LeaveRequestPage() {
     // User Context
     const [currentEmployee, setCurrentEmployee] = useState(null);
     const username = localStorage.getItem("username"); // Assuming stored on login
-    const userRole = localStorage.getItem("role"); // ADMIN, HR, MANAGER, EMPLOYEE
+    const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
+    const canApproveLeaves = userModules.includes("hr.leave_approvals");
 
     // Data
     const [myLeaves, setMyLeaves] = useState([]);
@@ -43,12 +44,12 @@ function LeaveRequestPage() {
         if (currentEmployee) {
             fetchMyLeaves();
             fetchQuota();
-            if (["ADMIN", "HR", "MANAGER"].includes(userRole)) {
+            if (canApproveLeaves) {
                 fetchPendingLeaves();
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentEmployee, userRole, selectedYear]);
+    }, [currentEmployee, canApproveLeaves, selectedYear]);
 
     const resolveCurrentEmployee = async () => {
         try {
@@ -229,7 +230,7 @@ function LeaveRequestPage() {
                             </Table>
                         </Tab>
 
-                        {["ADMIN", "HR", "MANAGER"].includes(userRole) && (
+                        {canApproveLeaves && (
                             <Tab eventKey="approvals" title={`Approvals (${pendingLeaves.length})`}>
                                 <Table striped bordered hover responsive>
                                     <thead>

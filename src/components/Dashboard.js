@@ -116,7 +116,7 @@ function Dashboard({ onLogout }) {
   );
 
   // Role Access
-  const userRole = localStorage.getItem("role") || "EMPLOYEE";
+  const userRole = (localStorage.getItem("role") || "EMPLOYEE").toUpperCase();
   const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
 
   // hasAccess moved to menu definition area to capture scope? No, it uses userModules which is here. 
@@ -265,13 +265,12 @@ function Dashboard({ onLogout }) {
   //   ];
 
   const hasAccess = (item) => {
-    if (!item.roles) return true;
+    const isAdminDashboard =
+      item.id === "executive.dashboard" || item.id === "project.summary.dashboard";
 
-    // 1. Role Check
-    const roleMatch = item.roles.includes(userRole);
-    if (!roleMatch)    // ADMIN Access Note: User requested strict module checks for Admin too.
-      // if (userRole === "ADMIN") return true;
-      if (!item.id) return true;
+    if (!item.id) return true;
+    if (isAdminDashboard) return ["ADMIN", "SUPER_ADMIN"].includes(userRole);
+
     return userModules.includes(item.id);
   };
 
@@ -372,7 +371,7 @@ function Dashboard({ onLogout }) {
         {/* WIDGETS SECTION (Moved to Top) */}
         <div className="d-flex gap-4 flex-wrap mb-4">
           {/* My Attendance */}
-          {hasAccess({ id: 'dashboard.my_attendance', roles: ['ADMIN', 'MANAGER', 'EMPLOYEE'] }) && (
+          {hasAccess({ id: 'dashboard.my_attendance' }) && (
             <div style={{ flex: 1, minWidth: '300px' }}>
               <MyAttendanceWidget />
             </div>
@@ -386,7 +385,7 @@ function Dashboard({ onLogout }) {
           )}
 
           {/* Pending Approvals */}
-          {hasAccess({ id: 'dashboard.pending_approvals', roles: ['ADMIN', 'MANAGER', 'EMPLOYEE'] }) && (
+          {hasAccess({ id: 'dashboard.pending_approvals' }) && (
             <div style={{ flex: 1, minWidth: '300px' }}>
               <PendingApprovalsWidget />
             </div>
