@@ -7,14 +7,31 @@ import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
 import signature from "../../assets/signature.png";
 
-const addressLines = (address = {}) => [
-    address?.line1,
-    address?.line2,
-    address?.city,
-    address?.state,
-    address?.postalCode,
-    address?.country,
-].filter(Boolean);
+const cleanText = (value) => String(value || "").trim();
+
+const sameText = (a, b) => cleanText(a).toLowerCase() === cleanText(b).toLowerCase();
+
+const addressLines = (address = {}) => {
+    const country = cleanText(address?.country);
+    const rawLines = [
+        address?.line1,
+        address?.line2,
+        address?.city,
+        address?.state,
+        address?.postalCode,
+    ].map(cleanText).filter(Boolean);
+
+    const lines = [];
+    rawLines.forEach(line => {
+        if (!lines.some(existing => sameText(existing, line))) lines.push(line);
+    });
+
+    if (country && !lines.some(line => sameText(line, country) || line.toLowerCase().includes(country.toLowerCase()))) {
+        lines.push(country);
+    }
+
+    return lines;
+};
 
 const POPrint = () => {
     const { id } = useParams();
@@ -51,19 +68,6 @@ const POPrint = () => {
 
     console.log("Rendering POPrint with PO:", po);
 
-    // Calculations
-    const subTotal = (po.items || []).reduce((sum, item) => {
-        if (!item) return sum;
-        return sum + ((item.orderedQty || 0) * (item.unitPrice || 0));
-    }, 0);
-
-    const taxTotal = (po.items || []).reduce((sum, item) => {
-        if (!item) return sum;
-        const itemTotal = (item.orderedQty || 0) * (item.unitPrice || 0);
-        return sum + (itemTotal * ((item.taxPercent || 0) / 100));
-    }, 0);
-
-    const grandTotal = subTotal + taxTotal;
     const isStorePo = po.originType === "STORES" || (!po.projectId && !po.inquiryNumber && !po.jobNumber);
     const inquiryRef = po.inquiryNumber || po.projectInquiryNumber || po.projectId || po.projectRef || "";
     const jobRef = po.jobNumber || po.projectJobNumber || "";
@@ -105,17 +109,25 @@ const POPrint = () => {
                 <div className="row mb-4">
                     <div className="col-4">
                         <h6 className="fw-bold text-uppercase mb-2">VENDOR</h6>
-                        {supplier ? (
-                            <div style={{ fontSize: "0.9rem" }}>
-                                <div><strong>{supplier.contactPerson || supplier.name || po.supplierNameSnapshot || "-"}</strong></div>
-                                <div>{supplier.comName || supplier.name || ""}</div>
-                                {addressLines(supplier.address).length > 0 ? (
-                                    <div style={{ whiteSpace: "pre-wrap" }}>{addressLines(supplier.address).join("\n")}</div>
-                                ) : (
-                                    <div className="text-muted">Address not available</div>
-                                )}
-                            </div>
-                        ) : (
+                        {supplier ? (() => {
+                            const companyName = supplier.name || po.supplierNameSnapshot || "-";
+                            const contactName = supplier.contactPerson && !sameText(supplier.contactPerson, companyName)
+                                ? supplier.contactPerson
+                                : "";
+                            const vendorAddressLines = addressLines(supplier.address);
+
+                            return (
+                                <div style={{ fontSize: "0.9rem" }}>
+                                    <div><strong>{companyName}</strong></div>
+                                    {contactName && <div>Contact: {contactName}</div>}
+                                    {vendorAddressLines.length > 0 ? (
+                                        <div style={{ whiteSpace: "pre-wrap" }}>{vendorAddressLines.join("\n")}</div>
+                                    ) : (
+                                        <div className="text-muted">Address not available</div>
+                                    )}
+                                </div>
+                            );
+                        })() : (
                             <div>{po.supplierNameSnapshot}</div>
                         )}
                     </div>
