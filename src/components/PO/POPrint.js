@@ -88,8 +88,8 @@ const POPrint = () => {
 
                 {/* Header Section */}
                 <div className="d-flex justify-content-between align-items-start mb-5">
-                    <div style={{ fontSize: "0.9rem", lineHeight: "1.4" }}>
-                        <h4 className="fw-bold mb-1">Maruka Technologies (Pvt) Ltd</h4>
+                    <div style={{ fontSize: "1.1rem", lineHeight: "1.5" }}>
+                        <h3 className="fw-bold mb-1">Maruka Technologies (Pvt) Ltd</h3>
                         <div>558/7, Sethsiri Place,</div>
                         <div>Pannipitiya, Sri Lanka 10230</div>
                         <div>rukjayasinghe@gmail.com</div>
@@ -97,7 +97,7 @@ const POPrint = () => {
                     </div>
                     <div className="text-end">
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <img src={logo} alt="Maruka Technologies" style={{ height: "60px", width: "auto" }} />
+                            <img src={logo} alt="Maruka Technologies" style={{ height: "160px", width: "auto" }} />
                         </div>
                     </div>
                 </div>
