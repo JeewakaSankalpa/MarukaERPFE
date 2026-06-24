@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import { getPurchaseForSources, formatSourceRef } from "./poDisplay";
 
 /* ========== API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -211,6 +212,7 @@ export default function PurchaseOrderDetails() {
     const quotationAttachments = po.quotationAttachments || [];
     const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
     const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
+    const purchaseForSources = getPurchaseForSources(po);
 
     return (
         <Container className="py-4">
@@ -282,10 +284,13 @@ export default function PurchaseOrderDetails() {
                                 <div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
                                 <div className="text-muted">Quotation No: <strong>{po.quotationRef || "-"}</strong></div>
                                 <div className="mt-2">
-                                    {po.originType === "PROJECT" || po.projectId ? (
+                                    {purchaseForSources.length > 0 ? (
                                         <>
-                                            <Badge bg="success" className="me-2">MJN: {po.jobNumber || "-"}</Badge>
-                                            <Badge bg="primary">MIN: {po.inquiryNumber || po.projectId || "-"}</Badge>
+                                            {purchaseForSources.map((source, index) => (
+                                                <Badge bg="success" className="me-2 mb-1" key={`${formatSourceRef(source)}-${index}`}>
+                                                    {source.jobNumber ? `MJN: ${source.jobNumber}` : formatSourceRef(source)}
+                                                </Badge>
+                                            ))}
                                         </>
                                     ) : (
                                         <Badge bg="secondary">For Main Store</Badge>

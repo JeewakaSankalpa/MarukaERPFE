@@ -6,6 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import { getPurchaseForSources, formatSourceRef } from "./poDisplay";
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -117,15 +118,19 @@ export default function POListView({ onOpenGRN }) {
                     </thead>
                     <tbody>
                         {(data.content || []).map(po => {
+                            const purchaseForSources = getPurchaseForSources(po);
                             return (
                                 <tr key={po.id}>
                                     <td>{po.poNumber}</td>
                                     <td>{po.supplierNameSnapshot || po.supplierName}</td>
                                     <td>
-                                        {po.originType === "PROJECT" || po.projectId ? (
+                                        {purchaseForSources.length > 0 ? (
                                             <>
-                                                <Badge bg="success" className="me-1">{po.jobNumber || "MJN -"}</Badge>
-                                                <div className="small text-muted">{po.inquiryNumber || po.projectId}</div>
+                                                {purchaseForSources.map((source, index) => (
+                                                    <Badge bg="success" className="me-1 mb-1" key={`${formatSourceRef(source)}-${index}`}>
+                                                        {source.jobNumber ? source.jobNumber : formatSourceRef(source)}
+                                                    </Badge>
+                                                ))}
                                             </>
                                         ) : (
                                             <Badge bg="secondary">Main Store</Badge>
