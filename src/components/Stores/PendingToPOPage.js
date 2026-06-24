@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
@@ -26,6 +26,8 @@ const getProjectSearchText = (line) => [
     line.projectId
 ].filter(Boolean).join(" ").toLowerCase();
 
+const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
+
 /* ========== PAGE ========== */
 export default function PendingToPOPage() {
     const navigate = useNavigate();
@@ -39,8 +41,6 @@ export default function PendingToPOPage() {
     const [editRecord, setEditRecord] = useState(null);
     const [projectFilter, setProjectFilter] = useState("");
 
-    const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
-
     const getOriginLabel = (line) => {
         if (line.originType === 'PROJECT' || line.projectId) {
             return {
@@ -51,15 +51,15 @@ export default function PendingToPOPage() {
         return { title: 'From Stores', subtitle: 'Main Store' };
     };
 
-    useEffect(() => {
-        (async () => {
-            try {
-                const p = await getLatestPending();
-                setPlan(p);
-                setChoices(Object.fromEntries((p?.lines||[]).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
-            } catch { toast.error("Failed to load pending purchases"); }
-        })();
+    const reloadPending = useCallback(async () => {
+        const p = await getLatestPending();
+        setPlan(p);
+        setChoices(Object.fromEntries((p?.lines||[]).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
     }, []);
+
+    useEffect(() => {
+        reloadPending().catch(() => toast.error("Failed to load pending purchases"));
+    }, [reloadPending]);
 
     const filteredLines = useMemo(() => {
         const lines = plan?.lines || [];
@@ -129,6 +129,15 @@ export default function PendingToPOPage() {
     };
 
     const closeIssueEditor = () => setEditRecord(null);
+
+    const handleIssueEditorSaved = async () => {
+        closeIssueEditor();
+        try {
+            await reloadPending();
+        } catch {
+            toast.error("Saved, but failed to refresh pending purchases");
+        }
+    };
 
     const performCreatePOs = async () => {
         if (isSubmitting) return;
@@ -302,10 +311,10 @@ export default function PendingToPOPage() {
                 </Modal.Header>
                 <Modal.Body>
                     {editRecord?.type === 'supplier' && (
-                        <SupplierForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={closeIssueEditor} />
+                        <SupplierForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={handleIssueEditorSaved} />
                     )}
                     {editRecord?.type === 'product' && (
-                        <ProductForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={closeIssueEditor} />
+                        <ProductForm id={editRecord.id} compact startEditing onClose={closeIssueEditor} onSaved={handleIssueEditorSaved} />
                     )}
                 </Modal.Body>
             </Modal>
