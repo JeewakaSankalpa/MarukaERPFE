@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Card, Col, Form, Modal, Row, Spinner, Table } from 'react-bootstrap';
-import { CreditCard, FileText, Plus, RefreshCw } from 'lucide-react';
+import { CreditCard, FileText, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
@@ -32,6 +32,8 @@ export default function MigrationPayablesPage() {
     const [suppliers, setSuppliers] = useState([]);
     const [projects, setProjects] = useState([]);
     const [rows, setRows] = useState([]);
+    const [searchInquiry, setSearchInquiry] = useState('');
+    const [searchJob, setSearchJob] = useState('');
     const [form, setForm] = useState(emptyForm);
     const [backlogDocs, setBacklogDocs] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -64,12 +66,26 @@ export default function MigrationPayablesPage() {
         loadData();
     }, [loadData]);
 
-    const totals = useMemo(() => rows.reduce((acc, row) => {
+    const filteredRows = useMemo(() => {
+        const inq = searchInquiry.trim().toLowerCase();
+        const job = searchJob.trim().toLowerCase();
+        return rows.filter(row => {
+            const matchInquiry = !inq || (row.inquiryNumber || '').toLowerCase().includes(inq);
+            const matchJob = !job || (row.projects || []).some(p =>
+                (p.jobNumber || '').toLowerCase().includes(job) ||
+                (p.referenceNumber || '').toLowerCase().includes(job) ||
+                (p.projectName || '').toLowerCase().includes(job)
+            );
+            return matchInquiry && matchJob;
+        });
+    }, [rows, searchInquiry, searchJob]);
+
+    const totals = useMemo(() => filteredRows.reduce((acc, row) => {
         acc.amount += Number(row.amount || 0);
         acc.paid += Number(row.paidAmount || 0);
         acc.balance += Number(row.balance || 0);
         return acc;
-    }, { amount: 0, paid: 0, balance: 0 }), [rows]);
+    }, { amount: 0, paid: 0, balance: 0 }), [filteredRows]);
 
     const handleProjectChange = (projectIds) => {
         setForm(current => ({ ...current, projectIds }));
@@ -220,7 +236,41 @@ export default function MigrationPayablesPage() {
             </Card>
 
             <Card className="shadow-sm">
-                <Card.Header className="fw-semibold">Migration Payables Report</Card.Header>
+                <Card.Header className="fw-semibold d-flex flex-wrap align-items-center gap-2 justify-content-between">
+                    <span>Migration Payables Report</span>
+                    <div className="d-flex gap-2 flex-wrap">
+                        <div className="input-group input-group-sm" style={{ width: 220 }}>
+                            <span className="input-group-text"><Search size={13} /></span>
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Search inquiry no…"
+                                value={searchInquiry}
+                                onChange={e => setSearchInquiry(e.target.value)}
+                            />
+                            {searchInquiry && (
+                                <button className="btn btn-outline-secondary" type="button" onClick={() => setSearchInquiry('')}>
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="input-group input-group-sm" style={{ width: 220 }}>
+                            <span className="input-group-text"><Search size={13} /></span>
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Search job / project…"
+                                value={searchJob}
+                                onChange={e => setSearchJob(e.target.value)}
+                            />
+                            {searchJob && (
+                                <button className="btn btn-outline-secondary" type="button" onClick={() => setSearchJob('')}>
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </Card.Header>
                 <Card.Body className="p-0">
                     {loading ? (
                         <div className="text-center py-5"><Spinner animation="border" /></div>
@@ -242,9 +292,11 @@ export default function MigrationPayablesPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.length === 0 ? (
-                                    <tr><td colSpan="11" className="text-center text-muted py-4">No migration payables found</td></tr>
-                                ) : rows.map(row => (
+                                {filteredRows.length === 0 ? (
+                                    <tr><td colSpan="11" className="text-center text-muted py-4">
+                                        {rows.length === 0 ? 'No migration payables found' : 'No results match your search'}
+                                    </td></tr>
+                                ) : filteredRows.map(row => (
                                     <tr key={row.id}>
                                         <td>
                                             <div className="fw-semibold">{row.inquiryNumber || '-'}</div>
