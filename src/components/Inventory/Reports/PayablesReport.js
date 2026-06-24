@@ -138,7 +138,8 @@ const PayablesReport = () => {
                     <Table bordered size="sm" className="aging-report-table">
                         <thead className="table-light">
                             <tr>
-                                <th>GRN #</th>
+                                <th>Reference</th>
+                                <th>Source</th>
                                 <th>Supplier</th>
                                 <th>Due Date</th>
                                 <th className="text-end">Age Days</th>
@@ -152,11 +153,12 @@ const PayablesReport = () => {
                         </thead>
                         <tbody>
                             {agingRows.length === 0 ? (
-                                <tr><td colSpan="11" className="text-center">No records found</td></tr>
+                                <tr><td colSpan="12" className="text-center">No records found</td></tr>
                             ) : (
                                 agingRows.map((item, i) => (
                                     <tr key={i}>
                                         <td>{item.grnNumber}</td>
+                                        <td>{item.source || "GRN"}</td>
                                         <td>{item.supplierName}</td>
                                         <td>{item.dueDate}</td>
                                         <td className="text-end">{item.ageDays}</td>
@@ -170,7 +172,7 @@ const PayablesReport = () => {
                                 ))
                             )}
                             <tr className="table-light fw-bold border-top border-dark">
-                                <td colSpan="4" className="text-end">TOTAL PAYABLE</td>
+                                <td colSpan="5" className="text-end">TOTAL PAYABLE</td>
                                 <td className="text-end">{money(totals.invoiceAmount)}</td>
                                 <td className="text-end">{money(totals.paidAmount)}</td>
                                 <td className="text-end">{money(totals.balance)}</td>
@@ -179,7 +181,7 @@ const PayablesReport = () => {
                                 ))}
                             </tr>
                             <tr className="fw-semibold">
-                                <td colSpan="7" className="text-end">AGING %</td>
+                                <td colSpan="8" className="text-end">AGING %</td>
                                 {agingBuckets.map(bucket => (
                                     <td key={bucket.key} className="text-end">{percentage(totals[bucket.key])}</td>
                                 ))}

@@ -177,27 +177,35 @@ export default function ExpensesPage() {
         const { fGrns, fAssets, fLoans, fExpenses } = filteredForBreakdown;
 
         // ── PAID (money that has actually left in this period) ──
-        const supplierPaid     = fGrns.reduce((s, g) => s + (Number(g.totalPaid) || 0), 0);
+        const isSupplierExpense = (expense) =>
+            expense.category === 'SUPPLIER_PAYMENT' || expense.category === 'SUPPLIER_MIGRATION_PAYMENT';
+        const migrationPaid = fExpenses
+            .filter(e => e.category === 'SUPPLIER_MIGRATION_PAYMENT' && e.status === 'PAID')
+            .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const migrationPayable = fExpenses
+            .filter(e => e.category === 'SUPPLIER_MIGRATION_PAYMENT' && e.status !== 'PAID')
+            .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const supplierPaid     = fGrns.reduce((s, g) => s + (Number(g.totalPaid) || 0), 0) + migrationPaid;
         const assetPaid        = fAssets.reduce((s, a) => s + (Number(a.paidAmount) || 0), 0);
         const loanPaid         = fLoans.reduce((s, l) => s + (Number(l.totalRepaid) || 0), 0);
-        const sitePaid         = fExpenses.filter(e => e.category !== 'SUPPLIER_PAYMENT' && e.status === 'PAID').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const sitePaid         = fExpenses.filter(e => !isSupplierExpense(e) && e.status === 'PAID').reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
         // ── PAYABLE (owed but not yet paid from this period) ──
         const supplierPayable  = fGrns.filter(g => g.paymentStatus !== 'FULLY_PAID').reduce((s, g) => {
             const invoice = Number(g.invoiceAmount) || 0;
             const paid    = Number(g.totalPaid) || 0;
             return s + Math.max(0, invoice - paid);
-        }, 0);
+        }, 0) + migrationPayable;
         const assetPayable     = fAssets.reduce((s, a) => {
             const total = Number(a.purchaseCost) || Number(a.cost) || 0;
             const paid  = Number(a.paidAmount) || 0;
             return s + Math.max(0, total - paid);
         }, 0);
         const loanPayable      = fLoans.filter(l => l.status === 'ACTIVE').reduce((s, l) => s + (Number(l.outstandingBalance) || 0), 0);
-        const sitePayable      = fExpenses.filter(e => e.category !== 'SUPPLIER_PAYMENT' && e.status !== 'PAID').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+        const sitePayable      = fExpenses.filter(e => !isSupplierExpense(e) && e.status !== 'PAID').reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
         const categories = [
-            { name: 'Suppliers',     paid: supplierPaid,   payable: supplierPayable,   color: '#0088FE', icon: '🏭', sub: `${fGrns.length} GRNs` },
+            { name: 'Suppliers',     paid: supplierPaid,   payable: supplierPayable,   color: '#0088FE', icon: '🏭', sub: `${fGrns.length} GRNs + migration` },
             { name: 'Assets',        paid: assetPaid,      payable: assetPayable,      color: '#00C49F', icon: '🏗️', sub: `${fAssets.length} assets` },
             { name: 'Loans',         paid: loanPaid,       payable: loanPayable,       color: '#FFBB28', icon: '🏦', sub: `${fLoans.length} loans` },
             { name: 'Site Expenses', paid: sitePaid,       payable: sitePayable,       color: '#FF8042', icon: '🔧', sub: 'Operational & others' }
@@ -303,6 +311,7 @@ export default function ExpensesPage() {
                                 <option value="RENT">Rent</option>
                                 <option value="MAINTENANCE">Maintenance</option>
                                 <option value="SUPPLIER_PAYMENT">Supplier Payment</option>
+                                <option value="SUPPLIER_MIGRATION_PAYMENT">Migration Supplier Payment</option>
                                 <option value="OTHER">Other</option>
                             </SafeSelect>
                         </Col>

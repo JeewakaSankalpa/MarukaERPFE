@@ -32,6 +32,13 @@ const approveAPI = async (id, payload) => (await api.post(`/estimations/${id}/ap
 const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/reject`, payload)).data;
 const createRevisionAPI = async (id, payload) => (await api.post(`/estimations/${id}/revision`, payload)).data;
 
+const LINE_TYPES = {
+    PRODUCT: "PRODUCT",
+    MANUAL: "MANUAL",
+};
+
+const createManualRowId = () => `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const navigate = useNavigate();
     const location = useLocation(); // Hook for URL query params
@@ -302,26 +309,33 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 const rowMap = new Map();
                 for (const c of (est.components || [])) {
                     const cname = c.name?.trim() || "Component";
-                    for (const it of (c.items || [])) {
-                        if (!it.productId) continue;
-                        if (!rowMap.has(it.productId)) {
+                    (c.items || []).forEach((it, itemIndex) => {
+                        const isProductLine = !!it.productId;
+                        const rowKey = isProductLine
+                            ? `product:${it.productId}`
+                            : `manual:${it.description || it.productNameSnapshot || ""}:${it.unit || ""}:${it.estUnitCost ?? ""}:${itemIndex}`;
+                        if (!rowMap.has(rowKey)) {
                             const p = productById[it.productId];
                             const suggested = deriveSuggestedCost(p);
-                            rowMap.set(it.productId, {
+                            rowMap.set(rowKey, {
+                                rowKey,
+                                lineType: isProductLine ? LINE_TYPES.PRODUCT : LINE_TYPES.MANUAL,
                                 productId: it.productId,
                                 productOption: p
                                     ? { value: p.id, label: buildProductLabel(p) }
-                                    : { value: it.productId, label: it.productNameSnapshot || it.productId },
+                                    : (isProductLine ? { value: it.productId, label: it.productNameSnapshot || it.productId } : null),
+                                description: it.description || it.productNameSnapshot || "",
+                                unit: it.unit || "",
                                 estUnitCost: it.estUnitCost ?? "",
                                 suggestedCost: suggested,
-                                storeAvail: availMap[it.productId],
+                                storeAvail: isProductLine ? availMap[it.productId] : undefined,
                                 quantities: {},
                             });
                         }
-                        const r = rowMap.get(it.productId);
+                        const r = rowMap.get(rowKey);
                         r.quantities[cname] = (r.quantities[cname] || 0) + (it.quantity || 0);
                         if (r.estUnitCost === "" && it.estUnitCost != null) r.estUnitCost = it.estUnitCost;
-                    }
+                    });
                 }
                 setRows(Array.from(rowMap.values()));
 
@@ -520,8 +534,26 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const addRow = () =>
         setRows(rs => [...rs, {
+            rowKey: `product-${Date.now()}-${rs.length}`,
+            lineType: LINE_TYPES.PRODUCT,
             productId: "",
             productOption: null,
+            description: "",
+            unit: "",
+            estUnitCost: "",
+            suggestedCost: undefined,
+            storeAvail: undefined,
+            quantities: Object.fromEntries(components.map(c => [c, 0])),
+        }]);
+
+    const addManualRow = () =>
+        setRows(rs => [...rs, {
+            rowKey: createManualRowId(),
+            lineType: LINE_TYPES.MANUAL,
+            productId: "",
+            productOption: null,
+            description: "",
+            unit: "Nr",
             estUnitCost: "",
             suggestedCost: undefined,
             storeAvail: undefined,
@@ -576,8 +608,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
             const next = {
                 ...cp[rowIndex],
+                lineType: LINE_TYPES.PRODUCT,
                 productId: pid,
                 productOption: option,
+                description: p?.name || option.label || "",
+                unit: cp[rowIndex].unit || "",
                 quantities: filled,
                 storeAvail: typeof availMap[pid] === "number" ? availMap[pid] : undefined,
                 suggestedCost: suggested,
@@ -743,12 +778,28 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             rows.forEach(r => {
                 const qtyVal = (r.quantities || {})[cname];
                 const qty = Number(qtyVal || 0);
+                const isManual = r.lineType === LINE_TYPES.MANUAL;
+                const hasManualDescription = String(r.description || "").trim().length > 0;
+                const hasRate = r.estUnitCost !== "" && r.estUnitCost != null;
 
                 if (r.productId && qty > 0) {
                     items.push({
+                        lineType: LINE_TYPES.PRODUCT,
                         productId: r.productId,
                         productNameSnapshot: productById[r.productId]?.name || r.productOption?.label || r.productId,
+                        description: productById[r.productId]?.name || r.productOption?.label || r.description || r.productId,
+                        unit: r.unit || "",
                         quantity: qty, // if NaN, becomes null in JSON
+                        estUnitCost: toBigDec(r.estUnitCost),
+                    });
+                } else if (isManual && hasManualDescription && (qty > 0 || hasRate)) {
+                    items.push({
+                        lineType: LINE_TYPES.MANUAL,
+                        productId: null,
+                        productNameSnapshot: null,
+                        description: r.description.trim(),
+                        unit: r.unit || "",
+                        quantity: qty,
                         estUnitCost: toBigDec(r.estUnitCost),
                     });
                 }
@@ -926,9 +977,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     /* ------------ derived ------------ */
     const neededMap = useMemo(() => {
         const m = new Map();
-        rows.forEach(r => {
+        rows.forEach((r, idx) => {
             const total = Object.values(r.quantities || {}).reduce((a, b) => a + Number(b || 0), 0);
-            m.set(r.productId, total);
+            m.set(r.rowKey || r.productId || `row-${idx}`, total);
         });
         return m;
     }, [rows]);
@@ -1053,8 +1104,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         <Table hover responsive>
                             <thead>
                                 <tr>
-                                    <th style={{ minWidth: 360 }}>Product</th>
-                                    <th className="text-end" style={{ width: 160 }}>Est. Unit Cost</th>
+                                    <th style={{ minWidth: 360 }}>Product / Description</th>
+                                    <th style={{ width: 110 }}>Unit</th>
+                                    <th className="text-end" style={{ width: 160 }}>Rate</th>
                                     {components.map((c, idx) => (
                                         <th key={idx} style={{ width: 140 }}>
                                             <div className="d-flex gap-1 align-items-center">
@@ -1076,43 +1128,68 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     ))}
                                     <th className="text-end" style={{ width: 120 }}>Total Qty</th>
                                     <th className="text-end" style={{ width: 120 }}>Avail</th>
-                                    <th className="text-end" style={{ width: 140 }}>Row Total</th>
+                                    <th className="text-end" style={{ width: 140 }}>Amount</th>
                                     <th style={{ width: 60 }}></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {rows.length === 0 ? (
-                                    <tr><td colSpan={components.length + 7} className="text-center text-muted">No rows</td></tr>
+                                    <tr><td colSpan={components.length + 8} className="text-center text-muted">No rows</td></tr>
                                 ) : rows.map((r, i) => {
-                                    const need = neededMap.get(r.productId) || 0;
+                                    const rowMapKey = r.rowKey || r.productId || `row-${i}`;
+                                    const need = neededMap.get(rowMapKey) || 0;
+                                    const isManualLine = r.lineType === LINE_TYPES.MANUAL;
                                     const avail = typeof r.storeAvail === "number" ? r.storeAvail : (r.productId ? (availMap[r.productId] ?? 0) : 0);
-                                    const low = need > avail;
+                                    const low = !isManualLine && need > avail;
                                     const unit = Number(r.estUnitCost || 0);
                                     const rowTotal = unit * need;
 
                                     return (
-                                        <tr key={`${r.productId || "row"}-${i}`}>
+                                        <tr key={rowMapKey}>
                                             <td>
-                                                <Select
-                                                    options={productOptions}
-                                                    value={r.productOption || null}
-                                                    isDisabled={isLocked}
-                                                    onChange={(opt) => onPickProduct(i, opt)}
-                                                    placeholder="Search product by name…"
-                                                    isClearable
-                                                    menuPosition="fixed"
-                                                    menuPortalTarget={document.body}
-                                                    styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                                    filterOption={(option, input) =>
-                                                        option.label.toLowerCase().includes(input.toLowerCase())
-                                                    }
-                                                    className="modern-select-container"
-                                                    classNamePrefix="modern-select"
+                                                {isManualLine ? (
+                                                    <>
+                                                        <Form.Control
+                                                            value={r.description || ""}
+                                                            onChange={(e) => setRowField(i, "description", e.target.value)}
+                                                            disabled={isLocked}
+                                                            placeholder="Enter expense or note description"
+                                                        />
+                                                        <div className="small text-muted mt-1">Manual line</div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Select
+                                                            options={productOptions}
+                                                            value={r.productOption || null}
+                                                            isDisabled={isLocked}
+                                                            onChange={(opt) => onPickProduct(i, opt)}
+                                                            placeholder="Search product by name..."
+                                                            isClearable
+                                                            menuPosition="fixed"
+                                                            menuPortalTarget={document.body}
+                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                            filterOption={(option, input) =>
+                                                                option.label.toLowerCase().includes(input.toLowerCase())
+                                                            }
+                                                            className="modern-select-container"
+                                                            classNamePrefix="modern-select"
+                                                        />
+                                                        <div className="small text-muted mt-1">
+                                                            {r.productId ? <>ID: {r.productId}</> : <>Not selected</>}
+                                                            {productById[r.productId]?.sku ? <> &nbsp;-&nbsp; SKU: {productById[r.productId].sku}</> : null}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </td>
+
+                                            <td>
+                                                <Form.Control
+                                                    value={r.unit || ""}
+                                                    onChange={(e) => setRowField(i, "unit", e.target.value)}
+                                                    disabled={isLocked}
+                                                    placeholder={isManualLine ? "Nr" : "-"}
                                                 />
-                                                <div className="small text-muted mt-1">
-                                                    {r.productId ? <>ID: {r.productId}</> : <>Not selected</>}
-                                                    {productById[r.productId]?.sku ? <> &nbsp;•&nbsp; SKU: {productById[r.productId].sku}</> : null}
-                                                </div>
                                             </td>
 
                                             <td>
@@ -1156,7 +1233,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                                             <td className="text-end">{need}</td>
                                             <td className="text-end">
-                                                {low ? <Badge bg="danger">{avail}</Badge> : <span>{avail}</span>}
+                                                {isManualLine ? <span className="text-muted">-</span> : (low ? <Badge bg="danger">{avail}</Badge> : <span>{avail}</span>)}
                                             </td>
                                             <td className="text-end">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</td>
                                             <td className="text-end">
@@ -1171,8 +1248,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                             <tfoot>
                                 <tr>
-                                    <td colSpan={components.length + 7}>
-                                        {!isReadOnly && <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>}
+                                    <td colSpan={components.length + 8}>
+                                        {!isReadOnly && (
+                                            <div className="d-flex gap-2">
+                                                <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>
+                                                <Button variant="outline-primary" onClick={addManualRow}>+ Add Expense / Description Row</Button>
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             </tfoot>

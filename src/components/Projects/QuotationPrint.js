@@ -46,6 +46,9 @@ const getInvoiceDocumentType = (invoice) => {
 const componentAmount = (component) =>
     component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0;
 
+const itemDescription = (item) =>
+    item?.description || item?.productNameSnapshot || item?.productId || "";
+
 const QuotationPrint = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
@@ -231,6 +234,7 @@ const QuotationPrint = () => {
                                 )}
                                 {printFormat === PRINT_FORMATS.ALL && (
                                     <>
+                                        <th className="text-end" style={{ width: "90px" }}>Unit</th>
                                         <th className="text-end" style={{ width: "150px" }}>Unit Price</th>
                                     </>
                                 )}
@@ -242,16 +246,17 @@ const QuotationPrint = () => {
                                 <React.Fragment key={idx}>
                                     <tr className="table-secondary">
                                         <td><strong>{comp.name}</strong></td>
-                                        {printFormat === PRINT_FORMATS.ALL && <td colSpan="2" />}
+                                        {printFormat === PRINT_FORMATS.ALL && <td colSpan="3" />}
                                         {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && <td />}
                                         <td className="text-end fw-bold">{money(componentAmount(comp))}</td>
                                     </tr>
                                     {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && comp.items?.map((item, i) => (
                                         <tr key={`${idx}-${i}`}>
-                                            <td className="ps-4">{item.productNameSnapshot || item.productId}</td>
+                                            <td className="ps-4">{itemDescription(item)}</td>
                                             {printFormat === PRINT_FORMATS.ALL && (
                                                 <>
                                                     <td className="text-end">{item.quantity}</td>
+                                                    <td className="text-end">{item.unit || "-"}</td>
                                                     <td className="text-end">{money(item.estUnitCost)}</td>
                                                     <td className="text-end">{money((item.quantity || 0) * (item.estUnitCost || 0))}</td>
                                                 </>

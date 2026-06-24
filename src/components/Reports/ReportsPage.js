@@ -103,7 +103,8 @@ export default function ReportsPage() {
                         <Table hover responsive striped>
                             <thead>
                                 <tr>
-                                    <th>GRN No</th>
+                                    <th>Reference</th>
+                                    <th>Source</th>
                                     <th>Supplier</th>
                                     <th>Due Date</th>
                                     <th className="text-end">Invoice Amount</th>
@@ -116,6 +117,7 @@ export default function ReportsPage() {
                                 {payables.map((p, i) => (
                                     <tr key={i}>
                                         <td>{p.grnNumber}</td>
+                                        <td>{p.source || "GRN"}</td>
                                         <td>{p.supplierName}</td>
                                         <td className={new Date(p.dueDate) < new Date() ? "text-danger fw-bold" : ""}>
                                             {p.dueDate}

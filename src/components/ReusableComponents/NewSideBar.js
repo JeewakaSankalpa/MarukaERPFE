@@ -49,6 +49,12 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
 
     // Role inheritance for newly appended menus not yet seeded in DB
     if (item.id === "inventory.supplier_approvals" && userModules.includes("inventory.approvals")) return true;
+    if (item.id === "finance.migration" && (
+      userModules.includes("finance") ||
+      userModules.includes("finance.expenses") ||
+      userModules.includes("finance.accounts") ||
+      userModules.includes("finance.reports")
+    )) return true;
 
     return false;
   };

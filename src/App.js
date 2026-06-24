@@ -86,6 +86,7 @@ import IncomePage from './components/finance/IncomePage';
 import AccountsPage from './components/finance/AccountsPage';
 import JournalEntryList from './components/finance/JournalEntryList';
 import PettyCashApprovalPage from './components/finance/PettyCashApprovalPage';
+import MigrationPayablesPage from './components/finance/MigrationPayablesPage';
 import LeaveRequestPage from "./components/Employee/LeaveRequestPage";
 import AttendancePage from "./components/Employee/AttendancePage";
 import StockTakingPage from "./components/Inventory/Adjustments/StockTakingPage";
@@ -320,6 +321,7 @@ function App() {
                         <Route path="/finance/loans" element={<LoanManagement />} />
                         <Route path="/finance/income" element={<IncomePage />} />
                         <Route path="/finance/reports" element={<FinanceReportsPage />} />
+                        <Route path="/finance/migration-payables" element={<MigrationPayablesPage />} />
                         <Route path="/reports/payables" element={<PayablesReport />} />
                         <Route path="/reports/receivables" element={<ReceivablesReport />} />
                         <Route path="/assets" element={<AssetRegister />} />

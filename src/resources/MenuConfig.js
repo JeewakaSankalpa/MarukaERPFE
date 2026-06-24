@@ -122,6 +122,7 @@ export const MenuConfig = [
         subItems: [
             { id: "finance.dashboard", title: "Finance Dashboard", path: "/finance/dashboard" },
             { id: "finance.expenses", title: "Expenses", path: "/finance/expenses" },
+            { id: "finance.migration", title: "Migration Payables", path: "/finance/migration-payables" },
             { id: "finance.income", title: "Income", path: "/finance/income" },
             { id: "finance.accounts", title: "Chart of Accounts", path: "/finance/accounts" }, // NEW
             { id: "finance.journals", title: "Journal Entries", path: "/finance/journals" },  // NEW
