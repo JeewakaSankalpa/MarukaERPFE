@@ -49,6 +49,38 @@ const PayablesReport = () => {
     ];
 
     const money = (value) => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const cleanInvoiceNumbers = (values = []) => values
+        .map(value => (value || "").trim())
+        .filter(Boolean)
+        .filter((value, index, arr) => arr.indexOf(value) === index);
+    const invoiceNumbersFor = (item = {}) => {
+        if (Array.isArray(item.invoiceNumbers) && item.invoiceNumbers.length) {
+            return cleanInvoiceNumbers(item.invoiceNumbers);
+        }
+        return cleanInvoiceNumbers(String(item.invoiceNumber || item.grnNumber || "")
+            .split(",")
+            .map(value => value.trim()));
+    };
+    const invoiceNumberList = (item) => {
+        const invoices = invoiceNumbersFor(item);
+        return invoices.length === 0 ? "-" : invoices.map(invoice => (
+            <span key={invoice} className="d-block fw-semibold">{invoice}</span>
+        ));
+    };
+    const documentLinks = (docs = []) => {
+        if (!Array.isArray(docs) || docs.length === 0) return "-";
+        return docs.map((doc, index) => (
+            <a
+                key={`${doc.url || doc.fileName || "document"}-${index}`}
+                href={doc.url}
+                target="_blank"
+                rel="noreferrer"
+                className="d-block"
+            >
+                {doc.fileName || `Document ${index + 1}`}
+            </a>
+        ));
+    };
     const daysBetween = (dateText) => {
         if (!dateText) return 0;
         const due = new Date(`${dateText}T00:00:00`);
@@ -138,7 +170,8 @@ const PayablesReport = () => {
                     <Table bordered size="sm" className="aging-report-table">
                         <thead className="table-light">
                             <tr>
-                                <th>Reference</th>
+                                <th>Invoice Numbers</th>
+                                <th>Invoice Files</th>
                                 <th>Source</th>
                                 <th>Supplier</th>
                                 <th>Due Date</th>
@@ -153,11 +186,12 @@ const PayablesReport = () => {
                         </thead>
                         <tbody>
                             {agingRows.length === 0 ? (
-                                <tr><td colSpan="12" className="text-center">No records found</td></tr>
+                                <tr><td colSpan="13" className="text-center">No records found</td></tr>
                             ) : (
                                 agingRows.map((item, i) => (
                                     <tr key={i}>
-                                        <td>{item.grnNumber}</td>
+                                        <td className="text-wrap">{invoiceNumberList(item)}</td>
+                                        <td className="text-wrap">{documentLinks(item.documents)}</td>
                                         <td>{item.source || "GRN"}</td>
                                         <td>{item.supplierName}</td>
                                         <td>{item.dueDate}</td>
@@ -172,7 +206,7 @@ const PayablesReport = () => {
                                 ))
                             )}
                             <tr className="table-light fw-bold border-top border-dark">
-                                <td colSpan="5" className="text-end">TOTAL PAYABLE</td>
+                                <td colSpan="6" className="text-end">TOTAL PAYABLE</td>
                                 <td className="text-end">{money(totals.invoiceAmount)}</td>
                                 <td className="text-end">{money(totals.paidAmount)}</td>
                                 <td className="text-end">{money(totals.balance)}</td>
@@ -181,7 +215,7 @@ const PayablesReport = () => {
                                 ))}
                             </tr>
                             <tr className="fw-semibold">
-                                <td colSpan="8" className="text-end">AGING %</td>
+                                <td colSpan="9" className="text-end">AGING %</td>
                                 {agingBuckets.map(bucket => (
                                     <td key={bucket.key} className="text-end">{percentage(totals[bucket.key])}</td>
                                 ))}
@@ -194,6 +228,10 @@ const PayablesReport = () => {
                             font-size: 11px;
                             white-space: nowrap;
                             vertical-align: middle;
+                        }
+                        .aging-report-table .text-wrap {
+                            white-space: normal;
+                            min-width: 120px;
                         }
                     `}</style>
                 </ReportLayout>

@@ -9,7 +9,7 @@ import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 
 /**
  * Component to display project financial summary and payments.
- * Allows editing total value and adding payments.
+ * Allows adding receivable payments.
  *
  * @component
  * @param {Object} props
@@ -21,10 +21,6 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
     const navigate = useNavigate();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
-
-    // Edit Value State
-    const [showEditValue, setShowEditValue] = useState(false);
-    const [newValue, setNewValue] = useState('');
 
     // Add Payment State
     const [showPay, setShowPay] = useState(false);
@@ -52,17 +48,6 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
     };
 
     useEffect(() => { loadPayments(); }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    const handleUpdateValue = async () => {
-        try {
-            await api.patch(`/projects/${projectId}/value`, { totalValue: parseFloat(newValue) });
-            toast.success("Project value updated");
-            setShowEditValue(false);
-            onRefresh?.();
-        } catch (e) {
-            toast.error("Failed to update value");
-        }
-    };
 
     const handleAddPayment = async () => {
         if (!payData.amount || !payData.date || !payData.reference?.trim()) {
@@ -105,7 +90,6 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
             <Card.Header className="d-flex justify-content-between align-items-center">
                 <span>Project Payments (Receivables)</span>
                 <div className="d-flex gap-2">
-
                     <Button size="sm" variant="success" onClick={() => setShowPay(true)}>
                         Add Payment
                     </Button>
@@ -154,21 +138,6 @@ export default function ProjectPaymentsCard({ projectId, project, onRefresh, cur
                     </tbody>
                 </Table>
             </Card.Body>
-
-            {/* Edit Value Modal */}
-            <Modal show={showEditValue} onHide={() => setShowEditValue(false)} size="sm" centered>
-                <Modal.Header closeButton><Modal.Title>Edit Project Value</Modal.Title></Modal.Header>
-                <Modal.Body>
-                    <Form.Group>
-                        <Form.Label>Total Agreed Value</Form.Label>
-                        <Form.Control type="number" value={newValue} onChange={e => setNewValue(e.target.value)} />
-                    </Form.Group>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowEditValue(false)}>Cancel</Button>
-                    <Button variant="primary" onClick={handleUpdateValue}>Save</Button>
-                </Modal.Footer>
-            </Modal>
 
             {/* Add Payment Modal */}
             <Modal show={showPay} onHide={() => { if (!submitting) setShowPay(false); }} centered>

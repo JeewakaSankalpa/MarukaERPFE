@@ -321,6 +321,7 @@ function App() {
                         <Route path="/finance/loans" element={<LoanManagement />} />
                         <Route path="/finance/income" element={<IncomePage />} />
                         <Route path="/finance/reports" element={<FinanceReportsPage />} />
+                        <Route path="/finance/migration" element={<MigrationPayablesPage />} />
                         <Route path="/finance/migration-payables" element={<MigrationPayablesPage />} />
                         <Route path="/reports/payables" element={<PayablesReport />} />
                         <Route path="/reports/receivables" element={<ReceivablesReport />} />

@@ -128,7 +128,7 @@ export default function FinanceDashboard() {
                                 <Card.Header>Quick Actions</Card.Header>
                                 <Card.Body className="d-flex gap-3 flex-wrap">
                                     <Button variant="outline-primary" onClick={() => navigate('/finance/expenses')}>Go to Expenses</Button>
-                                    <Button variant="outline-primary" onClick={() => navigate('/finance/migration-payables')}>Migration Payables</Button>
+                                    <Button variant="outline-primary" onClick={() => navigate('/finance/migration')}>Migration</Button>
                                     <Button variant="outline-primary" onClick={() => navigate('/finance/accounts')}>Chart of Accounts</Button>
                                     <Button variant="outline-warning" onClick={() => navigate('/finance/petty-cash-approvals')}>Petty Cash Approvals</Button>
                                     <Button variant="outline-primary" onClick={() => navigate('/salary')}>Go to Payroll</Button>
