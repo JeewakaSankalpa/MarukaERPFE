@@ -17,6 +17,7 @@ import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF6666'];
 
 const fmt = (v) => Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+const isOpeningStockGRN = (grn) => grn?.supplierNameSnapshot?.toLowerCase() === 'opening stock import';
 
 export default function ExpensesPage() {
     const navigate = useNavigate();
@@ -163,9 +164,10 @@ export default function ExpensesPage() {
 
     // Filtered Arrays based on Month for the Breakdown
     const filteredForBreakdown = useMemo(() => {
-        if (!filterMonth) return { fGrns: grns, fAssets: assets, fLoans: loans, fExpenses: expenses };
+        const supplierGrns = grns.filter(g => !isOpeningStockGRN(g));
+        if (!filterMonth) return { fGrns: supplierGrns, fAssets: assets, fLoans: loans, fExpenses: expenses };
         return {
-            fGrns: grns.filter(g => g.createdAt?.substring(0, 7) === filterMonth || g.updatedAt?.substring(0, 7) === filterMonth),
+            fGrns: supplierGrns.filter(g => g.createdAt?.substring(0, 7) === filterMonth || g.updatedAt?.substring(0, 7) === filterMonth),
             fAssets: assets.filter(a => a.purchaseDate?.substring(0, 7) === filterMonth || a.createdAt?.substring(0, 7) === filterMonth),
             fLoans: loans.filter(l => l.startDate?.substring(0, 7) === filterMonth),
             fExpenses: expenses.filter(e => e.expenseDate?.substring(0, 7) === filterMonth)
