@@ -70,6 +70,8 @@ const POPrint = () => {
     console.log("Rendering POPrint with PO:", po);
 
     const purchaseForText = formatPurchaseForText(po);
+    const shippingAddressLines = addressLines(po.shippingAddress);
+    const hasCustomShippingAddress = shippingAddressLines.length > 0;
 
     return (
         <div className="bg-white min-vh-100 p-4" style={{ color: "#000", fontFamily: "Arial, sans-serif" }}>
@@ -131,16 +133,16 @@ const POPrint = () => {
                     </div>
                     <div className="col-4">
                         <h6 className="fw-bold text-uppercase mb-2">SHIP TO</h6>
-                        {po.shippingAddress ? (
+                        {hasCustomShippingAddress ? (
                             <div style={{ fontSize: "0.9rem" }}>
-                                <div><strong>{po.shippingAddress.name || "Maruka Technologies (Pvt) Ltd"}</strong></div>
-                                {addressLines(po.shippingAddress).map((line, idx) => <div key={idx}>{line}</div>)}
+                                {po.shippingAddress?.name && <div><strong>{po.shippingAddress.name}</strong></div>}
+                                {shippingAddressLines.map((line, idx) => <div key={idx}>{line}</div>)}
                             </div>
                         ) : (
                             <div style={{ fontSize: "0.9rem" }}>
                                 <div>Maruka Technologies (Pvt) Ltd</div>
                                 <div>54/05,</div>
-                                <div>Marangahahena Horaketiya,</div>
+                                <div>Moragahahena Horaketiya,</div>
                                 <div>Kuduaduwa Road,</div>
                                 <div>Horana</div>
                             </div>
