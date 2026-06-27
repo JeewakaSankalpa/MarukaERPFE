@@ -20,6 +20,12 @@ import { listWorkflows } from "../../services/workflowApi";
 import Select from "react-select";
 import SafeSelect from "../ReusableComponents/SafeSelect";
 
+const inquiryTypeOptions = [
+  { value: "JOB", label: "Job Inquiry" },
+  { value: "MAINTENANCE", label: "Maintenance" },
+  { value: "RETAIL_SALE", label: "Retail Sale" },
+];
+
 const ProjectForm = () => {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
@@ -30,6 +36,7 @@ const ProjectForm = () => {
     projectName: "",
     customerId: "",
     salesRep: "",
+    inquiryType: "JOB",
     workflowId: "", // NEW
     comment: "",
     currency: "LKR",
@@ -209,7 +216,7 @@ const ProjectForm = () => {
   };
 
   const performSubmit = async () => {
-    const { projectName, customerId, salesRep, comment } = projectData;
+    const { projectName, customerId, salesRep, inquiryType, comment } = projectData;
     setIsSubmitting(true);
     try {
       if (!routeId) {
@@ -220,6 +227,7 @@ const ProjectForm = () => {
             projectName,
             customerId,
             salesRep,
+            inquiryType,
             comment,
             currency: projectData.currency,
             workflowId: projectData.workflowId // NEW
@@ -248,6 +256,7 @@ const ProjectForm = () => {
             projectName,
             customerId,
             salesRep,
+            inquiryType,
             comment,
             currency: projectData.currency,
             status: projectData.status, // keep status if you want to allow change later
@@ -301,8 +310,8 @@ const ProjectForm = () => {
     e.preventDefault();
     setValidated(true);
 
-    const { projectName, customerId, salesRep, comment } = projectData;
-    if (!projectName || !customerId || !salesRep || !comment) return;
+    const { projectName, customerId, salesRep, inquiryType, comment } = projectData;
+    if (!projectName || !customerId || !salesRep || !inquiryType || !comment) return;
 
     await performSubmit();
   };
@@ -477,6 +486,28 @@ const ProjectForm = () => {
 
 
             <Row className="g-3 mt-1">
+              <Col xs={12} md={6}>
+                <Form.Group controlId="inquiryType">
+                  <Form.Label>Inquiry Type</Form.Label>
+                  <SafeSelect
+                    name="inquiryType"
+                    value={projectData.inquiryType || "JOB"}
+                    onChange={handleChange}
+                    disabled={!isEditMode}
+                    required
+                    isInvalid={validated && !projectData.inquiryType}
+                  >
+                    {inquiryTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SafeSelect>
+                  <Form.Control.Feedback type="invalid">
+                    Please select an inquiry type.
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
               <Col xs={12} md={6}>
                 <Form.Group controlId="currency">
                   <Form.Label>Currency</Form.Label>

@@ -7,6 +7,24 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 
+const inquiryTypeOptions = [
+    { value: '', label: 'Inquiry Type (any)' },
+    { value: 'JOB', label: 'Job Inquiry' },
+    { value: 'MAINTENANCE', label: 'Maintenance' },
+    { value: 'RETAIL_SALE', label: 'Retail Sale' }
+];
+
+const inquiryTypeLabels = {
+    JOB: 'Job Inquiry',
+    MAINTENANCE: 'Maintenance',
+    RETAIL_SALE: 'Retail Sale'
+};
+
+const inquiryTypeBadge = {
+    JOB: 'primary',
+    MAINTENANCE: 'warning',
+    RETAIL_SALE: 'success'
+};
 
 function ProjectSearch() {
     const [rows, setRows] = useState([]);
@@ -18,6 +36,7 @@ function ProjectSearch() {
     const [customerName, setCustomerName] = useState('');
     const [salesRepName, setSalesRepName] = useState('');
     const [status, setStatus] = useState(''); // optional
+    const [inquiryType, setInquiryType] = useState('');
     const [mjnStatus, setMjnStatus] = useState(''); // '', 'WITH_MJN', 'WITHOUT_MJN'
 
     // Sort and Display
@@ -38,7 +57,7 @@ function ProjectSearch() {
 
         return () => clearTimeout(delayDebounceFn);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [projectId, projectName, customerName, salesRepName, status, mjnStatus]);
+    }, [projectId, projectName, customerName, salesRepName, status, inquiryType, mjnStatus]);
 
     const cycleColumnMode = () => setColumnMode((prev) => (prev + 1) % 3);
 
@@ -72,6 +91,7 @@ function ProjectSearch() {
             if (customerName.trim()) params.customerName = customerName.trim();
             if (salesRepName.trim()) params.salesRepName = salesRepName.trim();
             if (status) params.status = status;
+            if (inquiryType) params.inquiryType = inquiryType;
             
             if (mjnStatus === 'WITH_MJN') params.hasJobNumber = true;
             if (mjnStatus === 'WITHOUT_MJN') params.hasJobNumber = false;
@@ -92,6 +112,7 @@ function ProjectSearch() {
         setCustomerName('');
         setSalesRepName('');
         setStatus('');
+        setInquiryType('');
         setMjnStatus('');
         setSortField('id');
         setSortDirection('desc');
@@ -140,7 +161,7 @@ function ProjectSearch() {
                             onChange={(e) => setSalesRepName(e.target.value)}
                         />
                     </Col>
-                    <Col lg={4} md={6}>
+                    <Col lg={3} md={6}>
                         <Select
                             options={[
                                 { value: '', label: 'Status (any)' },
@@ -154,7 +175,18 @@ function ProjectSearch() {
                             classNamePrefix="modern-select"
                         />
                     </Col>
-                    <Col lg={4} md={6}>
+                    <Col lg={3} md={6}>
+                        <Select
+                            options={inquiryTypeOptions}
+                            value={inquiryTypeOptions.find(opt => opt.value === inquiryType)}
+                            onChange={(opt) => setInquiryType(opt ? opt.value : '')}
+                            placeholder="Inquiry Type (any)"
+                            isSearchable
+                            className="modern-select-container"
+                            classNamePrefix="modern-select"
+                        />
+                    </Col>
+                    <Col lg={3} md={6}>
                         <Select
                             options={[
                                 { value: '', label: 'Job Status (any)' },
@@ -173,7 +205,7 @@ function ProjectSearch() {
                             classNamePrefix="modern-select"
                         />
                     </Col>
-                    <Col lg={4} md={12} className="d-flex gap-2">
+                    <Col lg={3} md={12} className="d-flex gap-2">
                         <Button variant="outline-secondary" onClick={clearFilters} className="w-100">Reset Filters</Button>
                     </Col>
                 </Row>
@@ -200,6 +232,7 @@ function ProjectSearch() {
                                 </th>
                             )}
                             <th>Project Name</th>
+                            <th>Inquiry Type</th>
                             <th>Client</th>
                             <th>Sales Rep</th>
                             <th>Status</th>
@@ -208,9 +241,9 @@ function ProjectSearch() {
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={7}><Spinner animation="border" size="sm" /> Loading...</td></tr>
+                            <tr><td colSpan={8}><Spinner animation="border" size="sm" /> Loading...</td></tr>
                         ) : sortedRows.length === 0 ? (
-                            <tr><td colSpan={7}>No projects found</td></tr>
+                            <tr><td colSpan={8}>No projects found</td></tr>
                         ) : sortedRows.map(r => (
                             <tr key={r.id}>
                                 {columnMode !== 2 && <td><small className="text-muted">{r.id}</small></td>}
@@ -224,6 +257,11 @@ function ProjectSearch() {
                                     </td>
                                 )}
                                 <td>{r.projectName || '-'}</td>
+                                <td>
+                                    <Badge bg={inquiryTypeBadge[r.inquiryType || 'JOB'] || 'secondary'} pill>
+                                        {inquiryTypeLabels[r.inquiryType || 'JOB'] || r.inquiryType || 'Job Inquiry'}
+                                    </Badge>
+                                </td>
                                 <td>{r.customerName || '-'}</td>
                                 <td>{r.salesRepName || '-'}</td>
                                 <td>

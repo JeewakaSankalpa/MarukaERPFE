@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { Card, Button, Badge, Form } from 'react-bootstrap';
+import React from 'react';
+import { Card, Button, Badge } from 'react-bootstrap';
+
+const inquiryTypeLabels = {
+    JOB: 'Job Inquiry',
+    MAINTENANCE: 'Maintenance',
+    RETAIL_SALE: 'Retail Sale'
+};
+
+const inquiryTypeBadge = {
+    JOB: 'primary',
+    MAINTENANCE: 'warning',
+    RETAIL_SALE: 'success'
+};
 
 export const OverviewCard = ({ id, project, stageObj, viewVersion, navigate, openEmailModal, loading }) => {
     // Fallbacks
@@ -24,6 +36,12 @@ export const OverviewCard = ({ id, project, stageObj, viewVersion, navigate, ope
             <Card.Body style={{ overflowY: 'auto' }}>
                 <div><strong>Inquiry ID:</strong> {id || '-'}</div>
                 {p.jobNumber && <div><strong>Job ID:</strong> <Badge bg="success">{p.jobNumber}</Badge></div>}
+                <div>
+                    <strong>Inquiry Type:</strong>{' '}
+                    <Badge bg={inquiryTypeBadge[p.inquiryType || 'JOB'] || 'secondary'}>
+                        {inquiryTypeLabels[p.inquiryType || 'JOB'] || p.inquiryType || 'Job Inquiry'}
+                    </Badge>
+                </div>
                 <div><strong>Name:</strong> {p.projectName || '-'}</div>
                 <div><strong>Client:</strong> {p.customerName || p.customerId || '-'}</div>
                 <div><strong>Sales Rep:</strong> {p.salesRepName || p.salesRep || '-'}</div>
