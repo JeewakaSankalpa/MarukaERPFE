@@ -9,6 +9,7 @@ import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 
 const emptyPayableForm = {
     supplierId: '',
+    targetType: 'PROJECT',
     projectIds: [],
     invoiceNumbers: [''],
     description: '',
@@ -48,6 +49,12 @@ const projectOptionLabel = (project) => {
     if (project.customerName) bits.push(project.customerName);
     if (project.jobNumber || project.referenceNumber) bits.push(project.jobNumber || project.referenceNumber);
     return bits.join(' - ');
+};
+
+const getPayableTargetLabel = (row = {}) => {
+    if (row.targetType === 'STOCK') return 'Stock';
+    const projects = row.projects || [];
+    return projects.length ? projects.map(projectLabel).join(', ') : 'Stock';
 };
 
 async function loadMigrationReceivableCandidates(projectRows, receivableRows) {
@@ -273,7 +280,8 @@ function PayablesTab({ suppliers, projects, rows, loading, onRefresh }) {
         return rows.filter(row => {
             const invoiceText = formatInvoiceNumbers(row).toLowerCase();
             const matchInvoice = !invoice || invoiceText.includes(invoice);
-            const matchJob = !job || (row.projects || []).some(p =>
+            const targetText = getPayableTargetLabel(row).toLowerCase();
+            const matchJob = !job || targetText.includes(job) || (row.projects || []).some(p =>
                 (p.jobNumber || '').toLowerCase().includes(job) ||
                 (p.referenceNumber || '').toLowerCase().includes(job) ||
                 (p.projectName || '').toLowerCase().includes(job)
@@ -292,8 +300,9 @@ function PayablesTab({ suppliers, projects, rows, loading, onRefresh }) {
     const submitBacklog = async (event) => {
         event.preventDefault();
         const invoiceNumbers = cleanInvoiceNumbers(form.invoiceNumbers);
-        if (!form.supplierId || form.projectIds.length === 0 || invoiceNumbers.length === 0 || Number(form.amount) <= 0) {
-            toast.error('Supplier, project, invoice number, and amount are required');
+        const isProjectPayable = form.targetType !== 'STOCK';
+        if (!form.supplierId || (isProjectPayable && form.projectIds.length === 0) || invoiceNumbers.length === 0 || Number(form.amount) <= 0) {
+            toast.error(`Supplier, ${isProjectPayable ? 'project, ' : ''}invoice number, and amount are required`);
             return;
         }
 
@@ -302,6 +311,7 @@ function PayablesTab({ suppliers, projects, rows, loading, onRefresh }) {
             const body = new FormData();
             body.append('payable', new Blob([JSON.stringify({
                 ...form,
+                projectIds: isProjectPayable ? form.projectIds : [],
                 inquiryNumber: invoiceNumbers.join(', '),
                 invoiceNumbers,
                 amount: Number(form.amount),
@@ -377,11 +387,42 @@ function PayablesTab({ suppliers, projects, rows, loading, onRefresh }) {
                                 </SafeSelect>
                             </Col>
                             <Col md={4}>
+                                <Form.Label>Purchase For</Form.Label>
+                                <div className="d-flex gap-3 pt-2">
+                                    <Form.Check
+                                        type="radio"
+                                        id="migration-payable-target-project"
+                                        name="migrationPayableTarget"
+                                        label="Project"
+                                        checked={form.targetType !== 'STOCK'}
+                                        onChange={() => setForm({ ...form, targetType: 'PROJECT' })}
+                                    />
+                                    <Form.Check
+                                        type="radio"
+                                        id="migration-payable-target-stock"
+                                        name="migrationPayableTarget"
+                                        label="Stock"
+                                        checked={form.targetType === 'STOCK'}
+                                        onChange={() => setForm({ ...form, targetType: 'STOCK', projectIds: [] })}
+                                    />
+                                </div>
+                            </Col>
+                            <Col md={4}>
                                 <Form.Label>Projects</Form.Label>
-                                <SafeSelect multiple value={form.projectIds} onChange={e => setForm({ ...form, projectIds: e.target.value })} isSearchable required>
+                                <SafeSelect
+                                    multiple
+                                    value={form.projectIds}
+                                    onChange={e => setForm({ ...form, projectIds: e.target.value })}
+                                    isSearchable
+                                    required={form.targetType !== 'STOCK'}
+                                    disabled={form.targetType === 'STOCK'}
+                                >
                                     <option value="">Select projects</option>
                                     {projects.map(project => <option key={project.id} value={project.id}>{projectLabel(project)}</option>)}
                                 </SafeSelect>
+                                {form.targetType === 'STOCK' && (
+                                    <div className="small text-muted mt-1">Direct supplier purchase into stock.</div>
+                                )}
                             </Col>
                             <Col md={4}>
                                 <InvoiceNumberList
@@ -668,7 +709,7 @@ function MigrationPayablesTable({ rows, allRows, loading, searchInvoice, searchJ
                         <input
                             type="text"
                             className="form-control"
-                            placeholder="Search job / project..."
+                            placeholder="Search job / project / stock..."
                             value={searchJob}
                             onChange={e => setSearchJob(e.target.value)}
                         />
@@ -689,7 +730,7 @@ function MigrationPayablesTable({ rows, allRows, loading, searchInvoice, searchJ
                             <tr>
                                 <th>Invoice Numbers</th>
                                 <th>Supplier</th>
-                                <th>Projects</th>
+                                <th>Purchase For</th>
                                 <th>Added By</th>
                                 <th>Invoice Files</th>
                                 <th className="text-end">Amount</th>
@@ -712,7 +753,7 @@ function MigrationPayablesTable({ rows, allRows, loading, searchInvoice, searchJ
                                         <small className="text-muted">{row.dueDate || row.payableDate || ''}</small>
                                     </td>
                                     <td>{row.supplierName}</td>
-                                    <td style={{ minWidth: 180 }}>{(row.projects || []).map(projectLabel).join(', ') || '-'}</td>
+                                    <td style={{ minWidth: 180 }}>{getPayableTargetLabel(row)}</td>
                                     <td>
                                         <div>{row.createdBy || '-'}</div>
                                         <small className="text-muted">{row.createdAt ? new Date(row.createdAt).toLocaleString() : ''}</small>
