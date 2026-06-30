@@ -80,12 +80,14 @@ const StockAuditApprovalsPage = () => {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `stock-audit-${audit.id}.pdf`;
+            link.download = audit.sourceType === 'IMPORT_SYNC'
+                ? `inventory-bulk-import-${audit.id}.pdf`
+                : `stock-audit-${audit.id}.pdf`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.setTimeout(() => window.URL.revokeObjectURL(url), 30000);
-            toast.success("Audit report downloaded.");
+            toast.success(audit.sourceType === 'IMPORT_SYNC' ? "Inventory bulk import report downloaded." : "Audit report downloaded.");
         } catch (err) {
             console.error("Error downloading audit report:", err);
             toast.error(err.message || "Failed to download audit report.");
@@ -134,7 +136,7 @@ const StockAuditApprovalsPage = () => {
                                             : <>Waiting for stock audit approval</>}
                                     </div>
                                     <Button variant="outline-secondary" size="sm" onClick={() => handleDownloadReport(audit)}>
-                                        <Download size={14} className="me-1" /> Report PDF
+                                        <Download size={14} className="me-1" /> {audit.sourceType === 'IMPORT_SYNC' ? 'Import Report PDF' : 'Report PDF'}
                                     </Button>
                                 </div>
 
