@@ -98,21 +98,24 @@ export default function SystemConfiguration() {
         XLSX.writeFile(wb, "inventory_import_template.xlsx");
     };
 
-    const normalizeImportHeader = (value) => String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+    const normalizeImportHeader = (value) => String(value || "").replace(/\u00a0/g, " ").trim().replace(/\s+/g, " ").toUpperCase();
+
+    const findInventoryHeaderIndex = (headers, aliases, fallback) => {
+        const normalizedAliases = aliases.map(normalizeImportHeader);
+        const idx = headers.findIndex(h => normalizedAliases.includes(h));
+        return idx >= 0 ? idx : fallback;
+    };
 
     const findInventoryHeaderRow = (data) => {
         for (let i = 0; i < data.length; i += 1) {
             const normalized = (data[i] || []).map(normalizeImportHeader);
-            if (normalized.includes("ITEM CODE") && normalized.includes("ITEM DESCRIPTION")) {
+            const hasItemCode = normalized.some(h => ["ITEM CODE", "ITEMCODE", "SKU", "CODE"].includes(h));
+            const hasDescription = normalized.some(h => ["ITEM DESCRIPTION", "ITEM DESC", "DESCRIPTION", "ITEM NAME"].includes(h));
+            if (hasItemCode && hasDescription) {
                 return i;
             }
         }
         return 0;
-    };
-
-    const headerIndex = (headers, label, fallback) => {
-        const idx = headers.findIndex(h => h === label);
-        return idx >= 0 ? idx : fallback;
     };
 
     // Parse the selected file and populate preview rows
@@ -128,14 +131,15 @@ export default function SystemConfiguration() {
             const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
             const headerRow = findInventoryHeaderRow(data);
             const headers = (data[headerRow] || []).map(normalizeImportHeader);
-            const isFinalFormat = headers.includes("ITEM CODE") && headers.includes("ITEM DESCRIPTION");
+            const isFinalFormat = findInventoryHeaderIndex(headers, ["ITEM CODE", "ITEMCODE", "SKU", "CODE"], -1) >= 0
+                && findInventoryHeaderIndex(headers, ["ITEM DESCRIPTION", "ITEM DESC", "DESCRIPTION", "ITEM NAME"], -1) >= 0;
 
-            const skuCol = isFinalFormat ? headerIndex(headers, "ITEM CODE", 0) : 2;
-            const nameCol = isFinalFormat ? headerIndex(headers, "ITEM DESCRIPTION", 1) : 0;
-            const qtyCol = isFinalFormat ? headerIndex(headers, "QTY", 2) : 13;
-            const rateCol = isFinalFormat ? headerIndex(headers, "RATE", 3) : 4;
+            const skuCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["ITEM CODE", "ITEMCODE", "SKU", "CODE"], 0) : 2;
+            const nameCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["ITEM DESCRIPTION", "ITEM DESC", "DESCRIPTION", "ITEM NAME"], 1) : 0;
+            const qtyCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["QTY", "QUANTITY"], 2) : 13;
+            const rateCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["RATE", "UNIT RATE"], 3) : 4;
             const costCol = isFinalFormat ? rateCol : 9;
-            const supplierCol = isFinalFormat ? headerIndex(headers, "SUPPLIER", 4) : -1;
+            const supplierCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["SUPPLIER", "SUPPLIERS"], 4) : -1;
 
             const rows = data.slice(headerRow + 1)
                 .map((r, i) => ({
@@ -734,22 +738,22 @@ export default function SystemConfiguration() {
                                     <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
                                         <tr>
                                             <th>#</th>
-                                            <th>Item Name</th>
-                                            <th>SKU</th>
-                                            <th>Cost</th>
-                                            <th>Sell</th>
-                                            <th>Qty</th>
+                                            <th>ITEM CODE</th>
+                                            <th>ITEM DESCRIPTION</th>
+                                            <th>QTY</th>
+                                            <th>RATE</th>
+                                            <th>SUPPLIER</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {importPreview.map(r => (
                                             <tr key={r.rowNum} className={(!r.name || !r.sku) ? "table-warning" : ""}>
                                                 <td className="text-muted">{r.rowNum}</td>
-                                                <td>{r.name || <span className="text-danger">—</span>}</td>
                                                 <td>{r.sku ? <code style={{ fontSize: 12 }}>{r.sku}</code> : <span className="text-danger">-</span>}</td>
-                                                <td>{r.costPrice === "" ? 0 : r.costPrice}</td>
-                                                <td>{r.sellingPrice === "" ? <span className="text-danger">—</span> : r.sellingPrice}</td>
-                                                <td><strong>{r.openingQty === "" ? <span className="text-danger">—</span> : r.openingQty}</strong></td>
+                                                <td>{r.name || <span className="text-danger">-</span>}</td>
+                                                <td><strong>{r.openingQty === "" ? 0 : r.openingQty}</strong></td>
+                                                <td>{r.sellingPrice === "" ? <span className="text-danger">-</span> : r.sellingPrice}</td>
+                                                <td>{r.supplier || <span className="text-muted">-</span>}</td>
                                             </tr>
                                         ))}
                                     </tbody>
