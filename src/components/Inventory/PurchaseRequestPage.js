@@ -77,6 +77,8 @@ function PRForm({ onSaved }) {
     const [commonSuppliers, setCommonSuppliers] = useState([]);
     const [selectedProductsForSupplier, setSelectedProductsForSupplier] = useState([]);
     const [showQuickSupplierCreate, setShowQuickSupplierCreate] = useState(false);
+    const productRequestSeq = useRef(0);
+    const hasMountedProductSearch = useRef(false);
 
     useEffect(() => {
         (async () => {
@@ -108,10 +110,12 @@ function PRForm({ onSaved }) {
     };
 
     const loadProductPage = async ({ pageToLoad = 0, append = false, searchText = itemSearch } = {}) => {
+        const requestSeq = ++productRequestSeq.current;
         if (append) setLoadingMoreProducts(true);
         else setLoadingProducts(true);
         try {
             const data = await listProducts(searchText, pageToLoad, 40);
+            if (requestSeq !== productRequestSeq.current) return;
             const list = data?.content || [];
             mergeProductRows(list, append);
             setProductPage(pageToLoad);
@@ -128,13 +132,18 @@ function PRForm({ onSaved }) {
                         try { map[id] = await getInventorySummary(id); } catch { /* ignore */ }
                     }
                 }
+                if (requestSeq !== productRequestSeq.current) return;
                 setSummaries(prev => ({ ...prev, ...map }));
             }
         } catch {
-            toast.error("Failed to load products");
+            if (requestSeq === productRequestSeq.current) {
+                toast.error("Failed to load products");
+            }
         } finally {
-            if (append) setLoadingMoreProducts(false);
-            else setLoadingProducts(false);
+            if (requestSeq === productRequestSeq.current) {
+                if (append) setLoadingMoreProducts(false);
+                else setLoadingProducts(false);
+            }
         }
     };
 
@@ -143,6 +152,23 @@ function PRForm({ onSaved }) {
         loadProductPage({ pageToLoad: 0, append: false, searchText: "" });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (!hasMountedProductSearch.current) {
+            hasMountedProductSearch.current = true;
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setSummaries({});
+            setProductPage(0);
+            setHasMoreProducts(false);
+            loadProductPage({ pageToLoad: 0, append: false, searchText: itemSearch });
+        }, 300);
+
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [itemSearch]);
 
     const totalLines = useMemo(() => rows.filter(r => Number(r.qty) > 0).length, [rows]);
     const visibleRows = useMemo(() => {
@@ -352,7 +378,6 @@ function PRForm({ onSaved }) {
                                 placeholder="Search item names or SKU"
                                 value={itemSearch}
                                 onChange={(e) => setItemSearch(e.target.value)}
-                                disabled={loadingProducts}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter") {
                                         e.preventDefault();
@@ -360,7 +385,7 @@ function PRForm({ onSaved }) {
                                     }
                                 }}
                             />
-                            <Button variant="outline-secondary" onClick={handleSearchProducts} disabled={loadingProducts}>
+                            <Button variant="outline-secondary" onClick={handleSearchProducts}>
                                 Search
                             </Button>
                         </div>

@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import api from '../../../api/api';
@@ -45,8 +45,12 @@ const StockAuditApprovalsPage = () => {
 
         setApproving(true);
         try {
-            // Backend handles approver via Principal (JWT)
-            await api.post(`/inventory/adjustments/audit/${approveDialog.id}/approve`);
+            if (approveDialog.sourceType === 'IMPORT_SYNC') {
+                await api.post(`/admin/import/inventory/approve-audit/${approveDialog.id}`);
+            } else {
+                // Backend handles approver via Principal (JWT)
+                await api.post(`/inventory/adjustments/audit/${approveDialog.id}/approve`);
+            }
             toast.success("Audit approved and stock updated successfully.");
             setApproveDialog(null);
             fetchAudits(); // Refresh list
@@ -55,6 +59,36 @@ const StockAuditApprovalsPage = () => {
             toast.error(err.response?.data || "Failed to approve audit.");
         } finally {
             setApproving(false);
+        }
+    };
+
+    const handleDownloadReport = async (audit) => {
+        try {
+            const response = await api.get(`/inventory/adjustments/audit/${audit.id}/report`, {
+                responseType: 'blob',
+                headers: { Accept: 'application/pdf' }
+            });
+            const contentType = response.headers?.['content-type'] || '';
+            if (!contentType.includes('application/pdf')) {
+                const text = await response.data.text();
+                throw new Error(text || 'Server did not return a PDF report.');
+            }
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            if (blob.size === 0) {
+                throw new Error('The generated PDF was empty.');
+            }
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `stock-audit-${audit.id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+            toast.success("Audit report downloaded.");
+        } catch (err) {
+            console.error("Error downloading audit report:", err);
+            toast.error(err.message || "Failed to download audit report.");
         }
     };
 
@@ -79,8 +113,9 @@ const StockAuditApprovalsPage = () => {
                                 <div className="d-flex justify-content-between align-items-center w-100 pe-3">
                                     <div>
                                         <span className="fw-bold me-2">{audit.title || 'Stock Adjustment Audit'}</span>
+                                        {audit.sourceType === 'IMPORT_SYNC' && <Badge bg="info" className="me-2">Import Sync</Badge>}
                                         <span className="text-secondary small">
-                                            Submitted {new Date(audit.createdAt).toLocaleString()} by {audit.createdBy || 'System'}
+                                            Uploaded {new Date(audit.uploadedAt || audit.createdAt).toLocaleString()} by {audit.uploadedBy || audit.createdBy || 'System'}
                                         </span>
                                     </div>
                                     <Badge
@@ -92,6 +127,51 @@ const StockAuditApprovalsPage = () => {
                                 </div>
                             </Accordion.Header>
                             <Accordion.Body>
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <div className="small text-secondary">
+                                        {audit.status === 'APPROVED'
+                                            ? <>Accepted by {audit.approvedBy || 'System'} on {audit.approvedAt ? new Date(audit.approvedAt).toLocaleString() : '-'}</>
+                                            : <>Waiting for stock audit approval</>}
+                                    </div>
+                                    <Button variant="outline-secondary" size="sm" onClick={() => handleDownloadReport(audit)}>
+                                        <Download size={14} className="me-1" /> Report PDF
+                                    </Button>
+                                </div>
+
+                                {audit.sourceType === 'IMPORT_SYNC' ? (
+                                    <Table size="sm" responsive hover bordered>
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th>SKU</th>
+                                                <th>Item</th>
+                                                <th>Status</th>
+                                                <th className="text-end">Old Qty</th>
+                                                <th className="text-end">Excel Qty</th>
+                                                <th className="text-end">Delta</th>
+                                                <th>Changes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {audit.importRows?.map((item, idxx) => (
+                                                <tr key={idxx}>
+                                                    <td>{item.sku}</td>
+                                                    <td>{item.name || 'Unknown Product'}</td>
+                                                    <td>{item.status}</td>
+                                                    <td className="text-end">{item.currentQty ?? '-'}</td>
+                                                    <td className="text-end fw-bold">{item.importedQty ?? '-'}</td>
+                                                    <td className={`text-end ${(item.stockDelta || 0) < 0 ? 'text-danger' : 'text-success'}`}>
+                                                        {item.stockDelta > 0 ? `+${item.stockDelta}` : item.stockDelta ?? '-'}
+                                                    </td>
+                                                    <td>
+                                                        {item.changes?.length
+                                                            ? item.changes.map(change => `${change.field}: ${change.currentValue || '-'} -> ${change.newValue || '-'}`).join('; ')
+                                                            : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                ) : (
                                 <Table size="sm" responsive hover bordered>
                                     <thead className="table-light">
                                         <tr>
@@ -116,6 +196,7 @@ const StockAuditApprovalsPage = () => {
                                         ))}
                                     </tbody>
                                 </Table>
+                                )}
 
                                 {audit.status === 'PENDING_APPROVAL' && (
                                     <div className="d-flex justify-content-end gap-2 mt-3">
@@ -124,7 +205,7 @@ const StockAuditApprovalsPage = () => {
                                     </div>
                                 )}
 
-                                {audit.status === 'APPROVED' && (
+                                {audit.status === 'APPROVED' && audit.sourceType !== 'IMPORT_SYNC' && (
                                     <div className="text-end mt-2 text-secondary small">
                                         Approved by {audit.approvedBy} on {new Date(audit.approvedAt).toLocaleString()}
                                     </div>

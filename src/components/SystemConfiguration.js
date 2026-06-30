@@ -212,21 +212,37 @@ export default function SystemConfiguration() {
             formData.append("locationId", selectedLocation);
 
             // Step 1: kick off the job — backend returns immediately with jobId
-            const kickoff = await api.post("/admin/import/inventory", formData, {
+            const kickoff = await api.post("/admin/import/inventory/preview", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            const jobId = kickoff.data?.jobId;
-            if (!jobId) throw new Error("No jobId returned from server");
-
-            toast.info("Import started! Processing in the background...");
-            localStorage.setItem("active_import_job", jobId);
-            
-            // Step 2: poll every 2s until DONE or FAILED
-            await pollJobStatus(jobId);
+            setImportResult({ ...kickoff.data, _preview: true });
+            if ((kickoff.data?.errors || 0) > 0) {
+                toast.warn("Review found rows that need fixing before approval.");
+            } else {
+                toast.success("Review ready. Check the differences before approving.");
+            }
         } catch (err) {
+            toast.error("Review failed: " + (err?.response?.data?.message || err.message));
+        } finally {
             setImporting(false);
-            localStorage.removeItem("active_import_job");
-            toast.error("Import failed: " + (err?.response?.data?.message || err.message));
+        }
+    };
+
+    const handleApproveImport = async () => {
+        if (!importResult?.previewId) return;
+        setImporting(true);
+        try {
+            const res = await api.post(`/admin/import/inventory/approve/${importResult.previewId}`);
+            setImportResult(res.data);
+            if ((res.data?.errors || 0) > 0) {
+                toast.warn("Import applied with some errors. Check the results below.");
+            } else {
+                toast.success("Approved changes applied successfully.");
+            }
+        } catch (err) {
+            toast.error("Approval failed: " + (err?.response?.data?.message || err.message));
+        } finally {
+            setImporting(false);
         }
     };
 
@@ -621,7 +637,7 @@ export default function SystemConfiguration() {
                             </div>
                             <div>
                                 <h5 className="mb-0 text-white">Inventory Bulk Import</h5>
-                                <small style={{ color: "#a0aec0" }}>Upload an Excel file to create products and load opening stock</small>
+                                <small style={{ color: "#a0aec0" }}>Upload an Excel file, review SKU differences, then approve changes</small>
                             </div>
                         </div>
                         <Button
@@ -701,7 +717,7 @@ export default function SystemConfiguration() {
                                 className="w-100"
                                 id="btn-run-inventory-import"
                             >
-                                {importing ? <><Spinner size="sm" className="me-1" />Importing...</> : <><Upload size={14} className="me-1" />Import</>}
+                                {importing ? <><Spinner size="sm" className="me-1" />Reviewing...</> : <><Upload size={14} className="me-1" />Review</>}
                             </Button>
                         </Col>
                     </Row>
@@ -748,7 +764,88 @@ export default function SystemConfiguration() {
                     {/* Import Progress / Result Panel */}
                     {importResult && (
                         <div className="mt-3">
-                            {importResult._polling ? (
+                            {importResult._preview ? (
+                                <>
+                                    <Alert variant={importResult.errors > 0 ? "warning" : "info"} className="mb-3">
+                                        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <strong>Review Ready</strong>
+                                                <span className="ms-2 text-muted small">No database changes have been applied yet.</span>
+                                            </div>
+                                            <div className="d-flex gap-3 align-items-center flex-wrap">
+                                                <span className="text-success fw-bold">{importResult.creates || 0} New</span>
+                                                <span className="text-primary fw-bold">{importResult.updates || 0} Updates</span>
+                                                <span className="text-secondary fw-bold">{importResult.unchanged || 0} Same</span>
+                                                <span className="text-info fw-bold">{importResult.stockAdjustments || 0} Stock Adjustments</span>
+                                                <span className="text-danger fw-bold">{importResult.errors || 0} Errors</span>
+                                            </div>
+                                        </div>
+                                    </Alert>
+
+                                    <div className="table-responsive" style={{ maxHeight: 360, overflowY: "auto", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                                        <Table size="sm" hover className="mb-0" style={{ fontSize: 13 }}>
+                                            <thead style={{ background: "#f7fafc", position: "sticky", top: 0 }}>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>SKU</th>
+                                                    <th>Item</th>
+                                                    <th>Status</th>
+                                                    <th>Stock</th>
+                                                    <th>Differences</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(importResult.rows || []).map(r => (
+                                                    <tr key={r.rowNum} className={r.status === "ERROR" ? "table-warning" : ""}>
+                                                        <td className="text-muted">{r.rowNum}</td>
+                                                        <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
+                                                        <td>{r.name}</td>
+                                                        <td>
+                                                            <Badge bg={r.status === "CREATE" ? "success" : r.status === "UPDATE" ? "primary" : r.status === "UNCHANGED" ? "secondary" : "danger"}>
+                                                                {r.status}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="small">
+                                                            <div>Current: <strong>{r.currentQty ?? 0}</strong></div>
+                                                            <div>Excel: <strong>{r.importedQty ?? "-"}</strong></div>
+                                                            <div className={(r.stockDelta || 0) === 0 ? "text-muted" : (r.stockDelta > 0 ? "text-success" : "text-danger")}>
+                                                                Delta: <strong>{r.stockDelta > 0 ? `+${r.stockDelta}` : (r.stockDelta ?? 0)}</strong>
+                                                            </div>
+                                                        </td>
+                                                        <td className="small">
+                                                            {r.status === "ERROR" ? (
+                                                                <span className="text-danger">{r.message}</span>
+                                                            ) : (r.changes || []).length > 0 ? (
+                                                                <div className="d-flex flex-column gap-1">
+                                                                    {(r.changes || []).map((c, idx) => (
+                                                                        <div key={`${r.rowNum}-${c.field}-${idx}`}>
+                                                                            <strong>{c.field}:</strong> <span className="text-muted">{c.currentValue || "-"}</span> &rarr; <span>{c.newValue || "-"}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-muted">No changes</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                    <div className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                                        <Button variant="link" size="sm" className="p-0 text-secondary" onClick={resetImport}>
+                                            Clear &amp; Choose Another File
+                                        </Button>
+                                        <Button
+                                            variant="success"
+                                            onClick={handleApproveImport}
+                                            disabled={importing || (importResult.errors || 0) > 0}
+                                        >
+                                            {importing ? <><Spinner size="sm" className="me-1" />Applying...</> : "Approve Changes"}
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : importResult._polling ? (
                                 /* ---- Live Progress Bar ---- */
                                 <Alert variant="info" className="mb-0">
                                     <div className="d-flex justify-content-between align-items-center mb-2">
@@ -825,7 +922,7 @@ export default function SystemConfiguration() {
                                                         <td><code style={{ fontSize: 12 }}>{r.sku}</code></td>
                                                         <td>{r.name}</td>
                                                         <td>
-                                                            <Badge bg={r.status === "CREATED" ? "success" : r.status === "SKIPPED" ? "secondary" : "danger"}>
+                                                            <Badge bg={r.status === "CREATED" ? "success" : r.status === "UPDATED" ? "primary" : r.status === "UNCHANGED" || r.status === "SKIPPED" ? "secondary" : "danger"}>
                                                                 {r.status}
                                                             </Badge>
                                                         </td>
