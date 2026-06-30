@@ -98,11 +98,15 @@ export default function SystemConfiguration() {
         XLSX.writeFile(wb, "inventory_import_template.xlsx");
     };
 
-    const normalizeImportHeader = (value) => String(value || "").replace(/\u00a0/g, " ").trim().replace(/\s+/g, " ").toUpperCase();
+    const normalizeImportHeader = (value) => String(value || "")
+        .replace(/\u00a0/g, " ")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toUpperCase();
 
-    const findInventoryHeaderIndex = (headers, aliases, fallback) => {
-        const normalizedAliases = aliases.map(normalizeImportHeader);
-        const idx = headers.findIndex(h => normalizedAliases.includes(h));
+    const headerIndexAny = (headers, labels, fallback) => {
+        const normalizedLabels = labels.map(normalizeImportHeader);
+        const idx = headers.findIndex(h => normalizedLabels.includes(h));
         return idx >= 0 ? idx : fallback;
     };
 
@@ -131,15 +135,16 @@ export default function SystemConfiguration() {
             const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
             const headerRow = findInventoryHeaderRow(data);
             const headers = (data[headerRow] || []).map(normalizeImportHeader);
-            const isFinalFormat = findInventoryHeaderIndex(headers, ["ITEM CODE", "ITEMCODE", "SKU", "CODE"], -1) >= 0
-                && findInventoryHeaderIndex(headers, ["ITEM DESCRIPTION", "ITEM DESC", "DESCRIPTION", "ITEM NAME"], -1) >= 0;
+            const isFinalFormat = headerIndexAny(headers, ["ITEM CODE", "ITEMCODE", "SKU", "CODE"], -1) >= 0
+                && headerIndexAny(headers, ["ITEM DESCRIPTION", "ITEM DESC", "DESCRIPTION", "ITEM NAME"], -1) >= 0;
 
-            const skuCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["ITEM CODE", "ITEMCODE", "SKU", "CODE"], 0) : 2;
-            const nameCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["ITEM DESCRIPTION", "ITEM DESC", "DESCRIPTION", "ITEM NAME"], 1) : 0;
-            const qtyCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["QTY", "QUANTITY"], 2) : 13;
-            const rateCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["RATE", "UNIT RATE"], 3) : 4;
+            const skuCol = isFinalFormat ? headerIndexAny(headers, ["ITEM CODE", "ITEMCODE", "SKU", "CODE"], 0) : 2;
+            const nameCol = isFinalFormat ? headerIndexAny(headers, ["ITEM DESCRIPTION", "ITEM DESC", "DESCRIPTION", "ITEM NAME"], 1) : 0;
+            const qtyCol = isFinalFormat ? headerIndexAny(headers, ["QTY", "QUANTITY"], 2) : 13;
+            const rateCol = isFinalFormat ? headerIndexAny(headers, ["RATE", "UNIT RATE"], 3) : 4;
             const costCol = isFinalFormat ? rateCol : 9;
-            const supplierCol = isFinalFormat ? findInventoryHeaderIndex(headers, ["SUPPLIER", "SUPPLIERS"], 4) : -1;
+            const supplierCol = isFinalFormat ? headerIndexAny(headers, ["SUPPLIER", "SUPPLIERS"], 4) : -1;
+            const priceCol = isFinalFormat ? headerIndexAny(headers, ["PRICE", "TOTAL", "TOTAL PRICE"], 5) : -1;
 
             const rows = data.slice(headerRow + 1)
                 .map((r, i) => ({
@@ -150,6 +155,7 @@ export default function SystemConfiguration() {
                     costPrice: r[costCol] !== undefined ? r[costCol] : "",
                     openingQty: r[qtyCol] !== undefined && String(r[qtyCol]).trim() !== "" ? r[qtyCol] : 0,
                     supplier: supplierCol >= 0 ? String(r[supplierCol] || "").trim() : "",
+                    ignoredPrice: priceCol >= 0 ? r[priceCol] : "",
                     isFinalFormat
                 }))
                 .filter(r => r.name);
@@ -743,6 +749,7 @@ export default function SystemConfiguration() {
                                             <th>QTY</th>
                                             <th>RATE</th>
                                             <th>SUPPLIER</th>
+                                            <th>Price</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -754,6 +761,7 @@ export default function SystemConfiguration() {
                                                 <td><strong>{r.openingQty === "" ? 0 : r.openingQty}</strong></td>
                                                 <td>{r.sellingPrice === "" ? <span className="text-danger">-</span> : r.sellingPrice}</td>
                                                 <td>{r.supplier || <span className="text-muted">-</span>}</td>
+                                                <td className="text-muted">{r.ignoredPrice === "" ? "-" : r.ignoredPrice}</td>
                                             </tr>
                                         ))}
                                     </tbody>
