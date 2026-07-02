@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 // src/components/Projects/ProjectEstimationPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card, Spinner } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import Select from "react-select";
@@ -38,6 +38,9 @@ const LINE_TYPES = {
 };
 
 const createManualRowId = () => `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const ESTIMATION_ROW_HEIGHT = 118;
+const ESTIMATION_TABLE_HEIGHT = 620;
+const ESTIMATION_ROW_OVERSCAN = 8;
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const navigate = useNavigate();
@@ -68,6 +71,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [editingComponentNames, setEditingComponentNames] = useState({});
     // rows: { productId, productOption, estUnitCost:"", suggestedCost:number|undefined, storeAvail:number|undefined, quantities:{[comp]: number} }
     const [rows, setRows] = useState([]);
+    const estimationRowsScrollRef = useRef(null);
+    const [estimationRowsScrollTop, setEstimationRowsScrollTop] = useState(0);
 
     // Global include toggles / rates for printing & totals
     const [includeDelivery, setIncludeDelivery] = useState(true);
@@ -984,6 +989,26 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return m;
     }, [rows]);
 
+    const virtualRowWindow = useMemo(() => {
+        const totalRows = rows.length;
+        const visibleCount = Math.ceil(ESTIMATION_TABLE_HEIGHT / ESTIMATION_ROW_HEIGHT);
+        const start = Math.max(0, Math.floor(estimationRowsScrollTop / ESTIMATION_ROW_HEIGHT) - ESTIMATION_ROW_OVERSCAN);
+        const end = Math.min(totalRows, start + visibleCount + (ESTIMATION_ROW_OVERSCAN * 2));
+        return {
+            rows: rows.slice(start, end).map((row, offset) => ({ row, index: start + offset })),
+            topPadding: start * ESTIMATION_ROW_HEIGHT,
+            bottomPadding: Math.max(0, (totalRows - end) * ESTIMATION_ROW_HEIGHT),
+            totalRows,
+        };
+    }, [rows, estimationRowsScrollTop]);
+
+    useEffect(() => {
+        if (!estimationRowsScrollRef.current) return;
+        if (estimationRowsScrollTop <= rows.length * ESTIMATION_ROW_HEIGHT) return;
+        estimationRowsScrollRef.current.scrollTop = 0;
+        setEstimationRowsScrollTop(0);
+    }, [rows.length, estimationRowsScrollTop]);
+
     // Status Badge Color
     const statusColor = {
         "DRAFT": "secondary",
@@ -1101,7 +1126,23 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             </div>
                         </div>
 
-                        <Table hover responsive>
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <div className="small text-muted">
+                                {rows.length > 0 ? `Showing ${rows.length} estimation line${rows.length === 1 ? "" : "s"}` : "No estimation lines"}
+                            </div>
+                            {rows.length > 30 && (
+                                <Badge bg="light" text="dark" className="border">
+                                    Virtual scrolling enabled
+                                </Badge>
+                            )}
+                        </div>
+
+                        <div
+                            ref={estimationRowsScrollRef}
+                            className="estimation-lines-virtual-scroll"
+                            onScroll={(e) => setEstimationRowsScrollTop(e.currentTarget.scrollTop)}
+                        >
+                        <Table hover className="estimation-lines-table mb-0">
                             <thead>
                                 <tr>
                                     <th style={{ minWidth: 360 }}>Product / Description</th>
@@ -1135,7 +1176,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             <tbody>
                                 {rows.length === 0 ? (
                                     <tr><td colSpan={components.length + 8} className="text-center text-muted">No rows</td></tr>
-                                ) : rows.map((r, i) => {
+                                ) : (
+                                    <>
+                                        {virtualRowWindow.topPadding > 0 && (
+                                            <tr aria-hidden="true">
+                                                <td colSpan={components.length + 8} style={{ height: virtualRowWindow.topPadding, padding: 0, border: 0 }} />
+                                            </tr>
+                                        )}
+                                        {virtualRowWindow.rows.map(({ row: r, index: i }) => {
                                     const rowMapKey = r.rowKey || r.productId || `row-${i}`;
                                     const need = neededMap.get(rowMapKey) || 0;
                                     const isManualLine = r.lineType === LINE_TYPES.MANUAL;
@@ -1243,7 +1291,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             </td>
                                         </tr>
                                     );
-                                })}
+                                        })}
+                                        {virtualRowWindow.bottomPadding > 0 && (
+                                            <tr aria-hidden="true">
+                                                <td colSpan={components.length + 8} style={{ height: virtualRowWindow.bottomPadding, padding: 0, border: 0 }} />
+                                            </tr>
+                                        )}
+                                    </>
+                                )}
                             </tbody>
 
                             <tfoot>
@@ -1259,6 +1314,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                 </tr>
                             </tfoot>
                         </Table>
+                        </div>
 
                         {/* Per-component options & totals */}
                         <div className="bg-light rounded p-3 mt-3">

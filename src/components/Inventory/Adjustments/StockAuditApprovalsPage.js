@@ -20,7 +20,9 @@ const StockAuditApprovalsPage = () => {
     const [audits, setAudits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [approveDialog, setApproveDialog] = useState(null); // Audit ID to approve
+    const [rejectDialog, setRejectDialog] = useState(null);
     const [approving, setApproving] = useState(false);
+    const [rejecting, setRejecting] = useState(false);
 
     useEffect(() => {
         fetchAudits();
@@ -59,6 +61,23 @@ const StockAuditApprovalsPage = () => {
             toast.error(err.response?.data || "Failed to approve audit.");
         } finally {
             setApproving(false);
+        }
+    };
+
+    const handleReject = async () => {
+        if (!rejectDialog) return;
+
+        setRejecting(true);
+        try {
+            await api.post(`/inventory/adjustments/audit/${rejectDialog.id}/reject`);
+            toast.success("Audit rejected. No stock changes were applied.");
+            setRejectDialog(null);
+            fetchAudits();
+        } catch (err) {
+            console.error("Error rejecting audit:", err);
+            toast.error(err.response?.data || "Failed to reject audit.");
+        } finally {
+            setRejecting(false);
         }
     };
 
@@ -202,7 +221,7 @@ const StockAuditApprovalsPage = () => {
 
                                 {audit.status === 'PENDING_APPROVAL' && (
                                     <div className="d-flex justify-content-end gap-2 mt-3">
-                                        <Button variant="outline-danger">Reject</Button>
+                                        <Button variant="outline-danger" onClick={() => setRejectDialog(audit)}>Reject</Button>
                                         <Button variant="primary" onClick={() => setApproveDialog(audit)}>Approve & Apply</Button>
                                     </div>
                                 )}
@@ -230,6 +249,21 @@ const StockAuditApprovalsPage = () => {
                     <Button variant="secondary" onClick={() => setApproveDialog(null)}>Cancel</Button>
                     <Button variant="primary" onClick={handleApprove} disabled={approving}>
                         {approving ? <Spinner as="span" animation="border" size="sm" /> : 'Confirm Approve'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+            <Modal show={!!rejectDialog} onHide={() => setRejectDialog(null)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Audit Rejection</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Are you sure you want to reject this stock audit?
+                    This will close the pending approval without changing stock levels.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setRejectDialog(null)}>Cancel</Button>
+                    <Button variant="danger" onClick={handleReject} disabled={rejecting}>
+                        {rejecting ? <Spinner as="span" animation="border" size="sm" /> : 'Confirm Reject'}
                     </Button>
                 </Modal.Footer>
             </Modal>
