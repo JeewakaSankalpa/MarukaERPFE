@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
-import { Button, Spinner, Table } from "react-bootstrap";
+import { Alert, Button, Spinner, Table } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
@@ -65,6 +65,19 @@ const POPrint = () => {
     const handlePrint = () => window.print();
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /> Loading Print View...</div>;
+    const canPrintPO = ["APPROVED", "FINALIZED"].includes(String(po?.approvalStatus || "").toUpperCase());
+    if (!canPrintPO) {
+        return (
+            <div className="bg-white min-vh-100 p-4">
+                <div className="d-flex justify-content-between mb-4">
+                    <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+                </div>
+                <Alert variant="danger">
+                    This Purchase Order must be approved before it can be printed.
+                </Alert>
+            </div>
+        );
+    }
     if (!po) return <div className="text-center p-5">PO not found</div>;
 
     console.log("Rendering POPrint with PO:", po);

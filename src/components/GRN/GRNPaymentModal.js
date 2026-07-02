@@ -18,6 +18,7 @@ export default function GRNPaymentModal({ grn, onClose }) {
     const [accountBalance, setAccountBalance] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showOverdraft, setShowOverdraft] = useState(false);
+    const [verified, setVerified] = useState(false);
 
     // Max payable = invoice amount minus what's already been paid
     const totalPaid = grn.totalPaid || 0;
@@ -55,7 +56,8 @@ export default function GRNPaymentModal({ grn, onClose }) {
                 paymentAccountName: paymentInfo.paymentAccountName,
                 paymentAccountType: paymentInfo.paymentAccountType,
                 paymentMethod: paymentInfo.paymentMethod,
-                allowOverdraft
+                allowOverdraft,
+                verified
             };
             const formData = new FormData();
             formData.append("payment", new Blob([JSON.stringify(payload)], { type: "application/json" }));
@@ -75,6 +77,7 @@ export default function GRNPaymentModal({ grn, onClose }) {
         if (!paymentInfo.paymentAccountId) { toast.warn("Please select a payment account"); return; }
         if (!paymentInfo.paymentMethod) { toast.warn("Please explicitly select a Payment Method (e.g. Card, Cash)"); return; }
         if (!receiptFile) { toast.warn("Please upload the payment receipt"); return; }
+        if (!verified) { toast.warn("Please verify and accept this payment before adding it"); return; }
 
         // Check if amount exceeds account balance → prompt overdraft
         if (accountBalance !== null && Number(amount) > accountBalance) {
@@ -128,10 +131,15 @@ export default function GRNPaymentModal({ grn, onClose }) {
 
                     <div className="border-top pt-3">
                         <h5>Add New Payment</h5>
+                        {grn.status !== "ACCEPTED" && (
+                            <Alert variant="warning">
+                                This GRN must be accepted before any payment can be added.
+                            </Alert>
+                        )}
                         {maxPayable <= 0 && (
                             <Alert variant="success">✅ This GRN is fully paid.</Alert>
                         )}
-                        {maxPayable > 0 && (
+                        {maxPayable > 0 && grn.status === "ACCEPTED" && (
                             <>
                                 <div className="mb-3">
                                     <PaymentAccountPicker
@@ -166,6 +174,15 @@ export default function GRNPaymentModal({ grn, onClose }) {
                                             type="file"
                                             accept="image/*,application/pdf"
                                             onChange={e => setReceiptFile(e.target.files?.[0] || null)}
+                                        />
+                                    </Col>
+                                    <Col md={12}>
+                                        <Form.Check
+                                            type="checkbox"
+                                            id="grn-payment-verified"
+                                            checked={verified}
+                                            onChange={e => setVerified(e.target.checked)}
+                                            label="I have verified the accepted GRN, supplier invoice, receipt, amount, date, and payment account for this payment."
                                         />
                                     </Col>
                                     <Col md={2}>

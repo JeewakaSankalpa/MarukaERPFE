@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
-import { Container, Button, Form, Table, Badge, Modal, Row, Col, Alert } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Modal, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
@@ -11,6 +11,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 const listGRNs = async ({ q, page = 0, size = 10, paymentStatus }) => (await api.get(`/grns?${qp({ q, page, size, sort: "createdAt,desc", paymentStatus: paymentStatus || undefined })}`)).data;
+const acceptGRN = async (id) => (await api.patch(`/grns/${id}/accept`)).data;
 
 export default function GRNListView() {
     const navigate = useNavigate();
@@ -21,6 +22,11 @@ export default function GRNListView() {
     const [selectedGRN, setSelectedGRN] = useState(null); // For payment modal
     const [selectedGRNItems, setSelectedGRNItems] = useState(null); // For items modal
     const [selectedGRNReturn, setSelectedGRNReturn] = useState(null); // For return modal
+    const [selectedGRNReport, setSelectedGRNReport] = useState(null);
+    const [acceptingId, setAcceptingId] = useState(null);
+    const userRole = (localStorage.getItem("role") || "").toUpperCase();
+    const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
+    const canAcceptGRN = userRole === "ADMIN" || userModules.includes("procurement.grn_accept");
 
     const load = async () => {
         try { setData(await listGRNs({ q, page, paymentStatus: statusFilter })); }
@@ -30,6 +36,19 @@ export default function GRNListView() {
     useEffect(() => { setPage(0); }, [statusFilter]);
     useEffect(() => { load(); }, [statusFilter]);
 
+    const handleAccept = async (grn) => {
+        if (!window.confirm(`Accept ${grn.grnNumber} for supplier payment?`)) return;
+        setAcceptingId(grn.id);
+        try {
+            await acceptGRN(grn.id);
+            toast.success("GRN accepted for payment");
+            load();
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to accept GRN");
+        } finally {
+            setAcceptingId(null);
+        }
+    };
 
     return (
         <Container className="py-4">
@@ -67,7 +86,7 @@ export default function GRNListView() {
                         <tr>
                             <th>GRN No</th><th>PO No</th><th>Supplier</th><th>Date</th>
                             <th className="text-end">Gross Total</th><th className="text-end">Paid</th>
-                            <th>Status</th><th>Due Date</th><th>Actions</th>
+                            <th>Status</th><th>GRN</th><th>Due Date</th><th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,10 +107,21 @@ export default function GRNListView() {
                                                 g.paymentStatus === "INVOICED" ? "info" : "secondary"
                                     }>{g.paymentStatus}</Badge>
                                 </td>
+                                <td>
+                                    <Badge bg={g.status === "ACCEPTED" ? "success" : "warning"} text={g.status === "ACCEPTED" ? undefined : "dark"}>
+                                        {g.status || "-"}
+                                    </Badge>
+                                </td>
                                 <td>{g.dueDate}</td>
                                 <td>
+                                    {g.status !== "ACCEPTED" && canAcceptGRN && (
+                                        <Button size="sm" variant="outline-success" className="me-2" onClick={() => handleAccept(g)} disabled={acceptingId === g.id}>
+                                            {acceptingId === g.id ? "Accepting..." : "Accept"}
+                                        </Button>
+                                    )}
                                     <Button size="sm" variant="outline-success" className="me-2" onClick={() => setSelectedGRN(g)}>Payments</Button>
                                     <Button size="sm" variant="outline-dark" className="me-2" onClick={() => setSelectedGRNItems(g)}>Items</Button>
+                                    <Button size="sm" variant="outline-primary" className="me-2" onClick={() => setSelectedGRNReport(g)}>Report</Button>
                                     <Button size="sm" variant="outline-danger" onClick={() => setSelectedGRNReturn(g)}>Return</Button>
                                 </td>
                             </tr>
@@ -111,8 +141,202 @@ export default function GRNListView() {
             {selectedGRN && <GRNPaymentModal grn={selectedGRN} onClose={() => { setSelectedGRN(null); load(); }} />}
             {selectedGRNReturn && <GRNReturnModal grn={selectedGRNReturn} onClose={() => { setSelectedGRNReturn(null); load(); }} />}
             {selectedGRNItems && <ItemsModal grn={selectedGRNItems} onClose={() => setSelectedGRNItems(null)} />}
+            {selectedGRNReport && <GRNReportModal grn={selectedGRNReport} onClose={() => setSelectedGRNReport(null)} />}
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
+    );
+}
+
+function money(value) {
+    return Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(value) {
+    if (!value) return "-";
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString("en-GB");
+}
+
+function lineTotal(item) {
+    if (item?.unitCost) return Number(item.receivedQty || 0) * Number(item.unitCost || 0);
+    return (item?.batches || []).reduce((sum, batch) => sum + (Number(batch.qty || 0) * Number(batch.unitCost || 0)), 0);
+}
+
+function GRNReportModal({ grn, onClose }) {
+    const invoiceTotal = Number(grn.invoiceAmount || 0) + Number(grn.vatAmount || 0) + Number(grn.deliveryCharge || 0);
+
+    const handlePrint = () => {
+        setTimeout(() => window.print(), 50);
+    };
+
+    return (
+        <Modal show={true} onHide={onClose} size="xl" className="grn-report-modal">
+            <Modal.Header closeButton className="no-print">
+                <Modal.Title>GRN Report: {grn.grnNumber}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <div className="grn-report-print bg-white text-dark">
+                    <div className="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h3 className="fw-bold mb-1">Maruka Technologies (Pvt) Ltd</h3>
+                            <div>Goods Received Note Report</div>
+                        </div>
+                        <div className="text-end">
+                            <h4 className="fw-bold mb-1">{grn.grnNumber}</h4>
+                            <div>Created: {formatDate(grn.createdAt)}</div>
+                            <div>Status: {grn.status || "-"}</div>
+                        </div>
+                    </div>
+
+                    <Table bordered size="sm" className="mb-4">
+                        <tbody>
+                            <tr>
+                                <th style={{ width: "20%" }}>PO Number</th>
+                                <td>{grn.poNumber || "-"}</td>
+                                <th style={{ width: "20%" }}>Supplier</th>
+                                <td>{grn.supplierNameSnapshot || "-"}</td>
+                            </tr>
+                            <tr>
+                                <th>Supplier Invoice</th>
+                                <td>{grn.supplierInvoiceNo || "-"}</td>
+                                <th>Invoice Date</th>
+                                <td>{formatDate(grn.supplierInvoiceDate)}</td>
+                            </tr>
+                            <tr>
+                                <th>Payment Status</th>
+                                <td>{grn.paymentStatus || "-"}</td>
+                                <th>Due Date</th>
+                                <td>{formatDate(grn.dueDate)}</td>
+                            </tr>
+                        </tbody>
+                    </Table>
+
+                    <Table bordered hover size="sm">
+                        <thead className="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th className="text-end">Received Qty</th>
+                                <th>Unit</th>
+                                <th className="text-end">Unit Cost</th>
+                                <th className="text-end">Line Total</th>
+                                <th>Batches / Serials</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(!grn.items || grn.items.length === 0) ? (
+                                <tr><td colSpan="7" className="text-center text-muted">No GRN items found</td></tr>
+                            ) : grn.items.map((item, idx) => (
+                                <tr key={idx}>
+                                    <td>{item.productNameSnapshot || "-"}</td>
+                                    <td>{item.sku || "-"}</td>
+                                    <td className="text-end">{item.receivedQty || 0}</td>
+                                    <td>{item.unit || "-"}</td>
+                                    <td className="text-end">{item.unitCost ? money(item.unitCost) : "-"}</td>
+                                    <td className="text-end">{money(lineTotal(item))}</td>
+                                    <td>
+                                        {(item.batches || []).length === 0 ? "-" : (
+                                            <div className="d-flex flex-column gap-1">
+                                                {item.batches.map((batch, batchIndex) => (
+                                                    <span key={batchIndex}>
+                                                        {batch.batchNo || "N/A"} | Qty {batch.qty || 0} | Exp {formatDate(batch.expiryDate)}
+                                                        {(batch.serials || []).length > 0 ? ` | Serials: ${batch.serials.join(", ")}` : ""}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+
+                    <div className="d-flex justify-content-end mt-4">
+                        <Table borderless size="sm" style={{ width: 340 }}>
+                            <tbody>
+                                <tr>
+                                    <td className="text-end">Invoice Amount</td>
+                                    <td className="text-end">{money(grn.invoiceAmount)}</td>
+                                </tr>
+                                <tr>
+                                    <td className="text-end">VAT</td>
+                                    <td className="text-end">{money(grn.vatAmount)}</td>
+                                </tr>
+                                <tr>
+                                    <td className="text-end">Delivery Charge</td>
+                                    <td className="text-end">{money(grn.deliveryCharge)}</td>
+                                </tr>
+                                <tr className="border-top fw-bold">
+                                    <td className="text-end">Gross Total</td>
+                                    <td className="text-end">LKR {money(invoiceTotal)}</td>
+                                </tr>
+                                <tr>
+                                    <td className="text-end">Total Paid</td>
+                                    <td className="text-end">{money(grn.totalPaid)}</td>
+                                </tr>
+                            </tbody>
+                        </Table>
+                    </div>
+
+                    {(grn.paymentHistory || []).length > 0 && (
+                        <>
+                            <h5 className="mt-4 mb-2">Payment History</h5>
+                            <Table bordered size="sm">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Method</th>
+                                        <th>Reference</th>
+                                        <th>Added By</th>
+                                        <th className="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {grn.paymentHistory.map((payment, idx) => (
+                                        <tr key={idx}>
+                                            <td>{formatDate(payment.paymentDate)}</td>
+                                            <td>{payment.paymentMethod || payment.paymentAccountName || "-"}</td>
+                                            <td>{payment.reference || "-"}</td>
+                                            <td>{payment.addedBy || "-"}</td>
+                                            <td className="text-end">{money(payment.amount)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        </>
+                    )}
+                </div>
+            </Modal.Body>
+            <Modal.Footer className="no-print">
+                <Button variant="secondary" onClick={onClose}>Close</Button>
+                <Button variant="primary" onClick={handlePrint}>Print Report</Button>
+            </Modal.Footer>
+            <style>{`
+                @media print {
+                    @page { size: A4 portrait; margin: 10mm; }
+                    body * { visibility: hidden !important; }
+                    .grn-report-print, .grn-report-print * { visibility: visible !important; }
+                    .grn-report-print {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        padding: 0 !important;
+                    }
+                    .no-print, .no-print * { display: none !important; }
+                    .modal, .modal-dialog, .modal-content, .modal-body {
+                        position: static !important;
+                        transform: none !important;
+                        width: 100% !important;
+                        max-width: none !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                        box-shadow: none !important;
+                        border: 0 !important;
+                    }
+                }
+            `}</style>
+        </Modal>
     );
 }
 

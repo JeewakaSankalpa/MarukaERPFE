@@ -23,8 +23,6 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const [supplierInvoiceNo, setSupplierInvoiceNo] = useState("");
     const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
     const [creditPeriodDays, setCreditPeriodDays] = useState("");
-    const [initialPaymentAmount, setInitialPaymentAmount] = useState("");
-    const [initialPaymentRef, setInitialPaymentRef] = useState("");
     const [vatAmount, setVatAmount] = useState("");
     const [deliveryCharge, setDeliveryCharge] = useState("");
 
@@ -120,8 +118,6 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 supplierInvoiceNo,
                 supplierInvoiceDate: supplierInvoiceDate || undefined,
                 creditPeriodDays: creditPeriodDays ? Number(creditPeriodDays) : undefined,
-                initialPaymentAmount: initialPaymentAmount ? Number(initialPaymentAmount) : undefined,
-                initialPaymentRef,
                 vatAmount: vatAmount ? Number(vatAmount) : 0,
                 deliveryCharge: deliveryCharge ? Number(deliveryCharge) : 0
             };
@@ -133,7 +129,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             // Reset form
             setPoInput(""); setPoId(""); setPo(null); setRows([]);
             setSupplierInvoiceNo(""); setSupplierInvoiceDate("");
-            setCreditPeriodDays(""); setInitialPaymentAmount(""); setInitialPaymentRef("");
+            setCreditPeriodDays("");
 
             // Fetch created batches for QR display
             try {
@@ -228,17 +224,10 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                             <Form.Control type="number" value={creditPeriodDays} onChange={e => setCreditPeriodDays(e.target.value)} />
                         </Form.Group>
                     </Col>
-                    <Col md={3}>
-                        <Form.Group>
-                            <Form.Label>Initial Payment</Form.Label>
-                            <Form.Control type="number" value={initialPaymentAmount} onChange={e => setInitialPaymentAmount(e.target.value)} />
-                        </Form.Group>
-                    </Col>
-                    <Col md={3}>
-                        <Form.Group>
-                            <Form.Label>Payment Ref (Check No)</Form.Label>
-                            <Form.Control value={initialPaymentRef} onChange={e => setInitialPaymentRef(e.target.value)} />
-                        </Form.Group>
+                    <Col md={6}>
+                        <div className="text-muted small mt-4">
+                            Supplier payments can be added only after this GRN is posted, accepted, and verified from GRN History.
+                        </div>
                     </Col>
                     <Col md={3}>
                         <Form.Group>

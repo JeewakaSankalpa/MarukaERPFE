@@ -37,6 +37,21 @@ const LINE_TYPES = {
     MANUAL: "MANUAL",
 };
 
+const getErrorMessage = (error, fallback) => {
+    const data = error?.response?.data;
+
+    if (typeof data === "string" && data.trim()) return data;
+    if (data?.message) return data.message;
+    if (data?.error) return data.error;
+    if (Array.isArray(data?.errors) && data.errors.length) {
+        return data.errors.map(err => err?.message || err?.defaultMessage || String(err)).join(", ");
+    }
+    if (error?.code === "ECONNABORTED") return "Request timed out. Please try again.";
+    if (error?.message && !error?.response) return error.message;
+
+    return fallback;
+};
+
 const createManualRowId = () => `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const ESTIMATION_ROW_HEIGHT = 118;
 const ESTIMATION_TABLE_HEIGHT = 620;
@@ -187,7 +202,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 }
                 setIsRefDataLoaded(true);
             } catch (e) {
-                toast.error(e?.response?.data?.message || "Failed to load reference data");
+                toast.error(getErrorMessage(e, "Failed to load reference data"));
                 setLoading(false);
             } finally {
                 // Ensure initial load doesn't block if we manage loading here.
@@ -356,7 +371,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 // After loading data, mark as clean and allow dirty tracking
                 setTimeout(() => { setIsDirty(false); setIsInitialLoad(false); }, 300);
             } catch (e) {
-                toast.error(e?.response?.data?.message || "Failed to load estimation. Please try again.");
+                toast.error(getErrorMessage(e, "Failed to load estimation. Please try again."));
             } finally {
                 setLoading(false);
             }
@@ -874,7 +889,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setIsDirty(false); // Mark as clean after save
             return true;
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to save estimation");
+            toast.error(getErrorMessage(e, "Failed to save estimation"));
             return false;
         } finally {
             setIsSavingEstimation(false);
@@ -915,7 +930,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setShowApprovalModal(false); // Close modal on success
             toast.success("Submitted for approval!");
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to submit");
+            toast.error(getErrorMessage(e, "Failed to submit"));
         } finally {
             setSubmittingApproval(false);
         }
@@ -933,7 +948,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setApprovalPolicy(res.approvalPolicy || "ALL");
             toast.success("Estimation Approved! ✅");
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to approve");
+            toast.error(getErrorMessage(e, "Failed to approve"));
         } finally {
             setSubmittingApproveAction(false);
         }
@@ -960,7 +975,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setShowRejectModal(false);
             toast.error("Estimation Rejected.");
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to reject");
+            toast.error(getErrorMessage(e, "Failed to reject"));
         } finally {
             setSubmittingReject(false);
         }
@@ -980,7 +995,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setRevisionReason("");
             toast.success(`New Revision V${res.version} Created!`);
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to create revision");
+            toast.error(getErrorMessage(e, "Failed to create revision"));
         }
     };
 

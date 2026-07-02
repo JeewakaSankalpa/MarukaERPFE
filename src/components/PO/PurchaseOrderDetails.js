@@ -213,6 +213,7 @@ export default function PurchaseOrderDetails() {
     const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
     const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
     const purchaseForSources = getPurchaseForSources(po);
+    const canPrintPO = ["APPROVED", "FINALIZED"].includes(String(approvalStatus || "").toUpperCase());
 
     return (
         <Container className="py-4">
@@ -220,7 +221,14 @@ export default function PurchaseOrderDetails() {
                 <div className="d-flex gap-2 align-items-center">
                     <button type="button" className="btn btn-light me-1" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                     <Button variant="outline-secondary" onClick={() => navigate("/pos")}>&larr; Back to List</Button>
-                    <Button variant="info" onClick={() => navigate(`/pos/${id}/print`)}>Print View</Button>
+                    <Button
+                        variant="info"
+                        onClick={() => navigate(`/pos/${id}/print`)}
+                        disabled={!canPrintPO}
+                        title={!canPrintPO ? "Approve this Purchase Order before printing" : ""}
+                    >
+                        Print View
+                    </Button>
                 </div>
                 <div className="d-flex gap-2">
                     {isDraft && (

@@ -72,6 +72,7 @@ export const MenuConfig = [
             { id: "procurement.pending", title: "Pending Items", path: "/stores/pending-to-po" },
             { id: "procurement.grn", title: "Receive (GRN)", path: "/grn" },
             { id: "procurement.grn_history", title: "GRN History", path: "/grns" },
+            { id: "procurement.grn_accept", title: "Accept GRN for Payment", path: "#", hidden: true },
             { id: "procurement.transfers", title: "Transfers", path: "/transfers/inbox" },
         ]
     },
