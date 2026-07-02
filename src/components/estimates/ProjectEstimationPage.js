@@ -56,6 +56,7 @@ const createManualRowId = () => `manual-${Date.now()}-${Math.random().toString(3
 const ESTIMATION_ROW_HEIGHT = 118;
 const ESTIMATION_TABLE_HEIGHT = 620;
 const ESTIMATION_ROW_OVERSCAN = 8;
+const ESTIMATION_SAVE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const navigate = useNavigate();
@@ -108,6 +109,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     /* ------------ file upload state ------------ */
     const [quotationFile, setQuotationFile] = useState(null);
     const [existingFileUrl, setExistingFileUrl] = useState(null);
+    const [uploadProgress, setUploadProgress] = useState(null);
+    const quotationFileInputRef = useRef(null);
 
     /* ------------ new features state ------------ */
     const [globalSettings, setGlobalSettings] = useState({});
@@ -865,6 +868,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         if (!pid) { toast.warn("Select a project"); return false; }
         if (isSavingEstimation) return false;
         setIsSavingEstimation(true);
+        setUploadProgress(quotationFile ? 0 : null);
         try {
             const payload = buildPayload();
 
@@ -874,11 +878,23 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 formData.append("file", quotationFile);
             }
 
-            const res = await api.post(`/estimations/by-project/${pid}`, formData);
+            const res = await api.post(`/estimations/by-project/${pid}`, formData, {
+                timeout: ESTIMATION_SAVE_TIMEOUT_MS,
+                onUploadProgress: quotationFile
+                    ? (event) => {
+                        if (!event.total) return;
+                        setUploadProgress(Math.round((event.loaded * 100) / event.total));
+                    }
+                    : undefined,
+            });
 
             // Update existing file URL if response has it
             if (res.data?.quotationFileUrl) {
                 setExistingFileUrl(res.data.quotationFileUrl);
+                setQuotationFile(null);
+                if (quotationFileInputRef.current) {
+                    quotationFileInputRef.current.value = "";
+                }
             }
             // Update estimationId if it's a new estimation being saved for the first time
             if (!estimationId && res.data?.id) {
@@ -893,6 +909,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return false;
         } finally {
             setIsSavingEstimation(false);
+            setUploadProgress(null);
         }
     };
 
@@ -1129,11 +1146,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                 {/* File Upload */}
                                 <div className="d-flex flex-column align-items-end me-2">
                                     <Form.Control
+                                        ref={quotationFileInputRef}
                                         type="file"
                                         size="sm"
                                         style={{ width: 250 }}
                                         disabled={isLocked}
-                                        onChange={(e) => setQuotationFile(e.target.files[0])}
+                                        onChange={(e) => setQuotationFile(e.target.files[0] || null)}
                                     />
                                     {existingFileUrl && (
                                         <a href={existingFileUrl} target="_blank" rel="noopener noreferrer" className="small">
@@ -1744,7 +1762,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         <span className="visually-hidden">Saving estimation...</span>
                     </Spinner>
                     <h6 className="mb-1">Saving estimation</h6>
-                    <div className="text-muted small">Please wait while your changes are saved.</div>
+                    <div className="text-muted small">
+                        {uploadProgress == null
+                            ? "Please wait while your changes are saved."
+                            : uploadProgress < 100
+                                ? `Uploading quotation... ${uploadProgress}%`
+                                : "Upload complete. Finishing save..."}
+                    </div>
                 </Modal.Body>
             </Modal>
 
