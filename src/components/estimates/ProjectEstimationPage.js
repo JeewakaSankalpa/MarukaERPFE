@@ -126,6 +126,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
+    const [isSavingEstimation, setIsSavingEstimation] = useState(false);
     const [rejectComment, setRejectComment] = useState("");
     const [submittingApproval, setSubmittingApproval] = useState(false);
     const [submittingReject, setSubmittingReject] = useState(false);
@@ -847,6 +848,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const performSaveEstimation = async (silent = false) => {
         const pid = projectOpt?.value;
         if (!pid) { toast.warn("Select a project"); return false; }
+        if (isSavingEstimation) return false;
+        setIsSavingEstimation(true);
         try {
             const payload = buildPayload();
 
@@ -873,6 +876,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to save estimation");
             return false;
+        } finally {
+            setIsSavingEstimation(false);
         }
     };
 
@@ -1570,7 +1575,20 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             <div className="small text-muted">Tip: Columns are components; rename or add more as needed.</div>
                             <div className="d-flex gap-2">
                                 {!isLocked && <span className="text-muted small me-2">Editing enabled</span>}
-                                {!isLocked && <Button variant="primary" onClick={() => saveEstimation(false)}>Save</Button>}
+                                {!isLocked && (
+                                    <Button
+                                        variant="primary"
+                                        onClick={() => saveEstimation(false)}
+                                        disabled={isSavingEstimation}
+                                    >
+                                        {isSavingEstimation ? (
+                                            <>
+                                                <Spinner as="span" animation="border" size="sm" className="me-2" />
+                                                Saving...
+                                            </>
+                                        ) : "Save"}
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1697,6 +1715,24 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 </Modal.Footer>
             </Modal>
 
+            {/* Saving Progress Modal */}
+            <Modal
+                show={isSavingEstimation}
+                backdrop="static"
+                keyboard={false}
+                centered
+                size="sm"
+                contentClassName="border-0 shadow"
+            >
+                <Modal.Body className="text-center p-4">
+                    <Spinner animation="border" variant="primary" role="status" className="mb-3">
+                        <span className="visually-hidden">Saving estimation...</span>
+                    </Spinner>
+                    <h6 className="mb-1">Saving estimation</h6>
+                    <div className="text-muted small">Please wait while your changes are saved.</div>
+                </Modal.Body>
+            </Modal>
+
             {/* Save Before Submit Modal */}
             <Modal show={showSaveConfirmModal} onHide={() => setShowSaveConfirmModal(false)} centered>
                 <Modal.Header closeButton className="border-0 pb-0">
@@ -1739,8 +1775,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                 const saved = await saveEstimation(false);
                                 if (saved) setShowApprovalModal(true);
                             }}
+                            disabled={isSavingEstimation}
                         >
-                            Save &amp; Submit
+                            {isSavingEstimation ? "Saving..." : "Save & Submit"}
                         </Button>
                     </div>
                 </Modal.Footer>
