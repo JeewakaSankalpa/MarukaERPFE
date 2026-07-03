@@ -29,6 +29,16 @@ const StockAuditApprovalsPage = () => {
         fetchAudits();
     }, []);
 
+    const approvalErrorMessage = (err) => {
+        const data = err.response?.data;
+        if (!data) return "Failed to approve audit.";
+        if (typeof data === 'string') return data;
+        const rowMessage = data.rows?.find(row => row?.message)?.message;
+        if (rowMessage) return rowMessage;
+        if (data.message) return data.message;
+        return "Failed to approve audit.";
+    };
+
     const fetchAudits = async () => {
         try {
             setLoading(true);
@@ -78,7 +88,7 @@ const StockAuditApprovalsPage = () => {
             fetchAudits(); // Refresh list
         } catch (err) {
             console.error("Error approving audit:", err);
-            toast.error(err.response?.data || "Failed to approve audit.");
+            toast.error(approvalErrorMessage(err));
         } finally {
             setApproving(false);
             setApprovalProgress(null);
