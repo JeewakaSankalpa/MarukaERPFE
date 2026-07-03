@@ -964,10 +964,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const dirtyNames = Array.from(dirtyComponents);
         if (dirtyNames.length === 0) return true;
         if (dirtyNames.length >= (payload.components || []).length) return false;
-        const dirtyItems = (payload.components || [])
-            .filter(component => dirtyComponents.has(component.name))
-            .reduce((sum, component) => sum + ((component.items || []).length), 0);
-        return dirtyItems < ESTIMATION_BATCH_SAVE_THRESHOLD;
+        return true;
     };
 
     const performPatchSaveEstimation = async (pid, payload) => {
