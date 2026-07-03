@@ -23,6 +23,7 @@ const StockAuditApprovalsPage = () => {
     const [rejectDialog, setRejectDialog] = useState(null);
     const [approving, setApproving] = useState(false);
     const [rejecting, setRejecting] = useState(false);
+    const [approvalProgress, setApprovalProgress] = useState(null);
 
     useEffect(() => {
         fetchAudits();
@@ -46,9 +47,28 @@ const StockAuditApprovalsPage = () => {
         if (!approveDialog) return;
 
         setApproving(true);
+        setApprovalProgress(null);
         try {
             if (approveDialog.sourceType === 'IMPORT_SYNC') {
-                await api.post(`/admin/import/inventory/approve-audit/${approveDialog.id}`);
+                const totalRows = approveDialog.importRows?.length || 0;
+                const batchSize = 50;
+                let start = 0;
+                let completed = false;
+
+                while (!completed) {
+                    const response = await api.post(
+                        `/admin/import/inventory/approve-audit/${approveDialog.id}`,
+                        null,
+                        { params: { start, batchSize } }
+                    );
+                    const result = response.data || {};
+                    completed = result.completed === true || result.nextStart == null;
+                    start = result.nextStart ?? result.processedRows ?? totalRows;
+                    setApprovalProgress({
+                        processed: Math.min(start, totalRows || start),
+                        total: totalRows
+                    });
+                }
             } else {
                 // Backend handles approver via Principal (JWT)
                 await api.post(`/inventory/adjustments/audit/${approveDialog.id}/approve`);
@@ -61,6 +81,7 @@ const StockAuditApprovalsPage = () => {
             toast.error(err.response?.data || "Failed to approve audit.");
         } finally {
             setApproving(false);
+            setApprovalProgress(null);
         }
     };
 
@@ -160,8 +181,9 @@ const StockAuditApprovalsPage = () => {
                                 </div>
 
                                 {audit.sourceType === 'IMPORT_SYNC' ? (
-                                    <Table size="sm" responsive hover bordered>
-                                        <thead className="table-light">
+                                    <div style={{ maxHeight: '55vh', overflowY: 'auto' }} className="border rounded">
+                                    <Table size="sm" responsive hover bordered className="mb-0">
+                                        <thead className="table-light sticky-top" style={{ top: 0, zIndex: 1 }}>
                                             <tr>
                                                 <th>SKU</th>
                                                 <th>Item</th>
@@ -192,9 +214,11 @@ const StockAuditApprovalsPage = () => {
                                             ))}
                                         </tbody>
                                     </Table>
+                                    </div>
                                 ) : (
-                                <Table size="sm" responsive hover bordered>
-                                    <thead className="table-light">
+                                <div style={{ maxHeight: '55vh', overflowY: 'auto' }} className="border rounded">
+                                <Table size="sm" responsive hover bordered className="mb-0">
+                                    <thead className="table-light sticky-top" style={{ top: 0, zIndex: 1 }}>
                                         <tr>
                                             <th>Product</th>
                                             <th>Batch</th>
@@ -217,6 +241,7 @@ const StockAuditApprovalsPage = () => {
                                         ))}
                                     </tbody>
                                 </Table>
+                                </div>
                                 )}
 
                                 {audit.status === 'PENDING_APPROVAL' && (
@@ -244,6 +269,12 @@ const StockAuditApprovalsPage = () => {
                 <Modal.Body>
                     Are you sure you want to approve this stock audit? 
                     This will immediately update current stock levels in the system.
+                    {approving && approvalProgress && (
+                        <div className="mt-3 small text-secondary">
+                            Applying import rows {approvalProgress.processed}
+                            {approvalProgress.total ? ` of ${approvalProgress.total}` : ''}...
+                        </div>
+                    )}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setApproveDialog(null)}>Cancel</Button>
