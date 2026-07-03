@@ -31,6 +31,8 @@ const submitApprovalAPI = async (id, payload) => (await api.post(`/estimations/$
 const approveAPI = async (id, payload) => (await api.post(`/estimations/${id}/approve`, payload)).data;
 const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/reject`, payload)).data;
 const createRevisionAPI = async (id, payload) => (await api.post(`/estimations/${id}/revision`, payload)).data;
+const batchSaveEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}/batch`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const patchEstimationComponentsAPI = async (projectId, payload) => (await api.patch(`/estimations/by-project/${projectId}/components`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 
 const LINE_TYPES = {
     PRODUCT: "PRODUCT",
@@ -57,6 +59,8 @@ const ESTIMATION_ROW_HEIGHT = 118;
 const ESTIMATION_TABLE_HEIGHT = 620;
 const ESTIMATION_ROW_OVERSCAN = 8;
 const ESTIMATION_SAVE_TIMEOUT_MS = 5 * 60 * 1000;
+const ESTIMATION_BATCH_ITEM_LIMIT = 40;
+const ESTIMATION_BATCH_SAVE_THRESHOLD = 60;
 
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const navigate = useNavigate();
@@ -145,11 +149,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
     const [isSavingEstimation, setIsSavingEstimation] = useState(false);
+    const [saveProgressText, setSaveProgressText] = useState("");
     const [rejectComment, setRejectComment] = useState("");
     const [submittingApproval, setSubmittingApproval] = useState(false);
     const [submittingReject, setSubmittingReject] = useState(false);
     const [submittingApproveAction, setSubmittingApproveAction] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
+    const [dirtyComponents, setDirtyComponents] = useState(new Set());
+    const [forceFullSave, setForceFullSave] = useState(false);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [completenessIssues, setCompletenessIssues] = useState([]);
@@ -372,7 +379,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
 
                 // After loading data, mark as clean and allow dirty tracking
-                setTimeout(() => { setIsDirty(false); setIsInitialLoad(false); }, 300);
+                setTimeout(() => {
+                    setIsDirty(false);
+                    setDirtyComponents(new Set());
+                    setForceFullSave(false);
+                    setIsInitialLoad(false);
+                }, 300);
             } catch (e) {
                 toast.error(getErrorMessage(e, "Failed to load estimation. Please try again."));
             } finally {
@@ -451,6 +463,20 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return buildCompletenessIssues('customerProject', customer, item => item?.comName || 'Customer');
     };
 
+    const markComponentsDirty = (...names) => {
+        if (isInitialLoad) return;
+        setDirtyComponents(prev => {
+            const next = new Set(prev);
+            names.filter(Boolean).forEach(name => next.add(name));
+            return next;
+        });
+    };
+
+    const requireFullSave = () => {
+        if (isInitialLoad) return;
+        setForceFullSave(true);
+    };
+
     /* ------------ matrix ops ------------ */
     const addComponent = () => {
         const base = "Component";
@@ -469,6 +495,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const cfg = window._sysConfig || {};
         const defMargin = cfg["app.estimation.margin"] || "15";
         setCompMargin(s => ({ ...s, [name]: defMargin }));
+        requireFullSave();
     };
 
     // Called on every keystroke — allows empty string so user can freely delete all characters
@@ -498,6 +525,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return next;
         });
         if (oldName !== newName) {
+            requireFullSave();
             setRows(rs => rs.map(r => {
                 const q = { ...(r.quantities || {}) };
                 if (q[oldName] != null) {
@@ -539,6 +567,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const removeComponent = (idx) => {
         const name = components[idx];
+        requireFullSave();
         setComponents(cols => cols.filter((_, i) => i !== idx));
         setEditingComponentNames(s => Object.fromEntries(
             Object.entries(s)
@@ -556,7 +585,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         setCompDeliveryTaxable(s => { const x = { ...s }; delete x[name]; return x; });
     };
 
-    const addRow = () =>
+    const addRow = () => {
+        requireFullSave();
         setRows(rs => [...rs, {
             rowKey: `product-${Date.now()}-${rs.length}`,
             lineType: LINE_TYPES.PRODUCT,
@@ -569,8 +599,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             storeAvail: undefined,
             quantities: Object.fromEntries(components.map(c => [c, 0])),
         }]);
+    };
 
-    const addManualRow = () =>
+    const addManualRow = () => {
+        requireFullSave();
         setRows(rs => [...rs, {
             rowKey: createManualRowId(),
             lineType: LINE_TYPES.MANUAL,
@@ -583,17 +615,24 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             storeAvail: undefined,
             quantities: Object.fromEntries(components.map(c => [c, 0])),
         }]);
+    };
 
-    const removeRow = (i) => setRows(rs => rs.filter((_, idx) => idx !== i));
+    const removeRow = (i) => {
+        requireFullSave();
+        setRows(rs => rs.filter((_, idx) => idx !== i));
+    };
 
-    const setRowField = (i, key, value) =>
+    const setRowField = (i, key, value) => {
+        requireFullSave();
         setRows(rs => {
             const cp = [...rs];
             cp[i] = { ...cp[i], [key]: value };
             return cp;
         });
+    };
 
-    const setQty = (i, comp, val) =>
+    const setQty = (i, comp, val) => {
+        markComponentsDirty(comp);
         setRows(rs => {
             const cp = [...rs];
             const r = { ...cp[i] };
@@ -603,8 +642,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             cp[i] = r;
             return cp;
         });
+    };
 
     const onPickProduct = async (rowIndex, option) => {
+        requireFullSave();
         if (!option) {
             setRows(rs => {
                 const cp = [...rs];
@@ -863,46 +904,159 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         };
     };
 
+    const countPayloadItems = (payload) =>
+        (payload.components || []).reduce((sum, component) => sum + ((component.items || []).length), 0);
+
+    const createBatchPayloads = (payload) => {
+        const batches = [];
+        (payload.components || []).forEach(component => {
+            const items = component.items || [];
+            const baseComponent = { ...component, items: [] };
+            if (items.length === 0) {
+                batches.push([{ ...baseComponent, items: [] }]);
+                return;
+            }
+            for (let start = 0; start < items.length; start += ESTIMATION_BATCH_ITEM_LIMIT) {
+                batches.push([{ ...baseComponent, items: items.slice(start, start + ESTIMATION_BATCH_ITEM_LIMIT) }]);
+            }
+        });
+        return batches;
+    };
+
+    const uploadQuotationFileOnly = async (pid) => {
+        if (!quotationFile) return null;
+        const formData = new FormData();
+        formData.append("file", quotationFile);
+        return api.post(`/estimations/by-project/${pid}/quotation-file`, formData, {
+            timeout: ESTIMATION_SAVE_TIMEOUT_MS,
+            onUploadProgress: (event) => {
+                if (!event.total) return;
+                setUploadProgress(Math.round((event.loaded * 100) / event.total));
+            },
+        });
+    };
+
+    const performBatchSaveEstimation = async (pid, payload) => {
+        const batches = createBatchPayloads(payload);
+        const sessionId = `est-${pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const expectedItems = countPayloadItems(payload);
+        const header = { ...payload, components: [] };
+        let saved = null;
+
+        for (let index = 0; index < batches.length; index += 1) {
+            setSaveProgressText(`Saving batch ${index + 1} of ${batches.length}`);
+            saved = await batchSaveEstimationAPI(pid, {
+                sessionId,
+                batchNumber: index + 1,
+                totalBatches: batches.length,
+                expectedItems,
+                finalBatch: index === batches.length - 1,
+                estimation: header,
+                components: batches[index],
+            });
+        }
+
+        return { data: saved };
+    };
+
+    const canPatchExistingEstimation = (payload) => {
+        if (!estimationId || quotationFile || forceFullSave) return false;
+        const dirtyNames = Array.from(dirtyComponents);
+        if (dirtyNames.length === 0) return true;
+        if (dirtyNames.length >= (payload.components || []).length) return false;
+        const dirtyItems = (payload.components || [])
+            .filter(component => dirtyComponents.has(component.name))
+            .reduce((sum, component) => sum + ((component.items || []).length), 0);
+        return dirtyItems < ESTIMATION_BATCH_SAVE_THRESHOLD;
+    };
+
+    const performPatchSaveEstimation = async (pid, payload) => {
+        const dirtyNames = Array.from(dirtyComponents);
+        const selectedComponents = dirtyNames.length === 0
+            ? []
+            : (payload.components || []).filter(component => dirtyComponents.has(component.name));
+        setSaveProgressText(selectedComponents.length
+            ? `Updating ${selectedComponents.length} changed component${selectedComponents.length === 1 ? "" : "s"}`
+            : "Updating estimation details");
+        const saved = await patchEstimationComponentsAPI(pid, {
+            estimation: { ...payload, components: [] },
+            components: selectedComponents,
+        });
+        return { data: saved };
+    };
+
     const performSaveEstimation = async (silent = false) => {
         const pid = projectOpt?.value;
         if (!pid) { toast.warn("Select a project"); return false; }
         if (isSavingEstimation) return false;
         setIsSavingEstimation(true);
         setUploadProgress(quotationFile ? 0 : null);
+        setSaveProgressText("");
         try {
             const payload = buildPayload();
+            const itemCount = countPayloadItems(payload);
+            const shouldBatchSave = itemCount >= ESTIMATION_BATCH_SAVE_THRESHOLD;
+            let res;
+            let saveMode = "single";
+            let batchCount = 0;
 
-            const formData = new FormData();
-            formData.append("estimation", new Blob([JSON.stringify(payload)], { type: "application/json" }));
-            if (quotationFile) {
-                formData.append("file", quotationFile);
-            }
-
-            const res = await api.post(`/estimations/by-project/${pid}`, formData, {
-                timeout: ESTIMATION_SAVE_TIMEOUT_MS,
-                onUploadProgress: quotationFile
-                    ? (event) => {
-                        if (!event.total) return;
-                        setUploadProgress(Math.round((event.loaded * 100) / event.total));
+            if (canPatchExistingEstimation(payload)) {
+                saveMode = "patch";
+                res = await performPatchSaveEstimation(pid, payload);
+            } else if (shouldBatchSave) {
+                saveMode = "batch";
+                batchCount = createBatchPayloads(payload).length;
+                if (quotationFile) {
+                    setSaveProgressText("Uploading quotation file");
+                    const fileRes = await uploadQuotationFileOnly(pid);
+                    if (fileRes?.data?.quotationFileUrl) {
+                        setExistingFileUrl(fileRes.data.quotationFileUrl);
                     }
-                    : undefined,
-            });
+                    setUploadProgress(null);
+                }
+                res = await performBatchSaveEstimation(pid, payload);
+            } else {
+                const formData = new FormData();
+                formData.append("estimation", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+                if (quotationFile) {
+                    formData.append("file", quotationFile);
+                }
+
+                res = await api.post(`/estimations/by-project/${pid}`, formData, {
+                    timeout: ESTIMATION_SAVE_TIMEOUT_MS,
+                    onUploadProgress: quotationFile
+                        ? (event) => {
+                            if (!event.total) return;
+                            setUploadProgress(Math.round((event.loaded * 100) / event.total));
+                        }
+                        : undefined,
+                });
+            }
 
             // Update existing file URL if response has it
             if (res.data?.quotationFileUrl) {
                 setExistingFileUrl(res.data.quotationFileUrl);
+            }
+            if (quotationFile) {
                 setQuotationFile(null);
-                if (quotationFileInputRef.current) {
-                    quotationFileInputRef.current.value = "";
-                }
+                if (quotationFileInputRef.current) quotationFileInputRef.current.value = "";
             }
             // Update estimationId if it's a new estimation being saved for the first time
             if (!estimationId && res.data?.id) {
                 setEstimationId(res.data.id);
             }
 
-            if (!silent) toast.success("Estimation saved");
+            if (!silent) {
+                const message = saveMode === "batch"
+                    ? `Estimation saved in ${batchCount} batches`
+                    : saveMode === "patch"
+                        ? "Changed parts saved"
+                        : "Estimation saved";
+                toast.success(message);
+            }
             setIsDirty(false); // Mark as clean after save
+            setDirtyComponents(new Set());
+            setForceFullSave(false);
             return true;
         } catch (e) {
             toast.error(getErrorMessage(e, "Failed to save estimation"));
@@ -910,6 +1064,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         } finally {
             setIsSavingEstimation(false);
             setUploadProgress(null);
+            setSaveProgressText("");
         }
     };
 
@@ -1382,7 +1537,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     min="0" step="0.01"
                                                     value={compOverhead[cc.name] ?? ""}
                                                     disabled={isLocked}
-                                                    onChange={(e) => setCompOverhead(s => ({ ...s, [cc.name]: e.target.value }))}
+                                                    onChange={(e) => {
+                                                        markComponentsDirty(cc.name);
+                                                        setCompOverhead(s => ({ ...s, [cc.name]: e.target.value }));
+                                                    }}
                                                     placeholder="0"
                                                 />
                                             </td>
@@ -1393,7 +1551,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     min="0" step="0.01"
                                                     value={compMargin[cc.name] ?? ""}
                                                     disabled={isLocked}
-                                                    onChange={(e) => setCompMargin(s => ({ ...s, [cc.name]: e.target.value }))}
+                                                    onChange={(e) => {
+                                                        markComponentsDirty(cc.name);
+                                                        setCompMargin(s => ({ ...s, [cc.name]: e.target.value }));
+                                                    }}
                                                     placeholder="0"
                                                 />
                                             </td>
@@ -1405,7 +1566,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     min="0" step="0.01"
                                                     value={compDelivery[cc.name] ?? ""}
                                                     disabled={isLocked}
-                                                    onChange={(e) => setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }))}
+                                                    onChange={(e) => {
+                                                        markComponentsDirty(cc.name);
+                                                        setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }));
+                                                    }}
                                                     placeholder="0"
                                                 />
                                             </td>
@@ -1413,7 +1577,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <Form.Check
                                                     type="switch"
                                                     checked={!!compDeliveryTaxable[cc.name]}
-                                                    onChange={(e) => setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }))}
+                                                    onChange={(e) => {
+                                                        markComponentsDirty(cc.name);
+                                                        setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }));
+                                                    }}
                                                     disabled={!includeDelivery || isLocked}
                                                     label=""
                                                 />
@@ -1763,7 +1930,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     </Spinner>
                     <h6 className="mb-1">Saving estimation</h6>
                     <div className="text-muted small">
-                        {uploadProgress == null
+                        {saveProgressText
+                            ? saveProgressText
+                            : uploadProgress == null
                             ? "Please wait while your changes are saved."
                             : uploadProgress < 100
                                 ? `Uploading quotation... ${uploadProgress}%`
