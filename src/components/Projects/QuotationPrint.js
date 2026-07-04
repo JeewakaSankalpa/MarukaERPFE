@@ -49,6 +49,44 @@ const componentAmount = (component) =>
 const itemDescription = (item) =>
     item?.description || item?.productNameSnapshot || item?.productId || "";
 
+const normalizeLineText = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+const aggregateItems = (items = []) => {
+    const groups = new Map();
+
+    items.forEach((item, index) => {
+        const description = itemDescription(item);
+        const key = item?.productId
+            ? `product:${item.productId}`
+            : `manual:${normalizeLineText(description)}:${normalizeLineText(item?.unit)}:${Number(item?.estUnitCost || 0)}`;
+        const quantity = Number(item?.quantity || 0);
+        const unitCost = Number(item?.estUnitCost || 0);
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                ...item,
+                key: `${key}-${index}`,
+                description,
+                quantity,
+                estUnitCost: unitCost,
+                __quantity: quantity,
+                __extendedCost: quantity * unitCost,
+            });
+            return;
+        }
+
+        const group = groups.get(key);
+        group.quantity += quantity;
+        group.__quantity += quantity;
+        group.__extendedCost += quantity * unitCost;
+        if (group.__quantity > 0) {
+            group.estUnitCost = group.__extendedCost / group.__quantity;
+        }
+    });
+
+    return Array.from(groups.values()).map(({ __quantity, __extendedCost, ...item }) => item);
+};
+
 const QuotationPrint = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
@@ -250,8 +288,8 @@ const QuotationPrint = () => {
                                         {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && <td />}
                                         <td className="text-end fw-bold">{money(componentAmount(comp))}</td>
                                     </tr>
-                                    {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && comp.items?.map((item, i) => (
-                                        <tr key={`${idx}-${i}`}>
+                                    {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && aggregateItems(comp.items).map((item, i) => (
+                                        <tr key={item.key || `${idx}-${i}`}>
                                             <td className="ps-4">{itemDescription(item)}</td>
                                             {printFormat === PRINT_FORMATS.ALL && (
                                                 <>

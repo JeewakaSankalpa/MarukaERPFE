@@ -62,6 +62,57 @@ const ESTIMATION_SAVE_TIMEOUT_MS = 5 * 60 * 1000;
 const ESTIMATION_BATCH_ITEM_LIMIT = 40;
 const ESTIMATION_BATCH_SAVE_THRESHOLD = 60;
 
+const normalizeLineText = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+const duplicateRowKey = (row) => {
+    if (row?.productId) return `product:${row.productId}`;
+    if (row?.lineType === LINE_TYPES.MANUAL) {
+        return `manual:${normalizeLineText(row.description)}:${normalizeLineText(row.unit)}:${Number(row.estUnitCost || 0)}`;
+    }
+    return row?.rowKey || "";
+};
+
+const mergeRowsByItem = (inputRows = [], componentNames = []) => {
+    const groups = new Map();
+
+    inputRows.forEach((row, index) => {
+        const key = duplicateRowKey(row) || `row:${index}`;
+        const quantities = { ...Object.fromEntries(componentNames.map(c => [c, 0])), ...(row.quantities || {}) };
+        const rowQuantity = componentNames.reduce((sum, c) => sum + Number(quantities[c] || 0), 0);
+        const unitCost = Number(row.estUnitCost || 0);
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                ...row,
+                rowKey: row.rowKey || key,
+                quantities,
+                __quantity: rowQuantity,
+                __extendedCost: rowQuantity * unitCost,
+            });
+            return;
+        }
+
+        const existing = groups.get(key);
+        componentNames.forEach((c) => {
+            existing.quantities[c] = Number(existing.quantities[c] || 0) + Number(quantities[c] || 0);
+        });
+
+        existing.__quantity += rowQuantity;
+        existing.__extendedCost += rowQuantity * unitCost;
+        if (!existing.productOption && row.productOption) existing.productOption = row.productOption;
+        if (!existing.description && row.description) existing.description = row.description;
+        if (!existing.unit && row.unit) existing.unit = row.unit;
+        if ((existing.estUnitCost === "" || existing.estUnitCost == null) && row.estUnitCost != null) {
+            existing.estUnitCost = row.estUnitCost;
+        }
+        if (existing.__quantity > 0) {
+            existing.estUnitCost = String(existing.__extendedCost / existing.__quantity);
+        }
+    });
+
+    return Array.from(groups.values()).map(({ __quantity, __extendedCost, ...row }) => row);
+};
+
 export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const navigate = useNavigate();
     const location = useLocation(); // Hook for URL query params
@@ -686,7 +737,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 next.estUnitCost = String(suggested);
             }
             cp[rowIndex] = next;
-            return cp;
+            return mergeRowsByItem(cp, components);
         });
 
         // live availability (optional)
@@ -741,9 +792,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         includeDelivery, includeVat, includeTax, discountPercent, customNote, terms]);
 
     /* ------------ per-component + totals ------------ */
+    const mergedRows = useMemo(() => mergeRowsByItem(rows, components), [rows, components]);
+
     const compCalcs = useMemo(() => {
         return components.map((cname) => {
-            const subtotal = rows.reduce(
+            const subtotal = mergedRows.reduce(
                 (acc, r) => acc + Number(r.estUnitCost || 0) * Number((r.quantities || {})[cname] || 0),
                 0
             );
@@ -779,7 +832,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 lineTotalBeforeTax: afterMargin + (includeDelivery ? del : 0),
             };
         });
-    }, [components, rows, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery]);
+    }, [components, mergedRows, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery]);
 
     const totals = useMemo(() => {
         const taxableBaseRaw = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
@@ -838,9 +891,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     };
 
     const buildPayload = () => {
+        const rowsForPayload = mergeRowsByItem(rows, components);
         const comps = components.map(cname => {
             const items = [];
-            rows.forEach(r => {
+            rowsForPayload.forEach(r => {
                 const qtyVal = (r.quantities || {})[cname];
                 const qty = Number(qtyVal || 0);
                 const isManual = r.lineType === LINE_TYPES.MANUAL;

@@ -93,6 +93,78 @@ const cleanDescription = (description) => {
     return parts.length > 1 ? parts.slice(1).join(":").trim() || value : value;
 };
 
+const normalizeLineText = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+const aggregateLineItems = (items = [], options = {}) => {
+    const groups = new Map();
+    const getDescription = options.getDescription || ((item) => item.description || item.productNameSnapshot || item.productId || "Item");
+    const getUnitPrice = options.getUnitPrice || ((item) => Number(item.unitPrice ?? item.estUnitCost ?? 0));
+    const getTotal = options.getTotal || ((item) => Number(item.total ?? (Number(item.quantity || 0) * getUnitPrice(item))));
+    const getKey = options.getKey || ((item) => item.productId
+        ? `product:${item.productId}`
+        : `manual:${normalizeLineText(getDescription(item))}:${Number(getUnitPrice(item) || 0)}`);
+
+    items.forEach((item, index) => {
+        const description = getDescription(item);
+        const quantity = Number(item.quantity || 0);
+        const total = getTotal(item);
+        const key = getKey(item);
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                ...item,
+                key: `${key}-${index}`,
+                description,
+                quantity,
+                unitPrice: quantity > 0 ? total / quantity : Number(getUnitPrice(item) || 0),
+                total,
+            });
+            return;
+        }
+
+        const group = groups.get(key);
+        group.quantity += quantity;
+        group.total += total;
+        if (group.quantity > 0) {
+            group.unitPrice = group.total / group.quantity;
+        }
+    });
+
+    return Array.from(groups.values());
+};
+
+const titleCase = (value) => value
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const integerToWords = (value) => {
+    const ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+    const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+    if (value === 0) return "zero";
+    if (value < 20) return ones[value];
+    if (value < 100) return `${tens[Math.floor(value / 10)]}${value % 10 ? ` ${ones[value % 10]}` : ""}`;
+    if (value < 1000) {
+        return `${ones[Math.floor(value / 100)]} hundred${value % 100 ? ` ${integerToWords(value % 100)}` : ""}`;
+    }
+    if (value < 100000) {
+        return `${integerToWords(Math.floor(value / 1000))} thousand${value % 1000 ? ` ${integerToWords(value % 1000)}` : ""}`;
+    }
+    if (value < 10000000) {
+        return `${integerToWords(Math.floor(value / 100000))} lakh${value % 100000 ? ` ${integerToWords(value % 100000)}` : ""}`;
+    }
+    return `${integerToWords(Math.floor(value / 10000000))} crore${value % 10000000 ? ` ${integerToWords(value % 10000000)}` : ""}`;
+};
+
+const amountToWords = (value) => {
+    const amount = Number(value || 0);
+    const rupees = Math.floor(amount);
+    const cents = Math.round((amount - rupees) * 100);
+    const rupeeText = `${titleCase(integerToWords(rupees))} Rupees`;
+    return cents ? `${rupeeText} And Cents ${titleCase(integerToWords(cents))} Only` : `${rupeeText} Only`;
+};
+
 const getCustomerLines = (customer) => {
     if (!customer) return ["N/A"];
     return [
@@ -103,6 +175,12 @@ const getCustomerLines = (customer) => {
         customer.vatNumber ? `VAT No. ${customer.vatNumber}` : null,
     ].filter(Boolean);
 };
+
+const getCompanyAddress = (customer) =>
+    splitLines(customer?.comAddress || customer?.pAddr || customer?.address).join(", ");
+
+const getCustomerPhone = (customer) =>
+    customer?.comContactNumber || customer?.pContact || customer?.contactNo || "";
 
 const buildDisplayInvoiceNumber = (rawNumber, docType) => {
     const prefix = docType === DOC_TYPES.PROFORMA
@@ -209,12 +287,16 @@ const InvoiceView = () => {
                 quantity: 1,
                 unitPrice: componentAmount(comp),
                 total: componentAmount(comp),
-                items: (comp.items || []).map((item, idx) => ({
-                    key: `${comp.name}-${idx}`,
-                    description: item.productNameSnapshot || item.productId,
+                items: aggregateLineItems(comp.items || [], {
+                    getDescription: (item) => item.productNameSnapshot || item.description || item.productId,
+                    getUnitPrice: (item) => Number(item.estUnitCost || 0),
+                    getTotal: (item) => Number(item.quantity || 0) * Number(item.estUnitCost || 0),
+                }).map((item, idx) => ({
+                    key: item.key || `${comp.name}-${idx}`,
+                    description: item.description,
                     quantity: item.quantity,
-                    unitPrice: Number(item.estUnitCost || 0),
-                    total: Number(item.quantity || 0) * Number(item.estUnitCost || 0),
+                    unitPrice: Number(item.unitPrice || 0),
+                    total: Number(item.total || 0),
                 })),
             }));
         }
@@ -225,9 +307,14 @@ const InvoiceView = () => {
     const invoiceRows = useMemo(() => {
         if (isProforma) return groupedItems;
         if (invoice?.items?.length) {
-            return invoice.items.map((item, idx) => ({
-                key: `invoice-item-${idx}`,
-                description: cleanDescription(item.description),
+            return aggregateLineItems(invoice.items, {
+                getDescription: (item) => cleanDescription(item.description),
+                getUnitPrice: (item) => Number(item.unitPrice || 0),
+                getTotal: (item) => Number(item.total || 0),
+                getKey: (item) => `invoice:${normalizeLineText(cleanDescription(item.description))}`,
+            }).map((item, idx) => ({
+                key: item.key || `invoice-item-${idx}`,
+                description: item.description,
                 quantity: item.quantity,
                 unitPrice: Number(item.unitPrice || 0),
                 total: Number(item.total || 0),
@@ -314,8 +401,10 @@ const InvoiceView = () => {
                     @page { size: A4 portrait; margin: 12mm; }
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     body * { visibility: hidden; }
-                    .invoice-sheet, .invoice-sheet * { visibility: visible; }
-                    .invoice-sheet { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
+                    .invoice-sheet, .invoice-sheet *,
+                    .tax-invoice-sheet, .tax-invoice-sheet * { visibility: visible; }
+                    .invoice-sheet,
+                    .tax-invoice-sheet { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
                     .no-print { display: none !important; }
                 }
                 .invoice-sheet {
@@ -452,6 +541,134 @@ const InvoiceView = () => {
                 }
                 .acceptance { display: grid; grid-template-columns: 1fr 1fr; gap: 86px; margin-top: 72px; max-width: 560px; }
                 .acceptance div { padding-top: 5px; }
+                .tax-invoice-sheet {
+                    max-width: 820px;
+                    min-height: 1040px;
+                    margin: 0 auto;
+                    padding: 48px 54px 38px;
+                    background: #fff;
+                    color: #222;
+                    font-family: "Times New Roman", Times, serif;
+                    font-size: 17px;
+                    line-height: 1.25;
+                    box-shadow: 0 0 0 1px #e5e7eb, 0 14px 35px rgba(15, 23, 42, 0.08);
+                    box-sizing: border-box;
+                    overflow-wrap: anywhere;
+                }
+                .tax-invoice-sheet *,
+                .tax-invoice-sheet *::before,
+                .tax-invoice-sheet *::after {
+                    box-sizing: border-box;
+                }
+                .tax-title {
+                    width: max-content;
+                    max-width: 100%;
+                    margin: 0 auto 18px;
+                    padding: 8px 42px;
+                    border: 3px solid #222;
+                    font-weight: 700;
+                    font-size: 20px;
+                    text-align: center;
+                }
+                .tax-two-col {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                    gap: 18px 20px;
+                    margin-bottom: 12px;
+                }
+                .tax-box {
+                    border: 2px solid #222;
+                    min-height: 42px;
+                    padding: 8px 12px;
+                    min-width: 0;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+                .tax-party-box {
+                    min-height: 176px;
+                    display: grid;
+                    grid-template-rows: auto auto 1fr auto;
+                    row-gap: 5px;
+                }
+                .tax-full-box {
+                    border: 2px solid #222;
+                    min-height: 82px;
+                    padding: 8px 12px;
+                    margin-bottom: 24px;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+                .tax-label { font-weight: 400; }
+                .tax-value { font-weight: 400; }
+                .tax-items {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    margin-top: 6px;
+                }
+                .tax-items th,
+                .tax-items td {
+                    border: 1.6px solid #222;
+                    padding: 7px 6px;
+                    vertical-align: top;
+                    max-width: 0;
+                    overflow: hidden;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+                .tax-items th {
+                    height: 82px;
+                    text-align: center;
+                    vertical-align: middle;
+                    font-weight: 700;
+                }
+                .tax-items td { height: 42px; }
+                .tax-items .ref { width: 12%; }
+                .tax-items .desc { width: 36%; }
+                .tax-items .qty { width: 10%; text-align: right; }
+                .tax-items .unit { width: 19%; text-align: right; }
+                .tax-items .amount { width: 23%; text-align: right; }
+                .tax-items .qty,
+                .tax-items .unit,
+                .tax-items .amount {
+                    font-variant-numeric: tabular-nums;
+                    line-height: 1.15;
+                    white-space: normal;
+                }
+                .tax-summary-label { text-align: left; }
+                .tax-words-box {
+                    border: 1.6px solid #222;
+                    border-bottom: 0;
+                    min-height: 40px;
+                    padding: 8px;
+                    margin-top: 28px;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+                .tax-payment-box {
+                    border: 1.6px solid #222;
+                    min-height: 40px;
+                    padding: 8px;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                }
+                @media print {
+                    .tax-invoice-sheet {
+                        max-width: none;
+                        min-height: 0;
+                        padding: 0;
+                    }
+                    .tax-items th,
+                    .tax-items td {
+                        padding-left: 5px;
+                        padding-right: 5px;
+                    }
+                    .tax-items .qty,
+                    .tax-items .unit,
+                    .tax-items .amount {
+                        font-size: 15px;
+                    }
+                }
             `}</style>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="no-print" />
@@ -486,6 +703,97 @@ const InvoiceView = () => {
                 </div>
             </div>
 
+            {isTaxInvoice ? (
+                <section className="tax-invoice-sheet">
+                    <div className="tax-title">Tax Invoice</div>
+
+                    <div className="tax-two-col">
+                        <div className="tax-box">
+                            <span className="tax-label">Date of Invoice: </span>
+                            <span className="tax-value">{formatDate(invoice.issuedDate)}</span>
+                        </div>
+                        <div className="tax-box">
+                            <span className="tax-label">Tax Invoice No.: </span>
+                            <span className="tax-value">{invoiceNo}</span>
+                        </div>
+                        <div className="tax-box tax-party-box">
+                            <div><span className="tax-label">Supplier's TIN: </span><span>{company.vatNo || "-"}</span></div>
+                            <div><span className="tax-label">Supplier's Name: </span><span>{company.name}</span></div>
+                            <div><span className="tax-label">Address: </span><span>{company.addressLines.join(", ")}</span></div>
+                            <div><span className="tax-label">Telephone No: </span><span>{company.phone || "-"}</span></div>
+                        </div>
+                        <div className="tax-box tax-party-box">
+                            <div><span className="tax-label">Purchaser's TIN: </span><span>{customer?.tin || customer?.taxId || customer?.vatNumber || "-"}</span></div>
+                            <div><span className="tax-label">Purchaser's Name: </span><span>{customer?.comName || customer?.name || "N/A"}</span></div>
+                            <div><span className="tax-label">Address: </span><span>{getCompanyAddress(customer) || "-"}</span></div>
+                            <div><span className="tax-label">Telephone No: </span><span>{getCustomerPhone(customer) || "-"}</span></div>
+                        </div>
+                        <div className="tax-box">
+                            <span className="tax-label">Date of Delivery: </span>
+                            <span>{formatDate(project?.deliveryDate || project?.endDate || invoice.issuedDate)}</span>
+                        </div>
+                        <div className="tax-box">
+                            <span className="tax-label">Place of Supply: </span>
+                            <span>{settings["app.company.placeOfSupply"] || settings["app.company.city"] || "Sri Lanka"}</span>
+                        </div>
+                    </div>
+
+                    <div className="tax-full-box">
+                        <span className="tax-label">Additional Information if any: </span>
+                        <span>{invoice.notes || (invoice.poNumber ? `PO No: ${invoice.poNumber}` : "")}</span>
+                    </div>
+
+                    <table className="tax-items">
+                        <thead>
+                            <tr>
+                                <th className="ref">Reference</th>
+                                <th className="desc">Description of Goods or Services</th>
+                                <th className="qty">Quantity</th>
+                                <th className="unit">Unit Price</th>
+                                <th className="amount">Amount<br />Excluding VAT<br />(Rs.)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...invoiceRows, ...Array.from({ length: Math.max(0, 4 - invoiceRows.length) }, (_, index) => ({
+                                key: `blank-${index}`,
+                                description: "",
+                                quantity: "",
+                                unitPrice: "",
+                                total: "",
+                            }))].map((item, index) => (
+                                <tr key={item.key || `${item.description}-${index}`}>
+                                    <td className="ref">{item.description ? inquiryRef : ""}</td>
+                                    <td>{item.description}</td>
+                                    <td className="qty">{item.quantity || ""}</td>
+                                    <td className="unit">{item.description ? money(item.unitPrice) : ""}</td>
+                                    <td className="amount">{item.description ? money(item.total) : ""}</td>
+                                </tr>
+                            ))}
+                            <tr>
+                                <td className="tax-summary-label" colSpan="4">Total Value of Supply:</td>
+                                <td className="amount">{money(subtotal)}</td>
+                            </tr>
+                            <tr>
+                                <td className="tax-summary-label" colSpan="4">VAT Amount (Total Value of Supply @ 18%)</td>
+                                <td className="amount">{money(taxTotal)}</td>
+                            </tr>
+                            <tr>
+                                <td className="tax-summary-label" colSpan="4">Total Amount including VAT:</td>
+                                <td className="amount">{money(documentTotal)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div className="tax-words-box">
+                        <span>Total Amount in words: </span>
+                        <span>{amountToWords(documentTotal)}</span>
+                    </div>
+                    <div className="tax-payment-box">
+                        <span>Mode of Payment: </span>
+                        <span>{payments[0]?.paymentMethod || (totalReceived > 0 ? "Part Payment Received" : "Credit")}</span>
+                    </div>
+                </section>
+            ) : (
             <section className="invoice-sheet">
                 <header className="invoice-header">
                     <div className="invoice-company">
@@ -615,6 +923,7 @@ const InvoiceView = () => {
                 )}
 
             </section>
+            )}
         </div>
     );
 };
