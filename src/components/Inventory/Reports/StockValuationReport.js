@@ -1,30 +1,37 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import api from "../../../api/api";
 import { Button, Spinner, Table } from "react-bootstrap";
 import ReportLayout from "../../ReusableComponents/ReportLayout";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Printer, RefreshCw } from "lucide-react";
 
 const StockValuationReport = () => {
     const [loading, setLoading] = useState(false);
     const [stock, setStock] = useState([]);
+    const [lastUpdated, setLastUpdated] = useState(null);
     const navigate = useNavigate();
+
+    const fetchStock = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) setLoading(true);
+        try {
+            const res = await api.get("/reports/stock", {
+                params: { _: Date.now() }
+            });
+            setStock(res.data || []);
+            setLastUpdated(new Date());
+        } catch (error) {
+            if (!silent) toast.error("Failed to load stock data");
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         fetchStock();
-    }, []);
-
-    const fetchStock = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get("/reports/stock");
-            setStock(res.data || []);
-        } catch (error) {
-            toast.error("Failed to load stock data");
-        } finally {
-            setLoading(false);
-        }
-    };
+        const intervalId = setInterval(() => fetchStock({ silent: true }), 60000);
+        return () => clearInterval(intervalId);
+    }, [fetchStock]);
 
     const handlePrint = () => {
         window.print();
@@ -48,9 +55,23 @@ const StockValuationReport = () => {
     return (
         <div className="p-4 bg-white min-vh-100">
             {/* Controls */}
-            <div className="d-flex justify-content-between mb-3 no-print">
+            <div className="d-flex justify-content-between align-items-center gap-3 mb-3 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
-                <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
+                <div className="d-flex align-items-center gap-2">
+                    {lastUpdated && (
+                        <small className="text-muted">
+                            Updated {lastUpdated.toLocaleTimeString()}
+                        </small>
+                    )}
+                    <Button variant="outline-primary" onClick={() => fetchStock()} disabled={loading}>
+                        <RefreshCw size={16} className="me-2" />
+                        Refresh
+                    </Button>
+                    <Button variant="primary" onClick={handlePrint}>
+                        <Printer size={16} className="me-2" />
+                        Print / Save PDF
+                    </Button>
+                </div>
             </div>
 
             {loading ? <div className="text-center p-5"><Spinner animation="border" /></div> : (

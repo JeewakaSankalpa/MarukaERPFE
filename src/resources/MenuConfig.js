@@ -73,6 +73,8 @@ export const MenuConfig = [
             { id: "procurement.grn", title: "Receive (GRN)", path: "/grn" },
             { id: "procurement.grn_history", title: "GRN History", path: "/grns" },
             { id: "procurement.grn_accept", title: "Accept GRN for Payment", path: "#", hidden: true },
+            { id: "procurement.grn_payment_verify", title: "Verify GRN Payments", path: "#", hidden: true },
+            { id: "procurement.grn_print_approve", title: "Approve GRN Printing", path: "#", hidden: true },
             { id: "procurement.transfers", title: "Transfers", path: "/transfers/inbox" },
         ]
     },

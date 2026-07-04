@@ -12,6 +12,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 const listGRNs = async ({ q, page = 0, size = 10, paymentStatus }) => (await api.get(`/grns?${qp({ q, page, size, sort: "createdAt,desc", paymentStatus: paymentStatus || undefined })}`)).data;
 const acceptGRN = async (id) => (await api.patch(`/grns/${id}/accept`)).data;
+const approveGRNPrint = async (id) => (await api.patch(`/grns/${id}/approve-print`)).data;
 
 export default function GRNListView() {
     const navigate = useNavigate();
@@ -26,7 +27,15 @@ export default function GRNListView() {
     const [acceptingId, setAcceptingId] = useState(null);
     const userRole = (localStorage.getItem("role") || "").toUpperCase();
     const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
-    const canAcceptGRN = userRole === "ADMIN" || userModules.includes("procurement.grn_accept");
+    const projectRoles = JSON.parse(localStorage.getItem("projectRoles") || "[]");
+    const [workflow, setWorkflow] = useState({});
+    const hasWorkflowRole = (roles = []) => {
+        const allowed = new Set((roles || []).map(r => String(r || "").trim().toUpperCase()));
+        return projectRoles.some(r => allowed.has(String(r || "").trim().toUpperCase()));
+    };
+    const canAcceptGRN = userRole === "ADMIN" || userModules.includes("procurement.grn_accept") || hasWorkflowRole(workflow.grnAcceptanceRoles);
+    const canVerifyGRNPayment = userRole === "ADMIN" || userModules.includes("procurement.grn_payment_verify") || hasWorkflowRole(workflow.grnPaymentVerifierRoles);
+    const canApproveGRNPrint = userRole === "ADMIN" || userModules.includes("procurement.grn_print_approve") || hasWorkflowRole(workflow.grnPrintApproverRoles);
 
     const load = async () => {
         try { setData(await listGRNs({ q, page, paymentStatus: statusFilter })); }
@@ -35,6 +44,9 @@ export default function GRNListView() {
     useEffect(() => { load(); }, [page]);
     useEffect(() => { setPage(0); }, [statusFilter]);
     useEffect(() => { load(); }, [statusFilter]);
+    useEffect(() => {
+        api.get("/workflow").then(res => setWorkflow(res.data || {})).catch(() => setWorkflow({}));
+    }, []);
 
     const handleAccept = async (grn) => {
         if (!window.confirm(`Accept ${grn.grnNumber} for supplier payment?`)) return;
@@ -138,10 +150,10 @@ export default function GRNListView() {
                 </div>
             </div>
 
-            {selectedGRN && <GRNPaymentModal grn={selectedGRN} onClose={() => { setSelectedGRN(null); load(); }} />}
+            {selectedGRN && <GRNPaymentModal grn={selectedGRN} canVerifyPayment={canVerifyGRNPayment} onClose={() => { setSelectedGRN(null); load(); }} />}
             {selectedGRNReturn && <GRNReturnModal grn={selectedGRNReturn} onClose={() => { setSelectedGRNReturn(null); load(); }} />}
             {selectedGRNItems && <ItemsModal grn={selectedGRNItems} onClose={() => setSelectedGRNItems(null)} />}
-            {selectedGRNReport && <GRNReportModal grn={selectedGRNReport} onClose={() => setSelectedGRNReport(null)} />}
+            {selectedGRNReport && <GRNReportModal grn={selectedGRNReport} canApprovePrint={canApproveGRNPrint} onChanged={(updated) => { setSelectedGRNReport(updated); load(); }} onClose={() => setSelectedGRNReport(null)} />}
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
@@ -162,11 +174,30 @@ function lineTotal(item) {
     return (item?.batches || []).reduce((sum, batch) => sum + (Number(batch.qty || 0) * Number(batch.unitCost || 0)), 0);
 }
 
-function GRNReportModal({ grn, onClose }) {
+function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
     const invoiceTotal = Number(grn.invoiceAmount || 0) + Number(grn.vatAmount || 0) + Number(grn.deliveryCharge || 0);
+    const [approvingPrint, setApprovingPrint] = useState(false);
+    const printApproved = Boolean(grn.printApprovedAt);
 
     const handlePrint = () => {
+        if (!printApproved) {
+            toast.warn("This GRN report must be approved for printing first.");
+            return;
+        }
         setTimeout(() => window.print(), 50);
+    };
+
+    const handleApprovePrint = async () => {
+        setApprovingPrint(true);
+        try {
+            const updated = await approveGRNPrint(grn.id);
+            toast.success("GRN report approved for printing");
+            onChanged?.(updated);
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to approve GRN printing");
+        } finally {
+            setApprovingPrint(false);
+        }
     };
 
     return (
@@ -185,6 +216,7 @@ function GRNReportModal({ grn, onClose }) {
                             <h4 className="fw-bold mb-1">{grn.grnNumber}</h4>
                             <div>Created: {formatDate(grn.createdAt)}</div>
                             <div>Status: {grn.status || "-"}</div>
+                            <div>Print Approval: {printApproved ? `Approved by ${grn.printApprovedBy || "-"}` : "Pending"}</div>
                         </div>
                     </div>
 
@@ -288,6 +320,7 @@ function GRNReportModal({ grn, onClose }) {
                                         <th>Method</th>
                                         <th>Reference</th>
                                         <th>Added By</th>
+                                        <th>Status</th>
                                         <th className="text-end">Amount</th>
                                     </tr>
                                 </thead>
@@ -298,6 +331,7 @@ function GRNReportModal({ grn, onClose }) {
                                             <td>{payment.paymentMethod || payment.paymentAccountName || "-"}</td>
                                             <td>{payment.reference || "-"}</td>
                                             <td>{payment.addedBy || "-"}</td>
+                                            <td>{payment.verified ? `Verified by ${payment.verifiedBy || "-"}` : "Pending verification"}</td>
                                             <td className="text-end">{money(payment.amount)}</td>
                                         </tr>
                                     ))}
@@ -309,7 +343,12 @@ function GRNReportModal({ grn, onClose }) {
             </Modal.Body>
             <Modal.Footer className="no-print">
                 <Button variant="secondary" onClick={onClose}>Close</Button>
-                <Button variant="primary" onClick={handlePrint}>Print Report</Button>
+                {!printApproved && canApprovePrint && (
+                    <Button variant="outline-success" onClick={handleApprovePrint} disabled={approvingPrint || grn.status !== "ACCEPTED"}>
+                        {approvingPrint ? "Approving..." : "Approve Print"}
+                    </Button>
+                )}
+                <Button variant="primary" onClick={handlePrint} disabled={!printApproved}>Print Report</Button>
             </Modal.Footer>
             <style>{`
                 @media print {

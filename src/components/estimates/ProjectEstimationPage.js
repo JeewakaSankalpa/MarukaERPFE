@@ -72,6 +72,16 @@ const duplicateRowKey = (row) => {
     return row?.rowKey || "";
 };
 
+const getRowRenderKey = (row, index) => row?.rowKey || row?.productId || `row-${index}`;
+
+const isEmptyManualRow = (row) => {
+    if (row?.lineType !== LINE_TYPES.MANUAL) return false;
+    const hasDescription = String(row.description || "").trim().length > 0;
+    const hasRate = row.estUnitCost !== "" && row.estUnitCost != null && Number(row.estUnitCost) > 0;
+    const hasQuantity = Object.values(row.quantities || {}).some(qty => Number(qty || 0) > 0);
+    return !hasDescription && !hasRate && !hasQuantity;
+};
+
 const mergeRowsByItem = (inputRows = [], componentNames = []) => {
     const groups = new Map();
 
@@ -144,6 +154,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [rows, setRows] = useState([]);
     const estimationRowsScrollRef = useRef(null);
     const [estimationRowsScrollTop, setEstimationRowsScrollTop] = useState(0);
+    const [highlightedRowKey, setHighlightedRowKey] = useState(null);
+    const highlightTimeoutRef = useRef(null);
 
     // Global include toggles / rates for printing & totals
     const [includeDelivery, setIncludeDelivery] = useState(true);
@@ -193,11 +205,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     // Derived ReadOnly
     const isLocked = forceReadOnly || (approvalStatus !== "DRAFT");
     const isReadOnly = isLocked;
+    const canClearEstimation = !isLocked && !["PENDING_APPROVAL", "APPROVED", "FINALIZED"].includes(approvalStatus);
 
     // Modals
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showClearEstimationModal, setShowClearEstimationModal] = useState(false);
     const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
     const [isSavingEstimation, setIsSavingEstimation] = useState(false);
     const [saveProgressText, setSaveProgressText] = useState("");
@@ -221,6 +235,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     useEffect(() => {
         setEditingComponentNames({});
     }, [projectOpt?.value, propProjectId]);
+
+    useEffect(() => () => {
+        if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+    }, []);
 
     /* ------------ load reference data ------------ */
     useEffect(() => {
@@ -528,6 +546,39 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         setForceFullSave(true);
     };
 
+    const clearEstimationContent = () => {
+        if (!canClearEstimation) {
+            toast.warn("This estimation cannot be cleared in its current approval status.");
+            return;
+        }
+
+        const cfg = window._sysConfig || {};
+        const defaultMargin = cfg["app.estimation.margin"] || "15";
+
+        setComponents(["Component A"]);
+        setEditingComponentNames({});
+        setRows([]);
+        setEstimationRowsScrollTop(0);
+        if (estimationRowsScrollRef.current) {
+            estimationRowsScrollRef.current.scrollTop = 0;
+        }
+        setCompMargin({ "Component A": defaultMargin });
+        setCompOverhead({});
+        setCompDelivery({});
+        setCompDeliveryTaxable({});
+        setDiscountPercent("");
+        setCustomNote("");
+        setTerms([]);
+        setQuotationFile(null);
+        if (quotationFileInputRef.current) quotationFileInputRef.current.value = "";
+
+        setDirtyComponents(new Set());
+        setForceFullSave(true);
+        setIsDirty(true);
+        setShowClearEstimationModal(false);
+        toast.info("Estimation content cleared. Save to apply the change.");
+    };
+
     /* ------------ matrix ops ------------ */
     const addComponent = () => {
         const base = "Component";
@@ -652,20 +703,47 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         }]);
     };
 
+    const focusEstimationRow = (rowIndex, rowKey) => {
+        if (rowIndex < 0 || !rowKey) return;
+        const nextScrollTop = Math.max(0, rowIndex * ESTIMATION_ROW_HEIGHT);
+
+        if (estimationRowsScrollRef.current) {
+            estimationRowsScrollRef.current.scrollTo({ top: nextScrollTop, behavior: "smooth" });
+        }
+        setEstimationRowsScrollTop(nextScrollTop);
+        setHighlightedRowKey(rowKey);
+
+        if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = setTimeout(() => {
+            setHighlightedRowKey(current => current === rowKey ? null : current);
+            highlightTimeoutRef.current = null;
+        }, 1800);
+    };
+
     const addManualRow = () => {
+        const emptyIndex = rows.findIndex(isEmptyManualRow);
+        if (emptyIndex >= 0) {
+            focusEstimationRow(emptyIndex, getRowRenderKey(rows[emptyIndex], emptyIndex));
+            toast.info("Fill the existing empty expense / description row first.");
+            return;
+        }
+
         requireFullSave();
-        setRows(rs => [...rs, {
-            rowKey: createManualRowId(),
-            lineType: LINE_TYPES.MANUAL,
-            productId: "",
-            productOption: null,
-            description: "",
-            unit: "Nr",
-            estUnitCost: "",
-            suggestedCost: undefined,
-            storeAvail: undefined,
-            quantities: Object.fromEntries(components.map(c => [c, 0])),
-        }]);
+        setRows(rs => [
+            ...rs,
+            {
+                rowKey: createManualRowId(),
+                lineType: LINE_TYPES.MANUAL,
+                productId: "",
+                productOption: null,
+                description: "",
+                unit: "Nr",
+                estUnitCost: "",
+                suggestedCost: undefined,
+                storeAvail: undefined,
+                quantities: Object.fromEntries(components.map(c => [c, 0])),
+            }
+        ]);
     };
 
     const removeRow = (i) => {
@@ -696,8 +774,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     };
 
     const onPickProduct = async (rowIndex, option) => {
-        requireFullSave();
         if (!option) {
+            requireFullSave();
             setRows(rs => {
                 const cp = [...rs];
                 cp[rowIndex] = {
@@ -713,6 +791,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return;
         }
         const pid = option.value;
+        const existingIndex = rows.findIndex((row, index) => row.productId === pid && index !== rowIndex);
+        if (existingIndex >= 0) {
+            focusEstimationRow(existingIndex, getRowRenderKey(rows[existingIndex], existingIndex));
+            toast.info("That product is already in the estimation.");
+            return;
+        }
+
+        requireFullSave();
         const p = productById[pid];
         const suggested = deriveSuggestedCost(p);
 
@@ -1227,7 +1313,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const m = new Map();
         rows.forEach((r, idx) => {
             const total = Object.values(r.quantities || {}).reduce((a, b) => a + Number(b || 0), 0);
-            m.set(r.rowKey || r.productId || `row-${idx}`, total);
+            m.set(getRowRenderKey(r, idx), total);
         });
         return m;
     }, [rows]);
@@ -1366,6 +1452,15 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     )}
                                 </div>
 
+                                {canClearEstimation && (
+                                    <Button
+                                        variant="outline-danger"
+                                        onClick={() => setShowClearEstimationModal(true)}
+                                        disabled={isSavingEstimation || (!projectOpt?.value && !propProjectId)}
+                                    >
+                                        Clear Estimation
+                                    </Button>
+                                )}
                                 {!isLocked && <Button variant="outline-success" onClick={addComponent}>+ Column</Button>}
                             </div>
                         </div>
@@ -1428,7 +1523,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             </tr>
                                         )}
                                         {virtualRowWindow.rows.map(({ row: r, index: i }) => {
-                                    const rowMapKey = r.rowKey || r.productId || `row-${i}`;
+                                    const rowMapKey = getRowRenderKey(r, i);
                                     const need = neededMap.get(rowMapKey) || 0;
                                     const isManualLine = r.lineType === LINE_TYPES.MANUAL;
                                     const avail = typeof r.storeAvail === "number" ? r.storeAvail : (r.productId ? (availMap[r.productId] ?? 0) : 0);
@@ -1437,7 +1532,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     const rowTotal = unit * need;
 
                                     return (
-                                        <tr key={rowMapKey}>
+                                        <tr key={rowMapKey} className={highlightedRowKey === rowMapKey ? "estimation-row-highlight" : undefined}>
                                             <td>
                                                 {isManualLine ? (
                                                     <>
@@ -1933,6 +2028,36 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     </div>
                 </Col>
             </Row>
+
+            {/* Clear Estimation Modal */}
+            <Modal
+                show={showClearEstimationModal}
+                onHide={() => setShowClearEstimationModal(false)}
+                centered
+                backdrop="static"
+            >
+                <Modal.Header closeButton className="border-0 pb-0">
+                    <Modal.Title>Clear Estimation</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p className="mb-2">
+                        Are you sure you want to clear this estimation?
+                    </p>
+                    <p className="text-muted small mb-0">
+                        This will remove all estimation lines, quantities, component columns, margins,
+                        delivery values, discounts, notes, and terms from the current screen. The change
+                        is not permanent until you click <strong>Save</strong>.
+                    </p>
+                </Modal.Body>
+                <Modal.Footer className="border-0 pt-0">
+                    <Button variant="outline-secondary" onClick={() => setShowClearEstimationModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button variant="danger" onClick={clearEstimationContent}>
+                        Yes, Clear Everything
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             {/* Approval Modal */}
             <Modal show={showApprovalModal} onHide={() => setShowApprovalModal(false)}>

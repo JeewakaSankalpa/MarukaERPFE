@@ -9,8 +9,9 @@ import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 const addPayment = async (id, formData) => (await api.post(`/grns/${id}/payments`, formData, {
     headers: { "Content-Type": "multipart/form-data" }
 })).data;
+const verifyPayment = async (grnId, paymentId) => (await api.patch(`/grns/${grnId}/payments/${paymentId}/verify`)).data;
 
-export default function GRNPaymentModal({ grn, onClose }) {
+export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose }) {
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
     const [receiptFile, setReceiptFile] = useState(null);
@@ -18,12 +19,15 @@ export default function GRNPaymentModal({ grn, onClose }) {
     const [accountBalance, setAccountBalance] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showOverdraft, setShowOverdraft] = useState(false);
-    const [verified, setVerified] = useState(false);
+    const [verifyingId, setVerifyingId] = useState(null);
 
-    // Max payable = invoice amount minus what's already been paid
+    const history = grn.paymentHistory || [];
+    // Max payable for a new record reserves pending payments too.
     const totalPaid = grn.totalPaid || 0;
     const invoiceAmount = grn.invoiceAmount || 0;
-    const maxPayable = Math.max(0, invoiceAmount - totalPaid);
+    const totalRecorded = history.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const pendingTotal = Math.max(0, totalRecorded - totalPaid);
+    const maxPayable = Math.max(0, invoiceAmount - totalRecorded);
 
     // Load account balance when account is selected
     useEffect(() => {
@@ -56,14 +60,13 @@ export default function GRNPaymentModal({ grn, onClose }) {
                 paymentAccountName: paymentInfo.paymentAccountName,
                 paymentAccountType: paymentInfo.paymentAccountType,
                 paymentMethod: paymentInfo.paymentMethod,
-                allowOverdraft,
-                verified
+                allowOverdraft
             };
             const formData = new FormData();
             formData.append("payment", new Blob([JSON.stringify(payload)], { type: "application/json" }));
             formData.append("receipt", receiptFile);
             await addPayment(grn.id, formData);
-            toast.success("Payment added");
+            toast.success("Payment added and pending verification");
             onClose();
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to add payment");
@@ -77,8 +80,6 @@ export default function GRNPaymentModal({ grn, onClose }) {
         if (!paymentInfo.paymentAccountId) { toast.warn("Please select a payment account"); return; }
         if (!paymentInfo.paymentMethod) { toast.warn("Please explicitly select a Payment Method (e.g. Card, Cash)"); return; }
         if (!receiptFile) { toast.warn("Please upload the payment receipt"); return; }
-        if (!verified) { toast.warn("Please verify and accept this payment before adding it"); return; }
-
         // Check if amount exceeds account balance → prompt overdraft
         if (accountBalance !== null && Number(amount) > accountBalance) {
             setShowOverdraft(true);
@@ -87,7 +88,20 @@ export default function GRNPaymentModal({ grn, onClose }) {
         await submitPayment(false);
     };
 
-    const history = grn.paymentHistory || [];
+    const handleVerifyPayment = async (payment, index) => {
+        const paymentId = payment.id || String(index);
+        if (!window.confirm("Verify this GRN payment as correct? This will count it as paid and post the finance entry.")) return;
+        setVerifyingId(paymentId);
+        try {
+            await verifyPayment(grn.id, paymentId);
+            toast.success("Payment verified");
+            onClose();
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to verify payment");
+        } finally {
+            setVerifyingId(null);
+        }
+    };
 
     return (
         <>
@@ -98,7 +112,7 @@ export default function GRNPaymentModal({ grn, onClose }) {
                         <h5>Payment History</h5>
                         {history.length === 0 ? <div className="text-muted">No payments recorded.</div> :
                             <Table size="sm" bordered>
-                                <thead><tr><th>Date</th><th>Receipt</th><th className="text-end">Amount</th><th>Method</th><th>Added By</th></tr></thead>
+                                <thead><tr><th>Date</th><th>Receipt</th><th className="text-end">Amount</th><th>Method</th><th>Added By</th><th>Status</th><th>Action</th></tr></thead>
                                 <tbody>
                                     {history.map((p, i) => (
                                         <tr key={i}>
@@ -115,6 +129,20 @@ export default function GRNPaymentModal({ grn, onClose }) {
                                             <td className="text-end">{p.amount?.toFixed(2)}</td>
                                             <td>{p.paymentMethod || '—'}</td>
                                             <td>{p.addedBy}</td>
+                                            <td>
+                                                {p.verified ? (
+                                                    <span className="badge bg-success">Verified</span>
+                                                ) : (
+                                                    <span className="badge bg-warning text-dark">Pending</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {!p.verified && canVerifyPayment && (
+                                                    <Button size="sm" variant="outline-success" onClick={() => handleVerifyPayment(p, i)} disabled={verifyingId === (p.id || String(i))}>
+                                                        {verifyingId === (p.id || String(i)) ? "Verifying..." : "Verify"}
+                                                    </Button>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -122,6 +150,7 @@ export default function GRNPaymentModal({ grn, onClose }) {
                         }
                         <div className="d-flex justify-content-end gap-3 mt-2 fw-bold">
                             <span>Total Paid: {totalPaid?.toFixed(2)}</span>
+                            <span>Pending Verification: {pendingTotal.toFixed(2)}</span>
                             <span>Invoice: {invoiceAmount?.toFixed(2)}</span>
                             <span className={maxPayable > 0 ? "text-danger" : "text-success"}>
                                 Remaining: {maxPayable.toFixed(2)}
@@ -177,13 +206,9 @@ export default function GRNPaymentModal({ grn, onClose }) {
                                         />
                                     </Col>
                                     <Col md={12}>
-                                        <Form.Check
-                                            type="checkbox"
-                                            id="grn-payment-verified"
-                                            checked={verified}
-                                            onChange={e => setVerified(e.target.checked)}
-                                            label="I have verified the accepted GRN, supplier invoice, receipt, amount, date, and payment account for this payment."
-                                        />
+                                        <Alert variant="info" className="mb-0">
+                                            This payment will remain pending until a configured GRN Payment Verifier accepts it.
+                                        </Alert>
                                     </Col>
                                     <Col md={2}>
                                         <Button className="w-100" onClick={doPay} disabled={isSubmitting || maxPayable <= 0}>

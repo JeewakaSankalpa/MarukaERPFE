@@ -166,6 +166,27 @@ body {
     vertical-align: top;
 }
 
+.estimation-lines-table tbody tr.estimation-row-highlight > td {
+    animation: estimation-row-flash 1.8s ease-out;
+}
+
+@keyframes estimation-row-flash {
+    0% {
+        background-color: #fff3cd;
+        box-shadow: inset 4px 0 0 #ffc107;
+    }
+
+    70% {
+        background-color: #fff8e1;
+        box-shadow: inset 4px 0 0 #ffc107;
+    }
+
+    100% {
+        background-color: transparent;
+        box-shadow: inset 0 0 0 transparent;
+    }
+}
+
 @media print {
     body * {
         visibility: hidden;
@@ -301,4 +322,93 @@ textarea.form-control {
 /* AntD Date Picker Overrides */
 .ant-picker, .ant-select {
     width: 100%; /* Make it behave like form-control */
+}
+
+/* Workflow visibility matrix */
+.workflow-visibility-dialog {
+    width: min(1180px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+}
+
+.workflow-visibility-content {
+    max-height: calc(100vh - 48px);
+}
+
+.workflow-visibility-body {
+    padding: 0.75rem;
+    overflow: hidden;
+}
+
+.workflow-visibility-table-wrap {
+    max-height: min(68vh, 680px);
+    max-width: 100%;
+    overflow: auto;
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.workflow-visibility-table {
+    min-width: max-content;
+    margin-bottom: 0;
+    border-color: #dbe3ef;
+}
+
+.workflow-visibility-table th,
+.workflow-visibility-table td {
+    padding: 0.5rem 0.625rem;
+    vertical-align: middle;
+}
+
+.workflow-visibility-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 600;
+    box-shadow: inset 0 -1px 0 #dbe3ef;
+}
+
+.workflow-visibility-component-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 190px;
+    max-width: 240px;
+    background: #ffffff;
+    color: #1e293b;
+    font-weight: 500;
+    box-shadow: 1px 0 0 #dbe3ef;
+}
+
+.workflow-visibility-table thead .workflow-visibility-component-col {
+    z-index: 4;
+    background: #f8fafc;
+}
+
+.workflow-visibility-check-col,
+.workflow-visibility-role-col {
+    min-width: 92px;
+    max-width: 118px;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.2;
+}
+
+.workflow-visibility-check-cell {
+    text-align: center;
+}
+
+.workflow-visibility-check-cell .form-check {
+    display: inline-flex;
+    min-height: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+}
+
+.workflow-visibility-check-cell .form-check-input {
+    float: none;
+    margin-left: 0;
 }

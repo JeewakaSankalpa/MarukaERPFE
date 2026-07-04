@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ReactFlow,
     Controls,
@@ -47,8 +47,50 @@ const emptyFlow = {
     payrollApproverRoles: [],
     quotationAcceptanceRoles: [],
     projectRevisionApproverRoles: [],
+    grnAcceptanceRoles: [],
+    grnPaymentVerifierRoles: [],
+    grnPrintApproverRoles: [],
     visualLayout: {} // { "STAGE": { x: 0, y: 0 } }
 };
+
+const collectFlowRoles = (flow) => {
+    const roleSet = new Set();
+    const addRole = (role) => {
+        const normalized = String(role || "").trim().toUpperCase();
+        if (normalized) roleSet.add(normalized);
+    };
+    const addRoles = (roleList) => (roleList || []).forEach(addRole);
+
+    Object.values(flow.requiredApprovals || {}).forEach(addRoles);
+    Object.values(flow.notifications || {}).forEach(addRoles);
+    Object.values(flow.transitions || {}).forEach((rules) => {
+        (rules || []).forEach((rule) => {
+            addRoles(rule.roles);
+            addRoles(rule.notifyRoles);
+        });
+    });
+    [
+        "estimationApproverRoles",
+        "purchaseOrderApproverRoles",
+        "stockAuditApproverRoles",
+        "payrollApproverRoles",
+        "quotationAcceptanceRoles",
+        "projectRevisionApproverRoles",
+        "grnAcceptanceRoles",
+        "grnPaymentVerifierRoles",
+        "grnPrintApproverRoles",
+    ].forEach((field) => addRoles(flow[field]));
+
+    Object.values(flow.visibility || {}).forEach((rule) => {
+        Object.keys(rule?.roleVisibility || {}).forEach(addRole);
+    });
+
+    return Array.from(roleSet);
+};
+
+const mergeRoleNames = (...roleLists) => Array.from(
+    new Set(roleLists.flat().map((role) => String(role || "").trim().toUpperCase()).filter(Boolean))
+).sort();
 
 export default function WorkflowBuilder() {
     const { id } = useParams();
@@ -77,6 +119,7 @@ export default function WorkflowBuilder() {
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [selection, setSelection] = useState(null); // { type: 'node'|'edge', id: string }
     const [showGlobalSettings, setShowGlobalSettings] = useState(false);
+    const workflowRoles = useMemo(() => mergeRoleNames(roles, collectFlowRoles(flow)), [roles, flow]);
 
     // --- History Helper ---
     // Wrapper around setLocalFlow to push history
@@ -161,6 +204,9 @@ export default function WorkflowBuilder() {
                     payrollApproverRoles: wf?.payrollApproverRoles || [],
                     quotationAcceptanceRoles: wf?.quotationAcceptanceRoles || [],
                     projectRevisionApproverRoles: wf?.projectRevisionApproverRoles || [],
+                    grnAcceptanceRoles: wf?.grnAcceptanceRoles || [],
+                    grnPaymentVerifierRoles: wf?.grnPaymentVerifierRoles || [],
+                    grnPrintApproverRoles: wf?.grnPrintApproverRoles || [],
                     visualLayout: wf?.visualLayout || {}
                 };
 
@@ -168,7 +214,7 @@ export default function WorkflowBuilder() {
                 if (base.id) setWorkflowIdInput(base.id);
 
                 setAvailableStages(stagesRes.data || []);
-                setRoles(rolesRes.data || []);
+                setRoles(mergeRoleNames(rolesRes.data || []));
                 setAdminConfig(adminConfigRes.data || {});
 
             } catch (e) {
@@ -547,7 +593,7 @@ export default function WorkflowBuilder() {
                         <StagePropertyPanel
                             stage={selection.id}
                             flow={flow}
-                            roles={roles}
+                            roles={workflowRoles}
                             allStages={availableStages}
                             onUpdateFlow={setFlow}
                             onClose={() => setSelection(null)}
@@ -560,7 +606,7 @@ export default function WorkflowBuilder() {
                         <TransitionPropertyPanel
                             edgeId={selection.id}
                             flow={flow}
-                            roles={roles}
+                            roles={workflowRoles}
                             onUpdateFlow={setFlow}
                             onClose={() => setSelection(null)}
                             onRemoveEdge={deleteEdgeById}
@@ -624,12 +670,15 @@ export default function WorkflowBuilder() {
                         { label: 'Payroll Approvers', field: 'payrollApproverRoles' },
                         { label: 'Quotation Acceptance Approvers', field: 'quotationAcceptanceRoles' },
                         { label: 'Project Revision Approvers', field: 'projectRevisionApproverRoles', note: 'Project revision controls are always enabled. Select who can approve revisions.' },
+                        { label: 'GRN Acceptance Approvers', field: 'grnAcceptanceRoles', note: 'Users in these workflow roles can accept posted GRNs so supplier payments can be added.' },
+                        { label: 'GRN Payment Verifiers', field: 'grnPaymentVerifierRoles', note: 'Users in these workflow roles can verify each added supplier payment before it counts as paid.' },
+                        { label: 'GRN Print Approvers', field: 'grnPrintApproverRoles', note: 'Users in these workflow roles can approve GRN report printing.' },
                     ].map(({ label, field, note }) => (
                         <div key={field} className="mb-3">
                             <label className="fw-bold mb-1">{label}</label>
                             {note && <p className="text-muted small mb-1" style={{ fontSize: '0.78rem' }}>{note}</p>}
                             <div className="d-flex flex-wrap gap-2">
-                                {roles.map(r => {
+                                {workflowRoles.map(r => {
                                     const active = (flow[field] || []).includes(r);
                                     return (
                                         <div
@@ -642,7 +691,7 @@ export default function WorkflowBuilder() {
                                         </div>
                                     );
                                 })}
-                                {roles.length === 0 && <small className="text-muted">No roles defined yet. Add roles above first.</small>}
+                                {workflowRoles.length === 0 && <small className="text-muted">No roles defined yet. Add roles above first.</small>}
                             </div>
                         </div>
                     ))}

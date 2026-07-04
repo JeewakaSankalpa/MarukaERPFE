@@ -12,7 +12,7 @@ import { ProductForm } from '../Inventory/ProductPage';
 import { SupplierForm } from '../Supplier/SupplierPage';
 
 /* ========== INLINE API HELPERS ========== */
-const getLatestPending = async () => (await api.get(`/stores/pending-purchase/latest`)).data; // implement endpoint to return latest plan
+const getPendingPlans = async (sort) => (await api.get(`/stores/pending-purchase`, { params: { sort } })).data;
 const createPOsFromPending = async (pendingId, allocation) =>
     (await api.post(`/stores/pending-to-po/${pendingId}`, allocation)).data;
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
@@ -27,11 +27,25 @@ const getProjectSearchText = (line) => [
 ].filter(Boolean).join(" ").toLowerCase();
 
 const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
+const getInitialChoices = (pendingPlan) => Object.fromEntries(
+    (pendingPlan?.lines || []).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])
+);
+const getPlanUpdatedAt = (pendingPlan) => pendingPlan?.updatedAt || pendingPlan?.createdAt || "";
+const formatPlanUpdatedAt = (pendingPlan) => {
+    const value = getPlanUpdatedAt(pendingPlan);
+    if (!value) return "No update date";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+};
 
 /* ========== PAGE ========== */
 export default function PendingToPOPage() {
     const navigate = useNavigate();
+    const [plans, setPlans] = useState([]);
     const [plan, setPlan] = useState(null); // {id, lines:[{productId, productNameSnapshot, shortageQty, suppliers:[...] }]}
+    const [selectedPlanId, setSelectedPlanId] = useState("");
+    const [pendingSort, setPendingSort] = useState("updatedAtDesc");
+    const [hasLoadedPending, setHasLoadedPending] = useState(false);
     const [choices, setChoices] = useState({}); // productId -> { supplierId, qty, unitPrice, taxPercent }
     const [quotationRefs, setQuotationRefs] = useState({}); // supplierId -> quotation no
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,15 +65,31 @@ export default function PendingToPOPage() {
         return { title: 'From Stores', subtitle: 'Main Store' };
     };
 
-    const reloadPending = useCallback(async () => {
-        const p = await getLatestPending();
-        setPlan(p);
-        setChoices(Object.fromEntries((p?.lines||[]).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
+    const applyPlan = useCallback((nextPlan) => {
+        setPlan(nextPlan);
+        setSelectedPlanId(nextPlan?.id || "");
+        setChoices(getInitialChoices(nextPlan));
+        setQuotationRefs({});
     }, []);
 
+    const reloadPending = useCallback(async () => {
+        const list = await getPendingPlans(pendingSort);
+        const pendingPlans = list || [];
+        setPlans(pendingPlans);
+        applyPlan(pendingPlans.find(p => p.id === selectedPlanId) || pendingPlans[0] || null);
+        setHasLoadedPending(true);
+    }, [applyPlan, pendingSort, selectedPlanId]);
+
     useEffect(() => {
-        reloadPending().catch(() => toast.error("Failed to load pending purchases"));
+        reloadPending().catch(() => {
+            setHasLoadedPending(true);
+            toast.error("Failed to load pending purchases");
+        });
     }, [reloadPending]);
+
+    const handlePlanChange = (planId) => {
+        applyPlan(plans.find(p => p.id === planId) || null);
+    };
 
     const filteredLines = useMemo(() => {
         const lines = plan?.lines || [];
@@ -147,10 +177,7 @@ export default function PendingToPOPage() {
             setIsSubmitting(true);
             const res = await createPOsFromPending(plan.id, groupedAllocation);
             toast.success(`Created ${res.length} PO(s)`);
-            // refresh
-            const p = await getLatestPending();
-            setPlan(p);
-            setChoices(Object.fromEntries((p?.lines||[]).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])));
+            await reloadPending();
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to create POs");
         } finally {
@@ -175,9 +202,22 @@ export default function PendingToPOPage() {
         await performCreatePOs();
     };
 
-    if (!plan) return (
+    if (!hasLoadedPending) return (
         <Container style={{ width:"80vw", maxWidth:1000, paddingTop:24 }}>
             <div className="bg-white shadow rounded p-4">Loading…</div>
+        </Container>
+    );
+
+    if (!plan) return (
+        <Container style={{ width:"80vw", maxWidth:1000, paddingTop:24 }}>
+            <div className="bg-white shadow rounded p-4">
+                <div className="d-flex align-items-center mb-3">
+                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                    <h2 className="mb-0" style={{ fontSize:"1.5rem" }}>Pending Purchases</h2>
+                </div>
+                <div className="text-muted">No pending purchases found.</div>
+            </div>
+            <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
 
@@ -198,6 +238,23 @@ export default function PendingToPOPage() {
                             placeholder="MJN, MIN, project no..."
                             onChange={e => setProjectFilter(e.target.value)}
                         />
+                    </Form.Group>
+                    <Form.Group style={{ minWidth: 220 }}>
+                        <Form.Label className="small fw-bold">Sort Pending Purchases</Form.Label>
+                        <SafeSelect value={pendingSort} onChange={e => setPendingSort(e.target.value)}>
+                            <option value="updatedAtDesc">Newest updated first</option>
+                            <option value="updatedAtAsc">Oldest updated first</option>
+                        </SafeSelect>
+                    </Form.Group>
+                    <Form.Group style={{ minWidth: 260, maxWidth: 360 }}>
+                        <Form.Label className="small fw-bold">Pending Purchase</Form.Label>
+                        <SafeSelect value={selectedPlanId} onChange={e => handlePlanChange(e.target.value)}>
+                            {plans.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.planNumber || p.id} - {formatPlanUpdatedAt(p)}
+                                </option>
+                            ))}
+                        </SafeSelect>
                     </Form.Group>
                     {projectFilter.trim() && (
                         <Button variant="outline-secondary" onClick={() => setProjectFilter("")}>

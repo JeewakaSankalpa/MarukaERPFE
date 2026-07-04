@@ -226,7 +226,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     </Col>
                     <Col md={6}>
                         <div className="text-muted small mt-4">
-                            Supplier payments can be added only after this GRN is posted, accepted, and verified from GRN History.
+                            Supplier payments can be added only after this GRN is posted and accepted from GRN History. Each payment is verified separately after it is added.
                         </div>
                     </Col>
                     <Col md={3}>

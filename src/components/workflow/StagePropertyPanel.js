@@ -3,6 +3,8 @@ import { Card, Form, Accordion, Badge, Button, Modal, Table } from 'react-bootst
 import { Trash2 } from 'lucide-react';
 import { PROJECT_COMPONENTS } from '../Project/ComponentRegistry';
 
+const ALWAYS_VISIBLE_ROLES = ["ADMIN", "SUPER_ADMIN"];
+
 export default function StagePropertyPanel({
     stage,
     flow,
@@ -20,6 +22,7 @@ export default function StagePropertyPanel({
     const notifications = flow.notifications?.[stage] || [];
     const isInitial = flow.initialStage === stage;
     const fileRules = flow.fileRequirements?.[stage] || [];
+    const visibilityRoles = Array.from(new Set([...ALWAYS_VISIBLE_ROLES, ...(roles || [])]));
 
     const toggleApproval = (role) => {
         const next = approvals.includes(role)
@@ -203,15 +206,23 @@ export default function StagePropertyPanel({
                 </Accordion>
             </Card.Body>
 
-            <Modal show={showVisibilityModal} onHide={() => setShowVisibilityModal(false)} size="lg">
+            <Modal
+                show={showVisibilityModal}
+                onHide={() => setShowVisibilityModal(false)}
+                size="xl"
+                centered
+                dialogClassName="workflow-visibility-dialog"
+                contentClassName="workflow-visibility-content"
+            >
                 <Modal.Header closeButton><Modal.Title>Visibility Matrix: {stage}</Modal.Title></Modal.Header>
-                <Modal.Body>
-                    <Table bordered hover size="sm" className="small">
+                <Modal.Body className="workflow-visibility-body">
+                    <div className="workflow-visibility-table-wrap">
+                    <Table bordered hover size="sm" className="small workflow-visibility-table">
                         <thead>
                             <tr>
-                                <th>Component</th>
-                                <th>Everyone</th>
-                                {roles.map(r => <th key={r}>{r}</th>)}
+                                <th className="workflow-visibility-component-col">Component</th>
+                                <th className="workflow-visibility-check-col">Everyone</th>
+                                {visibilityRoles.map(r => <th key={r} className="workflow-visibility-role-col">{r}</th>)}
                             </tr>
                         </thead>
                         <tbody>
@@ -221,26 +232,39 @@ export default function StagePropertyPanel({
                                 const isVisibleAll = isGlobalList.includes(comp.id);
                                 return (
                                     <tr key={comp.id}>
-                                        <td>{comp.label}</td>
-                                        <td>
+                                        <td className="workflow-visibility-component-col">{comp.label}</td>
+                                        <td className="workflow-visibility-check-cell">
                                             <Form.Check 
                                                 type="checkbox" checked={isVisibleAll}
                                                 onChange={(e) => {
-                                                    const nextList = e.target.checked ? [...isGlobalList, comp.id] : isGlobalList.filter(id => id !== comp.id);
+                                                    const nextList = e.target.checked
+                                                        ? Array.from(new Set([...isGlobalList, comp.id]))
+                                                        : isGlobalList.filter(id => id !== comp.id);
                                                     onUpdateFlow({ ...flow, visibility: { ...flow.visibility, [stage]: { ...rule, visibleComponents: nextList } } });
                                                 }}
                                             />
                                         </td>
-                                        {roles.map(r => {
+                                        {visibilityRoles.map(r => {
+                                            const isAlwaysVisibleRole = ALWAYS_VISIBLE_ROLES.includes(String(r || "").toUpperCase());
                                             const roleMap = rule.roleVisibility || {};
-                                            const roleList = roleMap[r] || [];
+                                            const existingRoleKey = Object.keys(roleMap).find(key => key.toUpperCase() === String(r || "").toUpperCase());
+                                            const roleList = roleMap[existingRoleKey || r] || [];
                                             return (
-                                                <td key={r}>
+                                                <td key={r} className="workflow-visibility-check-cell">
                                                     <Form.Check 
-                                                        type="checkbox" disabled={isVisibleAll} checked={isVisibleAll || roleList.includes(comp.id)}
+                                                        type="checkbox"
+                                                        disabled={isVisibleAll || isAlwaysVisibleRole}
+                                                        checked={isAlwaysVisibleRole || isVisibleAll || roleList.includes(comp.id)}
                                                         onChange={(e) => {
-                                                            const nextRoleList = e.target.checked ? [...roleList, comp.id] : roleList.filter(id => id !== comp.id);
-                                                            onUpdateFlow({ ...flow, visibility: { ...flow.visibility, [stage]: { ...rule, roleVisibility: { ...roleMap, [r]: nextRoleList } } } });
+                                                            const nextRoleList = e.target.checked
+                                                                ? Array.from(new Set([...roleList, comp.id]))
+                                                                : roleList.filter(id => id !== comp.id);
+                                                            const nextRoleMap = { ...roleMap };
+                                                            if (existingRoleKey && existingRoleKey !== r) {
+                                                                delete nextRoleMap[existingRoleKey];
+                                                            }
+                                                            nextRoleMap[r] = nextRoleList;
+                                                            onUpdateFlow({ ...flow, visibility: { ...flow.visibility, [stage]: { ...rule, roleVisibility: nextRoleMap } } });
                                                         }}
                                                     />
                                                 </td>
@@ -251,6 +275,7 @@ export default function StagePropertyPanel({
                             })}
                         </tbody>
                     </Table>
+                    </div>
                 </Modal.Body>
             </Modal>
         </Card>
