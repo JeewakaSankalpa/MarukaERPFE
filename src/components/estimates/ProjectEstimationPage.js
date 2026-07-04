@@ -263,7 +263,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         (async () => {
             setLoading(true);
             try {
-                const est = await getEstimation(pid).catch(() => null);
+                const est = await getEstimation(pid);
 
                 if (!est) {
                     setComponents(["Component A"]);
