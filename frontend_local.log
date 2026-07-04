@@ -1,0 +1,70 @@
+
+> mruak-fe@0.1.0 start
+> react-scripts start
+
+(node:24276) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Browserslist: browsers data (caniuse-lite) is 18 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+(node:24276) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:24276) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+Starting the development server...
+
+[0;33mOne of your dependencies, babel-preset-react-app, is importing the
+"@babel/plugin-proposal-private-property-in-object" package without
+declaring it in its dependencies. This is currently working because
+"@babel/plugin-proposal-private-property-in-object" is already in your
+node_modules folder for unrelated reasons, but it [1mmay break at any time[0;33m.
+
+babel-preset-react-app is part of the create-react-app project, [1mwhich
+is not maintianed anymore[0;33m. It is thus unlikely that this bug will
+ever be fixed. Add "@babel/plugin-proposal-private-property-in-object" to
+your devDependencies to work around this error. This will make this message
+go away.[0m
+  
+Compiled with warnings.
+
+[eslint] 
+src\components\estimates\ProjectEstimationPage.js
+  Line 111:12:  'showPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 111:28:  'setShowPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                           no-unused-vars
+  Line 140:12:  'approvalPolicy' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 394:8:   React Hook useEffect has missing dependencies: 'availMap', 'globalSettings.GLOBAL_TAX_PERCENT', 'globalSettings.GLOBAL_VAT_PERCENT', 'productById', and 'propProjectId'. Either include them or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setVatPercent' needs the current value of 'globalSettings.GLOBAL_VAT_PERCENT'  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\components\estimates\ProjectEstimationPage.js
+  Line 111:12:  'showPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 111:28:  'setShowPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                           no-unused-vars
+  Line 140:12:  'approvalPolicy' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 394:8:   React Hook useEffect has missing dependencies: 'availMap', 'globalSettings.GLOBAL_TAX_PERCENT', 'globalSettings.GLOBAL_VAT_PERCENT', 'productById', and 'propProjectId'. Either include them or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setVatPercent' needs the current value of 'globalSettings.GLOBAL_VAT_PERCENT'  react-hooks/exhaustive-deps
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\components\estimates\ProjectEstimationPage.js
+  Line 111:12:  'showPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 111:28:  'setShowPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                           no-unused-vars
+  Line 140:12:  'approvalPolicy' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 394:8:   React Hook useEffect has missing dependencies: 'availMap', 'globalSettings.GLOBAL_TAX_PERCENT', 'globalSettings.GLOBAL_VAT_PERCENT', 'productById', and 'propProjectId'. Either include them or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setVatPercent' needs the current value of 'globalSettings.GLOBAL_VAT_PERCENT'  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\components\estimates\ProjectEstimationPage.js
+  Line 111:12:  'showPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 111:28:  'setShowPrintModal' is assigned a value but never used                                                                                                                                                                                                                                                                                                                           no-unused-vars
+  Line 140:12:  'approvalPolicy' is assigned a value but never used                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  Line 394:8:   React Hook useEffect has missing dependencies: 'availMap', 'globalSettings.GLOBAL_TAX_PERCENT', 'globalSettings.GLOBAL_VAT_PERCENT', 'productById', and 'propProjectId'. Either include them or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setVatPercent' needs the current value of 'globalSettings.GLOBAL_VAT_PERCENT'  react-hooks/exhaustive-deps
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
