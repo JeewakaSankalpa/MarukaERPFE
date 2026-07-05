@@ -11,6 +11,7 @@ import SafeSelect from "./ReusableComponents/SafeSelect";
 
 // Must match backend key
 const SECRET_KEY = "MarukaERP_Secret";
+const INVENTORY_IMPORT_TIMEOUT_MS = 600000;
 
 export default function SystemConfiguration() {
     const navigate = useNavigate();
@@ -224,6 +225,7 @@ export default function SystemConfiguration() {
             // Step 1: kick off the job — backend returns immediately with jobId
             const kickoff = await api.post("/admin/import/inventory/preview", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
+                timeout: INVENTORY_IMPORT_TIMEOUT_MS,
             });
             setImportResult({ ...kickoff.data, _preview: true });
             if ((kickoff.data?.errors || 0) > 0) {
@@ -242,7 +244,9 @@ export default function SystemConfiguration() {
         if (!importResult?.previewId) return;
         setImporting(true);
         try {
-            const res = await api.post(`/admin/import/inventory/approve/${importResult.previewId}`);
+            const res = await api.post(`/admin/import/inventory/approve/${importResult.previewId}`, null, {
+                timeout: INVENTORY_IMPORT_TIMEOUT_MS,
+            });
             setImportResult(res.data);
             if ((res.data?.errors || 0) > 0) {
                 toast.warn("Import applied with some errors. Check the results below.");

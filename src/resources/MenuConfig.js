@@ -143,6 +143,7 @@ export const MenuConfig = [
             { id: "settings.notifications", title: "My Notification Preferences", path: "/my-notifications" },
             { id: "settings.rules", title: "Notification Logic (Admin)", path: "/admin/notification-rules" },
             { id: "settings.roles", title: "Role Management", path: "/admin/roles" },
+            { id: "settings.stock_verification", title: "Stock Verification", path: "/admin/stock-verification" },
             { id: "settings.config", title: "System Config", path: "/admin/config" },
             { id: "settings.workflows", title: "Workflows", path: "/admin/workflows" },
             { id: "settings.estimation", title: "Estimation Settings", path: "/settings" },

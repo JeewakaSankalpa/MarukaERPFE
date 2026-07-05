@@ -101,6 +101,7 @@ import SettingsPage from "./components/settings/SettingsPage";
 import MyNotificationsPage from "./components/settings/MyNotificationsPage";
 import NotificationRulesPage from "./components/settings/NotificationRulesPage";
 import RoleManagement from "./components/settings/RoleManagement";
+import StockVerificationPage from "./components/settings/StockVerificationPage";
 import SuperAdminPage from "./components/admin/SuperAdminPage";
 
 
@@ -332,10 +333,18 @@ function App() {
                     {/* Settings / Admin */}
                     <Route element={<PrivateRoute module="settings" />}>
                         <Route path="/admin/config" element={<SystemConfiguration />} />
-                        <Route path="/admin/super-admin" element={<SuperAdminPage />} />
+                        <Route
+                            path="/admin/super-admin"
+                            element={
+                                <PrivateRoute roles={["ADMIN", "SUPER_ADMIN"]}>
+                                    <SuperAdminPage />
+                                </PrivateRoute>
+                            }
+                        />
                         <Route path="/admin/workflows" element={<WorkflowList />} />
                         <Route path="/admin/notification-rules" element={<NotificationRulesPage />} />
                         <Route path="/admin/roles" element={<RoleManagement />} />
+                        <Route path="/admin/stock-verification" element={<StockVerificationPage />} />
                         <Route path="/admin/workflow" element={<WorkflowBuilder />} />
                         <Route path="/admin/workflow/:id" element={<WorkflowBuilder />} />
                         <Route path="/departments" element={<DepartmentListRouteWrapper />} />

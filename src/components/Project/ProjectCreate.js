@@ -26,6 +26,30 @@ const inquiryTypeOptions = [
   { value: "RETAIL_SALE", label: "Retail Sale" },
 ];
 
+const extractFileName = (urlOrName) => {
+  if (!urlOrName) return "";
+  try {
+    const withoutQuery = String(urlOrName).split("?")[0];
+    return decodeURIComponent(withoutQuery.substring(withoutQuery.lastIndexOf("/") + 1));
+  } catch {
+    return String(urlOrName);
+  }
+};
+
+const uploadedFileName = (file, index) => {
+  if (typeof file === "string") return extractFileName(file) || `file-${index + 1}`;
+  return file?.originalName || file?.name || extractFileName(file?.storedName || file?.url) || `file-${index + 1}`;
+};
+
+const uploadedFileSystemName = (file, index) => {
+  if (typeof file === "string") return "";
+  const displayName = uploadedFileName(file, index);
+  const systemName = extractFileName(file?.storedName || file?.url);
+  return systemName && systemName !== displayName ? systemName : "";
+};
+
+const uploadedFileUrl = (file) => typeof file === "string" ? file : file?.url;
+
 const ProjectForm = () => {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
@@ -173,7 +197,7 @@ const ProjectForm = () => {
           ...prev,
           ...p,
           id: p.id,
-          fileList: fileItems.map((x) => x.url),
+          fileList: fileItems,
         }));
         setIsEditMode(false); // start read-only on edit route
         setFiles([]);
@@ -277,7 +301,7 @@ const ProjectForm = () => {
             );
             // merge new URLs with existing
             const newUrls = (upRes.data || []).map((x) =>
-              typeof x === "string" ? x : x.url
+              typeof x === "string" ? x : { ...x, name: x.originalName || x.name }
             );
             setProjectData((prev) => ({
               ...prev,
@@ -613,17 +637,20 @@ const ProjectForm = () => {
                 <div className="mb-3">
                   <Form.Label>Uploaded Files</Form.Label>
                   <ListGroup>
-                    {projectData.fileList.map((url, i) => {
-                      const nameFromUrl =
-                        decodeURIComponent(url.split("/").pop() || "") ||
-                        `file-${i + 1}`;
+                    {projectData.fileList.map((file, i) => {
+                      const url = uploadedFileUrl(file);
+                      const displayName = uploadedFileName(file, i);
+                      const systemName = uploadedFileSystemName(file, i);
                       return (
                         <ListGroup.Item
-                          key={url}
+                          key={url || `${displayName}-${i}`}
                           className="d-flex justify-content-between align-items-center"
                         >
                           <span className="text-truncate" style={{ maxWidth: "75%" }}>
-                            {nameFromUrl}
+                            {displayName}
+                            {systemName && (
+                              <span className="d-block small text-muted">System name: {systemName}</span>
+                            )}
                           </span>
                           <div className="d-flex gap-2">
                             <a
@@ -639,7 +666,7 @@ const ProjectForm = () => {
                               href={url}
                               target="_blank"
                               rel="noreferrer"
-                              download={nameFromUrl}
+                              download={displayName}
                             >
                               Download
                             </a>

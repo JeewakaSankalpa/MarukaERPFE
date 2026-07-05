@@ -15,6 +15,9 @@ import {
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+const IMPORT_APPROVAL_BATCH_SIZE = 10;
+const IMPORT_APPROVAL_TIMEOUT_MS = 300000;
+
 const StockAuditApprovalsPage = () => {
     const navigate = useNavigate();
     const [audits, setAudits] = useState([]);
@@ -61,7 +64,7 @@ const StockAuditApprovalsPage = () => {
         try {
             if (approveDialog.sourceType === 'IMPORT_SYNC') {
                 const totalRows = approveDialog.importRows?.length || 0;
-                const batchSize = 50;
+                const batchSize = IMPORT_APPROVAL_BATCH_SIZE;
                 let start = 0;
                 let completed = false;
 
@@ -69,7 +72,10 @@ const StockAuditApprovalsPage = () => {
                     const response = await api.post(
                         `/admin/import/inventory/approve-audit/${approveDialog.id}`,
                         null,
-                        { params: { start, batchSize } }
+                        {
+                            params: { start, batchSize },
+                            timeout: IMPORT_APPROVAL_TIMEOUT_MS,
+                        }
                     );
                     const result = response.data || {};
                     completed = result.completed === true || result.nextStart == null;
@@ -166,6 +172,7 @@ const StockAuditApprovalsPage = () => {
                                     <div>
                                         <span className="fw-bold me-2">{audit.title || 'Stock Adjustment Audit'}</span>
                                         {audit.sourceType === 'IMPORT_SYNC' && <Badge bg="info" className="me-2">Import Sync</Badge>}
+                                        {audit.sourceType === 'STOCK_RECONCILIATION' && <Badge bg="primary" className="me-2">Physical Reconciliation</Badge>}
                                         <span className="text-secondary small">
                                             Uploaded {new Date(audit.uploadedAt || audit.createdAt).toLocaleString()} by {audit.uploadedBy || audit.createdBy || 'System'}
                                         </span>
@@ -235,6 +242,8 @@ const StockAuditApprovalsPage = () => {
                                             <th className="text-end">Old Qty</th>
                                             <th className="text-end">New Qty</th>
                                             <th className="text-end">Adjustment</th>
+                                            <th className="text-end">Old Cost</th>
+                                            <th className="text-end">New Cost</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -247,6 +256,8 @@ const StockAuditApprovalsPage = () => {
                                                 <td className={`text-end ${item.adjustmentQuantity < 0 ? 'text-danger' : 'text-success'}`}>
                                                     {item.adjustmentQuantity > 0 ? `+${item.adjustmentQuantity}` : item.adjustmentQuantity}
                                                 </td>
+                                                <td className="text-end">{item.oldUnitCost ?? '-'}</td>
+                                                <td className="text-end fw-bold">{item.newUnitCost ?? '-'}</td>
                                             </tr>
                                         ))}
                                     </tbody>

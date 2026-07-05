@@ -16,6 +16,15 @@ const extractFileName = (urlOrName) => {
     }
 };
 
+const fileDisplayName = (file) =>
+    extractFileName(file?.originalName || file?.displayName || file?.storedName || file?.url || file?.publicUrl);
+
+const fileSystemName = (file) => {
+    const stored = extractFileName(file?.storedName || file?.url || file?.publicUrl);
+    const original = fileDisplayName(file);
+    return stored && stored !== '(unnamed)' && stored !== original ? stored : '';
+};
+
 // Normalize labels like "file1 (need 2)" -> "file1"
 const normalizeLabel = (s) => (String(s || '').split(' (need')[0].trim());
 
@@ -132,11 +141,17 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
         if (filesOverride) {
             // Use snapshot override
             const list = (filesOverride || []).map(x => {
-                const name = extractFileName(x.storedName || x.originalName);
+                const name = fileDisplayName(x);
                 return {
                     displayName: name,
+                    originalName: x.originalName || name,
+                    storedName: x.storedName || '',
+                    systemName: fileSystemName(x),
                     url: x.publicUrl || x.url, // Handle diverse naming in snapshot
                     docType: x.docType || '',
+                    stage: x.stage || '',
+                    uploadedAt: x.uploadedAt,
+                    uploadedBy: x.uploadedBy,
                     _kind: 'file'
                 };
             });
@@ -156,10 +171,13 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
             const res = await api.get(`/projects/${id}/files`, { headers: roleHeader });
             const rawList = Array.isArray(res.data) ? res.data : [];
             const projectFiles = rawList.map(x => {
-                const name = extractFileName(x.url || x.storedName || x.originalName);
+                const name = fileDisplayName(x);
                 return {
                     id: x.id,
                     displayName: name,
+                    originalName: x.originalName || name,
+                    storedName: x.storedName || '',
+                    systemName: fileSystemName(x),
                     url: x.url,
                     stage: x.stage || '',
                     docType: x.docType || '',
@@ -525,6 +543,9 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                                     {f._kind === 'invoice' ? <Badge bg="primary" className="me-2">Invoice</Badge> : null}
                                     {f._drawingHistoryCount ? <Badge bg="warning" text="dark" className="me-2">Latest Drawing</Badge> : null}
                                     {f.displayName}
+                                    {f.systemName ? (
+                                        <div className="small text-muted">System name: {f.systemName}</div>
+                                    ) : null}
                                     {f._drawingHistoryCount ? (
                                         <Button
                                             size="sm"
@@ -555,7 +576,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                                             Open
                                         </a>
                                     ) : (
-                                        <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download>
+                                        <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download={f.originalName || f.displayName}>
                                             Download
                                         </a>
                                     )}
@@ -606,11 +627,14 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                                     <td>
                                         {idx === 0 ? <Badge bg="warning" text="dark" className="me-2">Latest</Badge> : null}
                                         {f.displayName}
+                                        {f.systemName ? (
+                                            <div className="small text-muted">System name: {f.systemName}</div>
+                                        ) : null}
                                     </td>
                                     <td>{f.uploadedAt ? new Date(f.uploadedAt).toLocaleString() : '-'}</td>
                                     <td className="d-flex gap-2 justify-content-center">
                                         <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">View</a>
-                                        <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download>Download</a>
+                                        <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download={f.originalName || f.displayName}>Download</a>
                                     </td>
                                 </tr>
                             ))}

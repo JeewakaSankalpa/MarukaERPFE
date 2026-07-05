@@ -27,17 +27,18 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
   const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
 
   const hasAccess = (item) => {
+    const isAdminRole = ["ADMIN", "SUPER_ADMIN"].includes(userRole);
     const isAdminDashboard =
       item.id === "executive.dashboard" || item.id === "project.summary.dashboard";
 
-    if ((item.adminOnly || isAdminDashboard) && !["ADMIN", "SUPER_ADMIN"].includes(userRole)) return false;
+    if ((item.adminOnly || isAdminDashboard) && !isAdminRole) return false;
 
     // Check if ID is in access list
     if (!item.id) return true;
 
     // Special Restricted Items (Must have explicit permission, no hierarchy)
     if (item.id === "settings.super_admin") {
-      return userModules.includes("settings.super_admin");
+      return isAdminRole && userModules.includes("settings.super_admin");
     }
 
     // Admin dashboards are role-protected and should appear for all admins,
@@ -54,6 +55,11 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
       userModules.includes("finance.expenses") ||
       userModules.includes("finance.accounts") ||
       userModules.includes("finance.reports")
+    )) return true;
+    if (item.id === "settings.stock_verification" && (
+      userModules.includes("settings") ||
+      userModules.includes("settings.config") ||
+      userModules.includes("settings.roles")
     )) return true;
 
     return false;

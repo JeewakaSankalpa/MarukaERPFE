@@ -196,7 +196,7 @@ const ProjectSummaryDashboard = () => {
 
                             <section className="executive-grid two-column">
                                 <DataTable title="Documents updated" rows={detail.files || []} columns={[
-                                    ["Document", row => <><strong>{row.name}</strong><small>{row.docType || row.stage || "Project file"}</small></>],
+                                    ["Document", row => <><strong>{row.originalName || row.name}</strong><small>{row.storedName && row.storedName !== (row.originalName || row.name) ? `System name: ${row.storedName}` : (row.docType || row.stage || "Project file")}</small></>],
                                     ["By", row => row.uploadedBy || "Unknown"],
                                     ["Version", row => row.version || "-"],
                                     ["Uploaded", row => dateTime(row.uploadedAt)]
