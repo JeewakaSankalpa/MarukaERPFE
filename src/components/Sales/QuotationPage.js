@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import React, { useEffect, useState, useRef } from "react";
-import { Container, Row, Col, Form, Button, Card, Badge } from "react-bootstrap";
+import { Container, Row, Col, Form, Button, Card, Badge, Table, Spinner } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../../api/api";
@@ -28,6 +28,61 @@ export default function QuotationPage() {
     const [products, setProducts] = useState([]);
     const [availMap, setAvailMap] = useState({});
     const productById = useRef({});
+    const [invoices, setInvoices] = useState([]);
+    const [invoiceType, setInvoiceType] = useState("proforma");
+    const [loadingInvoices, setLoadingInvoices] = useState(false);
+    const [generatingInvoice, setGeneratingInvoice] = useState(false);
+
+    const invoiceTypeLabels = {
+        proforma: "Proforma Invoice",
+        normal: "Cash Invoice",
+        tax: "Tax Invoice",
+    };
+
+    const formatMoney = (value) => Number(value || 0).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
+    const formatDateTime = (value) => {
+        if (!value) return "-";
+        return new Date(value).toLocaleString("en-GB", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const invoiceNumberFor = (invoice) =>
+        invoice.proformaInvoiceNumber || invoice.normalInvoiceNumber || invoice.taxInvoiceNumber || invoice.invoiceNumber || "-";
+
+    const invoiceTypeFor = (invoice) => {
+        const type = invoice.downloadDocumentType || (invoice.taxInvoiceNumber ? "tax" : invoice.normalInvoiceNumber ? "normal" : "proforma");
+        return invoiceTypeLabels[type] || type || "-";
+    };
+
+    const invoiceTypeVariant = (invoice) => {
+        const type = invoice.downloadDocumentType || (invoice.taxInvoiceNumber ? "tax" : invoice.normalInvoiceNumber ? "normal" : "proforma");
+        if (type === "tax") return "success";
+        if (type === "normal") return "primary";
+        return "info";
+    };
+
+    const loadInvoices = async (quotationId = quote.id || id) => {
+        if (!quotationId || quotationId === "new") return;
+        setLoadingInvoices(true);
+        try {
+            const res = await api.get(`/invoices/by-quotation/${quotationId}`);
+            setInvoices(res.data || []);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to load invoice history");
+        } finally {
+            setLoadingInvoices(false);
+        }
+    };
 
     useEffect(() => {
         // Load Ref Data
@@ -52,7 +107,9 @@ export default function QuotationPage() {
                 toast.error("Failed to load quotation");
                 navigate("/sales/quotations");
             });
+            loadInvoices(id);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, isNew, navigate]);
 
     const handleSave = async (silent = false) => {
@@ -74,15 +131,40 @@ export default function QuotationPage() {
                 res = await api.post("/quotations", payload);
                 toast.success("Quotation Created");
                 navigate(`/sales/quotations/${res.data.id}`);
+                return res.data;
             } else {
                 res = await api.put(`/quotations/${quote.id || id}`, payload);
                 if (!silent) toast.success("Quotation Updated");
                 // Update local state to reflect potentially new server-side fields (like updated timestamps)
                 setQuote(res.data);
+                return res.data;
             }
         } catch (e) {
             console.error(e);
             toast.error("Failed to save");
+            throw e;
+        }
+    };
+
+    const handleGenerateInvoice = async () => {
+        const quoteId = quote.id || id;
+        if (!quoteId || isNew) {
+            toast.info("Save the quotation before generating invoices");
+            return;
+        }
+
+        setGeneratingInvoice(true);
+        try {
+            await handleSave(true);
+            const res = await api.post(`/invoices/generate-from-quotation/${quoteId}?type=${invoiceType}`);
+            toast.success(`${invoiceTypeLabels[invoiceType]} generated`);
+            await loadInvoices(quoteId);
+            navigate(`/invoices/${res.data.id}?type=${invoiceType}`);
+        } catch (e) {
+            console.error(e);
+            toast.error(e.response?.data?.message || "Failed to generate invoice");
+        } finally {
+            setGeneratingInvoice(false);
         }
     };
 
@@ -204,6 +286,84 @@ export default function QuotationPage() {
                         onChange={(newTerms) => setQuote({ ...quote, terms: newTerms })}
                     />
                 </Col>
+
+                {!isNew && (
+                    <Col md={12}>
+                        <Card className="shadow-sm">
+                            <Card.Header className="bg-white d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                <div>
+                                    <div className="fw-bold">Invoices</div>
+                                    <div className="text-muted small">Generate invoice documents and keep a versioned history for this quotation.</div>
+                                </div>
+                                <div className="d-flex align-items-center gap-2">
+                                    <Form.Select
+                                        size="sm"
+                                        value={invoiceType}
+                                        onChange={e => setInvoiceType(e.target.value)}
+                                        style={{ width: 190 }}
+                                        disabled={generatingInvoice}
+                                    >
+                                        <option value="proforma">Proforma Invoice</option>
+                                        <option value="normal">Cash Invoice</option>
+                                        <option value="tax">Tax Invoice</option>
+                                    </Form.Select>
+                                    <Button size="sm" variant="primary" onClick={handleGenerateInvoice} disabled={generatingInvoice}>
+                                        {generatingInvoice ? "Generating..." : "Generate invoice"}
+                                    </Button>
+                                </div>
+                            </Card.Header>
+                            <Card.Body>
+                                {loadingInvoices ? (
+                                    <div className="py-4 text-center text-muted">
+                                        <Spinner size="sm" animation="border" className="me-2" />
+                                        Loading invoice history...
+                                    </div>
+                                ) : invoices.length === 0 ? (
+                                    <div className="py-4 text-center text-muted">
+                                        No invoices generated for this quotation yet.
+                                    </div>
+                                ) : (
+                                    <Table responsive hover size="sm" className="align-middle mb-0">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th>Invoice no</th>
+                                                <th>Type</th>
+                                                <th>Version</th>
+                                                <th>Generated by</th>
+                                                <th>Generated at</th>
+                                                <th className="text-end">Total</th>
+                                                <th className="text-end">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[...invoices]
+                                                .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+                                                .map(invoice => (
+                                                    <tr key={invoice.id}>
+                                                        <td className="fw-semibold">{invoiceNumberFor(invoice)}</td>
+                                                        <td><Badge bg={invoiceTypeVariant(invoice)}>{invoiceTypeFor(invoice)}</Badge></td>
+                                                        <td>{invoice.documentVersion || 1}</td>
+                                                        <td>{invoice.createdBy || "system"}</td>
+                                                        <td>{formatDateTime(invoice.createdAt)}</td>
+                                                        <td className="text-end">LKR {formatMoney(invoice.totalAmount)}</td>
+                                                        <td className="text-end">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline-primary"
+                                                                onClick={() => navigate(`/invoices/${invoice.id}?type=${invoice.downloadDocumentType || "proforma"}`)}
+                                                            >
+                                                                View
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </tbody>
+                                    </Table>
+                                )}
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                )}
             </Row>
         </Container>
     );

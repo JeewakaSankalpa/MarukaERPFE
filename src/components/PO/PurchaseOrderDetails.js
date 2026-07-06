@@ -1,4 +1,4 @@
-import { ArrowLeft, Paperclip, Upload } from 'lucide-react';
+import { ArrowLeft, Paperclip, RotateCcw, Upload } from 'lucide-react';
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { Container, Row, Col, Button, Table, Badge, Modal, Form } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
@@ -15,6 +15,16 @@ const listEmployeesAPI = async () => (await api.get(`/employee/all`)).data ?? []
 const submitApprovalAPI = async (id, payload) => (await api.post(`/pos/${id}/submit-approval`, payload)).data;
 const approveAPI = async (id, payload) => (await api.post(`/pos/${id}/approve`, payload)).data;
 const rejectAPI = async (id, payload) => (await api.post(`/pos/${id}/reject`, payload)).data;
+const revertToDraftAPI = async (id, payload) => {
+    try {
+        return (await api.post(`/pos/${id}/revert-to-draft`, payload)).data;
+    } catch (e) {
+        if (e?.response?.status === 405) {
+            return (await api.patch(`/pos/${id}/revert-to-draft`, payload)).data;
+        }
+        throw e;
+    }
+};
 const listSavedAddressesAPI = async () => (await api.get(`/addresses`)).data;
 const createSavedAddressAPI = async (payload) => (await api.post(`/addresses`, payload)).data;
 const updatePOAddressAPI = async (id, payload) => (await api.patch(`/pos/${id}/address`, payload)).data;
@@ -43,11 +53,14 @@ export default function PurchaseOrderDetails() {
     const [approvalComment, setApprovalComment] = useState("");
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showRevertModal, setShowRevertModal] = useState(false);
+    const [revertReason, setRevertReason] = useState("");
 
     // Loading states for async actions
     const [submitting, setSubmitting] = useState(false);
     const [approving, setApproving] = useState(false);
     const [rejecting, setRejecting] = useState(false);
+    const [reverting, setReverting] = useState(false);
 
     // Address Modal
     const [showAddressModal, setShowAddressModal] = useState(false);
@@ -137,6 +150,31 @@ export default function PurchaseOrderDetails() {
         }
     };
 
+    const handleRevertToDraft = async () => {
+        const reason = revertReason.trim();
+        if (!reason) {
+            toast.warn("Enter a reason before reverting the PO");
+            return;
+        }
+
+        setShowRevertModal(false);
+        setReverting(true);
+        try {
+            const updated = await revertToDraftAPI(id, { reason });
+            setPo(updated);
+            setRevertReason("");
+            toast.success("PO sent back to edit stage");
+        } catch (e) {
+            if (e?.response?.status === 405) {
+                toast.error("Revert endpoint is not loaded on the backend. Restart the backend and try again.");
+            } else {
+                toast.error(e.response?.data?.message || "Failed to revert PO");
+            }
+        } finally {
+            setReverting(false);
+        }
+    };
+
     const handleUpdateFinancials = async () => {
         try {
             const deliveryCharge = financialsForm.deliveryCharge !== '' ? parseFloat(financialsForm.deliveryCharge) : 0;
@@ -210,10 +248,55 @@ export default function PurchaseOrderDetails() {
 
     const { approvalStatus, approverIds = [], approvals = [] } = po;
     const quotationAttachments = po.quotationAttachments || [];
+    const revisionHistory = po.revisionHistory || [];
+    const employeeByIdOrUsername = new Map();
+    employees.forEach(emp => {
+        if (emp?.id) employeeByIdOrUsername.set(emp.id, emp);
+        if (emp?.username) employeeByIdOrUsername.set(emp.username, emp);
+    });
+    const formatEmployee = (idOrName, fallbackName) => {
+        const candidate = idOrName ? employeeByIdOrUsername.get(idOrName) : null;
+        if (candidate) {
+            const fullName = [candidate.firstName, candidate.lastName].filter(Boolean).join(" ").trim();
+            return fullName && candidate.username ? `${fullName} (${candidate.username})` : fullName || candidate.username || candidate.id;
+        }
+        if (fallbackName && fallbackName !== idOrName) return fallbackName;
+        return idOrName || "-";
+    };
+    const finalApprovalRecord = approvals.slice().reverse().find(r => r.status === 'APPROVED');
     const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
     const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
     const purchaseForSources = getPurchaseForSources(po);
     const canPrintPO = ["APPROVED", "FINALIZED"].includes(String(approvalStatus || "").toUpperCase());
+    const currentAcceptedById = po.approvedById || finalApprovalRecord?.approverId;
+    const canRevertToDraft = String(approvalStatus || "").toUpperCase() === "APPROVED"
+        && currentAcceptedById
+        && employeeId
+        && currentAcceptedById === employeeId;
+    const versionHistoryRows = [
+        ...revisionHistory.map(record => ({
+            key: `revision-${record.approvalVersion}-${record.revertedAt || record.reason}`,
+            version: record.approvalVersion,
+            acceptedBy: formatEmployee(record.acceptedById, record.acceptedByName),
+            acceptedAt: record.acceptedAt,
+            revertedBy: formatEmployee(record.revertedById, record.revertedByName),
+            revertedAt: record.revertedAt,
+            reason: record.reason || "-"
+        })),
+        ...(String(approvalStatus || "").toUpperCase() === "APPROVED" ? [{
+            key: `current-${po.approvalVersion || 1}`,
+            version: po.approvalVersion || 1,
+            acceptedBy: formatEmployee(currentAcceptedById, po.approvedByName || finalApprovalRecord?.approverName),
+            acceptedAt: po.approvedAt || finalApprovalRecord?.timestamp,
+            revertedBy: "-",
+            revertedAt: null,
+            reason: "Current approved version"
+        }] : [])
+    ].sort((a, b) => {
+        const dateA = new Date(b.revertedAt || b.acceptedAt || 0).getTime();
+        const dateB = new Date(a.revertedAt || a.acceptedAt || 0).getTime();
+        return dateA - dateB;
+    });
 
     return (
         <Container className="py-4">
@@ -280,6 +363,19 @@ export default function PurchaseOrderDetails() {
                             </Button>
                         </div>
                     )}
+                    {canRevertToDraft && (
+                        <Button
+                            variant="outline-warning"
+                            className="d-inline-flex align-items-center gap-1"
+                            disabled={reverting}
+                            onClick={() => setShowRevertModal(true)}
+                        >
+                            {reverting
+                                ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                : <RotateCcw size={16} />}
+                            {reverting ? 'Reverting...' : 'Revert to Edit'}
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -306,10 +402,14 @@ export default function PurchaseOrderDetails() {
                                 </div>
                             </div>
                             <div className="text-end">
-                                <Button size="sm" variant="outline-primary" className="mb-2" onClick={() => setShowAddressModal(true)}>
-                                    Edit Shipping Address
-                                </Button>
-                                <br />
+                                {isDraft && (
+                                    <>
+                                        <Button size="sm" variant="outline-primary" className="mb-2" onClick={() => setShowAddressModal(true)}>
+                                            Edit Shipping Address
+                                        </Button>
+                                        <br />
+                                    </>
+                                )}
                                 <Badge bg={
                                     po.status === 'FULLY_RECEIVED' ? 'success' :
                                         po.status === 'PARTIALLY_RECEIVED' ? 'info' :
@@ -439,7 +539,8 @@ export default function PurchaseOrderDetails() {
                                 size="sm"
                                 variant="outline-primary"
                                 className="d-inline-flex align-items-center gap-1"
-                                disabled={uploadingQuotations}
+                                disabled={uploadingQuotations || !isDraft}
+                                title={!isDraft ? "Revert this PO before uploading quotations" : ""}
                                 onClick={() => quotationInputRef.current?.click()}
                             >
                                 {uploadingQuotations
@@ -499,8 +600,7 @@ export default function PurchaseOrderDetails() {
                         {(approverIds.length > 0) ? (
                             <ul className="list-unstyled mb-0">
                                 {approverIds.map(uid => {
-                                    const emp = employees.find(e => e.id === uid);
-                                    const name = emp ? `${emp.firstName} ${emp.lastName}` : uid;
+                                    const name = formatEmployee(uid);
                                     const rec = approvals.slice().reverse().find(r => r.approverId === uid);
                                     const status = rec ? rec.status : "PENDING";
                                     const color = status === 'APPROVED' ? 'success' : status === 'REJECTED' ? 'danger' : 'secondary';
@@ -526,6 +626,41 @@ export default function PurchaseOrderDetails() {
                     </div>
                 </Col>
             </Row>
+
+            <div className="bg-white shadow rounded p-3 mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h6 className="mb-0">Version History</h6>
+                    <Badge bg="light" text="dark">Approval v{po.approvalVersion || 1}</Badge>
+                </div>
+                {versionHistoryRows.length > 0 ? (
+                    <Table hover responsive bordered size="sm" className="mb-0">
+                        <thead className="bg-light">
+                            <tr>
+                                <th style={{ width: 110 }}>Version</th>
+                                <th>Accepted By</th>
+                                <th>Accepted At</th>
+                                <th>Reverted By</th>
+                                <th>Reverted At</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {versionHistoryRows.map(row => (
+                                <tr key={row.key}>
+                                    <td className="fw-semibold">v{row.version}</td>
+                                    <td>{row.acceptedBy}</td>
+                                    <td>{row.acceptedAt ? new Date(row.acceptedAt).toLocaleString() : "-"}</td>
+                                    <td>{row.revertedBy}</td>
+                                    <td>{row.revertedAt ? new Date(row.revertedAt).toLocaleString() : "-"}</td>
+                                    <td style={{ whiteSpace: "pre-wrap" }}>{row.reason}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                ) : (
+                    <div className="text-muted small">No approved revisions have been recorded yet.</div>
+                )}
+            </div>
 
             {/* Submit Modal */}
             <Modal show={showSubmitModal} onHide={() => setShowSubmitModal(false)}>
@@ -567,6 +702,31 @@ export default function PurchaseOrderDetails() {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowRejectModal(false)}>Cancel</Button>
                     <Button variant="danger" onClick={handleReject} disabled={!approvalComment.trim()}>Reject PO</Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showRevertModal} onHide={() => setShowRevertModal(false)}>
+                <Modal.Header closeButton><Modal.Title>Revert Purchase Order to Edit</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <p className="text-muted small">
+                        This will create the next approval version and send the PO back to draft/edit stage.
+                    </p>
+                    <Form.Group>
+                        <Form.Label>Reason for Revert *</Form.Label>
+                        <Form.Control
+                            as="textarea"
+                            rows={3}
+                            value={revertReason}
+                            onChange={e => setRevertReason(e.target.value)}
+                            placeholder="Explain why this approved PO needs a revision"
+                        />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowRevertModal(false)}>Cancel</Button>
+                    <Button variant="warning" onClick={handleRevertToDraft} disabled={!revertReason.trim() || reverting}>
+                        Revert to Edit
+                    </Button>
                 </Modal.Footer>
             </Modal>
 

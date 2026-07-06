@@ -24,7 +24,7 @@ const DOC_TYPES = {
 
 const DOC_TYPE_OPTIONS = [
     { value: DOC_TYPES.PROFORMA, label: "Proforma Invoice", field: "proformaInvoiceNumber" },
-    { value: DOC_TYPES.NORMAL, label: "Invoice", field: "normalInvoiceNumber" },
+    { value: DOC_TYPES.NORMAL, label: "Cash Invoice", field: "normalInvoiceNumber" },
     { value: DOC_TYPES.TAX, label: "Tax Invoice", field: "taxInvoiceNumber" },
 ];
 
@@ -182,6 +182,15 @@ const getCompanyAddress = (customer) =>
 const getCustomerPhone = (customer) =>
     customer?.comContactNumber || customer?.pContact || customer?.contactNo || "";
 
+const getSnapshotCustomer = (invoice) => ({
+    comName: invoice?.customerNameSnapshot,
+    name: invoice?.customerNameSnapshot,
+    comEmail: invoice?.customerEmailSnapshot,
+    email: invoice?.customerEmailSnapshot,
+    comAddress: invoice?.customerAddressSnapshot,
+    address: invoice?.customerAddressSnapshot,
+});
+
 const buildDisplayInvoiceNumber = (rawNumber, docType) => {
     const prefix = docType === DOC_TYPES.PROFORMA
         ? "MT/PI/"
@@ -214,6 +223,7 @@ const InvoiceView = () => {
     const [invoice, setInvoice] = useState(null);
     const [project, setProject] = useState(null);
     const [customer, setCustomer] = useState(null);
+    const [quotation, setQuotation] = useState(null);
     const [payments, setPayments] = useState([]);
     const [estimation, setEstimation] = useState(null);
     const [settings, setSettings] = useState({});
@@ -235,6 +245,15 @@ const InvoiceView = () => {
                     setSettings(settingsRes.data || {});
                 } catch (settingsErr) {
                     console.warn("Could not fetch invoice company settings", settingsErr);
+                }
+
+                if (invRes.data.quotationId) {
+                    try {
+                        const quoteRes = await api.get(`/quotations/${invRes.data.quotationId}`);
+                        setQuotation(quoteRes.data);
+                    } catch (quoteErr) {
+                        console.warn("Could not fetch source quotation", quoteErr);
+                    }
                 }
 
                 if (invRes.data.projectId) {
@@ -386,6 +405,8 @@ const InvoiceView = () => {
     const balanceDue = Math.max(documentTotal - totalReceived, 0);
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
     const projectText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
+    const displayCustomer = customer || getSnapshotCustomer(invoice);
+    const displaySubject = project?.projectName || quotation?.subject || invoice.subjectSnapshot;
     const company = {
         name: settings["app.company.name"] || fallbackCompany.name,
         addressLines: splitLines(settings["app.company.address"] || fallbackCompany.address),
@@ -723,10 +744,10 @@ const InvoiceView = () => {
                             <div><span className="tax-label">Telephone No: </span><span>{company.phone || "-"}</span></div>
                         </div>
                         <div className="tax-box tax-party-box">
-                            <div><span className="tax-label">Purchaser's TIN: </span><span>{customer?.tin || customer?.taxId || customer?.vatNumber || "-"}</span></div>
-                            <div><span className="tax-label">Purchaser's Name: </span><span>{customer?.comName || customer?.name || "N/A"}</span></div>
-                            <div><span className="tax-label">Address: </span><span>{getCompanyAddress(customer) || "-"}</span></div>
-                            <div><span className="tax-label">Telephone No: </span><span>{getCustomerPhone(customer) || "-"}</span></div>
+                            <div><span className="tax-label">Purchaser's TIN: </span><span>{displayCustomer?.tin || displayCustomer?.taxId || displayCustomer?.vatNumber || "-"}</span></div>
+                            <div><span className="tax-label">Purchaser's Name: </span><span>{displayCustomer?.comName || displayCustomer?.name || "N/A"}</span></div>
+                            <div><span className="tax-label">Address: </span><span>{getCompanyAddress(displayCustomer) || "-"}</span></div>
+                            <div><span className="tax-label">Telephone No: </span><span>{getCustomerPhone(displayCustomer) || "-"}</span></div>
                         </div>
                         <div className="tax-box">
                             <span className="tax-label">Date of Delivery: </span>
@@ -811,7 +832,7 @@ const InvoiceView = () => {
                 <div className="invoice-top-grid">
                     <div className="invoice-address">
                         <div className="invoice-address-title">{addressTitle}</div>
-                        {getCustomerLines(customer).map((line, idx) => (
+                        {getCustomerLines(displayCustomer).map((line, idx) => (
                             <div className="invoice-address-line" key={`${line}-${idx}`}>{line}</div>
                         ))}
                     </div>
@@ -837,7 +858,7 @@ const InvoiceView = () => {
                     </div>
                     <div>
                         <div className="invoice-project-label">PROJECT NO</div>
-                        <div className="invoice-project-value">{jobRef !== "-" ? `${jobRef} (${projectText})` : projectText}</div>
+                        <div className="invoice-project-value">{jobRef !== "-" ? `${jobRef} (${projectText})` : (displaySubject || projectText)}</div>
                     </div>
                 </div>
 

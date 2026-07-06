@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
-import { Button, Spinner, Table, Alert, Modal, Form } from "react-bootstrap";
+import { Button, Spinner, Table, Alert, Modal, Form, Tabs, Tab, Badge } from "react-bootstrap";
 import ReportLayout from "../ReusableComponents/ReportLayout";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -31,7 +31,7 @@ const INVOICE_TYPES = {
 
 const invoiceTypeLabels = {
     [INVOICE_TYPES.PROFORMA]: "Proforma Invoice",
-    [INVOICE_TYPES.NORMAL]: "Invoice",
+    [INVOICE_TYPES.NORMAL]: "Cash Invoice",
     [INVOICE_TYPES.TAX]: "Tax Invoice",
 };
 
@@ -41,6 +41,36 @@ const getInvoiceDocumentType = (invoice) => {
     if (invoice.taxInvoiceNumber) return INVOICE_TYPES.TAX;
     if (invoice.normalInvoiceNumber) return INVOICE_TYPES.NORMAL;
     return INVOICE_TYPES.PROFORMA;
+};
+
+const getInvoiceDocumentNumber = (invoice) =>
+    invoice?.taxInvoiceNumber || invoice?.normalInvoiceNumber || invoice?.proformaInvoiceNumber || invoice?.invoiceNumber;
+
+const formatDateTime = (value) => {
+    if (!value) return "-";
+    return new Date(value).toLocaleString("en-GB", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+const invoiceTypeVariant = (invoice) => {
+    const type = getInvoiceDocumentType(invoice);
+    if (type === INVOICE_TYPES.TAX) return "success";
+    if (type === INVOICE_TYPES.NORMAL) return "primary";
+    return "info";
+};
+
+const statusVariant = (status) => {
+    switch (status) {
+        case "PAID": return "success";
+        case "CANCELLED": return "danger";
+        case "PARTIALLY_PAID": return "info";
+        default: return "warning";
+    }
 };
 
 const componentAmount = (component) =>
@@ -98,6 +128,7 @@ const QuotationPrint = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [printFormat, setPrintFormat] = useState(PRINT_FORMATS.ALL);
     const [invoiceType, setInvoiceType] = useState(INVOICE_TYPES.PROFORMA);
+    const [activeTab, setActiveTab] = useState("quotation");
 
     const fetchData = async () => {
         try {
@@ -129,6 +160,19 @@ const QuotationPrint = () => {
         fetchData();
         // eslint-disable-next-line
     }, [projectId]);
+
+    useEffect(() => {
+        const hasFinalInvoice = invoices
+            .filter(inv => inv.status !== "CANCELLED")
+            .some(inv => {
+                const type = getInvoiceDocumentType(inv);
+                return type === INVOICE_TYPES.NORMAL || type === INVOICE_TYPES.TAX;
+            });
+
+        if (hasFinalInvoice && invoiceType !== INVOICE_TYPES.PROFORMA) {
+            setInvoiceType(INVOICE_TYPES.PROFORMA);
+        }
+    }, [invoices, invoiceType]);
 
     const handleFinalize = async () => {
         if (!window.confirm("Are you sure you want to finalize this quotation? It will be locked.")) return;
@@ -163,7 +207,15 @@ const QuotationPrint = () => {
     if (!estimation) return <div className="text-center p-5">No estimation found for this project.</div>;
 
     const isFinalized = estimation.status === "FINALIZED";
-    const hasActiveInvoice = invoices.some(inv => inv.status !== "CANCELLED");
+    const activeInvoices = invoices.filter(inv => inv.status !== "CANCELLED");
+    const hasActiveFinalInvoice = activeInvoices.some(inv => {
+        const type = getInvoiceDocumentType(inv);
+        return type === INVOICE_TYPES.NORMAL || type === INVOICE_TYPES.TAX;
+    });
+    const availableInvoiceTypes = [
+        INVOICE_TYPES.PROFORMA,
+        ...(!hasActiveFinalInvoice ? [INVOICE_TYPES.NORMAL, INVOICE_TYPES.TAX] : []),
+    ];
     const today = new Date();
     const validUntil = new Date();
     validUntil.setDate(today.getDate() + 30);
@@ -171,9 +223,6 @@ const QuotationPrint = () => {
     const jobRef = project?.jobNumber || "-";
     const subtitleParts = [`Inquiry: ${inquiryRef}`];
     if (project?.jobNumber) subtitleParts.push(`Job: ${project.jobNumber}`);
-    const activeInvoice = invoices.find(i => i.status !== "CANCELLED");
-    const activeInvoiceType = getInvoiceDocumentType(activeInvoice);
-    const activeInvoiceLabel = invoiceTypeLabels[activeInvoiceType] || "Invoice";
 
     return (
         <div className="bg-white min-vh-100 p-4">
@@ -189,57 +238,134 @@ const QuotationPrint = () => {
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
                 <div className="d-flex gap-2 align-items-center">
-                    <Form.Select
-                        size="sm"
-                        className="w-auto"
-                        value={printFormat}
-                        onChange={(e) => setPrintFormat(e.target.value)}
-                        aria-label="Quotation print format"
-                    >
-                        <option value={PRINT_FORMATS.ALL}>Show everything</option>
-                        <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
-                        <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
-                        <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
-                    </Form.Select>
-                    {!isFinalized && (
-                        <Button variant="success" onClick={handleFinalize}>Finalize Quote</Button>
-                    )}
-                    {isFinalized && !hasActiveInvoice && (
+                    {activeTab === "quotation" && (
                         <>
                             <Form.Select
                                 size="sm"
                                 className="w-auto"
-                                value={invoiceType}
-                                onChange={(e) => setInvoiceType(e.target.value)}
-                                aria-label="Invoice type to generate"
+                                value={printFormat}
+                                onChange={(e) => setPrintFormat(e.target.value)}
+                                aria-label="Quotation print format"
                             >
-                                <option value={INVOICE_TYPES.PROFORMA}>Proforma Invoice</option>
-                                <option value={INVOICE_TYPES.NORMAL}>Invoice</option>
-                                <option value={INVOICE_TYPES.TAX}>Tax Invoice</option>
+                                <option value={PRINT_FORMATS.ALL}>Show everything</option>
+                                <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
+                                <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
+                                <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
                             </Form.Select>
-                            <Button variant="warning" onClick={handleGenerateInvoice}>
-                                Generate {invoiceTypeLabels[invoiceType]}
-                            </Button>
+                            {!isFinalized && (
+                                <Button variant="success" onClick={handleFinalize}>Finalize Quote</Button>
+                            )}
+                            <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
                         </>
                     )}
-                    {isFinalized && activeInvoice && (
-                        <Button variant="success" onClick={() => navigate(`/invoices/${activeInvoice.id}?type=${activeInvoiceType}`)}>
-                            View {activeInvoiceLabel}
-                        </Button>
-                    )}
-                    <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
                 </div>
             </div>
 
-            {isFinalized && <Alert variant="success" className="no-print">This quotation is finalized and locked.</Alert>}
-
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="no-print" />
 
-            <ReportLayout
-                title="Quotation"
-                orientation="portrait"
-                subtitle={`${subtitleParts.join(" | ")} - v${estimation.version || 1}`}
+            <Tabs
+                activeKey={activeTab}
+                onSelect={(key) => setActiveTab(key || "quotation")}
+                className="mb-3 no-print"
             >
+                <Tab eventKey="quotation" title="Quotation" />
+                <Tab eventKey="invoices" title={`Invoices (${activeInvoices.length})`} />
+            </Tabs>
+
+            {activeTab === "invoices" ? (
+                <div className="no-print">
+                    <div className="border rounded bg-white">
+                        <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap p-3 border-bottom">
+                            <div>
+                                <h5 className="mb-1">Invoice history</h5>
+                                <div className="text-muted small">
+                                    Every generated invoice is recorded here with its number, version, creator, timestamp, and total.
+                                </div>
+                            </div>
+                            {isFinalized && (
+                                <div className="d-flex gap-2 align-items-center">
+                                    <Form.Select
+                                        size="sm"
+                                        className="w-auto"
+                                        value={invoiceType}
+                                        onChange={(e) => setInvoiceType(e.target.value)}
+                                        aria-label="Invoice type to generate"
+                                        disabled={isGenerating}
+                                    >
+                                        {availableInvoiceTypes.map(type => (
+                                            <option key={type} value={type}>{invoiceTypeLabels[type]}</option>
+                                        ))}
+                                    </Form.Select>
+                                    <Button variant="warning" size="sm" onClick={handleGenerateInvoice} disabled={isGenerating}>
+                                        Generate {invoiceTypeLabels[invoiceType]}
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-3">
+                            {!isFinalized ? (
+                                <Alert variant="warning" className="mb-0">
+                                    Finalize the quotation before generating proforma, cash, or tax invoices.
+                                </Alert>
+                            ) : activeInvoices.length === 0 ? (
+                                <div className="text-center text-muted py-5">
+                                    No invoices generated yet.
+                                </div>
+                            ) : (
+                                <Table responsive hover size="sm" className="align-middle mb-0">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Invoice no</th>
+                                            <th>Type</th>
+                                            <th>Version</th>
+                                            <th>Generated by</th>
+                                            <th>Generated at</th>
+                                            <th>Status</th>
+                                            <th className="text-end">Total</th>
+                                            <th className="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[...activeInvoices]
+                                            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+                                            .map(invoice => {
+                                                const type = getInvoiceDocumentType(invoice);
+                                                return (
+                                                    <tr key={invoice.id}>
+                                                        <td className="fw-semibold">{getInvoiceDocumentNumber(invoice) || "-"}</td>
+                                                        <td><Badge bg={invoiceTypeVariant(invoice)}>{invoiceTypeLabels[type] || type}</Badge></td>
+                                                        <td>{invoice.documentVersion || 1}</td>
+                                                        <td>{invoice.createdBy || "system"}</td>
+                                                        <td>{formatDateTime(invoice.createdAt)}</td>
+                                                        <td><Badge bg={statusVariant(invoice.status)}>{invoice.status || "PENDING"}</Badge></td>
+                                                        <td className="text-end">LKR {money(invoice.totalAmount)}</td>
+                                                        <td className="text-end">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline-primary"
+                                                                onClick={() => navigate(`/invoices/${invoice.id}?type=${type}`)}
+                                                            >
+                                                                View
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                    </tbody>
+                                </Table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    {isFinalized && <Alert variant="success" className="no-print">This quotation is finalized and locked.</Alert>}
+
+                    <ReportLayout
+                        title="Quotation"
+                        orientation="portrait"
+                        subtitle={`${subtitleParts.join(" | ")} - v${estimation.version || 1}`}
+                    >
                 <div className="mb-4 d-flex justify-content-between gap-4">
                     <div style={{ maxWidth: "55%" }}>
                         <div className="fw-bold text-uppercase mb-2">Bill To</div>
@@ -369,7 +495,9 @@ const QuotationPrint = () => {
                         <div className="border-top pt-2 small text-muted">Accepted By / Date</div>
                     </div>
                 </div>
-            </ReportLayout>
+                    </ReportLayout>
+                </>
+            )}
         </div>
     );
 };
