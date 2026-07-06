@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card, Spinner } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import Select from "react-select";
+import AsyncSelect from "react-select/async";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
@@ -16,6 +17,7 @@ import { CustomerForm } from "../Customer/CustomerCreate";
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
 const listTemplates = async () => (await api.get(`/component-templates`)).data;
 const listProductsAPI = async () => (await api.get(`/products`, { params: { page: 0, size: 1000, sort: "name,asc" } })).data?.content ?? [];
+const searchProductsAPI = async (q) => (await api.get(`/products`, { params: { q, page: 0, size: 50, sort: "name,asc" } })).data?.content ?? [];
 const listAvailableAPI = async () => (await api.get(`/inventory/available-quantities`)).data;
 const listProjectsAPI = async () => (await api.get(`/projects`, { params: { page: 0, size: 1000, sort: "createdAt,desc" } })).data?.content ?? [];
 const getCustomerAPI = async (id) => (await api.get(`/customer/${id}`)).data;
@@ -483,9 +485,17 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     );
 
     const productOptions = useMemo(
-        () => products.map(p => ({ value: p.id, label: buildProductLabel(p) })),
+        () => products.map(p => ({ value: p.id, label: buildProductLabel(p), product: p })),
         [products]
     );
+
+    const loadProductOptions = async (inputValue) => {
+        const q = String(inputValue || "").trim();
+        if (!q) return productOptions;
+
+        const results = await searchProductsAPI(q).catch(() => []);
+        return results.map(p => ({ value: p.id, label: buildProductLabel(p), product: p }));
+    };
 
     useEffect(() => {
         const pid = projectOpt?.value || propProjectId;
@@ -799,7 +809,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         }
 
         requireFullSave();
-        const p = productById[pid];
+        const p = option.product || productById[pid];
+        if (option.product && !productById[pid]) {
+            setProducts(current => current.some(product => product.id === pid)
+                ? current
+                : [...current, option.product]);
+        }
         const suggested = deriveSuggestedCost(p);
 
         // optimistic set with cached availability & suggested cost
@@ -1546,8 +1561,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Select
-                                                            options={productOptions}
+                                                        <AsyncSelect
+                                                            defaultOptions={productOptions}
+                                                            cacheOptions
+                                                            loadOptions={loadProductOptions}
                                                             value={r.productOption || null}
                                                             isDisabled={isLocked}
                                                             onChange={(opt) => onPickProduct(i, opt)}
@@ -1556,9 +1573,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                             menuPosition="fixed"
                                                             menuPortalTarget={document.body}
                                                             styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                                            filterOption={(option, input) =>
-                                                                option.label.toLowerCase().includes(input.toLowerCase())
-                                                            }
+                                                            noOptionsMessage={({ inputValue }) => inputValue ? "No products found" : "Type a product name or SKU"}
                                                             className="modern-select-container"
                                                             classNamePrefix="modern-select"
                                                         />

@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
@@ -30,6 +30,21 @@ const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line
 const getInitialChoices = (pendingPlan) => Object.fromEntries(
     (pendingPlan?.lines || []).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])
 );
+const preserveChoicesForPlan = (pendingPlan, previousChoices = {}) => Object.fromEntries(
+    (pendingPlan?.lines || []).map(l => {
+        const key = getLineKey(l);
+        return [
+            key,
+            {
+                supplierId: "",
+                qty: l.shortageQty,
+                unitPrice: "",
+                taxPercent: "",
+                ...(previousChoices[key] || {})
+            }
+        ];
+    })
+);
 const getPlanUpdatedAt = (pendingPlan) => pendingPlan?.updatedAt || pendingPlan?.createdAt || "";
 const formatPlanUpdatedAt = (pendingPlan) => {
     const value = getPlanUpdatedAt(pendingPlan);
@@ -44,6 +59,7 @@ export default function PendingToPOPage() {
     const [plans, setPlans] = useState([]);
     const [plan, setPlan] = useState(null); // {id, lines:[{productId, productNameSnapshot, shortageQty, suppliers:[...] }]}
     const [selectedPlanId, setSelectedPlanId] = useState("");
+    const selectedPlanIdRef = useRef("");
     const [pendingSort, setPendingSort] = useState("updatedAtDesc");
     const [hasLoadedPending, setHasLoadedPending] = useState(false);
     const [choices, setChoices] = useState({}); // productId -> { supplierId, qty, unitPrice, taxPercent }
@@ -65,20 +81,27 @@ export default function PendingToPOPage() {
         return { title: 'From Stores', subtitle: 'Main Store' };
     };
 
-    const applyPlan = useCallback((nextPlan) => {
+    const applyPlan = useCallback((nextPlan, { preserveSelections = false } = {}) => {
         setPlan(nextPlan);
-        setSelectedPlanId(nextPlan?.id || "");
-        setChoices(getInitialChoices(nextPlan));
-        setQuotationRefs({});
+        const nextPlanId = nextPlan?.id || "";
+        selectedPlanIdRef.current = nextPlanId;
+        setSelectedPlanId(nextPlanId);
+        setChoices(previousChoices => (
+            preserveSelections
+                ? preserveChoicesForPlan(nextPlan, previousChoices)
+                : getInitialChoices(nextPlan)
+        ));
+        setQuotationRefs(previousRefs => (preserveSelections ? previousRefs : {}));
     }, []);
 
-    const reloadPending = useCallback(async () => {
+    const reloadPending = useCallback(async ({ preserveSelections = false } = {}) => {
         const list = await getPendingPlans(pendingSort);
         const pendingPlans = list || [];
         setPlans(pendingPlans);
-        applyPlan(pendingPlans.find(p => p.id === selectedPlanId) || pendingPlans[0] || null);
+        const currentPlanId = selectedPlanIdRef.current;
+        applyPlan(pendingPlans.find(p => p.id === currentPlanId) || pendingPlans[0] || null, { preserveSelections });
         setHasLoadedPending(true);
-    }, [applyPlan, pendingSort, selectedPlanId]);
+    }, [applyPlan, pendingSort]);
 
     useEffect(() => {
         reloadPending().catch(() => {
@@ -163,7 +186,7 @@ export default function PendingToPOPage() {
     const handleIssueEditorSaved = async () => {
         closeIssueEditor();
         try {
-            await reloadPending();
+            await reloadPending({ preserveSelections: true });
         } catch {
             toast.error("Saved, but failed to refresh pending purchases");
         }
