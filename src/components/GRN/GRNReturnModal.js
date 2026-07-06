@@ -3,6 +3,44 @@ import { Modal, Button, Table, Row, Col, Alert, Form } from "react-bootstrap";
 import { toast } from "react-toastify";
 import api from "../../api/api";
 
+const textOrDash = (value) => {
+    if (value === null || value === undefined || value === "") return "-";
+    return value;
+};
+
+const getBatchNumber = (batch) => batch.batchNumber || batch.batchNo || "";
+
+const findOriginalItem = (grn, batch, index) => {
+    const batchNumber = String(getBatchNumber(batch));
+    const productId = batch.productId || batch.product?.id;
+    const items = grn.items || [];
+    const uniqueProductIds = [...new Set(items.map(item => item.productId).filter(Boolean))];
+    return grn.items?.find(item =>
+        productId && String(item.productId) === String(productId)
+    ) || grn.items?.find(item =>
+        batchNumber && item.batches?.some(grnBatch => String(grnBatch.batchNo) === batchNumber)
+    ) || grn.items?.find(item =>
+        item.productNameSnapshot && item.productNameSnapshot === (batch.productNameSnapshot || batch.productName)
+    ) || grn.items?.[index] || (uniqueProductIds.length === 1 ? items[0] : null);
+};
+
+const getOriginalQuantity = (grnItem, batch) => {
+    if (batch.originalQuantity !== undefined && batch.originalQuantity !== null) return batch.originalQuantity;
+    const batchNumber = String(getBatchNumber(batch));
+    const grnBatch = grnItem?.batches?.find(itemBatch => String(itemBatch.batchNo) === batchNumber);
+    if (grnBatch) return grnBatch.qty;
+    if (grnItem) return grnItem.receivedQty;
+    return "-";
+};
+
+const getAvailableQuantity = (batch) => {
+    if (batch.availableQuantity !== undefined && batch.availableQuantity !== null) return Number(batch.availableQuantity);
+    if (batch.freeQuantity !== undefined && batch.freeQuantity !== null) return Number(batch.freeQuantity);
+    if (batch.free !== undefined && batch.free !== null) return Number(batch.free);
+    if (batch.quantity !== undefined && batch.quantity !== null) return Number(batch.quantity);
+    return 0;
+};
+
 export default function GRNReturnModal({ grn, onClose }) {
     const [batches, setBatches] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -54,20 +92,18 @@ export default function GRNReturnModal({ grn, onClose }) {
         // Collect items to return
         const returnItems = batches
             .filter(b => returnQty[b.id] > 0)
-            .map(b => {
-                const bNum = String(b.batchNumber || b.batchNo);
-                const originalItem = grn.items?.find(i => 
-                    i.batches?.some(sb => String(sb.batchNo) === bNum)
-                ) || grn.items?.find(i => String(i.productId) === String(b.productId || b.product?.id) || i.productNameSnapshot === b.productNameSnapshot);
+            .map((b, index) => {
+                const originalItem = findOriginalItem(grn, b, index);
 
                 return {
                     supplierId: grn.supplierId || "UNKNOWN",
                     supplierName: grn.supplierNameSnapshot || "Unknown",
-                    productId: b.productId || b.product?.id,
-                    productName: b.productNameSnapshot || originalItem?.productNameSnapshot || "Unknown Product",
+                    productId: b.productId || b.product?.id || originalItem?.productId,
+                    productName: b.productName || b.productNameSnapshot || originalItem?.productNameSnapshot || "Unknown Product",
                     batchId: b.id, // The inventory batch ID
-                    batchNo: b.batchNumber || b.batchNo,
+                    batchNo: getBatchNumber(b),
                     quantity: returnQty[b.id],
+                    grnNo: grn.grnNumber,
                     reason: returnNote.trim() || `Returned from GRN ${grn.grnNumber}`
                 };
             });
@@ -76,9 +112,6 @@ export default function GRNReturnModal({ grn, onClose }) {
             toast.warn("Please enter a return quantity for at least one item.");
             return;
         }
-
-        const storeId = localStorage.getItem("store") || grn.locationId || "LOC_STORES_MAIN";
-        const createdBy = localStorage.getItem("firstName") || "Admin";
 
         setSubmitting(true);
         try {
@@ -119,6 +152,7 @@ export default function GRNReturnModal({ grn, onClose }) {
                             <thead className="bg-light">
                                 <tr>
                                     <th>Product Name</th>
+                                    <th>SKU</th>
                                     <th>Batch Number</th>
                                     <th className="text-center">Location</th>
                                     <th className="text-end">Original Qty</th>
@@ -129,29 +163,18 @@ export default function GRNReturnModal({ grn, onClose }) {
                             </thead>
                             <tbody>
                                 {batches.length === 0 ? (
-                                    <tr><td colSpan="7" className="text-center text-muted">No available inventory found for this GRN.</td></tr>
+                                    <tr><td colSpan="8" className="text-center text-muted">No available inventory found for this GRN.</td></tr>
                                 ) : (
-                                    batches.map(b => {
-                                        // Try to find original info from GRN items by matching batch number
-                                        const bNum = String(b.batchNumber || b.batchNo);
-                                        const originalItem = grn.items?.find(i => 
-                                            i.batches?.some(sb => String(sb.batchNo) === bNum)
-                                        ) || grn.items?.find(i => String(i.productId) === String(b.productId || b.product?.id) || i.productNameSnapshot === b.productNameSnapshot);
-                                        
-                                        // Original Qty logic
-                                        let origQty = "-";
-                                        if (originalItem) {
-                                            const subBatch = originalItem.batches?.find(sb => String(sb.batchNo) === bNum);
-                                            origQty = subBatch ? subBatch.qty : originalItem.receivedQty;
-                                        }
+                                    batches.map((b, index) => {
+                                        const batchNumber = getBatchNumber(b);
+                                        const originalItem = findOriginalItem(grn, b, index);
+                                        const origQty = getOriginalQuantity(originalItem, b);
 
-                                        let available = (b.freeQuantity !== undefined && b.freeQuantity !== null) ? b.freeQuantity
-                                            : (b.free !== undefined && b.free !== null) ? b.free 
-                                            : ((b.quantity || 0) > 0 ? b.quantity : 0);
+                                        const available = getAvailableQuantity(b);
                                         
                                         // Calculate pending waiting approvals for this batch
                                         const pendingForThisBatch = pendingReturns
-                                            .filter(pr => String(pr.batchId) === String(b.id) || String(pr.batchNo) === bNum)
+                                            .filter(pr => String(pr.batchId) === String(b.id) || String(pr.batchNo) === String(batchNumber))
                                             .reduce((sum, pr) => sum + (pr.quantity || 0), 0);
 
                                         const isOrigNumber = !isNaN(Number(origQty)) && origQty !== "-";
@@ -166,8 +189,9 @@ export default function GRNReturnModal({ grn, onClose }) {
 
                                         return (
                                             <tr key={b.id}>
-                                                <td>{b.productNameSnapshot || originalItem?.productNameSnapshot || b.productId || b.product?.id}</td>
-                                                <td>{b.batchNumber || b.batchNo}</td>
+                                                <td>{textOrDash(b.productName || b.productNameSnapshot || originalItem?.productNameSnapshot || b.productId || b.product?.id)}</td>
+                                                <td>{textOrDash(b.sku || originalItem?.sku)}</td>
+                                                <td>{textOrDash(batchNumber)}</td>
                                                 <td className="text-center">{locationLabel}</td>
                                                 <td className="text-end">{origQty}</td>
                                                 <td className="text-end text-warning fw-bold">{pendingForThisBatch > 0 ? pendingForThisBatch : '-'}</td>

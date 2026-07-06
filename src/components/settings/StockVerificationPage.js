@@ -117,6 +117,18 @@ const statusBadge = (status) => {
     return <Badge bg={variant} text={variant === "warning" || variant === "info" ? "dark" : "white"}>{status || "-"}</Badge>;
 };
 
+const sourceLabel = (source) => ({
+    UPLOADED: "Use uploaded",
+    SYSTEM: "Use system",
+    IGNORE: "Ignore",
+    MANUAL: "Manual",
+}[source] || source || "-");
+
+const latestResolution = (row) => {
+    const history = row?.resolutionHistory || [];
+    return history.length ? history[history.length - 1] : null;
+};
+
 function SummaryBox({ label, value, tone }) {
     return (
         <div className="summary-box">
@@ -746,6 +758,7 @@ function ReconciliationTab() {
                                         ) : rows.length ? rows.map(row => {
                                             const rowSelected = selected[row.rowId];
                                             const disabled = row.resolutionStatus !== "UNRESOLVED" || row.matchStatus === "UPLOADED_ONLY";
+                                            const lastDecision = latestResolution(row);
                                             return (
                                                 <tr key={row.rowId}>
                                                     <td>
@@ -783,6 +796,13 @@ function ReconciliationTab() {
                                                         ) : disabled ? (
                                                             row.resolutionStatus === "RESOLVED" ? <CheckCircle2 size={18} className="text-success" /> : <span className="text-muted small">Not editable</span>
                                                         ) : <span className="text-muted small">Select row</span>}
+                                                        {lastDecision && (
+                                                            <div className="decision-history mt-2">
+                                                                <div>{sourceLabel(lastDecision.selectedSource)} by {lastDecision.resolvedBy || "system"}</div>
+                                                                <div>{formatDate(lastDecision.resolvedAt)}</div>
+                                                                {lastDecision.auditId && <div>Audit {lastDecision.auditId}</div>}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
@@ -844,6 +864,12 @@ export default function StockVerificationPage() {
                 }
                 .stock-verification-page .nested-reconciliation-table {
                     table-layout: fixed;
+                }
+                .stock-verification-page .decision-history {
+                    color: #6b7280;
+                    font-size: 11px;
+                    line-height: 1.35;
+                    white-space: nowrap;
                 }
                 .stock-verification-page .reconciliation-table th,
                 .stock-verification-page .reconciliation-table td,

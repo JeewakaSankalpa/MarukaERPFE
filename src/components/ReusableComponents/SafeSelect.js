@@ -39,6 +39,7 @@ export default function SafeSelect({
     classNamePrefix,
     isSearchable = false, // Default OFF to match native <select> behaviour
     isClearable = false,
+    showBlankOption = false,
 
     // Children: <option value="x">Label</option>
     children,
@@ -99,14 +100,14 @@ export default function SafeSelect({
     const reactPlaceholder =
         placeholder ?? (firstOpt && firstOpt.value === '' ? firstOpt.label : 'Select…');
 
-    // Exclude the "blank" first option from the dropdown list so it doesn't
-    // appear twice (it's handled by the placeholder).
+    // Exclude the "blank" first option from the dropdown list by default so it
+    // doesn't appear twice (it's handled by the placeholder).
     const filteredOptions = useMemo(() => {
-        if (firstOpt && firstOpt.value === '') {
+        if (!showBlankOption && firstOpt && firstOpt.value === '') {
             return options.slice(1);
         }
         return options;
-    }, [options, firstOpt]);
+    }, [options, firstOpt, showBlankOption]);
 
     return (
         <div style={{ position: 'relative', ...style }}>

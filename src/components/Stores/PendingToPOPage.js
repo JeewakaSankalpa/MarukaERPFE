@@ -297,8 +297,14 @@ export default function PendingToPOPage() {
                                 </td>
                                 <td className="text-end">{l.shortageQty}</td>
                                 <td>
-                                    <SafeSelect value={c.supplierId || ""} onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, supplierId: e.target.value } }))}>
-                                        <option value="">Select supplier</option>
+                                    <SafeSelect
+                                        value={c.supplierId || ""}
+                                        placeholder="No supplier"
+                                        showBlankOption
+                                        isClearable
+                                        onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, supplierId: e.target.value } }))}
+                                    >
+                                        <option value="">No supplier - leave blank</option>
                                         {(l.suppliers||[]).filter(s=>s.active!==false).map(s =>
                                             <option key={s.supplierId} value={s.supplierId}>
                                                 {s.supplierName}{s.lastPurchasePrice?` - ${s.lastPurchasePrice}`:""}
