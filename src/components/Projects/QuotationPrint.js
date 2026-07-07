@@ -76,20 +76,28 @@ const statusVariant = (status) => {
 const componentAmount = (component) =>
     component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0;
 
+const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
+
+const componentLabel = (component) => {
+    const qty = componentQuantity(component);
+    return qty > 1 ? `${component?.name || "Component"} x ${qty}` : (component?.name || "Component");
+};
+
 const itemDescription = (item) =>
     item?.description || item?.productNameSnapshot || item?.productId || "";
 
 const normalizeLineText = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 
-const aggregateItems = (items = []) => {
+const aggregateItems = (items = [], multiplier = 1) => {
     const groups = new Map();
+    const qtyMultiplier = Math.max(1, Number(multiplier || 1) || 1);
 
     items.forEach((item, index) => {
         const description = itemDescription(item);
         const key = item?.productId
             ? `product:${item.productId}`
             : `manual:${normalizeLineText(description)}:${normalizeLineText(item?.unit)}:${Number(item?.estUnitCost || 0)}`;
-        const quantity = Number(item?.quantity || 0);
+        const quantity = Number(item?.quantity || 0) * qtyMultiplier;
         const unitCost = Number(item?.estUnitCost || 0);
 
         if (!groups.has(key)) {
@@ -409,12 +417,12 @@ const QuotationPrint = () => {
                             {estimation.components?.map((comp, idx) => (
                                 <React.Fragment key={idx}>
                                     <tr className="table-secondary">
-                                        <td><strong>{comp.name}</strong></td>
+                                        <td><strong>{componentLabel(comp)}</strong></td>
                                         {printFormat === PRINT_FORMATS.ALL && <td colSpan="3" />}
                                         {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && <td />}
                                         <td className="text-end fw-bold">{money(componentAmount(comp))}</td>
                                     </tr>
-                                    {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && aggregateItems(comp.items).map((item, i) => (
+                                    {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && aggregateItems(comp.items, componentQuantity(comp)).map((item, i) => (
                                         <tr key={item.key || `${idx}-${i}`}>
                                             <td className="ps-4">{itemDescription(item)}</td>
                                             {printFormat === PRINT_FORMATS.ALL && (

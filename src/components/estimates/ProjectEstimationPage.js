@@ -167,6 +167,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [taxPercent, setTaxPercent] = useState("");   // number-as-string
 
     // Per-component controls (keyed by component name)
+    const [compQty, setCompQty] = useState({}); // { [compName]: number|string }
     const [compMargin, setCompMargin] = useState({}); // { [compName]: number|string }
     const [compDelivery, setCompDelivery] = useState({}); // { [compName]: number|string }
     const [compDeliveryTaxable, setCompDeliveryTaxable] = useState({}); // { [compName]: boolean }
@@ -312,6 +313,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             // Actually, let's pre-set the first component's margin if we have a default.
             const defMargin = cfg["app.estimation.margin"] || "15";
             setCompMargin({ "Component A": defMargin });
+            setCompQty({ "Component A": "1" });
 
             setCompDelivery({});
             setCompDeliveryTaxable({});
@@ -348,6 +350,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setTaxPercent(cfg["app.estimation.tax"] || "0");
                     const defMargin = cfg["app.estimation.margin"] || "15";
                     setCompMargin({ "Component A": defMargin });
+                    setCompQty({ "Component A": "1" });
 
                     setCompDelivery({});
                     setCompDeliveryTaxable({});
@@ -377,17 +380,20 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                 // per-component persisted options (if backend stores them)
                 const initialMargin = {};
+                const initialQty = {};
                 const initialDelivery = {};
                 const initialDelTax = {};
                 const initialOverhead = {};
                 (est.components || []).forEach(c => {
                     const name = c.name?.trim() || "Component";
+                    initialQty[name] = String(c.quantity == null || Number(c.quantity) <= 0 ? 1 : c.quantity);
                     if (c.marginPercent != null) initialMargin[name] = String(c.marginPercent);
                     if (c.overheadPercent != null) initialOverhead[name] = String(c.overheadPercent);
                     if (c.deliveryCost != null) initialDelivery[name] = String(c.deliveryCost);
                     if (typeof c.deliveryTaxable === "boolean") initialDelTax[name] = !!c.deliveryTaxable;
                 });
                 setCompMargin(initialMargin);
+                setCompQty(initialQty);
                 setCompOverhead(initialOverhead);
                 setCompDelivery(initialDelivery);
                 setCompDeliveryTaxable(initialDelTax);
@@ -573,6 +579,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             estimationRowsScrollRef.current.scrollTop = 0;
         }
         setCompMargin({ "Component A": defaultMargin });
+        setCompQty({ "Component A": "1" });
         setCompOverhead({});
         setCompDelivery({});
         setCompDeliveryTaxable({});
@@ -607,6 +614,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const cfg = window._sysConfig || {};
         const defMargin = cfg["app.estimation.margin"] || "15";
         setCompMargin(s => ({ ...s, [name]: defMargin }));
+        setCompQty(s => ({ ...s, [name]: "1" }));
         requireFullSave();
     };
 
@@ -653,6 +661,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 }
                 return x;
             });
+            setCompQty(s => {
+                const x = { ...s };
+                if (Object.prototype.hasOwnProperty.call(x, oldName)) {
+                    x[newName] = x[oldName]; delete x[oldName];
+                }
+                return x;
+            });
             setCompDelivery(s => {
                 const x = { ...s };
                 if (Object.prototype.hasOwnProperty.call(x, oldName)) {
@@ -692,6 +707,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return { ...r, quantities: q };
         }));
         setCompMargin(s => { const x = { ...s }; delete x[name]; return x; });
+        setCompQty(s => { const x = { ...s }; delete x[name]; return x; });
         setCompOverhead(s => { const x = { ...s }; delete x[name]; return x; });
         setCompDelivery(s => { const x = { ...s }; delete x[name]; return x; });
         setCompDeliveryTaxable(s => { const x = { ...s }; delete x[name]; return x; });
@@ -889,7 +905,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     useEffect(() => {
         if (!isInitialLoad) setIsDirty(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rows, components, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
+    }, [rows, components, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
         includeDelivery, includeVat, includeTax, discountPercent, customNote, terms]);
 
     /* ------------ per-component + totals ------------ */
@@ -897,10 +913,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const compCalcs = useMemo(() => {
         return components.map((cname) => {
-            const subtotal = mergedRows.reduce(
+            const sets = Math.max(1, Number(compQty[cname] || 1) || 1);
+            const unitSubtotal = mergedRows.reduce(
                 (acc, r) => acc + Number(r.estUnitCost || 0) * Number((r.quantities || {})[cname] || 0),
                 0
             );
+            const subtotal = unitSubtotal * sets;
 
             // 1. Overhead
             const oPct = Number(compOverhead[cname] || 0);
@@ -912,7 +930,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const mAmt = baseForMargin * (isNaN(mPct) ? 0 : mPct / 100);
             const afterMargin = baseForMargin + mAmt;
 
-            const del = Number(compDelivery[cname] || 0);
+            const unitDelivery = Number(compDelivery[cname] || 0);
+            const del = unitDelivery * sets;
             const delTaxable = !!compDeliveryTaxable[cname];
 
             const taxableAdd = includeDelivery && delTaxable ? del : 0;
@@ -920,12 +939,15 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
             return {
                 name: cname,
+                sets,
+                unitSubtotal,
                 subtotal,
                 overheadPct: oPct,
                 overheadAmt: oAmt,
                 marginPct: mPct,
                 marginAmount: mAmt,
                 afterMargin,
+                unitDelivery,
                 delivery: del,
                 deliveryTaxable: delTaxable,
                 taxablePortion: afterMargin + taxableAdd, // Gross taxable base from this component
@@ -933,7 +955,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 lineTotalBeforeTax: afterMargin + (includeDelivery ? del : 0),
             };
         });
-    }, [components, mergedRows, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery]);
+    }, [components, mergedRows, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery]);
 
     const totals = useMemo(() => {
         const taxableBaseRaw = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
@@ -1026,6 +1048,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             });
 
             const m = compMargin[cname];
+            const q = compQty[cname];
             const o = compOverhead[cname];
             const dc = compDelivery[cname];
             const dt = !!compDeliveryTaxable[cname];
@@ -1033,6 +1056,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return {
                 name: cname,
                 note: "",
+                quantity: Math.max(1, Number(q || 1) || 1),
                 marginPercent: toBigDec(m),
                 overheadPercent: toBigDec(o),
                 deliveryCost: toBigDec(dc),
@@ -1677,11 +1701,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                 <thead>
                                     <tr>
                                         <th>Component</th>
+                                        <th style={{ width: 100 }}>Sets</th>
+                                        <th className="text-end" style={{ width: 130 }}>Per Set</th>
                                         <th className="text-end" style={{ width: 120 }}>Subtotal</th>
                                         <th style={{ width: 120 }}>Overhead %</th>
                                         <th style={{ width: 120 }}>Margin %</th>
                                         <th className="text-end" style={{ width: 140 }}>After Margin</th>
-                                        <th style={{ width: 180 }}>Delivery</th>
+                                        <th style={{ width: 180 }}>Delivery / Set</th>
                                         <th style={{ width: 150 }}>Delivery Taxable?</th>
                                         <th className="text-end" style={{ width: 160 }}>Line Total (pre-tax)</th>
                                     </tr>
@@ -1690,6 +1716,21 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     {compCalcs.map(cc => (
                                         <tr key={cc.name}>
                                             <td className="align-middle">{cc.name}</td>
+                                            <td>
+                                                <Form.Control
+                                                    className="text-end"
+                                                    type="number"
+                                                    min="1" step="1"
+                                                    value={compQty[cc.name] ?? "1"}
+                                                    disabled={isLocked}
+                                                    onChange={(e) => {
+                                                        markComponentsDirty(cc.name);
+                                                        setCompQty(s => ({ ...s, [cc.name]: e.target.value }));
+                                                    }}
+                                                    placeholder="1"
+                                                />
+                                            </td>
+                                            <td className="text-end align-middle">{cc.unitSubtotal.toLocaleString()}</td>
                                             <td className="text-end align-middle">{cc.subtotal.toLocaleString()}</td>
                                             <td>
                                                 <Form.Control

@@ -34,6 +34,8 @@ const addAllocation = (allocations, componentName, quantity) => {
     else allocations.push({ componentName: name, quantity: qty });
 };
 
+const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
+
 const listDepartments = async () => {
     try {
         const res = await api.get(`/departments?${qp({ status: "ACTIVE", page: 0, size: 1000, sort: "name,asc" })}`);
@@ -242,6 +244,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 const rowMap = new Map();
                 estimationComponents.forEach((component, componentIndex) => {
                     const componentName = names[componentIndex];
+                    const sets = componentQuantity(component);
                     (component.items || []).forEach(item => {
                         if (!item.productId || Number(item.quantity || 0) <= 0) return;
                         const current = rowMap.get(item.productId) || {
@@ -255,7 +258,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                             estimatedQuantities: {},
                             selectedComponents: {}
                         };
-                        const estimatedQty = Number(item.quantity);
+                        const estimatedQty = Number(item.quantity) * sets;
                         current.estimatedQuantities[componentName] = estimatedQty;
                         current.quantities[componentName] = history[componentName]?.length ? 0 : estimatedQty;
                         current.selectedComponents[componentName] = !history[componentName]?.length;

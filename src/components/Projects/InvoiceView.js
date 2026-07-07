@@ -56,6 +56,13 @@ const bankDetails = [
 const componentAmount = (component) =>
     Number(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
 
+const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
+
+const componentLabel = (component) => {
+    const qty = componentQuantity(component);
+    return qty > 1 ? `${component?.name || "Component"} x ${qty}` : (component?.name || "Component");
+};
+
 const splitLines = (value) => String(value || "")
     .split(/\r?\n|,/)
     .map((line) => line.trim())
@@ -106,6 +113,7 @@ const aggregateLineItems = (items = [], options = {}) => {
     const groups = new Map();
     const getDescription = options.getDescription || ((item) => item.description || item.productNameSnapshot || item.productId || "Item");
     const getUnitPrice = options.getUnitPrice || ((item) => Number(item.unitPrice ?? item.estUnitCost ?? 0));
+    const getQuantity = options.getQuantity || ((item) => Number(item.quantity || 0));
     const getTotal = options.getTotal || ((item) => Number(item.total ?? (Number(item.quantity || 0) * getUnitPrice(item))));
     const getKey = options.getKey || ((item) => item.productId
         ? `product:${item.productId}`
@@ -113,7 +121,7 @@ const aggregateLineItems = (items = [], options = {}) => {
 
     items.forEach((item, index) => {
         const description = getDescription(item);
-        const quantity = Number(item.quantity || 0);
+        const quantity = getQuantity(item);
         const total = getTotal(item);
         const key = getKey(item);
 
@@ -337,20 +345,21 @@ const InvoiceView = () => {
     const groupedItems = useMemo(() => {
         if (estimation?.components?.length) {
             return estimation.components.map((comp) => ({
-                description: comp.name,
-                quantity: 1,
-                unitPrice: componentAmount(comp),
+                description: componentLabel(comp),
+                quantity: componentQuantity(comp),
+                unitPrice: componentQuantity(comp) > 0 ? componentAmount(comp) / componentQuantity(comp) : componentAmount(comp),
                 total: componentAmount(comp),
                 items: aggregateLineItems(comp.items || [], {
                     getDescription: (item) => item.productNameSnapshot || item.description || item.productId,
                     getUnitPrice: (item) => Number(item.estUnitCost || 0),
-                    getTotal: (item) => Number(item.quantity || 0) * Number(item.estUnitCost || 0),
+                    getQuantity: (item) => Number(item.quantity || 0) * componentQuantity(comp),
+                    getTotal: (item) => Number(item.quantity || 0) * componentQuantity(comp) * Number(item.estUnitCost || 0),
                 }).map((item, idx) => ({
                     key: item.key || `${comp.name}-${idx}`,
                     productId: item.productId,
                     unit: item.unit,
                     description: item.description,
-                    quantity: item.quantity,
+                    quantity: Number(item.quantity || 0),
                     unitPrice: Number(item.unitPrice || 0),
                     total: Number(item.total || 0),
                 })),
@@ -499,9 +508,9 @@ const InvoiceView = () => {
             key: `component-${index}`,
             itemCode: inquiryRef,
             description: group.description,
-            quantity: 1,
+            quantity: group.quantity || 1,
             unit: "Lot",
-            unitPrice: Number(group.total || group.unitPrice || 0),
+            unitPrice: Number(group.unitPrice || group.total || 0),
             total: Number(group.total || 0),
             isComponent: true,
         }));
@@ -514,9 +523,9 @@ const InvoiceView = () => {
                     key: `component-${groupIdx}`,
                     itemCode: inquiryRef,
                     description: group.description,
-                    quantity: 1,
+                    quantity: group.quantity || 1,
                     unit: "Lot",
-                    unitPrice: Number(group.total || group.unitPrice || 0),
+                    unitPrice: Number(group.unitPrice || group.total || 0),
                     total: Number(group.total || 0),
                     isComponent: true,
                 },

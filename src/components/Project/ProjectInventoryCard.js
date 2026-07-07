@@ -435,6 +435,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const estimatedByProduct = useMemo(() => {
         const products = new Map();
         estimationComponents.forEach(component => {
+            const sets = Math.max(1, Number(component?.quantity || 1) || 1);
             (component.items || []).forEach(item => {
                 if (!item.productId || Number(item.quantity || 0) <= 0) return;
                 const current = products.get(item.productId) || {
@@ -442,7 +443,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     productName: item.productNameSnapshot || item.productId,
                     estimatedQty: 0
                 };
-                current.estimatedQty += Number(item.quantity || 0);
+                current.estimatedQty += Number(item.quantity || 0) * sets;
                 products.set(item.productId, current);
             });
         });

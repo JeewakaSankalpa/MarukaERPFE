@@ -44,6 +44,11 @@ const getInventorySummary = async (productId) =>
 
 /** Create PR */
 const createPR = async (payload) => (await api.post(`/prs`, payload)).data;
+const createPRDraft = async (payload) => (await api.post(`/prs/drafts`, payload)).data;
+const updatePRDraft = async (id, payload) => (await api.put(`/prs/${id}`, payload)).data;
+const submitPRDraft = async (id) => (await api.post(`/prs/${id}/submit`)).data;
+const deletePRDraft = async (id) => (await api.delete(`/prs/${id}`)).data;
+const listPRs = async () => (await api.get(`/prs`)).data;
 
 /** Fetch PR details */
 const getPR = async (id) => (await api.get(`/prs/${id}`)).data;
@@ -77,8 +82,24 @@ function PRForm({ onSaved }) {
     const [commonSuppliers, setCommonSuppliers] = useState([]);
     const [selectedProductsForSupplier, setSelectedProductsForSupplier] = useState([]);
     const [showQuickSupplierCreate, setShowQuickSupplierCreate] = useState(false);
+    const [drafts, setDrafts] = useState([]);
+    const [activeDraftId, setActiveDraftId] = useState(null);
+    const [savingDraft, setSavingDraft] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const productRequestSeq = useRef(0);
     const hasMountedProductSearch = useRef(false);
+
+    const loadDrafts = async () => {
+        try {
+            const all = await listPRs();
+            const draftList = (Array.isArray(all) ? all : [])
+                .filter(pr => pr.status === "DRAFT")
+                .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+            setDrafts(draftList);
+        } catch {
+            setDrafts([]);
+        }
+    };
 
     useEffect(() => {
         (async () => {
@@ -88,6 +109,7 @@ function PRForm({ onSaved }) {
                 toast.error("Failed to load suppliers");
             }
         })();
+        loadDrafts();
     }, []);
 
     const mergeProductRows = (list, append) => {
@@ -209,6 +231,27 @@ function PRForm({ onSaved }) {
 
     const getSelectedRows = () => rows.filter(r => Number(r.qty) > 0);
 
+    const buildPayload = () => ({
+        supplierId: supplierId || null,
+        comment: comment || "",
+        items: getSelectedRows()
+            .map(r => ({ productId: r.productId, quantity: Number(r.qty), unit: r.unit || "pcs", note: r.note || "" }))
+    });
+
+    const resetForm = () => {
+        setSupplierId("");
+        setRows(prev => prev.map(row => ({ ...row, qty: "", note: "" })));
+        setComment("");
+        setValidated(false);
+        setActiveDraftId(null);
+    };
+
+    const hasDraftContent = () => Boolean(
+        supplierId ||
+        comment.trim() ||
+        getSelectedRows().length > 0
+    );
+
     const activeSupplierLinks = (product) =>
         (product.suppliers || []).filter(link => link?.supplierId && link.active !== false);
 
@@ -295,13 +338,68 @@ function PRForm({ onSaved }) {
         }
     };
 
+    const saveDraft = async () => {
+        if (!hasDraftContent()) {
+            toast.warn("Add PR details before saving a draft");
+            return;
+        }
+
+        setSavingDraft(true);
+        try {
+            const payload = buildPayload();
+            const saved = activeDraftId
+                ? await updatePRDraft(activeDraftId, payload)
+                : await createPRDraft(payload);
+            setActiveDraftId(saved.id);
+            await loadDrafts();
+            toast.success(`Draft saved (${saved.prNumber})`);
+        } catch (err) {
+            toast.error(err?.response?.data?.message || "Failed to save draft");
+        } finally {
+            setSavingDraft(false);
+        }
+    };
+
+    const loadDraft = (draft) => {
+        setActiveDraftId(draft.id);
+        setSupplierId(draft.supplierId || "");
+        setComment(draft.comment || "");
+        setValidated(false);
+
+        const draftRows = (draft.items || []).map(item => ({
+            productId: item.productId,
+            name: item.productNameSnapshot || item.productId,
+            sku: item.sku || "",
+            unit: item.unit || "pcs",
+            qty: item.requestedQty || "",
+            note: item.note || "",
+        }));
+        setRows(prev => {
+            const draftIds = new Set(draftRows.map(row => row.productId));
+            return [
+                ...draftRows,
+                ...prev.filter(row => !draftIds.has(row.productId))
+            ];
+        });
+        toast.info("Draft loaded");
+    };
+
+    const removeDraft = async (draftId) => {
+        try {
+            await deletePRDraft(draftId);
+            if (activeDraftId === draftId) resetForm();
+            await loadDrafts();
+            toast.success("Draft deleted");
+        } catch (err) {
+            toast.error(err?.response?.data?.message || "Failed to delete draft");
+        }
+    };
+
     const save = async (e) => {
         e.preventDefault();
         setValidated(true);
         const selectedRows = getSelectedRows();
-        const items = selectedRows
-            .map(r => ({ productId: r.productId, quantity: Number(r.qty), unit: r.unit || "pcs", note: r.note || "" }));
-        if (items.length === 0) {
+        if (selectedRows.length === 0) {
             toast.warn("Please enter quantities for at least one product");
             return;
         }
@@ -310,14 +408,24 @@ function PRForm({ onSaved }) {
             return;
         }
 
+        setSubmitting(true);
         try {
-            const payload = { supplierId, comment: comment || "", items };
-            const created = await createPR(payload);
+            const payload = buildPayload();
+            let created;
+            if (activeDraftId) {
+                await updatePRDraft(activeDraftId, payload);
+                created = await submitPRDraft(activeDraftId);
+            } else {
+                created = await createPR(payload);
+            }
             toast.success("Purchase Request created");
+            await loadDrafts();
             onSaved?.(created.id);
         } catch (err) {
             if (err?.response?.status === 400) toast.error(err.response.data?.message || "Validation failed");
             else toast.error("Failed to create PR");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -326,8 +434,51 @@ function PRForm({ onSaved }) {
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex align-items-center mb-4">
                     <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                    <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Request</h2>
+                    <div>
+                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Request</h2>
+                        {activeDraftId && <small className="text-muted">Editing saved draft</small>}
+                    </div>
                 </div>
+                {drafts.length > 0 && (
+                    <div className="border rounded p-3 mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <h5 className="mb-0">Created Drafts</h5>
+                            <Button size="sm" variant="outline-secondary" onClick={resetForm}>New Draft</Button>
+                        </div>
+                        <Table responsive hover size="sm" className="mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Draft</th>
+                                    <th>Supplier</th>
+                                    <th>Lines</th>
+                                    <th>Updated</th>
+                                    <th className="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {drafts.map(draft => (
+                                    <tr key={draft.id}>
+                                        <td>
+                                            <div className="fw-semibold">{draft.prNumber}</div>
+                                            {activeDraftId === draft.id && <Badge bg="primary">Editing</Badge>}
+                                        </td>
+                                        <td>{draft.supplierNameSnapshot || "Not selected"}</td>
+                                        <td>{(draft.items || []).length}</td>
+                                        <td>{draft.updatedAt ? new Date(draft.updatedAt).toLocaleString() : "-"}</td>
+                                        <td className="text-end">
+                                            <Button size="sm" variant="outline-primary" className="me-2" onClick={() => loadDraft(draft)}>
+                                                Continue
+                                            </Button>
+                                            <Button size="sm" variant="outline-danger" onClick={() => removeDraft(draft.id)}>
+                                                Delete
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </div>
+                )}
                 <Form noValidate validated={validated} onSubmit={save} className="mt-3">
                     <Row className="g-3">
                         <Col md={6}>
@@ -469,7 +620,14 @@ function PRForm({ onSaved }) {
                         </div>
                     </div>
 
-                    <Button type="submit" className="w-100 mt-3">Save Purchase Request</Button>
+                    <div className="d-flex gap-2 mt-3">
+                        <Button type="button" variant="outline-primary" className="w-50" onClick={saveDraft} disabled={savingDraft || submitting}>
+                            {savingDraft ? "Saving Draft..." : "Save Draft"}
+                        </Button>
+                        <Button type="submit" className="w-50" disabled={savingDraft || submitting}>
+                            {submitting ? "Submitting..." : "Submit Purchase Request"}
+                        </Button>
+                    </div>
                 </Form>
             </div>
 
