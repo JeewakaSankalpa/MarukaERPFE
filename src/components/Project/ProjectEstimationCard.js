@@ -50,9 +50,75 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
 
     // Helper to safely get number
     const val = (n) => Number(n || 0);
-
-    // Calculate display values
+    const money = (n) => val(n).toLocaleString(undefined, {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3,
+    });
     const components = est?.components || [];
+    const componentQuantity = (component) => Math.max(1, val(component?.quantity) || 1);
+    const componentTotals = (component) => {
+        const qty = componentQuantity(component);
+        const itemsSubtotal = (component?.items || []).reduce(
+            (sum, item) => sum + val(item?.estUnitCost) * val(item?.quantity) * qty,
+            0
+        );
+        if (component?.items?.length) {
+            const overheadAmount = itemsSubtotal * (val(component?.overheadPercent) / 100);
+            const baseForMargin = itemsSubtotal + overheadAmount;
+            const marginAmount = baseForMargin * (val(component?.marginPercent) / 100);
+            const delivery = est?.includeDelivery !== false ? val(component?.deliveryCost) * qty : 0;
+            return {
+                itemsSubtotal,
+                subtotalWithMargin: baseForMargin + marginAmount,
+                delivery,
+                deliveryTaxable: component?.deliveryTaxable === true,
+                lineTotalBeforeTax: baseForMargin + marginAmount + delivery,
+            };
+        }
+        const delivery = est?.includeDelivery !== false ? val(component?.deliveryCost) * qty : 0;
+        return {
+            itemsSubtotal: val(component?.itemsSubtotal),
+            subtotalWithMargin: val(component?.subtotalWithMargin ?? component?.itemsSubtotal),
+            delivery,
+            deliveryTaxable: component?.deliveryTaxable === true,
+            lineTotalBeforeTax: val(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal) + delivery,
+        };
+    };
+    const displayTotals = (() => {
+        let taxableBaseRaw = 0;
+        let nonTaxableRaw = 0;
+        let subtotalWithMargin = 0;
+        let deliveryTotal = 0;
+
+        components.forEach((component) => {
+            const totals = componentTotals(component);
+            subtotalWithMargin += totals.subtotalWithMargin;
+            deliveryTotal += totals.delivery;
+            taxableBaseRaw += totals.subtotalWithMargin + (totals.deliveryTaxable ? totals.delivery : 0);
+            nonTaxableRaw += totals.deliveryTaxable ? 0 : totals.delivery;
+        });
+
+        const totalBeforeDiscount = taxableBaseRaw + nonTaxableRaw;
+        const discountAmount = totalBeforeDiscount * (val(est?.discountPercent) / 100);
+        let taxableBase = taxableBaseRaw;
+        let nonTaxable = nonTaxableRaw;
+        if (totalBeforeDiscount > 0) {
+            const taxableRatio = taxableBaseRaw / totalBeforeDiscount;
+            taxableBase -= discountAmount * taxableRatio;
+            nonTaxable -= discountAmount * (1 - taxableRatio);
+        }
+        const vatAmount = est?.includeVat !== false ? taxableBase * (val(est?.vatPercent) / 100) : 0;
+        const taxAmount = est?.includeTax === true ? taxableBase * (val(est?.taxPercent) / 100) : 0;
+
+        return {
+            subtotalWithMargin,
+            deliveryTotal,
+            discountAmount,
+            vatAmount,
+            taxAmount,
+            grandTotal: taxableBase + nonTaxable + vatAmount + taxAmount,
+        };
+    })();
 
     // If computed fields are present (new format), use them. Otherwise fallback to simple calc.
     const hasComputed = est?.computedGrandTotal != null;
@@ -71,17 +137,17 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
 
             return (
                 <>
-                    <tr><td>Subtotal (Est)</td><td className="text-end">{subtotal.toLocaleString()}</td></tr>
-                    <tr><td>Delivery</td><td className="text-end">{delivery.toLocaleString()}</td></tr>
-                    <tr><td>VAT ({taxPct}%)</td><td className="text-end">{taxAmt.toLocaleString()}</td></tr>
-                    <tr><td><strong>Grand Total</strong></td><td className="text-end"><strong>{grand.toLocaleString()}</strong></td></tr>
+                    <tr><td>Subtotal (Est)</td><td className="text-end">{money(subtotal)}</td></tr>
+                    <tr><td>Delivery</td><td className="text-end">{money(delivery)}</td></tr>
+                    <tr><td>VAT ({taxPct}%)</td><td className="text-end">{money(taxAmt)}</td></tr>
+                    <tr><td><strong>Grand Total</strong></td><td className="text-end"><strong>{money(grand)}</strong></td></tr>
                     <tr><td colSpan="2" className="text-center text-warning small">Please Edit & Save to update details</td></tr>
                 </>
             );
         }
 
         // New Format
-        const totalDelivery = components.reduce((acc, c) => acc + val(c.deliveryCost), 0);
+        const totalDelivery = displayTotals.deliveryTotal;
 
         return (
             <>
@@ -89,7 +155,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
                     <tr key={idx}>
                         <td>{c.name || `Component ${idx + 1}`}</td>
                         <td className="text-end">
-                            {currency} {val(c.subtotalWithMargin).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {currency} {money(componentTotals(c).subtotalWithMargin)}
                         </td>
                     </tr>
                 ))}
@@ -97,22 +163,22 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
                 {totalDelivery > 0 && (
                     <tr>
                         <td>Delivery</td>
-                        <td className="text-end">{currency} {totalDelivery.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="text-end">{currency} {money(totalDelivery)}</td>
                     </tr>
                 )}
 
-                {val(est.computedDiscountAmount) > 0 && (
+                {displayTotals.discountAmount > 0 && (
                     <tr className="text-danger">
                         <td>Discount</td>
-                        <td className="text-end">-{currency} {val(est.computedDiscountAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="text-end">-{currency} {money(displayTotals.discountAmount)}</td>
                     </tr>
                 )}
 
-                {(val(est.computedVatAmount) > 0 || val(est.computedTaxAmount) > 0) && (
+                {(displayTotals.vatAmount > 0 || displayTotals.taxAmount > 0) && (
                     <tr>
                         <td>Taxes (VAT/Other)</td>
                         <td className="text-end">
-                            {currency} {(val(est.computedVatAmount) + val(est.computedTaxAmount)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {currency} {money(displayTotals.vatAmount + displayTotals.taxAmount)}
                         </td>
                     </tr>
                 )}
@@ -120,7 +186,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
                 <tr>
                     <td><strong>Grand Total</strong></td>
                     <td className="text-end">
-                        <strong>{currency} {val(est.computedGrandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                        <strong>{currency} {money(displayTotals.grandTotal)}</strong>
                     </td>
                 </tr>
             </>

@@ -7,8 +7,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const money = (value) => Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
 });
 
 const formatDate = (value) => {
@@ -73,10 +73,77 @@ const statusVariant = (status) => {
     }
 };
 
-const componentAmount = (component) =>
-    component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0;
-
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
+
+const componentAmount = (component, includeDelivery = true) => {
+    const qty = componentQuantity(component);
+    const itemsSubtotal = (component?.items || []).reduce(
+        (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
+        0
+    );
+    if (component?.items?.length) {
+        const overheadAmount = itemsSubtotal * (Number(component?.overheadPercent || 0) / 100);
+        const baseForMargin = itemsSubtotal + overheadAmount;
+        const marginAmount = baseForMargin * (Number(component?.marginPercent || 0) / 100);
+        const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
+        return baseForMargin + marginAmount + delivery;
+    }
+    return component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0;
+};
+
+const computeQuotationTotals = (estimation) => {
+    const components = estimation?.components || [];
+    const includeDelivery = estimation?.includeDelivery !== false;
+    const includeVat = estimation?.includeVat !== false;
+    const includeTax = estimation?.includeTax === true;
+    let taxableBaseRaw = 0;
+    let nonTaxableRaw = 0;
+
+    components.forEach((component) => {
+        const qty = componentQuantity(component);
+        const itemsSubtotal = (component?.items || []).reduce(
+            (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
+            0
+        );
+        const overheadAmount = itemsSubtotal * (Number(component?.overheadPercent || 0) / 100);
+        const baseForMargin = itemsSubtotal + overheadAmount;
+        const marginAmount = baseForMargin * (Number(component?.marginPercent || 0) / 100);
+        const afterMargin = component?.items?.length
+            ? baseForMargin + marginAmount
+            : Number(component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
+        const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
+        const deliveryTaxable = includeDelivery && component?.deliveryTaxable === true;
+
+        taxableBaseRaw += afterMargin + (deliveryTaxable ? delivery : 0);
+        nonTaxableRaw += deliveryTaxable ? 0 : delivery;
+    });
+
+    const discountPct = Number(estimation?.discountPercent || 0);
+    const totalBeforeDiscount = taxableBaseRaw + nonTaxableRaw;
+    const discountAmount = totalBeforeDiscount * (Number.isFinite(discountPct) ? discountPct / 100 : 0);
+    let taxableBase = taxableBaseRaw;
+    let nonTaxable = nonTaxableRaw;
+
+    if (totalBeforeDiscount > 0) {
+        const taxableRatio = taxableBaseRaw / totalBeforeDiscount;
+        taxableBase -= discountAmount * taxableRatio;
+        nonTaxable -= discountAmount * (1 - taxableRatio);
+    }
+
+    const vatPct = includeVat ? Number(estimation?.vatPercent || 0) : 0;
+    const taxPct = includeTax ? Number(estimation?.taxPercent || 0) : 0;
+    const vatAmount = taxableBase * (Number.isFinite(vatPct) ? vatPct / 100 : 0);
+    const taxAmount = taxableBase * (Number.isFinite(taxPct) ? taxPct / 100 : 0);
+    const grandTotal = taxableBase + nonTaxable + vatAmount + taxAmount;
+
+    return {
+        subtotal: totalBeforeDiscount || Number(estimation?.computedSubtotal || 0),
+        vatAmount,
+        taxAmount,
+        taxTotal: vatAmount + taxAmount,
+        grandTotal,
+    };
+};
 
 const componentLabel = (component) => {
     const qty = componentQuantity(component);
@@ -231,6 +298,7 @@ const QuotationPrint = () => {
     const jobRef = project?.jobNumber || "-";
     const subtitleParts = [`Inquiry: ${inquiryRef}`];
     if (project?.jobNumber) subtitleParts.push(`Job: ${project.jobNumber}`);
+    const quoteTotals = computeQuotationTotals(estimation);
 
     return (
         <div className="bg-white min-vh-100 p-4">
@@ -420,7 +488,7 @@ const QuotationPrint = () => {
                                         <td><strong>{componentLabel(comp)}</strong></td>
                                         {printFormat === PRINT_FORMATS.ALL && <td colSpan="3" />}
                                         {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && <td />}
-                                        <td className="text-end fw-bold">{money(componentAmount(comp))}</td>
+                                        <td className="text-end fw-bold">{money(componentAmount(comp, estimation.includeDelivery !== false))}</td>
                                     </tr>
                                     {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && aggregateItems(comp.items, componentQuantity(comp)).map((item, i) => (
                                         <tr key={item.key || `${idx}-${i}`}>
@@ -451,17 +519,23 @@ const QuotationPrint = () => {
                     <tfoot>
                         <tr>
                             <td className="text-end fw-bold">Subtotal</td>
-                            <td className="text-end" style={{ width: "150px" }}>{money(estimation.computedSubtotal)}</td>
+                            <td className="text-end" style={{ width: "150px" }}>{money(quoteTotals.subtotal)}</td>
                         </tr>
-                        {estimation.computedVatAmount > 0 && (
+                        {quoteTotals.vatAmount > 0 && (
                             <tr>
                                 <td className="text-end">VAT ({estimation.vatPercent}%)</td>
-                                <td className="text-end">{money(estimation.computedVatAmount)}</td>
+                                <td className="text-end">{money(quoteTotals.vatAmount)}</td>
+                            </tr>
+                        )}
+                        {quoteTotals.taxAmount > 0 && (
+                            <tr>
+                                <td className="text-end">Other Tax ({estimation.taxPercent}%)</td>
+                                <td className="text-end">{money(quoteTotals.taxAmount)}</td>
                             </tr>
                         )}
                         <tr className="table-active fw-bold fs-5">
                             <td className="text-end">GRAND TOTAL</td>
-                            <td className="text-end">{money(estimation.computedGrandTotal)}</td>
+                            <td className="text-end">{money(quoteTotals.grandTotal)}</td>
                         </tr>
                     </tfoot>
                 </Table>

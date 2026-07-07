@@ -1934,37 +1934,37 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <h6 className="card-title">Estimated Totals</h6>
                                                 <div className="d-flex justify-content-between mb-1">
                                                     <span>Subtotal (Comp):</span>
-                                                    <span>{totals.rawSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span>{totals.rawSubtotal.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                                                 </div>
                                                 <div className="d-flex justify-content-between mb-1 text-muted small">
                                                     <span>With Margin & Overhead:</span>
-                                                    <span>{totals.withMargin.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span>{totals.withMargin.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                                                 </div>
                                                 <div className="d-flex justify-content-between mb-1 text-danger">
                                                     <span>Discount ({discountPercent || 0}%):</span>
-                                                    <span>-{totals.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span>-{totals.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                                                 </div>
                                                 <hr />
                                                 <div className="d-flex justify-content-between mb-1">
                                                     <span>Taxable Base:</span>
-                                                    <span>{totals.taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span>{totals.taxableBase.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                                                 </div>
                                                 {includeVat && (
                                                     <div className="d-flex justify-content-between mb-1">
                                                         <span>VAT ({totals.vatUsed}%):</span>
-                                                        <span>{totals.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        <span>{totals.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                                                     </div>
                                                 )}
                                                 {includeTax && (
                                                     <div className="d-flex justify-content-between mb-1">
                                                         <span>Tax ({totals.taxUsed}%):</span>
-                                                        <span>{totals.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        <span>{totals.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                                                     </div>
                                                 )}
                                                 <hr />
                                                 <div className="d-flex justify-content-between fw-bold">
                                                     <span>Grand Total:</span>
-                                                    <span>{totals.grand.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span>{totals.grand.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
                                                 </div>
                                             </Card.Body>
                                         </Card>

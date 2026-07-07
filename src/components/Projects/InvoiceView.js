@@ -7,8 +7,8 @@ import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
 
 const money = (value) => Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
 });
 
 const formatDate = (value) => {
@@ -53,10 +53,23 @@ const bankDetails = [
     ["Branch", "Pannipitiya"],
 ];
 
-const componentAmount = (component) =>
-    Number(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
-
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
+
+const componentAmount = (component, includeDelivery = true) => {
+    const qty = componentQuantity(component);
+    const itemsSubtotal = (component?.items || []).reduce(
+        (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
+        0
+    );
+    if (component?.items?.length) {
+        const overheadAmount = itemsSubtotal * (Number(component?.overheadPercent || 0) / 100);
+        const baseForMargin = itemsSubtotal + overheadAmount;
+        const marginAmount = baseForMargin * (Number(component?.marginPercent || 0) / 100);
+        const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
+        return baseForMargin + marginAmount + delivery;
+    }
+    return Number(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
+};
 
 const componentLabel = (component) => {
     const qty = componentQuantity(component);
@@ -347,8 +360,8 @@ const InvoiceView = () => {
             return estimation.components.map((comp) => ({
                 description: componentLabel(comp),
                 quantity: componentQuantity(comp),
-                unitPrice: componentQuantity(comp) > 0 ? componentAmount(comp) / componentQuantity(comp) : componentAmount(comp),
-                total: componentAmount(comp),
+                unitPrice: componentQuantity(comp) > 0 ? componentAmount(comp, estimation.includeDelivery !== false) / componentQuantity(comp) : componentAmount(comp, estimation.includeDelivery !== false),
+                total: componentAmount(comp, estimation.includeDelivery !== false),
                 items: aggregateLineItems(comp.items || [], {
                     getDescription: (item) => item.productNameSnapshot || item.description || item.productId,
                     getUnitPrice: (item) => Number(item.estUnitCost || 0),
