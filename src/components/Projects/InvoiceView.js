@@ -71,6 +71,17 @@ const componentAmount = (component, includeDelivery = true) => {
     return Number(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
 };
 
+const quotationComponentAmount = (component, includeDelivery = true) => {
+    const qty = componentQuantity(component);
+    const itemsSubtotal = (component?.items || []).reduce((sum, item) => {
+        const unit = Number(item?.unitPrice ?? item?.unitCost ?? 0);
+        return sum + unit * Number(item?.quantity || 0) * qty;
+    }, 0);
+    const marginAmount = itemsSubtotal * (Number(component?.marginPercent || 0) / 100);
+    const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
+    return itemsSubtotal + marginAmount + delivery;
+};
+
 const componentLabel = (component) => {
     const qty = componentQuantity(component);
     return qty > 1 ? `${component?.name || "Component"} x ${qty}` : (component?.name || "Component");
@@ -193,6 +204,11 @@ const amountToWords = (value) => {
     return cents ? `${rupeeText} And Cents ${titleCase(integerToWords(cents))} Only` : `${rupeeText} Only`;
 };
 
+const numberValue = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const getCustomerLines = (customer) => {
     if (!customer) return ["N/A"];
     return [
@@ -204,11 +220,15 @@ const getCustomerLines = (customer) => {
     ].filter(Boolean);
 };
 
-const getCompanyAddress = (customer) =>
-    splitLines(customer?.comAddress || customer?.pAddr || customer?.address).join(", ");
-
 const getCustomerPhone = (customer) =>
     customer?.comContactNumber || customer?.pContact || customer?.contactNo || "";
+
+const TaxPartyRow = ({ label, children }) => (
+    <div className="tax-party-row">
+        <span className="tax-label">{label}</span>
+        <span className="tax-party-value">{children}</span>
+    </div>
+);
 
 const formatTermEntry = (term) => {
     const label = term?.label || term?.category || "";
@@ -491,9 +511,21 @@ const InvoiceView = () => {
     const inquiryRef = project?.referenceNumber || project?.inquiryNumber || project?.id || invoice.projectId || "-";
     const jobRef = project?.jobNumber || "-";
     const totalReceived = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    const subtotal = Number(invoice.subtotal || 0);
-    const taxTotal = Number(invoice.vatAmount || 0) + Number(invoice.taxAmount || 0);
-    const documentTotal = showTax ? Number(invoice.totalAmount || 0) : subtotal;
+    const sourceVatTotal = numberValue(estimation?.computedVatAmount);
+    const sourceOtherTaxTotal = numberValue(estimation?.computedTaxAmount);
+    const sourceDocumentTotal = numberValue(estimation?.computedGrandTotal);
+    const invoiceVatTotal = numberValue(invoice.vatAmount);
+    const invoiceOtherTaxTotal = numberValue(invoice.taxAmount);
+    const invoiceDocumentTotal = numberValue(invoice.totalAmount);
+    const sourceSubtotal = sourceDocumentTotal > 0
+        ? sourceDocumentTotal - sourceVatTotal - sourceOtherTaxTotal
+        : 0;
+    const invoiceSubtotal = numberValue(invoice.subtotal);
+    const subtotal = isTaxInvoice && sourceSubtotal > 0 ? sourceSubtotal : invoiceSubtotal;
+    const vatTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceVatTotal : invoiceVatTotal;
+    const otherTaxTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
+    const taxTotal = vatTotal + otherTaxTotal;
+    const documentTotal = showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : subtotal;
     const balanceDue = Math.max(documentTotal - totalReceived, 0);
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
     const projectText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
@@ -517,7 +549,67 @@ const InvoiceView = () => {
         .map((line) => line.trim())
         .filter(Boolean);
     const taxLineRows = (() => {
-        const componentRows = groupedItems.map((group, index) => ({
+        const estimationComponentRows = estimation?.components?.length
+            ? estimation.components.map((component, index) => {
+                const quantity = componentQuantity(component);
+                const total = componentAmount(component, estimation.includeDelivery !== false);
+                return {
+                    key: `est-component-${index}`,
+                    itemCode: inquiryRef,
+                    description: componentLabel(component),
+                    quantity,
+                    unit: "Lot",
+                    unitPrice: quantity > 0 ? total / quantity : total,
+                    total,
+                    items: aggregateLineItems(component.items || [], {
+                        getDescription: (item) => item.productNameSnapshot || item.description || item.productId,
+                        getUnitPrice: (item) => Number(item.estUnitCost || 0),
+                        getQuantity: (item) => Number(item.quantity || 0) * quantity,
+                        getTotal: (item) => Number(item.quantity || 0) * quantity * Number(item.estUnitCost || 0),
+                    }),
+                    isComponent: true,
+                };
+            })
+            : [];
+        const quotationComponentRows = !estimationComponentRows.length && quotation?.components?.length
+            ? quotation.components.map((component, index) => {
+                const quantity = componentQuantity(component);
+                const total = quotationComponentAmount(component, quotation.includeDelivery !== false);
+                return {
+                    key: `quote-component-${index}`,
+                    itemCode: inquiryRef,
+                    description: componentLabel(component),
+                    quantity,
+                    unit: "Lot",
+                    unitPrice: quantity > 0 ? total / quantity : total,
+                    total,
+                    items: aggregateLineItems(component.items || [], {
+                        getDescription: (item) => item.productNameSnapshot || item.description || item.productId,
+                        getUnitPrice: (item) => Number(item.unitPrice ?? item.unitCost ?? 0),
+                        getQuantity: (item) => Number(item.quantity || 0) * quantity,
+                        getTotal: (item) => Number(item.quantity || 0) * quantity * Number(item.unitPrice ?? item.unitCost ?? 0),
+                    }),
+                    isComponent: true,
+                };
+            })
+            : [];
+        const componentRows = estimationComponentRows.length ? estimationComponentRows : quotationComponentRows;
+        const actualDiscountAmount = numberValue(estimation?.computedDiscountAmount);
+        const rowsWithDiscount = actualDiscountAmount > 0.004
+            ? [
+                ...componentRows,
+                {
+                    key: "supply-discount",
+                    itemCode: "",
+                    description: "Discount",
+                    quantity: "",
+                    unit: "",
+                    unitPrice: -actualDiscountAmount,
+                    total: -actualDiscountAmount,
+                },
+            ]
+            : componentRows;
+        const groupedComponentRows = groupedItems.map((group, index) => ({
             key: `component-${index}`,
             itemCode: inquiryRef,
             description: group.description,
@@ -529,19 +621,31 @@ const InvoiceView = () => {
         }));
 
         if (taxPrintFormat === PRINT_FORMATS.TOTALS_ONLY) return [];
-        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_ONLY) return componentRows;
+        if (componentRows.length && taxPrintFormat !== PRINT_FORMATS.COMPONENTS_WITH_ITEMS) {
+            return rowsWithDiscount;
+        }
+        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_ONLY) return groupedComponentRows;
+        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && componentRows.length) {
+            const rows = componentRows.flatMap((group, groupIdx) => [
+                group,
+                ...(group.items || []).map((item, itemIdx) => ({
+                    key: `component-${groupIdx}-item-${itemIdx}`,
+                    itemCode: item.productId || "",
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit: item.unit || "Nos",
+                    unitPrice: Number(item.unitPrice || 0),
+                    total: Number(item.total || 0),
+                    isSubItem: true,
+                })),
+            ]);
+            return actualDiscountAmount > 0.004
+                ? [...rows, rowsWithDiscount[rowsWithDiscount.length - 1]]
+                : rows;
+        }
         if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && groupedItems.length) {
             return groupedItems.flatMap((group, groupIdx) => [
-                {
-                    key: `component-${groupIdx}`,
-                    itemCode: inquiryRef,
-                    description: group.description,
-                    quantity: group.quantity || 1,
-                    unit: "Lot",
-                    unitPrice: Number(group.unitPrice || group.total || 0),
-                    total: Number(group.total || 0),
-                    isComponent: true,
-                },
+                groupedComponentRows[groupIdx],
                 ...(group.items || []).map((item, itemIdx) => ({
                     key: `component-${groupIdx}-item-${itemIdx}`,
                     itemCode: item.productId || "",
@@ -555,7 +659,7 @@ const InvoiceView = () => {
             ]);
         }
 
-        return invoiceRows.map((item, index) => ({
+        return componentRows.length ? rowsWithDiscount : invoiceRows.map((item, index) => ({
             key: item.key || `tax-line-${index}`,
             itemCode: item.productId || inquiryRef,
             description: item.description,
@@ -800,6 +904,17 @@ const InvoiceView = () => {
                     grid-template-rows: auto auto 1fr auto;
                     row-gap: 7px;
                 }
+                .tax-party-row {
+                    display: grid;
+                    grid-template-columns: 128px minmax(0, 1fr);
+                    column-gap: 12px;
+                    align-items: start;
+                }
+                .tax-party-value {
+                    min-width: 0;
+                    overflow-wrap: anywhere;
+                    white-space: pre-line;
+                }
                 .tax-meta-grid {
                     display: grid;
                     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -815,7 +930,7 @@ const InvoiceView = () => {
                     word-break: break-word;
                     white-space: pre-wrap;
                 }
-                .tax-label { font-weight: 700; display: inline-block; min-width: 128px; }
+                .tax-label { font-weight: 700; }
                 .tax-value { font-weight: 700; }
                 .tax-items {
                     width: 100%;
@@ -1022,16 +1137,16 @@ const InvoiceView = () => {
                             <span className="tax-value">{invoiceNo}</span>
                         </div>
                         <div className="tax-box tax-party-box">
-                            <div><span className="tax-label">Supplier's TIN</span><span>{company.vatNo || "-"}</span></div>
-                            <div><span className="tax-label">Supplier's Name</span><span>{company.name}</span></div>
-                            <div><span className="tax-label">Address</span><span>{company.addressLines.join(", ")}</span></div>
-                            <div><span className="tax-label">Telephone No</span><span>{company.phone || "-"}</span></div>
+                            <TaxPartyRow label="Supplier's TIN">{company.vatNo || "-"}</TaxPartyRow>
+                            <TaxPartyRow label="Supplier's Name">{company.name}</TaxPartyRow>
+                            <TaxPartyRow label="Address">{company.addressLines.join("\n")}</TaxPartyRow>
+                            <TaxPartyRow label="Telephone No">{company.phone || "-"}</TaxPartyRow>
                         </div>
                         <div className="tax-box tax-party-box">
-                            <div><span className="tax-label">Purchaser's TIN</span><span>{displayCustomer?.tin || displayCustomer?.taxId || displayCustomer?.vatNumber || "-"}</span></div>
-                            <div><span className="tax-label">Purchaser's Name</span><span>{displayCustomer?.comName || displayCustomer?.name || "N/A"}</span></div>
-                            <div><span className="tax-label">Address</span><span>{getCompanyAddress(displayCustomer) || "-"}</span></div>
-                            <div><span className="tax-label">Telephone No</span><span>{getCustomerPhone(displayCustomer) || "-"}</span></div>
+                            <TaxPartyRow label="Purchaser's TIN">{displayCustomer?.tin || displayCustomer?.taxId || displayCustomer?.vatNumber || "-"}</TaxPartyRow>
+                            <TaxPartyRow label="Purchaser's Name">{displayCustomer?.comName || displayCustomer?.name || "N/A"}</TaxPartyRow>
+                            <TaxPartyRow label="Address">{splitLines(displayCustomer?.comAddress || displayCustomer?.pAddr || displayCustomer?.address).join("\n") || "-"}</TaxPartyRow>
+                            <TaxPartyRow label="Telephone No">{getCustomerPhone(displayCustomer) || "-"}</TaxPartyRow>
                         </div>
                     </div>
 
@@ -1089,9 +1204,15 @@ const InvoiceView = () => {
                                 <td className="amount">{money(subtotal)}</td>
                             </tr>
                             <tr>
-                                <td className="tax-summary-label" colSpan="5">VAT Amount (Total Value of Supply @ {Number(invoice.vatAmount || 0) > 0 ? "18%" : "0%"})</td>
-                                <td className="amount">{money(taxTotal)}</td>
+                                <td className="tax-summary-label" colSpan="5">VAT Amount (Total Value of Supply @ {vatTotal > 0 ? `${Number(estimation?.vatPercent ?? quotation?.vatPercent ?? 18)}%` : "0%"})</td>
+                                <td className="amount">{money(vatTotal)}</td>
                             </tr>
+                            {otherTaxTotal > 0 && (
+                                <tr>
+                                    <td className="tax-summary-label" colSpan="5">Other Tax Amount</td>
+                                    <td className="amount">{money(otherTaxTotal)}</td>
+                                </tr>
+                            )}
                             <tr>
                                 <td className="tax-summary-label" colSpan="5"><strong>Total Amount</strong></td>
                                 <td className="amount">{money(documentTotal)}</td>
