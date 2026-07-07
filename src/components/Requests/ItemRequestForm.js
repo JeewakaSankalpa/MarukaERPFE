@@ -25,6 +25,15 @@ const getEstimation = async (projectId) => (await api.get(`/estimations/by-proje
 const getComponentHistory = async (sourceEstimationId) =>
     (await api.get("/item-requests/component-history", { params: { sourceEstimationId } })).data;
 
+const addAllocation = (allocations, componentName, quantity) => {
+    const qty = Number(quantity || 0);
+    if (qty <= 0) return;
+    const name = componentName || GENERAL_COMPONENT;
+    const existing = allocations.find(allocation => allocation.componentName === name);
+    if (existing) existing.quantity += qty;
+    else allocations.push({ componentName: name, quantity: qty });
+};
+
 const listDepartments = async () => {
     try {
         const res = await api.get(`/departments?${qp({ status: "ACTIVE", page: 0, size: 1000, sort: "name,asc" })}`);
@@ -450,9 +459,19 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
     const buildItems = (componentNames = components) =>
         rows.flatMap(row => {
-            const componentAllocations = componentNames
+            const componentAllocations = [];
+            componentNames
                 .filter(component => row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)
-                .map(component => ({ componentName: component, quantity: Number(row.quantities[component]) }));
+                .forEach(component => {
+                    const requestedQty = Number(row.quantities[component] || 0);
+                    const estimatedQty = Number(row.estimatedQuantities?.[component] || 0);
+                    if (component !== GENERAL_COMPONENT && estimatedQty > 0 && requestedQty > estimatedQty) {
+                        addAllocation(componentAllocations, component, estimatedQty);
+                        addAllocation(componentAllocations, GENERAL_COMPONENT, requestedQty - estimatedQty);
+                    } else {
+                        addAllocation(componentAllocations, component, requestedQty);
+                    }
+                });
             if (!componentAllocations.length) return [];
             return [{
                 productId: row.productId,

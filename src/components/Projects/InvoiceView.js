@@ -28,6 +28,13 @@ const DOC_TYPE_OPTIONS = [
     { value: DOC_TYPES.TAX, label: "Tax Invoice", field: "taxInvoiceNumber" },
 ];
 
+const PRINT_FORMATS = {
+    ALL: "all",
+    COMPONENTS_ONLY: "componentsOnly",
+    COMPONENTS_WITH_ITEMS: "componentsWithItems",
+    TOTALS_ONLY: "totalsOnly",
+};
+
 const getAvailableDocTypes = (invoice) =>
     DOC_TYPE_OPTIONS.filter(option => Boolean(invoice?.[option.field]));
 
@@ -182,6 +189,22 @@ const getCompanyAddress = (customer) =>
 const getCustomerPhone = (customer) =>
     customer?.comContactNumber || customer?.pContact || customer?.contactNo || "";
 
+const formatTermEntry = (term) => {
+    const label = term?.label || term?.category || "";
+    const value = term?.value || term?.content || term?.description || "";
+    if (label && value) return `${label}: ${value}`;
+    return label || value;
+};
+
+const getTermValueByLabel = (terms = [], labels = []) => {
+    const normalizedLabels = labels.map(normalizeLineText);
+    const match = terms.find((term) => {
+        const label = normalizeLineText(term?.label || term?.category || term?.description || "");
+        return normalizedLabels.some((needle) => label.includes(needle));
+    });
+    return match ? formatTermEntry(match) : "";
+};
+
 const getSnapshotCustomer = (invoice) => ({
     comName: invoice?.customerNameSnapshot,
     name: invoice?.customerNameSnapshot,
@@ -189,6 +212,7 @@ const getSnapshotCustomer = (invoice) => ({
     email: invoice?.customerEmailSnapshot,
     comAddress: invoice?.customerAddressSnapshot,
     address: invoice?.customerAddressSnapshot,
+    comContactNumber: invoice?.customerPhoneSnapshot,
 });
 
 const buildDisplayInvoiceNumber = (rawNumber, docType) => {
@@ -228,7 +252,12 @@ const InvoiceView = () => {
     const [estimation, setEstimation] = useState(null);
     const [settings, setSettings] = useState({});
     const [poDraft, setPoDraft] = useState("");
+    const [notesDraft, setNotesDraft] = useState("");
+    const [customerPhoneDraft, setCustomerPhoneDraft] = useState("");
     const [savingPo, setSavingPo] = useState(false);
+    const [savingNotes, setSavingNotes] = useState(false);
+    const [savingCustomerPhone, setSavingCustomerPhone] = useState(false);
+    const [taxPrintFormat, setTaxPrintFormat] = useState(PRINT_FORMATS.ALL);
 
     const selectedType = searchParams.get("type") || DOC_TYPES.PROFORMA;
     const isProforma = selectedType === DOC_TYPES.PROFORMA;
@@ -239,12 +268,13 @@ const InvoiceView = () => {
                 const invRes = await api.get(`/invoices/${id}`);
                 setInvoice(invRes.data);
                 setPoDraft(invRes.data.poNumber || "");
+                setNotesDraft(invRes.data.notes || "");
 
                 try {
-                    const settingsRes = await api.get("/settings/map");
+                    const settingsRes = await api.get("/admin/config");
                     setSettings(settingsRes.data || {});
                 } catch (settingsErr) {
-                    console.warn("Could not fetch invoice company settings", settingsErr);
+                    console.warn("Could not fetch invoice company profile", settingsErr);
                 }
 
                 if (invRes.data.quotationId) {
@@ -289,6 +319,11 @@ const InvoiceView = () => {
     }, [id]);
 
     useEffect(() => {
+        if (!invoice) return;
+        setCustomerPhoneDraft(invoice.customerPhoneSnapshot || getCustomerPhone(customer) || "");
+    }, [invoice, customer]);
+
+    useEffect(() => {
         if (!invoice?.id) return;
         const availableTypes = getAvailableDocTypes(invoice);
         const fallbackType = invoice.downloadDocumentType || availableTypes[0]?.value;
@@ -312,6 +347,8 @@ const InvoiceView = () => {
                     getTotal: (item) => Number(item.quantity || 0) * Number(item.estUnitCost || 0),
                 }).map((item, idx) => ({
                     key: item.key || `${comp.name}-${idx}`,
+                    productId: item.productId,
+                    unit: item.unit,
                     description: item.description,
                     quantity: item.quantity,
                     unitPrice: Number(item.unitPrice || 0),
@@ -335,6 +372,7 @@ const InvoiceView = () => {
                 key: item.key || `invoice-item-${idx}`,
                 description: item.description,
                 quantity: item.quantity,
+                unit: item.unit,
                 unitPrice: Number(item.unitPrice || 0),
                 total: Number(item.total || 0),
             }));
@@ -343,6 +381,8 @@ const InvoiceView = () => {
             if (group.items?.length) {
                 return group.items.map((item, itemIdx) => ({
                     key: `${groupIdx}-${itemIdx}`,
+                    productId: item.productId,
+                    unit: item.unit,
                     description: item.description,
                     quantity: item.quantity,
                     unitPrice: Number(item.unitPrice || 0),
@@ -380,6 +420,36 @@ const InvoiceView = () => {
         }
     };
 
+    const handleSaveNotes = async () => {
+        setSavingNotes(true);
+        try {
+            const res = await api.patch(`/invoices/${id}/notes`, { notes: notesDraft });
+            setInvoice(res.data);
+            setNotesDraft(res.data.notes || "");
+            toast.success("Additional information saved");
+        } catch (error) {
+            console.error("Failed to save additional information", error);
+            toast.error("Failed to save additional information");
+        } finally {
+            setSavingNotes(false);
+        }
+    };
+
+    const handleSaveCustomerPhone = async () => {
+        setSavingCustomerPhone(true);
+        try {
+            const res = await api.post(`/invoices/${id}/customer-phone`, { customerPhone: customerPhoneDraft });
+            setInvoice(res.data);
+            setCustomerPhoneDraft(res.data.customerPhoneSnapshot || getCustomerPhone(customer) || "");
+            toast.success("Customer telephone saved");
+        } catch (error) {
+            console.error("Failed to save customer telephone", error);
+            toast.error("Failed to save customer telephone");
+        } finally {
+            setSavingCustomerPhone(false);
+        }
+    };
+
     const handlePrint = () => window.print();
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -405,7 +475,9 @@ const InvoiceView = () => {
     const balanceDue = Math.max(documentTotal - totalReceived, 0);
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
     const projectText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
-    const displayCustomer = customer || getSnapshotCustomer(invoice);
+    const baseCustomer = customer || getSnapshotCustomer(invoice);
+    const customerPhone = invoice.customerPhoneSnapshot || getCustomerPhone(baseCustomer);
+    const displayCustomer = baseCustomer ? { ...baseCustomer, comContactNumber: customerPhone } : null;
     const displaySubject = project?.projectName || quotation?.subject || invoice.subjectSnapshot;
     const company = {
         name: settings["app.company.name"] || fallbackCompany.name,
@@ -414,6 +486,70 @@ const InvoiceView = () => {
         phone: settings["app.company.phone"] || fallbackCompany.phone,
         vatNo: settings["app.company.vatNo"] || settings["app.company.vat"] || fallbackCompany.vatNo,
     };
+    const estimationTerms = estimation?.terms || [];
+    const paymentTermText = getTermValueByLabel(estimationTerms, ["payment", "credit"]);
+    const taxModeOfPayment = paymentTermText || payments[0]?.paymentMethod || (totalReceived > 0 ? "Part Payment Received" : "Credit");
+    const taxTerms = estimationTerms.map(formatTermEntry).filter(Boolean);
+    const taxNotes = String(estimation?.customNote || "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    const taxLineRows = (() => {
+        const componentRows = groupedItems.map((group, index) => ({
+            key: `component-${index}`,
+            itemCode: inquiryRef,
+            description: group.description,
+            quantity: 1,
+            unit: "Lot",
+            unitPrice: Number(group.total || group.unitPrice || 0),
+            total: Number(group.total || 0),
+            isComponent: true,
+        }));
+
+        if (taxPrintFormat === PRINT_FORMATS.TOTALS_ONLY) return [];
+        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_ONLY) return componentRows;
+        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && groupedItems.length) {
+            return groupedItems.flatMap((group, groupIdx) => [
+                {
+                    key: `component-${groupIdx}`,
+                    itemCode: inquiryRef,
+                    description: group.description,
+                    quantity: 1,
+                    unit: "Lot",
+                    unitPrice: Number(group.total || group.unitPrice || 0),
+                    total: Number(group.total || 0),
+                    isComponent: true,
+                },
+                ...(group.items || []).map((item, itemIdx) => ({
+                    key: `component-${groupIdx}-item-${itemIdx}`,
+                    itemCode: item.productId || "",
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit: item.unit || "Nos",
+                    unitPrice: Number(item.unitPrice || 0),
+                    total: Number(item.total || 0),
+                    isSubItem: true,
+                })),
+            ]);
+        }
+
+        return invoiceRows.map((item, index) => ({
+            key: item.key || `tax-line-${index}`,
+            itemCode: item.productId || inquiryRef,
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit || "Nos",
+            unitPrice: Number(item.unitPrice || 0),
+            total: Number(item.total || 0),
+        }));
+    })();
+    const paddedTaxRows = [
+        ...taxLineRows,
+        ...Array.from({ length: Math.max(0, 4 - taxLineRows.length) }, (_, index) => ({
+            key: `blank-${index}`,
+            description: "",
+        })),
+    ];
 
     return (
         <div className="invoice-page bg-white min-vh-100 p-4">
@@ -566,12 +702,12 @@ const InvoiceView = () => {
                     max-width: 820px;
                     min-height: 1040px;
                     margin: 0 auto;
-                    padding: 48px 54px 38px;
+                    padding: 28px 34px 34px;
                     background: #fff;
-                    color: #222;
-                    font-family: "Times New Roman", Times, serif;
-                    font-size: 17px;
-                    line-height: 1.25;
+                    color: #111;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-size: 13px;
+                    line-height: 1.2;
                     box-shadow: 0 0 0 1px #e5e7eb, 0 14px 35px rgba(15, 23, 42, 0.08);
                     box-sizing: border-box;
                     overflow-wrap: anywhere;
@@ -581,46 +717,84 @@ const InvoiceView = () => {
                 .tax-invoice-sheet *::after {
                     box-sizing: border-box;
                 }
-                .tax-title {
-                    width: max-content;
-                    max-width: 100%;
-                    margin: 0 auto 18px;
-                    padding: 8px 42px;
-                    border: 3px solid #222;
-                    font-weight: 700;
-                    font-size: 20px;
-                    text-align: center;
+                .tax-company-header {
+                    display: grid;
+                    grid-template-columns: 170px minmax(0, 1fr);
+                    gap: 20px;
+                    align-items: start;
+                    margin-bottom: 8px;
                 }
+                .tax-company-logo {
+                    width: 160px;
+                    max-height: 80px;
+                    object-fit: contain;
+                }
+                .tax-company-name {
+                    font-size: 25px;
+                    font-weight: 800;
+                    letter-spacing: 0;
+                    text-transform: uppercase;
+                }
+                .tax-company-details {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                    gap: 2px 18px;
+                    margin-top: 4px;
+                    font-size: 13px;
+                }
+                .tax-title {
+                    width: 100%;
+                    max-width: 100%;
+                    margin: 8px auto 10px;
+                    font-weight: 800;
+                    font-size: 21px;
+                    text-align: center;
+                    text-transform: uppercase;
+                }
+                .tax-topline {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) auto;
+                    align-items: center;
+                    gap: 14px;
+                }
+                .tax-page-no { font-weight: 700; }
                 .tax-two-col {
                     display: grid;
                     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-                    gap: 18px 20px;
-                    margin-bottom: 12px;
+                    gap: 6px 26px;
+                    margin-bottom: 8px;
                 }
                 .tax-box {
-                    border: 2px solid #222;
-                    min-height: 42px;
-                    padding: 8px 12px;
+                    border: 1.5px solid #222;
+                    min-height: 37px;
+                    padding: 6px 8px;
                     min-width: 0;
                     overflow-wrap: anywhere;
                     word-break: break-word;
                 }
                 .tax-party-box {
-                    min-height: 176px;
+                    min-height: 160px;
                     display: grid;
                     grid-template-rows: auto auto 1fr auto;
-                    row-gap: 5px;
+                    row-gap: 7px;
+                }
+                .tax-meta-grid {
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                    gap: 6px 26px;
+                    margin-bottom: 8px;
                 }
                 .tax-full-box {
-                    border: 2px solid #222;
-                    min-height: 82px;
-                    padding: 8px 12px;
-                    margin-bottom: 24px;
+                    border: 1.5px solid #222;
+                    min-height: 72px;
+                    padding: 7px 9px;
+                    margin-bottom: 10px;
                     overflow-wrap: anywhere;
                     word-break: break-word;
+                    white-space: pre-wrap;
                 }
-                .tax-label { font-weight: 400; }
-                .tax-value { font-weight: 400; }
+                .tax-label { font-weight: 700; display: inline-block; min-width: 128px; }
+                .tax-value { font-weight: 700; }
                 .tax-items {
                     width: 100%;
                     border-collapse: collapse;
@@ -629,8 +803,8 @@ const InvoiceView = () => {
                 }
                 .tax-items th,
                 .tax-items td {
-                    border: 1.6px solid #222;
-                    padding: 7px 6px;
+                    border: 1.2px solid #222;
+                    padding: 5px 5px;
                     vertical-align: top;
                     max-width: 0;
                     overflow: hidden;
@@ -638,17 +812,18 @@ const InvoiceView = () => {
                     word-break: break-word;
                 }
                 .tax-items th {
-                    height: 82px;
+                    height: 34px;
                     text-align: center;
                     vertical-align: middle;
                     font-weight: 700;
                 }
-                .tax-items td { height: 42px; }
-                .tax-items .ref { width: 12%; }
-                .tax-items .desc { width: 36%; }
-                .tax-items .qty { width: 10%; text-align: right; }
-                .tax-items .unit { width: 19%; text-align: right; }
-                .tax-items .amount { width: 23%; text-align: right; }
+                .tax-items td { height: 30px; }
+                .tax-items .code { width: 11%; }
+                .tax-items .desc { width: 34%; }
+                .tax-items .qty { width: 9%; text-align: right; }
+                .tax-items .uom { width: 8%; text-align: center; }
+                .tax-items .unit { width: 18%; text-align: right; }
+                .tax-items .amount { width: 20%; text-align: right; }
                 .tax-items .qty,
                 .tax-items .unit,
                 .tax-items .amount {
@@ -656,22 +831,50 @@ const InvoiceView = () => {
                     line-height: 1.15;
                     white-space: normal;
                 }
+                .tax-component-row td { font-weight: 700; background: #f4f4f4; }
+                .tax-subitem { padding-left: 16px !important; }
                 .tax-summary-label { text-align: left; }
-                .tax-words-box {
-                    border: 1.6px solid #222;
-                    border-bottom: 0;
-                    min-height: 40px;
-                    padding: 8px;
-                    margin-top: 28px;
-                    overflow-wrap: anywhere;
-                    word-break: break-word;
+                .tax-bottom-lines {
+                    display: grid;
+                    gap: 5px;
+                    margin-top: 14px;
+                    font-size: 13px;
                 }
-                .tax-payment-box {
-                    border: 1.6px solid #222;
-                    min-height: 40px;
-                    padding: 8px;
-                    overflow-wrap: anywhere;
-                    word-break: break-word;
+                .tax-bottom-line {
+                    display: grid;
+                    grid-template-columns: 170px minmax(0, 1fr);
+                    gap: 12px;
+                }
+                .tax-bottom-label { font-weight: 700; }
+                .tax-terms-notes {
+                    margin-top: 14px;
+                    font-size: 12px;
+                    line-height: 1.28;
+                }
+                .tax-terms-title {
+                    font-weight: 800;
+                    margin-top: 8px;
+                    margin-bottom: 4px;
+                }
+                .tax-terms-list {
+                    margin: 0 0 8px 18px;
+                    padding: 0;
+                }
+                .tax-terms-list li {
+                    margin-bottom: 3px;
+                    white-space: pre-wrap;
+                }
+                .tax-signatures {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 54px;
+                    margin-top: 34px;
+                    text-align: center;
+                    font-size: 12px;
+                }
+                .tax-signatures div {
+                    border-top: 1.2px dotted #222;
+                    padding-top: 5px;
                 }
                 @media print {
                     .tax-invoice-sheet {
@@ -681,13 +884,13 @@ const InvoiceView = () => {
                     }
                     .tax-items th,
                     .tax-items td {
-                        padding-left: 5px;
-                        padding-right: 5px;
+                        padding-left: 4px;
+                        padding-right: 4px;
                     }
                     .tax-items .qty,
                     .tax-items .unit,
                     .tax-items .amount {
-                        font-size: 15px;
+                        font-size: 12px;
                     }
                 }
             `}</style>
@@ -720,98 +923,204 @@ const InvoiceView = () => {
                     <Button size="sm" variant="outline-primary" onClick={handleSavePo} disabled={savingPo}>
                         {savingPo ? "Saving..." : "Save PO"}
                     </Button>
+                    <Form.Control
+                        size="sm"
+                        style={{ width: 220 }}
+                        placeholder="Customer telephone"
+                        value={customerPhoneDraft}
+                        onChange={(e) => setCustomerPhoneDraft(e.target.value)}
+                    />
+                    <Button size="sm" variant="outline-primary" onClick={handleSaveCustomerPhone} disabled={savingCustomerPhone}>
+                        {savingCustomerPhone ? "Saving..." : "Save Tel"}
+                    </Button>
+                    {isTaxInvoice && (
+                        <Form.Select
+                            size="sm"
+                            className="w-auto"
+                            value={taxPrintFormat}
+                            onChange={(e) => setTaxPrintFormat(e.target.value)}
+                            aria-label="Tax invoice print format"
+                        >
+                            <option value={PRINT_FORMATS.ALL}>Show everything</option>
+                            <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
+                            <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
+                            <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
+                        </Form.Select>
+                    )}
                     <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
                 </div>
             </div>
 
+            {isTaxInvoice && (
+                <div className="no-print mb-3 border rounded p-3 bg-light">
+                    <Form.Label className="fw-semibold">Tax invoice additional information</Form.Label>
+                    <Form.Control
+                        as="textarea"
+                        rows={3}
+                        value={notesDraft}
+                        onChange={(e) => setNotesDraft(e.target.value)}
+                        placeholder="Type any extra information to print on the tax invoice"
+                    />
+                    <div className="mt-2 text-end">
+                        <Button size="sm" variant="outline-primary" onClick={handleSaveNotes} disabled={savingNotes}>
+                            {savingNotes ? "Saving..." : "Save Additional Information"}
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {isTaxInvoice ? (
                 <section className="tax-invoice-sheet">
-                    <div className="tax-title">Tax Invoice</div>
+                    <header className="tax-company-header">
+                        <div>
+                            <img className="tax-company-logo" src={logo} alt="Maruka Technologies" />
+                        </div>
+                        <div>
+                            <div className="tax-company-name">{company.name}</div>
+                            <div>{company.addressLines.join(", ")}</div>
+                            <div className="tax-company-details">
+                                <div>Tel : {company.phone || "-"}</div>
+                                <div>e-mail : {company.email || "-"}</div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="tax-topline">
+                        <div className="tax-title">Tax Invoice</div>
+                        <div className="tax-page-no">1/1</div>
+                    </div>
 
                     <div className="tax-two-col">
                         <div className="tax-box">
-                            <span className="tax-label">Date of Invoice: </span>
+                            <span className="tax-label">Date of Invoice</span>
                             <span className="tax-value">{formatDate(invoice.issuedDate)}</span>
                         </div>
                         <div className="tax-box">
-                            <span className="tax-label">Tax Invoice No.: </span>
+                            <span className="tax-label">Tax Invoice No</span>
                             <span className="tax-value">{invoiceNo}</span>
                         </div>
                         <div className="tax-box tax-party-box">
-                            <div><span className="tax-label">Supplier's TIN: </span><span>{company.vatNo || "-"}</span></div>
-                            <div><span className="tax-label">Supplier's Name: </span><span>{company.name}</span></div>
-                            <div><span className="tax-label">Address: </span><span>{company.addressLines.join(", ")}</span></div>
-                            <div><span className="tax-label">Telephone No: </span><span>{company.phone || "-"}</span></div>
+                            <div><span className="tax-label">Supplier's TIN</span><span>{company.vatNo || "-"}</span></div>
+                            <div><span className="tax-label">Supplier's Name</span><span>{company.name}</span></div>
+                            <div><span className="tax-label">Address</span><span>{company.addressLines.join(", ")}</span></div>
+                            <div><span className="tax-label">Telephone No</span><span>{company.phone || "-"}</span></div>
                         </div>
                         <div className="tax-box tax-party-box">
-                            <div><span className="tax-label">Purchaser's TIN: </span><span>{displayCustomer?.tin || displayCustomer?.taxId || displayCustomer?.vatNumber || "-"}</span></div>
-                            <div><span className="tax-label">Purchaser's Name: </span><span>{displayCustomer?.comName || displayCustomer?.name || "N/A"}</span></div>
-                            <div><span className="tax-label">Address: </span><span>{getCompanyAddress(displayCustomer) || "-"}</span></div>
-                            <div><span className="tax-label">Telephone No: </span><span>{getCustomerPhone(displayCustomer) || "-"}</span></div>
+                            <div><span className="tax-label">Purchaser's TIN</span><span>{displayCustomer?.tin || displayCustomer?.taxId || displayCustomer?.vatNumber || "-"}</span></div>
+                            <div><span className="tax-label">Purchaser's Name</span><span>{displayCustomer?.comName || displayCustomer?.name || "N/A"}</span></div>
+                            <div><span className="tax-label">Address</span><span>{getCompanyAddress(displayCustomer) || "-"}</span></div>
+                            <div><span className="tax-label">Telephone No</span><span>{getCustomerPhone(displayCustomer) || "-"}</span></div>
                         </div>
+                    </div>
+
+                    <div className="tax-meta-grid">
                         <div className="tax-box">
-                            <span className="tax-label">Date of Delivery: </span>
+                            <span className="tax-label">Date of Delivery</span>
                             <span>{formatDate(project?.deliveryDate || project?.endDate || invoice.issuedDate)}</span>
                         </div>
                         <div className="tax-box">
-                            <span className="tax-label">Place of Supply: </span>
-                            <span>{settings["app.company.placeOfSupply"] || settings["app.company.city"] || "Sri Lanka"}</span>
+                            <span className="tax-label">Place of Supply</span>
+                            <span>{settings["app.company.placeOfSupply"] || settings["app.company.city"] || company.name}</span>
+                        </div>
+                        <div className="tax-box">
+                            <span className="tax-label">Job Number</span>
+                            <span>{jobRef !== "-" ? jobRef : inquiryRef}</span>
+                        </div>
+                        <div className="tax-box">
+                            <span className="tax-label">PO Number</span>
+                            <span>{invoice.poNumber || "-"}</span>
                         </div>
                     </div>
 
                     <div className="tax-full-box">
-                        <span className="tax-label">Additional Information if any: </span>
-                        <span>{invoice.notes || (invoice.poNumber ? `PO No: ${invoice.poNumber}` : "")}</span>
+                        <strong>Additional Information</strong>
+                        <div>{invoice.notes || "-"}</div>
                     </div>
 
                     <table className="tax-items">
                         <thead>
                             <tr>
-                                <th className="ref">Reference</th>
+                                <th className="code">Item Code</th>
                                 <th className="desc">Description of Goods or Services</th>
                                 <th className="qty">Quantity</th>
+                                <th className="uom">UoM</th>
                                 <th className="unit">Unit Price</th>
                                 <th className="amount">Amount<br />Excluding VAT<br />(Rs.)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {[...invoiceRows, ...Array.from({ length: Math.max(0, 4 - invoiceRows.length) }, (_, index) => ({
-                                key: `blank-${index}`,
-                                description: "",
-                                quantity: "",
-                                unitPrice: "",
-                                total: "",
-                            }))].map((item, index) => (
-                                <tr key={item.key || `${item.description}-${index}`}>
-                                    <td className="ref">{item.description ? inquiryRef : ""}</td>
-                                    <td>{item.description}</td>
+                            {paddedTaxRows.map((item, index) => (
+                                <tr
+                                    key={item.key || `${item.description}-${index}`}
+                                    className={item.isComponent ? "tax-component-row" : ""}
+                                >
+                                    <td className="code">{item.description ? item.itemCode || "" : ""}</td>
+                                    <td className={item.isSubItem ? "tax-subitem" : ""}>{item.description}</td>
                                     <td className="qty">{item.quantity || ""}</td>
-                                    <td className="unit">{item.description ? money(item.unitPrice) : ""}</td>
+                                    <td className="uom">{item.description ? item.unit || "" : ""}</td>
+                                    <td className="unit">{item.description && taxPrintFormat !== PRINT_FORMATS.COMPONENTS_WITH_ITEMS ? money(item.unitPrice) : item.isComponent ? money(item.unitPrice) : ""}</td>
                                     <td className="amount">{item.description ? money(item.total) : ""}</td>
                                 </tr>
                             ))}
                             <tr>
-                                <td className="tax-summary-label" colSpan="4">Total Value of Supply:</td>
+                                <td className="tax-summary-label" colSpan="5">Total Value of Supply</td>
                                 <td className="amount">{money(subtotal)}</td>
                             </tr>
                             <tr>
-                                <td className="tax-summary-label" colSpan="4">VAT Amount (Total Value of Supply @ 18%)</td>
+                                <td className="tax-summary-label" colSpan="5">VAT Amount (Total Value of Supply @ {Number(invoice.vatAmount || 0) > 0 ? "18%" : "0%"})</td>
                                 <td className="amount">{money(taxTotal)}</td>
                             </tr>
                             <tr>
-                                <td className="tax-summary-label" colSpan="4">Total Amount including VAT:</td>
+                                <td className="tax-summary-label" colSpan="5"><strong>Total Amount</strong></td>
                                 <td className="amount">{money(documentTotal)}</td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <div className="tax-words-box">
-                        <span>Total Amount in words: </span>
-                        <span>{amountToWords(documentTotal)}</span>
+                    <div className="tax-bottom-lines">
+                        <div className="tax-bottom-line">
+                            <span className="tax-bottom-label">Total Amount In word</span>
+                            <span>{amountToWords(documentTotal)}</span>
+                        </div>
+                        <div className="tax-bottom-line">
+                            <span className="tax-bottom-label">Mode of Payment</span>
+                            <span>{taxModeOfPayment}</span>
+                        </div>
+                        <div className="tax-bottom-line">
+                            <span className="tax-bottom-label">Customer Ref No</span>
+                            <span>{invoice.poNumber || "-"}</span>
+                        </div>
                     </div>
-                    <div className="tax-payment-box">
-                        <span>Mode of Payment: </span>
-                        <span>{payments[0]?.paymentMethod || (totalReceived > 0 ? "Part Payment Received" : "Credit")}</span>
+
+                    {(taxTerms.length > 0 || taxNotes.length > 0) && (
+                        <div className="tax-terms-notes">
+                            {taxTerms.length > 0 && (
+                                <>
+                                    <div className="tax-terms-title">Terms and Conditions</div>
+                                    <ol className="tax-terms-list">
+                                        {taxTerms.map((term, index) => (
+                                            <li key={`term-${index}`}>{term}</li>
+                                        ))}
+                                    </ol>
+                                </>
+                            )}
+                            {taxNotes.length > 0 && (
+                                <>
+                                    <div className="tax-terms-title">Notes</div>
+                                    <ol className="tax-terms-list">
+                                        {taxNotes.map((note, index) => (
+                                            <li key={`note-${index}`}>{note}</li>
+                                        ))}
+                                    </ol>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="tax-signatures">
+                        <div>Prepared By</div>
+                        <div>Checked By</div>
+                        <div>Authorized By</div>
                     </div>
                 </section>
             ) : (
