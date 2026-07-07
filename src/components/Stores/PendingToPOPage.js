@@ -15,15 +15,31 @@ import { SupplierForm } from '../Supplier/SupplierPage';
 const getPendingPlans = async (sort) => (await api.get(`/stores/pending-purchase`, { params: { sort } })).data;
 const createPOsFromPending = async (pendingId, allocation) =>
     (await api.post(`/stores/pending-to-po/${pendingId}`, allocation)).data;
+const listPendingPODrafts = async (pendingId) =>
+    (await api.get(`/stores/pending-to-po/${pendingId}/drafts`)).data;
+const createPendingPODraft = async (pendingId, payload) =>
+    (await api.post(`/stores/pending-to-po/${pendingId}/drafts`, payload)).data;
+const updatePendingPODraft = async (pendingId, draftId, payload) =>
+    (await api.put(`/stores/pending-to-po/${pendingId}/drafts/${draftId}`, payload)).data;
+const submitPendingPODraft = async (pendingId, draftId) =>
+    (await api.post(`/stores/pending-to-po/${pendingId}/drafts/${draftId}/submit`)).data;
+const deletePendingPODraft = async (pendingId, draftId) =>
+    (await api.delete(`/stores/pending-to-po/${pendingId}/drafts/${draftId}`)).data;
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
 
-const getProjectSearchText = (line) => [
+const isMainStoreLine = (line) => (
+    line.originType !== 'PROJECT' && !line.projectId
+);
+
+const getSourceSearchText = (line) => [
     line.jobNumber,
     line.inquiryNumber,
     line.projectNumber,
     line.referenceNumber,
-    line.projectId
+    line.projectId,
+    line.originType,
+    ...(isMainStoreLine(line) ? ['From Stores', 'Main Store', 'Stores'] : [])
 ].filter(Boolean).join(" ").toLowerCase();
 
 const getProductSearchText = (line) => [
@@ -72,6 +88,9 @@ export default function PendingToPOPage() {
     const [choices, setChoices] = useState({}); // productId -> { supplierId, qty, unitPrice, taxPercent }
     const [quotationRefs, setQuotationRefs] = useState({}); // supplierId -> quotation no
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSavingDraft, setIsSavingDraft] = useState(false);
+    const [drafts, setDrafts] = useState([]);
+    const [activeDraftId, setActiveDraftId] = useState(null);
     const [completenessIssues, setCompletenessIssues] = useState([]);
     const [showCompletenessModal, setShowCompletenessModal] = useState(false);
     const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
@@ -111,6 +130,19 @@ export default function PendingToPOPage() {
         setHasLoadedPending(true);
     }, [applyPlan, pendingSort]);
 
+    const loadDrafts = useCallback(async (pendingId = selectedPlanIdRef.current) => {
+        if (!pendingId) {
+            setDrafts([]);
+            return;
+        }
+        try {
+            const list = await listPendingPODrafts(pendingId);
+            setDrafts(Array.isArray(list) ? list : []);
+        } catch {
+            setDrafts([]);
+        }
+    }, []);
+
     useEffect(() => {
         reloadPending().catch(() => {
             setHasLoadedPending(true);
@@ -119,18 +151,24 @@ export default function PendingToPOPage() {
     }, [reloadPending]);
 
     const handlePlanChange = (planId) => {
+        setActiveDraftId(null);
+        setDrafts([]);
         applyPlan(plans.find(p => p.id === planId) || null);
     };
 
+    useEffect(() => {
+        loadDrafts(selectedPlanId).catch(() => setDrafts([]));
+    }, [loadDrafts, selectedPlanId]);
+
     const filteredLines = useMemo(() => {
         const lines = plan?.lines || [];
-        const projectQuery = projectFilter.trim().toLowerCase();
+        const sourceQuery = projectFilter.trim().toLowerCase();
         const productQuery = productFilter.trim().toLowerCase();
-        if (!projectQuery && !productQuery) return lines;
+        if (!sourceQuery && !productQuery) return lines;
         return lines.filter(line => {
-            const matchesProject = !projectQuery || getProjectSearchText(line).includes(projectQuery);
+            const matchesSource = !sourceQuery || getSourceSearchText(line).includes(sourceQuery);
             const matchesProduct = !productQuery || getProductSearchText(line).includes(productQuery);
-            return matchesProject && matchesProduct;
+            return matchesSource && matchesProduct;
         });
     }, [plan?.lines, projectFilter, productFilter]);
 
@@ -154,6 +192,68 @@ export default function PendingToPOPage() {
         });
         return map;
     }, [choices, quotationRefs, filteredLines]);
+
+    const buildDraftPayload = () => ({
+        title: `${plan?.planNumber || "Pending"} allocation`,
+        allocation: groupedAllocation
+    });
+
+    const saveDraft = async () => {
+        if (!plan?.id) return;
+        if (Object.keys(groupedAllocation).length === 0) {
+            toast.info("Select at least one supplier allocation before saving a draft");
+            return;
+        }
+
+        setIsSavingDraft(true);
+        try {
+            const payload = buildDraftPayload();
+            const saved = activeDraftId
+                ? await updatePendingPODraft(plan.id, activeDraftId, payload)
+                : await createPendingPODraft(plan.id, payload);
+            setActiveDraftId(saved.id);
+            await loadDrafts(plan.id);
+            toast.success(`Draft saved (${saved.draftNumber})`);
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to save draft");
+        } finally {
+            setIsSavingDraft(false);
+        }
+    };
+
+    const loadDraft = (draft) => {
+        const nextChoices = getInitialChoices(plan);
+        const nextQuotationRefs = {};
+        Object.entries(draft.allocation || {}).forEach(([supplierId, lines]) => {
+            (lines || []).forEach(line => {
+                const key = line.lineKey || getLineKey(line);
+                nextChoices[key] = {
+                    ...(nextChoices[key] || {}),
+                    supplierId,
+                    qty: line.qty || "",
+                    unitPrice: line.unitPrice || "",
+                    taxPercent: line.taxPercent || ""
+                };
+                if (line.quotationRef) nextQuotationRefs[supplierId] = line.quotationRef;
+            });
+        });
+        setChoices(nextChoices);
+        setQuotationRefs(nextQuotationRefs);
+        setActiveDraftId(draft.id);
+        toast.info("Draft loaded");
+    };
+
+    const removeDraft = async (draftId) => {
+        if (!plan?.id) return;
+        try {
+            await deletePendingPODraft(plan.id, draftId);
+            if (activeDraftId === draftId) setActiveDraftId(null);
+            await loadDrafts(plan.id);
+            toast.success("Draft deleted");
+        } catch (e) {
+            toast.error(e?.response?.data?.message || "Failed to delete draft");
+        }
+    };
 
     const openCompletenessModal = (issues, proceed = null) => {
         setCompletenessIssues(issues);
@@ -211,8 +311,16 @@ export default function PendingToPOPage() {
             if (!plan?.id) return;
             if (Object.keys(groupedAllocation).length === 0) { toast.info("No supplier allocation selected"); return; }
             setIsSubmitting(true);
-            const res = await createPOsFromPending(plan.id, groupedAllocation);
+            let res;
+            if (activeDraftId) {
+                await updatePendingPODraft(plan.id, activeDraftId, buildDraftPayload());
+                res = await submitPendingPODraft(plan.id, activeDraftId);
+                setActiveDraftId(null);
+            } else {
+                res = await createPOsFromPending(plan.id, groupedAllocation);
+            }
             toast.success(`Created ${res.length} PO(s)`);
+            await loadDrafts(plan.id);
             await reloadPending();
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to create POs");
@@ -266,12 +374,66 @@ export default function PendingToPOPage() {
                         <h2 className="mb-0" style={{ fontSize:"1.5rem" }}>Pending Purchases → Create POs</h2>
                     </div>
                 </div>
+                {activeDraftId && (
+                    <div className="text-muted small mb-2">Editing saved draft</div>
+                )}
+                {drafts.length > 0 && (
+                    <div className="border rounded p-3 mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <h5 className="mb-0">Created Drafts</h5>
+                            <Button size="sm" variant="outline-secondary" onClick={() => {
+                                setActiveDraftId(null);
+                                setChoices(getInitialChoices(plan));
+                                setQuotationRefs({});
+                            }}>
+                                New Draft
+                            </Button>
+                        </div>
+                        <Table responsive hover size="sm" className="mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Draft</th>
+                                    <th>Suppliers</th>
+                                    <th>Lines</th>
+                                    <th>Updated</th>
+                                    <th className="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {drafts.map(draft => {
+                                    const suppliers = Object.keys(draft.allocation || {}).length;
+                                    const lines = Object.values(draft.allocation || {})
+                                        .reduce((sum, items) => sum + (items || []).length, 0);
+                                    return (
+                                        <tr key={draft.id}>
+                                            <td>
+                                                <div className="fw-semibold">{draft.draftNumber}</div>
+                                                {activeDraftId === draft.id && <Badge bg="primary">Editing</Badge>}
+                                            </td>
+                                            <td>{suppliers}</td>
+                                            <td>{lines}</td>
+                                            <td>{draft.updatedAt ? new Date(draft.updatedAt).toLocaleString() : "-"}</td>
+                                            <td className="text-end">
+                                                <Button size="sm" variant="outline-primary" className="me-2" onClick={() => loadDraft(draft)}>
+                                                    Continue
+                                                </Button>
+                                                <Button size="sm" variant="outline-danger" onClick={() => removeDraft(draft.id)}>
+                                                    Delete
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </Table>
+                    </div>
+                )}
                 <div className="d-flex flex-wrap align-items-end gap-2 mb-3">
                     <Form.Group style={{ minWidth: 260, maxWidth: 360 }}>
-                        <Form.Label className="small fw-bold">Filter by Project / Job No.</Form.Label>
+                        <Form.Label className="small fw-bold">Filter by Source / Job No.</Form.Label>
                         <Form.Control
                             value={projectFilter}
-                            placeholder="MJN, MIN, project no..."
+                            placeholder="MJN, MIN, project no, main store..."
                             onChange={e => setProjectFilter(e.target.value)}
                         />
                     </Form.Group>
@@ -396,7 +558,10 @@ export default function PendingToPOPage() {
                 </Table>
 
                 <div className="d-flex justify-content-end gap-2">
-                    <Button onClick={createPOs} disabled={isSubmitting}>
+                    <Button variant="outline-primary" onClick={saveDraft} disabled={isSavingDraft || isSubmitting}>
+                        {isSavingDraft ? 'Saving Draft...' : 'Save Draft'}
+                    </Button>
+                    <Button onClick={createPOs} disabled={isSubmitting || isSavingDraft}>
                         {isSubmitting ? 'Creating POs...' : 'Create POs (per supplier)'}
                     </Button>
                 </div>

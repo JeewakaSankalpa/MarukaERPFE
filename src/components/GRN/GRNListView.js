@@ -11,8 +11,8 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 const listGRNs = async ({ q, page = 0, size = 10, paymentStatus }) => (await api.get(`/grns?${qp({ q, page, size, sort: "createdAt,desc", paymentStatus: paymentStatus || undefined })}`)).data;
-const acceptGRN = async (id) => (await api.patch(`/grns/${id}/accept`)).data;
-const approveGRNPrint = async (id) => (await api.patch(`/grns/${id}/approve-print`)).data;
+const acceptGRN = async (id, notes) => (await api.patch(`/grns/${id}/accept`, { notes })).data;
+const approveGRNPrint = async (id, notes) => (await api.patch(`/grns/${id}/approve-print`, { notes })).data;
 
 export default function GRNListView() {
     const navigate = useNavigate();
@@ -50,9 +50,10 @@ export default function GRNListView() {
 
     const handleAccept = async (grn) => {
         if (!window.confirm(`Accept ${grn.grnNumber} for supplier payment?`)) return;
+        const notes = window.prompt("Approval notes (optional)", "") || "";
         setAcceptingId(grn.id);
         try {
-            await acceptGRN(grn.id);
+            await acceptGRN(grn.id, notes);
             toast.success("GRN accepted for payment");
             load();
         } catch (e) {
@@ -169,6 +170,21 @@ function formatDate(value) {
     return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString("en-GB");
 }
 
+function formatDateTime(value) {
+    if (!value) return "-";
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString("en-GB");
+}
+
+function approvalActionLabel(action) {
+    switch (action) {
+        case "GRN_ACCEPTED": return "GRN accepted";
+        case "PAYMENT_VERIFIED": return "Payment verified";
+        case "PRINT_APPROVED": return "Print approved";
+        default: return action || "Approval";
+    }
+}
+
 function lineTotal(item) {
     if (item?.unitCost) return Number(item.receivedQty || 0) * Number(item.unitCost || 0);
     return (item?.batches || []).reduce((sum, batch) => sum + (Number(batch.qty || 0) * Number(batch.unitCost || 0)), 0);
@@ -188,9 +204,10 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
     };
 
     const handleApprovePrint = async () => {
+        const notes = window.prompt("Print approval notes (optional)", "") || "";
         setApprovingPrint(true);
         try {
-            const updated = await approveGRNPrint(grn.id);
+            const updated = await approveGRNPrint(grn.id, notes);
             toast.success("GRN report approved for printing");
             onChanged?.(updated);
         } catch (e) {
@@ -217,6 +234,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                             <div>Created: {formatDate(grn.createdAt)}</div>
                             <div>Status: {grn.status || "-"}</div>
                             <div>Print Approval: {printApproved ? `Approved by ${grn.printApprovedBy || "-"}` : "Pending"}</div>
+                            {grn.acceptedAt && <div>Accepted: {formatDateTime(grn.acceptedAt)} by {grn.acceptedBy || "-"}</div>}
                         </div>
                     </div>
 
@@ -339,6 +357,32 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                             </Table>
                         </>
                     )}
+
+                    {(grn.approvalHistory || []).length > 0 && (
+                        <>
+                            <h5 className="mt-4 mb-2">Approval History</h5>
+                            <Table bordered size="sm">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Action</th>
+                                        <th>Approved By</th>
+                                        <th>Approved At</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {grn.approvalHistory.map((record, idx) => (
+                                        <tr key={record.id || idx}>
+                                            <td>{approvalActionLabel(record.action)}</td>
+                                            <td>{record.actor || "-"}</td>
+                                            <td>{formatDateTime(record.actedAt)}</td>
+                                            <td>{record.notes || "-"}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        </>
+                    )}
                 </div>
             </Modal.Body>
             <Modal.Footer className="no-print">
@@ -432,6 +476,11 @@ function ItemsModal({ grn, onClose }) {
                     <Col md={3}><strong>Supplier:</strong> {grn.supplierNameSnapshot || "-"}</Col>
                     <Col md={3}><strong>Supplier Inv No:</strong> {grn.supplierInvoiceNo || "-"}</Col>
                     <Col md={3}><strong>Invoice Date:</strong> {grn.supplierInvoiceDate || "-"}</Col>
+                </Row>
+                <Row className="mb-3">
+                    <Col md={4}><strong>Accepted By:</strong> {grn.acceptedBy || "-"}</Col>
+                    <Col md={4}><strong>Accepted At:</strong> {formatDateTime(grn.acceptedAt)}</Col>
+                    <Col md={4}><strong>Acceptance Notes:</strong> {grn.acceptanceNote || "-"}</Col>
                 </Row>
                 <Row className="mb-4 bg-light p-2 rounded align-items-center">
                     <Col md={3}><strong>Gross Total:</strong> Rs. {((grn.invoiceAmount || 0) + (grn.vatAmount || 0) + (grn.deliveryCharge || 0)).toFixed(2)}</Col>

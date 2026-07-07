@@ -9,7 +9,22 @@ import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 const addPayment = async (id, formData) => (await api.post(`/grns/${id}/payments`, formData, {
     headers: { "Content-Type": "multipart/form-data" }
 })).data;
-const verifyPayment = async (grnId, paymentId) => (await api.patch(`/grns/${grnId}/payments/${paymentId}/verify`)).data;
+const verifyPayment = async (grnId, paymentId, notes) => (await api.patch(`/grns/${grnId}/payments/${paymentId}/verify`, { notes })).data;
+
+function formatDateTime(value) {
+    if (!value) return "-";
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString("en-GB");
+}
+
+function approvalActionLabel(action) {
+    switch (action) {
+        case "GRN_ACCEPTED": return "GRN accepted";
+        case "PAYMENT_VERIFIED": return "Payment verified";
+        case "PRINT_APPROVED": return "Print approved";
+        default: return action || "Approval";
+    }
+}
 
 export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose }) {
     const [amount, setAmount] = useState("");
@@ -91,9 +106,10 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
     const handleVerifyPayment = async (payment, index) => {
         const paymentId = payment.id || String(index);
         if (!window.confirm("Verify this GRN payment as correct? This will count it as paid and post the finance entry.")) return;
+        const notes = window.prompt("Verification notes (optional)", "") || "";
         setVerifyingId(paymentId);
         try {
-            await verifyPayment(grn.id, paymentId);
+            await verifyPayment(grn.id, paymentId, notes);
             toast.success("Payment verified");
             onClose();
         } catch (e) {
@@ -108,11 +124,18 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
             <Modal show={true} onHide={onClose} size="lg">
                 <Modal.Header closeButton><Modal.Title>Payments for {grn.grnNumber}</Modal.Title></Modal.Header>
                 <Modal.Body>
+                    <div className="mb-3 p-3 bg-light rounded">
+                        <Row className="g-2">
+                            <Col md={4}><strong>Accepted By:</strong> {grn.acceptedBy || "-"}</Col>
+                            <Col md={4}><strong>Accepted At:</strong> {formatDateTime(grn.acceptedAt)}</Col>
+                            <Col md={4}><strong>Notes:</strong> {grn.acceptanceNote || "-"}</Col>
+                        </Row>
+                    </div>
                     <div className="mb-4">
                         <h5>Payment History</h5>
                         {history.length === 0 ? <div className="text-muted">No payments recorded.</div> :
                             <Table size="sm" bordered>
-                                <thead><tr><th>Date</th><th>Receipt</th><th className="text-end">Amount</th><th>Method</th><th>Added By</th><th>Status</th><th>Action</th></tr></thead>
+                                <thead><tr><th>Date</th><th>Receipt</th><th className="text-end">Amount</th><th>Method</th><th>Added By</th><th>Status</th><th>Approved By</th><th>Notes</th><th>Action</th></tr></thead>
                                 <tbody>
                                     {history.map((p, i) => (
                                         <tr key={i}>
@@ -136,6 +159,8 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
                                                     <span className="badge bg-warning text-dark">Pending</span>
                                                 )}
                                             </td>
+                                            <td>{p.verified ? `${p.verifiedBy || "-"} (${formatDateTime(p.verifiedAt)})` : "-"}</td>
+                                            <td>{p.verificationNote || "-"}</td>
                                             <td>
                                                 {!p.verified && canVerifyPayment && (
                                                     <Button size="sm" variant="outline-success" onClick={() => handleVerifyPayment(p, i)} disabled={verifyingId === (p.id || String(i))}>
@@ -148,6 +173,26 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
                                 </tbody>
                             </Table>
                         }
+                        {(grn.approvalHistory || []).length > 0 && (
+                            <div className="mt-3">
+                                <h6>Approval History</h6>
+                                <Table size="sm" bordered>
+                                    <thead>
+                                        <tr><th>Action</th><th>Approved By</th><th>Approved At</th><th>Notes</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {grn.approvalHistory.map((record, idx) => (
+                                            <tr key={record.id || idx}>
+                                                <td>{approvalActionLabel(record.action)}</td>
+                                                <td>{record.actor || "-"}</td>
+                                                <td>{formatDateTime(record.actedAt)}</td>
+                                                <td>{record.notes || "-"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                        )}
                         <div className="d-flex justify-content-end gap-3 mt-2 fw-bold">
                             <span>Total Paid: {totalPaid?.toFixed(2)}</span>
                             <span>Pending Verification: {pendingTotal.toFixed(2)}</span>
