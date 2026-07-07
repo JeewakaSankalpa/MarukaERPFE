@@ -15,18 +15,22 @@ import { SupplierForm } from '../Supplier/SupplierPage';
 const getPendingPlans = async (sort) => (await api.get(`/stores/pending-purchase`, { params: { sort } })).data;
 const createPOsFromPending = async (pendingId, allocation) =>
     (await api.post(`/stores/pending-to-po/${pendingId}`, allocation)).data;
-const listPendingPODrafts = async (pendingId) =>
-    (await api.get(`/stores/pending-to-po/${pendingId}/drafts`)).data;
-const createPendingPODraft = async (pendingId, payload) =>
-    (await api.post(`/stores/pending-to-po/${pendingId}/drafts`, payload)).data;
-const updatePendingPODraft = async (pendingId, draftId, payload) =>
-    (await api.put(`/stores/pending-to-po/${pendingId}/drafts/${draftId}`, payload)).data;
-const submitPendingPODraft = async (pendingId, draftId) =>
-    (await api.post(`/stores/pending-to-po/${pendingId}/drafts/${draftId}/submit`)).data;
-const deletePendingPODraft = async (pendingId, draftId) =>
-    (await api.delete(`/stores/pending-to-po/${pendingId}/drafts/${draftId}`)).data;
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
+const PENDING_PO_DRAFTS_KEY = "maruka.pendingPoDrafts";
+
+const readPendingPODrafts = () => {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(PENDING_PO_DRAFTS_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const writePendingPODrafts = (drafts) => {
+    localStorage.setItem(PENDING_PO_DRAFTS_KEY, JSON.stringify(drafts));
+};
 
 const isMainStoreLine = (line) => (
     line.originType !== 'PROJECT' && !line.projectId
@@ -91,6 +95,7 @@ export default function PendingToPOPage() {
     const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [drafts, setDrafts] = useState([]);
     const [activeDraftId, setActiveDraftId] = useState(null);
+    const [activeDraftLineKeys, setActiveDraftLineKeys] = useState([]);
     const [completenessIssues, setCompletenessIssues] = useState([]);
     const [showCompletenessModal, setShowCompletenessModal] = useState(false);
     const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
@@ -119,6 +124,7 @@ export default function PendingToPOPage() {
                 : getInitialChoices(nextPlan)
         ));
         setQuotationRefs(previousRefs => (preserveSelections ? previousRefs : {}));
+        if (!preserveSelections) setActiveDraftLineKeys([]);
     }, []);
 
     const reloadPending = useCallback(async ({ preserveSelections = false } = {}) => {
@@ -130,17 +136,16 @@ export default function PendingToPOPage() {
         setHasLoadedPending(true);
     }, [applyPlan, pendingSort]);
 
-    const loadDrafts = useCallback(async (pendingId = selectedPlanIdRef.current) => {
+    const loadDrafts = useCallback((pendingId = selectedPlanIdRef.current) => {
         if (!pendingId) {
             setDrafts([]);
             return;
         }
-        try {
-            const list = await listPendingPODrafts(pendingId);
-            setDrafts(Array.isArray(list) ? list : []);
-        } catch {
-            setDrafts([]);
-        }
+        setDrafts(
+            readPendingPODrafts()
+                .filter(draft => draft.pendingPurchaseId === pendingId)
+                .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+        );
     }, []);
 
     useEffect(() => {
@@ -152,25 +157,33 @@ export default function PendingToPOPage() {
 
     const handlePlanChange = (planId) => {
         setActiveDraftId(null);
+        setActiveDraftLineKeys([]);
         setDrafts([]);
         applyPlan(plans.find(p => p.id === planId) || null);
     };
 
     useEffect(() => {
-        loadDrafts(selectedPlanId).catch(() => setDrafts([]));
+        loadDrafts(selectedPlanId);
     }, [loadDrafts, selectedPlanId]);
 
     const filteredLines = useMemo(() => {
         const lines = plan?.lines || [];
         const sourceQuery = projectFilter.trim().toLowerCase();
         const productQuery = productFilter.trim().toLowerCase();
-        if (!sourceQuery && !productQuery) return lines;
-        return lines.filter(line => {
+        const visible = (!sourceQuery && !productQuery) ? lines : lines.filter(line => {
             const matchesSource = !sourceQuery || getSourceSearchText(line).includes(sourceQuery);
             const matchesProduct = !productQuery || getProductSearchText(line).includes(productQuery);
             return matchesSource && matchesProduct;
         });
-    }, [plan?.lines, projectFilter, productFilter]);
+        if (activeDraftLineKeys.length === 0) return visible;
+
+        const priority = new Map(activeDraftLineKeys.map((key, index) => [key, index]));
+        return [...visible].sort((a, b) => {
+            const aRank = priority.has(getLineKey(a)) ? priority.get(getLineKey(a)) : Number.MAX_SAFE_INTEGER;
+            const bRank = priority.has(getLineKey(b)) ? priority.get(getLineKey(b)) : Number.MAX_SAFE_INTEGER;
+            return aRank - bRank;
+        });
+    }, [plan?.lines, projectFilter, productFilter, activeDraftLineKeys]);
 
     const groupedAllocation = useMemo(() => {
         // supplierId => [{ productId, qty, unitPrice?, taxPercent? }]
@@ -208,11 +221,23 @@ export default function PendingToPOPage() {
         setIsSavingDraft(true);
         try {
             const payload = buildDraftPayload();
-            const saved = activeDraftId
-                ? await updatePendingPODraft(plan.id, activeDraftId, payload)
-                : await createPendingPODraft(plan.id, payload);
+            const allDrafts = readPendingPODrafts();
+            const now = new Date().toISOString();
+            const existing = allDrafts.find(draft => draft.id === activeDraftId);
+            const saved = {
+                id: activeDraftId || `pending-po-draft-${Date.now()}`,
+                draftNumber: existing?.draftNumber || `PPD-${new Date().toISOString().slice(0, 10)}-${Date.now() % 10000}`,
+                pendingPurchaseId: plan.id,
+                createdAt: existing?.createdAt || now,
+                updatedAt: now,
+                ...payload
+            };
+            writePendingPODrafts([
+                saved,
+                ...allDrafts.filter(draft => draft.id !== saved.id)
+            ].slice(0, 50));
             setActiveDraftId(saved.id);
-            await loadDrafts(plan.id);
+            loadDrafts(plan.id);
             toast.success(`Draft saved (${saved.draftNumber})`);
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to save draft");
@@ -224,9 +249,11 @@ export default function PendingToPOPage() {
     const loadDraft = (draft) => {
         const nextChoices = getInitialChoices(plan);
         const nextQuotationRefs = {};
+        const draftLineKeys = [];
         Object.entries(draft.allocation || {}).forEach(([supplierId, lines]) => {
             (lines || []).forEach(line => {
                 const key = line.lineKey || getLineKey(line);
+                draftLineKeys.push(key);
                 nextChoices[key] = {
                     ...(nextChoices[key] || {}),
                     supplierId,
@@ -240,15 +267,19 @@ export default function PendingToPOPage() {
         setChoices(nextChoices);
         setQuotationRefs(nextQuotationRefs);
         setActiveDraftId(draft.id);
+        setActiveDraftLineKeys([...new Set(draftLineKeys)]);
         toast.info("Draft loaded");
     };
 
     const removeDraft = async (draftId) => {
         if (!plan?.id) return;
         try {
-            await deletePendingPODraft(plan.id, draftId);
-            if (activeDraftId === draftId) setActiveDraftId(null);
-            await loadDrafts(plan.id);
+            writePendingPODrafts(readPendingPODrafts().filter(draft => draft.id !== draftId));
+            if (activeDraftId === draftId) {
+                setActiveDraftId(null);
+                setActiveDraftLineKeys([]);
+            }
+            loadDrafts(plan.id);
             toast.success("Draft deleted");
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to delete draft");
@@ -311,16 +342,14 @@ export default function PendingToPOPage() {
             if (!plan?.id) return;
             if (Object.keys(groupedAllocation).length === 0) { toast.info("No supplier allocation selected"); return; }
             setIsSubmitting(true);
-            let res;
+            const res = await createPOsFromPending(plan.id, groupedAllocation);
             if (activeDraftId) {
-                await updatePendingPODraft(plan.id, activeDraftId, buildDraftPayload());
-                res = await submitPendingPODraft(plan.id, activeDraftId);
+                writePendingPODrafts(readPendingPODrafts().filter(draft => draft.id !== activeDraftId));
                 setActiveDraftId(null);
-            } else {
-                res = await createPOsFromPending(plan.id, groupedAllocation);
+                setActiveDraftLineKeys([]);
             }
             toast.success(`Created ${res.length} PO(s)`);
-            await loadDrafts(plan.id);
+            loadDrafts(plan.id);
             await reloadPending();
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to create POs");
@@ -383,6 +412,7 @@ export default function PendingToPOPage() {
                             <h5 className="mb-0">Created Drafts</h5>
                             <Button size="sm" variant="outline-secondary" onClick={() => {
                                 setActiveDraftId(null);
+                                setActiveDraftLineKeys([]);
                                 setChoices(getInitialChoices(plan));
                                 setQuotationRefs({});
                             }}>
