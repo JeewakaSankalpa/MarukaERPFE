@@ -267,7 +267,7 @@ export default function PendingApprovalsWidget() {
     };
 
     return (
-        <Card className="h-100 shadow-sm">
+        <Card className="pending-approvals-widget h-100 shadow-sm">
             <Card.Header className="bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
                 <h5 className="mb-0 text-dark">
                     <FaCheckCircle className="me-2 text-warning" />Pending Approvals
@@ -299,9 +299,9 @@ export default function PendingApprovalsWidget() {
                                     visibleApprovals.map((item) => (
                                         <div className="pending-approval-row" key={item.id}>
                                             <div className="pending-approval-main">
-                                                <div className="fw-semibold text-break">{item.title}</div>
-                                                <div className="small text-muted text-break">{item.subtitle}</div>
-                                                <div className="small text-secondary text-break">{item.detail}</div>
+                                                <div className="fw-semibold pending-approval-title">{item.title}</div>
+                                                <div className="small text-muted pending-approval-subtitle">{item.subtitle}</div>
+                                                <div className="small text-secondary pending-approval-detail">{item.detail}</div>
                                             </div>
                                             <div className="pending-approval-meta">
                                                 <Badge
@@ -330,6 +330,11 @@ export default function PendingApprovalsWidget() {
                 </Tabs>
             </Card.Body>
             <style>{`
+                .pending-approvals-widget {
+                    min-width: 0;
+                    container-type: inline-size;
+                }
+
                 .pending-approval-list {
                     max-height: 310px;
                     overflow-y: auto;
@@ -339,7 +344,7 @@ export default function PendingApprovalsWidget() {
 
                 .pending-approval-row {
                     display: grid;
-                    grid-template-columns: minmax(0, 1fr) minmax(120px, 170px) auto;
+                    grid-template-columns: minmax(150px, 1fr) minmax(118px, 160px) max-content;
                     gap: 12px;
                     align-items: center;
                     padding: 12px 16px;
@@ -353,6 +358,14 @@ export default function PendingApprovalsWidget() {
                 .pending-approval-main,
                 .pending-approval-meta {
                     min-width: 0;
+                }
+
+                .pending-approval-title,
+                .pending-approval-subtitle,
+                .pending-approval-detail {
+                    line-height: 1.35;
+                    overflow-wrap: anywhere;
+                    word-break: normal;
                 }
 
                 .pending-approval-meta {
@@ -380,6 +393,23 @@ export default function PendingApprovalsWidget() {
 
                 .card .nav-link {
                     white-space: normal;
+                }
+
+                @container (max-width: 520px) {
+                    .pending-approval-row {
+                        grid-template-columns: minmax(0, 1fr);
+                        align-items: start;
+                    }
+
+                    .pending-approval-meta {
+                        flex-direction: row;
+                        flex-wrap: wrap;
+                        align-items: center;
+                    }
+
+                    .pending-approval-action {
+                        width: fit-content;
+                    }
                 }
 
                 @media (max-width: 768px) {
