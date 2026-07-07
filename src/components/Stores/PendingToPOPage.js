@@ -26,6 +26,13 @@ const getProjectSearchText = (line) => [
     line.projectId
 ].filter(Boolean).join(" ").toLowerCase();
 
+const getProductSearchText = (line) => [
+    line.productNameSnapshot,
+    line.productName,
+    line.sku,
+    line.productId
+].filter(Boolean).join(" ").toLowerCase();
+
 const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
 const getInitialChoices = (pendingPlan) => Object.fromEntries(
     (pendingPlan?.lines || []).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])
@@ -70,6 +77,7 @@ export default function PendingToPOPage() {
     const [pendingCompletenessProceed, setPendingCompletenessProceed] = useState(null);
     const [editRecord, setEditRecord] = useState(null);
     const [projectFilter, setProjectFilter] = useState("");
+    const [productFilter, setProductFilter] = useState("");
 
     const getOriginLabel = (line) => {
         if (line.originType === 'PROJECT' || line.projectId) {
@@ -116,10 +124,15 @@ export default function PendingToPOPage() {
 
     const filteredLines = useMemo(() => {
         const lines = plan?.lines || [];
-        const query = projectFilter.trim().toLowerCase();
-        if (!query) return lines;
-        return lines.filter(line => getProjectSearchText(line).includes(query));
-    }, [plan?.lines, projectFilter]);
+        const projectQuery = projectFilter.trim().toLowerCase();
+        const productQuery = productFilter.trim().toLowerCase();
+        if (!projectQuery && !productQuery) return lines;
+        return lines.filter(line => {
+            const matchesProject = !projectQuery || getProjectSearchText(line).includes(projectQuery);
+            const matchesProduct = !productQuery || getProductSearchText(line).includes(productQuery);
+            return matchesProject && matchesProduct;
+        });
+    }, [plan?.lines, projectFilter, productFilter]);
 
     const groupedAllocation = useMemo(() => {
         // supplierId => [{ productId, qty, unitPrice?, taxPercent? }]
@@ -262,6 +275,14 @@ export default function PendingToPOPage() {
                             onChange={e => setProjectFilter(e.target.value)}
                         />
                     </Form.Group>
+                    <Form.Group style={{ minWidth: 260, maxWidth: 360 }}>
+                        <Form.Label className="small fw-bold">Filter by Product Name</Form.Label>
+                        <Form.Control
+                            value={productFilter}
+                            placeholder="Product name, SKU..."
+                            onChange={e => setProductFilter(e.target.value)}
+                        />
+                    </Form.Group>
                     <Form.Group style={{ minWidth: 220 }}>
                         <Form.Label className="small fw-bold">Sort Pending Purchases</Form.Label>
                         <SafeSelect value={pendingSort} onChange={e => setPendingSort(e.target.value)}>
@@ -279,8 +300,11 @@ export default function PendingToPOPage() {
                             ))}
                         </SafeSelect>
                     </Form.Group>
-                    {projectFilter.trim() && (
-                        <Button variant="outline-secondary" onClick={() => setProjectFilter("")}>
+                    {(projectFilter.trim() || productFilter.trim()) && (
+                        <Button variant="outline-secondary" onClick={() => {
+                            setProjectFilter("");
+                            setProductFilter("");
+                        }}>
                             Clear
                         </Button>
                     )}
@@ -364,7 +388,7 @@ export default function PendingToPOPage() {
                     {filteredLines.length === 0 && (
                         <tr>
                             <td colSpan={8} className="text-center text-muted py-4">
-                                No pending items match this project filter.
+                                No pending items match the selected filters.
                             </td>
                         </tr>
                     )}
