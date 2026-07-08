@@ -11,6 +11,9 @@ const money = (value) => Number(value || 0).toLocaleString("en-US", {
     maximumFractionDigits: 3,
 });
 
+const decimalTotal = (values = []) =>
+    values.reduce((sum, value) => sum + Math.round(Number(value || 0) * 1000), 0) / 1000;
+
 const formatDate = (value) => {
     if (!value) return "-";
     return new Date(value).toLocaleDateString("en-GB");
@@ -521,12 +524,10 @@ const InvoiceView = () => {
         ? sourceDocumentTotal - sourceVatTotal - sourceOtherTaxTotal
         : 0;
     const invoiceSubtotal = numberValue(invoice.subtotal);
-    const subtotal = isTaxInvoice && sourceSubtotal > 0 ? sourceSubtotal : invoiceSubtotal;
-    const vatTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceVatTotal : invoiceVatTotal;
-    const otherTaxTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
-    const taxTotal = vatTotal + otherTaxTotal;
-    const documentTotal = showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : subtotal;
-    const balanceDue = Math.max(documentTotal - totalReceived, 0);
+    const storedSubtotal = isTaxInvoice && sourceSubtotal > 0 ? sourceSubtotal : invoiceSubtotal;
+    const storedVatTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceVatTotal : invoiceVatTotal;
+    const storedOtherTaxTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
+    const storedDocumentTotal = showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : storedSubtotal;
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
     const projectText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
     const baseCustomer = customer || getSnapshotCustomer(invoice);
@@ -676,6 +677,19 @@ const InvoiceView = () => {
             description: "",
         })),
     ];
+    const printedSubtotal = isTaxInvoice && taxLineRows.length
+        ? decimalTotal(taxLineRows.map((row) => row.total))
+        : storedSubtotal;
+    const vatPercent = Number(estimation?.vatPercent ?? quotation?.vatPercent ?? 18);
+    const printedVatTotal = isTaxInvoice && taxLineRows.length && storedVatTotal > 0
+        ? decimalTotal([(printedSubtotal * vatPercent) / 100])
+        : storedVatTotal;
+    const printedOtherTaxTotal = storedOtherTaxTotal;
+    const printedTaxTotal = decimalTotal([printedVatTotal, printedOtherTaxTotal]);
+    const printedDocumentTotal = isTaxInvoice && taxLineRows.length
+        ? decimalTotal([printedSubtotal, printedVatTotal, printedOtherTaxTotal])
+        : storedDocumentTotal;
+    const balanceDue = Math.max(printedDocumentTotal - totalReceived, 0);
 
     return (
         <div className="invoice-page bg-white min-vh-100 p-4">
@@ -863,10 +877,16 @@ const InvoiceView = () => {
                 }
                 .tax-company-details {
                     display: grid;
-                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-                    gap: 2px 18px;
+                    grid-template-columns: minmax(0, 1fr);
+                    gap: 2px;
                     margin-top: 4px;
                     font-size: 13px;
+                }
+                .tax-contact-line {
+                    display: grid;
+                    grid-template-columns: 48px minmax(0, 1fr);
+                    column-gap: 4px;
+                    align-items: start;
                 }
                 .tax-title {
                     width: 100%;
@@ -897,6 +917,12 @@ const InvoiceView = () => {
                     min-width: 0;
                     overflow-wrap: anywhere;
                     word-break: break-word;
+                }
+                .tax-box:not(.tax-party-box) {
+                    display: grid;
+                    grid-template-columns: 132px minmax(0, 1fr);
+                    column-gap: 12px;
+                    align-items: start;
                 }
                 .tax-party-box {
                     min-height: 160px;
@@ -931,7 +957,11 @@ const InvoiceView = () => {
                     white-space: pre-wrap;
                 }
                 .tax-label { font-weight: 700; }
-                .tax-value { font-weight: 700; }
+                .tax-value {
+                    font-weight: 700;
+                    min-width: 0;
+                    overflow-wrap: anywhere;
+                }
                 .tax-items {
                     width: 100%;
                     border-collapse: collapse;
@@ -1116,8 +1146,8 @@ const InvoiceView = () => {
                             <div className="tax-company-name">{company.name}</div>
                             <div>{company.addressLines.join(", ")}</div>
                             <div className="tax-company-details">
-                                <div>Tel : {company.phone || "-"}</div>
-                                <div>e-mail : {company.email || "-"}</div>
+                                <div className="tax-contact-line"><span>Tel</span><span>: {company.phone || "-"}</span></div>
+                                <div className="tax-contact-line"><span>e-mail</span><span>: {company.email || "-"}</span></div>
                             </div>
                         </div>
                     </header>
@@ -1153,19 +1183,19 @@ const InvoiceView = () => {
                     <div className="tax-meta-grid">
                         <div className="tax-box">
                             <span className="tax-label">Date of Delivery</span>
-                            <span>{formatDate(project?.deliveryDate || project?.endDate || invoice.issuedDate)}</span>
+                            <span className="tax-value">{formatDate(project?.deliveryDate || project?.endDate || invoice.issuedDate)}</span>
                         </div>
                         <div className="tax-box">
                             <span className="tax-label">Place of Supply</span>
-                            <span>{settings["app.company.placeOfSupply"] || settings["app.company.city"] || company.name}</span>
+                            <span className="tax-value">{settings["app.company.placeOfSupply"] || settings["app.company.city"] || company.name}</span>
                         </div>
                         <div className="tax-box">
                             <span className="tax-label">Job Number</span>
-                            <span>{jobRef !== "-" ? jobRef : inquiryRef}</span>
+                            <span className="tax-value">{jobRef !== "-" ? jobRef : inquiryRef}</span>
                         </div>
                         <div className="tax-box">
                             <span className="tax-label">PO Number</span>
-                            <span>{invoice.poNumber || "-"}</span>
+                            <span className="tax-value">{invoice.poNumber || "-"}</span>
                         </div>
                     </div>
 
@@ -1201,21 +1231,21 @@ const InvoiceView = () => {
                             ))}
                             <tr>
                                 <td className="tax-summary-label" colSpan="5">Total Value of Supply</td>
-                                <td className="amount">{money(subtotal)}</td>
+                                <td className="amount">{money(printedSubtotal)}</td>
                             </tr>
                             <tr>
-                                <td className="tax-summary-label" colSpan="5">VAT Amount (Total Value of Supply @ {vatTotal > 0 ? `${Number(estimation?.vatPercent ?? quotation?.vatPercent ?? 18)}%` : "0%"})</td>
-                                <td className="amount">{money(vatTotal)}</td>
+                                <td className="tax-summary-label" colSpan="5">VAT Amount (Total Value of Supply @ {printedVatTotal > 0 ? `${vatPercent}%` : "0%"})</td>
+                                <td className="amount">{money(printedVatTotal)}</td>
                             </tr>
-                            {otherTaxTotal > 0 && (
+                            {printedOtherTaxTotal > 0 && (
                                 <tr>
                                     <td className="tax-summary-label" colSpan="5">Other Tax Amount</td>
-                                    <td className="amount">{money(otherTaxTotal)}</td>
+                                    <td className="amount">{money(printedOtherTaxTotal)}</td>
                                 </tr>
                             )}
                             <tr>
                                 <td className="tax-summary-label" colSpan="5"><strong>Total Amount</strong></td>
-                                <td className="amount">{money(documentTotal)}</td>
+                                <td className="amount">{money(printedDocumentTotal)}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1223,7 +1253,7 @@ const InvoiceView = () => {
                     <div className="tax-bottom-lines">
                         <div className="tax-bottom-line">
                             <span className="tax-bottom-label">Total Amount In word</span>
-                            <span>{amountToWords(documentTotal)}</span>
+                            <span>{amountToWords(printedDocumentTotal)}</span>
                         </div>
                         <div className="tax-bottom-line">
                             <span className="tax-bottom-label">Mode of Payment</span>
@@ -1361,17 +1391,17 @@ const InvoiceView = () => {
                             <>
                                 <div className="invoice-summary-row">
                                     <span>SUBTOTAL</span>
-                                    <span>{money(subtotal)}</span>
+                                    <span>{money(printedSubtotal)}</span>
                                 </div>
                                 {showTax && (
                                     <div className="invoice-summary-row">
                                         <span>TAX</span>
-                                        <span>{money(taxTotal)}</span>
+                                        <span>{money(printedTaxTotal)}</span>
                                     </div>
                                 )}
                                 <div className="invoice-summary-row">
                                     <span>TOTAL</span>
-                                    <span>{money(documentTotal)}</span>
+                                    <span>{money(printedDocumentTotal)}</span>
                                 </div>
                                 {!isProforma && totalReceived > 0 && (
                                     <div className="invoice-summary-row">
@@ -1383,7 +1413,7 @@ const InvoiceView = () => {
                         )}
                         <div className="invoice-due">
                             <div className="invoice-due-label">{isProforma ? "LKR" : "TOTAL DUE"}</div>
-                            <div className="invoice-due-value">LKR {money(isProforma ? documentTotal : balanceDue)}</div>
+                            <div className="invoice-due-value">LKR {money(isProforma ? printedDocumentTotal : balanceDue)}</div>
                         </div>
                     </div>
                 </div>
