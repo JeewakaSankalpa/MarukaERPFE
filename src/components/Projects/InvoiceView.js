@@ -677,16 +677,17 @@ const InvoiceView = () => {
             description: "",
         })),
     ];
-    const printedSubtotal = isTaxInvoice && taxLineRows.length
-        ? decimalTotal(taxLineRows.map((row) => row.total))
+    const pricedTaxLineRows = taxLineRows.filter((row) => !row.isSubItem);
+    const printedSubtotal = isTaxInvoice && pricedTaxLineRows.length
+        ? decimalTotal(pricedTaxLineRows.map((row) => row.total))
         : storedSubtotal;
     const vatPercent = Number(estimation?.vatPercent ?? quotation?.vatPercent ?? 18);
-    const printedVatTotal = isTaxInvoice && taxLineRows.length && storedVatTotal > 0
+    const printedVatTotal = isTaxInvoice && pricedTaxLineRows.length && storedVatTotal > 0
         ? decimalTotal([(printedSubtotal * vatPercent) / 100])
         : storedVatTotal;
     const printedOtherTaxTotal = storedOtherTaxTotal;
     const printedTaxTotal = decimalTotal([printedVatTotal, printedOtherTaxTotal]);
-    const printedDocumentTotal = isTaxInvoice && taxLineRows.length
+    const printedDocumentTotal = isTaxInvoice && pricedTaxLineRows.length
         ? decimalTotal([printedSubtotal, printedVatTotal, printedOtherTaxTotal])
         : storedDocumentTotal;
     const balanceDue = Math.max(printedDocumentTotal - totalReceived, 0);
@@ -1226,7 +1227,7 @@ const InvoiceView = () => {
                                     <td className="qty">{item.quantity || ""}</td>
                                     <td className="uom">{item.description ? item.unit || "" : ""}</td>
                                     <td className="unit">{item.description && taxPrintFormat !== PRINT_FORMATS.COMPONENTS_WITH_ITEMS ? money(item.unitPrice) : item.isComponent ? money(item.unitPrice) : ""}</td>
-                                    <td className="amount">{item.description ? money(item.total) : ""}</td>
+                                    <td className="amount">{item.description && !item.isSubItem ? money(item.total) : ""}</td>
                                 </tr>
                             ))}
                             <tr>
