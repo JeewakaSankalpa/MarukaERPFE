@@ -2,14 +2,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    Container, Button, Form, Table, Row, Col, Badge, InputGroup, Modal
+    Container, Button, Form, Table, Row, Col, Badge, InputGroup
 } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
-import SafeSelect from "../ReusableComponents/SafeSelect";
-import { SupplierForm } from "../Supplier/SupplierPage";
 
 /* ================== Inline API helpers ================== */
 const qp = (o = {}) => {
@@ -18,15 +16,8 @@ const qp = (o = {}) => {
     return u.toString();
 };
 
-const listActiveSuppliers = async () =>
-    (await api.get(`/suppliers?${qp({ status: "ACTIVE", page: 0, size: 100, sort: "name,asc" })}`)).data?.content || [];
-
 const listProducts = async (q = "", page = 0, size = 40) =>
     (await api.get(`/products?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
-
-const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
-const getProduct = async (id) => (await api.get(`/products/${id}`)).data;
-const updateProduct = async (id, payload) => (await api.put(`/products/${id}`, payload)).data;
 
 /** Preferred (faster): batch summary */
 const getInventorySummaryBatch = async (productIds) => {
@@ -66,8 +57,6 @@ const safe = (s) => (s ?? "");
 /* ================== Create / Edit Form ================== */
 function PRForm({ onSaved }) {
     const navigate = useNavigate();
-    const [suppliers, setSuppliers] = useState([]);
-    const [supplierId, setSupplierId] = useState("");
     const [summaries, setSummaries] = useState({}); // {productId: { totalQty, serialTracked, serialCount }}
     const [rows, setRows] = useState([]); // editable lines: {productId, name, sku, unit, qty, note}
     const [comment, setComment] = useState("");
@@ -77,11 +66,6 @@ function PRForm({ onSaved }) {
     const [itemSearch, setItemSearch] = useState("");
     const [productPage, setProductPage] = useState(0);
     const [hasMoreProducts, setHasMoreProducts] = useState(false);
-    const [showSupplierAssistModal, setShowSupplierAssistModal] = useState(false);
-    const [supplierAssistLoading, setSupplierAssistLoading] = useState(false);
-    const [commonSuppliers, setCommonSuppliers] = useState([]);
-    const [selectedProductsForSupplier, setSelectedProductsForSupplier] = useState([]);
-    const [showQuickSupplierCreate, setShowQuickSupplierCreate] = useState(false);
     const [drafts, setDrafts] = useState([]);
     const [activeDraftId, setActiveDraftId] = useState(null);
     const [savingDraft, setSavingDraft] = useState(false);
@@ -102,13 +86,6 @@ function PRForm({ onSaved }) {
     };
 
     useEffect(() => {
-        (async () => {
-            try {
-                setSuppliers(await listActiveSuppliers());
-            } catch {
-                toast.error("Failed to load suppliers");
-            }
-        })();
         loadDrafts();
     }, []);
 
@@ -169,7 +146,7 @@ function PRForm({ onSaved }) {
         }
     };
 
-    // Products are selected first; supplier choice is assisted from those items.
+    // Load products immediately so users can create a PR by entering quantities.
     useEffect(() => {
         loadProductPage({ pageToLoad: 0, append: false, searchText: "" });
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -232,14 +209,12 @@ function PRForm({ onSaved }) {
     const getSelectedRows = () => rows.filter(r => Number(r.qty) > 0);
 
     const buildPayload = () => ({
-        supplierId: supplierId || null,
         comment: comment || "",
         items: getSelectedRows()
             .map(r => ({ productId: r.productId, quantity: Number(r.qty), unit: r.unit || "pcs", note: r.note || "" }))
     });
 
     const resetForm = () => {
-        setSupplierId("");
         setRows(prev => prev.map(row => ({ ...row, qty: "", note: "" })));
         setComment("");
         setValidated(false);
@@ -247,96 +222,9 @@ function PRForm({ onSaved }) {
     };
 
     const hasDraftContent = () => Boolean(
-        supplierId ||
         comment.trim() ||
         getSelectedRows().length > 0
     );
-
-    const activeSupplierLinks = (product) =>
-        (product.suppliers || []).filter(link => link?.supplierId && link.active !== false);
-
-    const openSupplierAssist = async (selectedRows = getSelectedRows()) => {
-        if (selectedRows.length === 0) {
-            toast.warn("Please enter quantities for at least one product");
-            return;
-        }
-
-        setShowSupplierAssistModal(true);
-        setSupplierAssistLoading(true);
-        setShowQuickSupplierCreate(false);
-        setCommonSuppliers([]);
-        setSelectedProductsForSupplier(selectedRows);
-
-        try {
-            const products = await Promise.all(selectedRows.map(async row => {
-                const product = await getProduct(row.productId);
-                return { ...product, requestedQty: row.qty };
-            }));
-            setSelectedProductsForSupplier(products);
-
-            const supplierIdSets = products.map(product =>
-                new Set(activeSupplierLinks(product).map(link => link.supplierId))
-            );
-            const commonIds = supplierIdSets.length
-                ? [...supplierIdSets[0]].filter(id => supplierIdSets.every(set => set.has(id)))
-                : [];
-            const candidates = await Promise.all(
-                commonIds.map(id => getSupplier(id).catch(() => ({ id, name: id })))
-            );
-            setCommonSuppliers(candidates);
-        } catch {
-            toast.error("Failed to check suppliers for the selected items");
-            setSelectedProductsForSupplier(selectedRows);
-        } finally {
-            setSupplierAssistLoading(false);
-        }
-    };
-
-    const selectAssistedSupplier = (supplier) => {
-        setSuppliers(prev => prev.some(item => item.id === supplier.id) ? prev : [...prev, supplier]);
-        setSupplierId(supplier.id);
-        setShowSupplierAssistModal(false);
-    };
-
-    const linkSupplierToSelectedProducts = async (savedSupplier) => {
-        if (!savedSupplier?.id) return;
-
-        const results = await Promise.allSettled(selectedProductsForSupplier.map(async selectedProduct => {
-            const product = selectedProduct.suppliers ? selectedProduct : await getProduct(selectedProduct.productId);
-            const links = product.suppliers || [];
-            if (links.some(link => link.supplierId === savedSupplier.id)) return;
-
-            await updateProduct(product.id || selectedProduct.productId, {
-                barcode: product.barcode || undefined,
-                name: product.name,
-                categoryId: product.categoryId || undefined,
-                unit: product.unit || undefined,
-                status: product.status,
-                originalCostPrice: product.originalCostPrice || undefined,
-                defaultSellingPrice: product.defaultSellingPrice || undefined,
-                reorderLevel: product.reorderLevel,
-                suppliers: [
-                    ...links,
-                    { supplierId: savedSupplier.id, active: true }
-                ]
-            });
-        }));
-
-        if (results.some(result => result.status === "rejected")) {
-            throw new Error("Some product supplier links could not be updated");
-        }
-    };
-
-    const handleQuickSupplierSaved = async (savedSupplier) => {
-        try {
-            await linkSupplierToSelectedProducts(savedSupplier);
-            selectAssistedSupplier(savedSupplier);
-            toast.success("Supplier created and linked to the selected items");
-        } catch {
-            selectAssistedSupplier(savedSupplier);
-            toast.warn("Supplier selected, but some item links may need to be updated manually");
-        }
-    };
 
     const saveDraft = async () => {
         if (!hasDraftContent()) {
@@ -362,7 +250,6 @@ function PRForm({ onSaved }) {
 
     const loadDraft = (draft) => {
         setActiveDraftId(draft.id);
-        setSupplierId(draft.supplierId || "");
         setComment(draft.comment || "");
         setValidated(false);
 
@@ -401,10 +288,6 @@ function PRForm({ onSaved }) {
         const selectedRows = getSelectedRows();
         if (selectedRows.length === 0) {
             toast.warn("Please enter quantities for at least one product");
-            return;
-        }
-        if (!supplierId) {
-            await openSupplierAssist(selectedRows);
             return;
         }
 
@@ -449,7 +332,6 @@ function PRForm({ onSaved }) {
                             <thead>
                                 <tr>
                                     <th>Draft</th>
-                                    <th>Supplier</th>
                                     <th>Lines</th>
                                     <th>Updated</th>
                                     <th className="text-end">Actions</th>
@@ -462,7 +344,6 @@ function PRForm({ onSaved }) {
                                             <div className="fw-semibold">{draft.prNumber}</div>
                                             {activeDraftId === draft.id && <Badge bg="primary">Editing</Badge>}
                                         </td>
-                                        <td>{draft.supplierNameSnapshot || "Not selected"}</td>
                                         <td>{(draft.items || []).length}</td>
                                         <td>{draft.updatedAt ? new Date(draft.updatedAt).toLocaleString() : "-"}</td>
                                         <td className="text-end">
@@ -481,25 +362,7 @@ function PRForm({ onSaved }) {
                 )}
                 <Form noValidate validated={validated} onSubmit={save} className="mt-3">
                     <Row className="g-3">
-                        <Col md={6}>
-                            <Form.Group>
-                                <Form.Label>Supplier</Form.Label>
-                                <SafeSelect
-                                    value={supplierId}
-                                    onChange={(e) => setSupplierId(e.target.value)}
-                                    required
-                                    isInvalid={validated && !supplierId}
-                                >
-                                    <option value="">Select later from item suggestions</option>
-                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </SafeSelect>
-                                <Form.Text className="text-muted">
-                                    Choose items first and we can suggest suppliers linked to all of them.
-                                </Form.Text>
-                                <Form.Control.Feedback type="invalid">Select a supplier before saving.</Form.Control.Feedback>
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
+                        <Col md={12}>
                             <Form.Group>
                                 <Form.Label>Comment</Form.Label>
                                 <Form.Control as="textarea" rows={1} value={comment} onChange={(e) => setComment(e.target.value)} />
@@ -511,16 +374,6 @@ function PRForm({ onSaved }) {
                         <div className="d-flex justify-content-between align-items-center mb-2">
                             <h5 className="mb-0">Items ({fmtNum(totalLines)})</h5>
                             <div className="d-flex align-items-center gap-2">
-                                {!supplierId && totalLines > 0 && (
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline-primary"
-                                        onClick={() => openSupplierAssist()}
-                                    >
-                                        Find suppliers
-                                    </Button>
-                                )}
                                 {loadingProducts && <Badge bg="info">Loading products...</Badge>}
                             </div>
                         </div>
@@ -630,89 +483,6 @@ function PRForm({ onSaved }) {
                     </div>
                 </Form>
             </div>
-
-            <Modal
-                show={showSupplierAssistModal}
-                onHide={() => setShowSupplierAssistModal(false)}
-                size="xl"
-                centered
-                scrollable
-            >
-                <Modal.Header closeButton>
-                    <Modal.Title>Select Supplier for Selected Items</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    {!showQuickSupplierCreate ? (
-                        <>
-                            <div className="border rounded p-3 mb-3 bg-light">
-                                <div className="fw-semibold mb-2">Selected items</div>
-                                <div className="d-flex flex-wrap gap-2">
-                                    {selectedProductsForSupplier.map(product => (
-                                        <Badge bg="secondary" key={product.id || product.productId}>
-                                            {product.name} x {product.requestedQty || product.qty}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {supplierAssistLoading ? (
-                                <div className="text-muted py-4 text-center">Checking item suppliers...</div>
-                            ) : commonSuppliers.length > 0 ? (
-                                <>
-                                    <div className="mb-2 text-muted small">
-                                        These suppliers are linked to every selected item.
-                                    </div>
-                                    <Table hover responsive>
-                                        <thead>
-                                            <tr>
-                                                <th>Supplier</th>
-                                                <th>Phone</th>
-                                                <th>Email</th>
-                                                <th className="text-end"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {commonSuppliers.map(candidate => (
-                                                <tr key={candidate.id}>
-                                                    <td className="fw-semibold">{candidate.name}</td>
-                                                    <td>{candidate.phone || "-"}</td>
-                                                    <td>{candidate.email || "-"}</td>
-                                                    <td className="text-end">
-                                                        <Button size="sm" onClick={() => selectAssistedSupplier(candidate)}>
-                                                            Use this supplier
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </Table>
-                                </>
-                            ) : (
-                                <div className="alert alert-warning mb-3">
-                                    No existing supplier is linked to every selected item. Create a supplier here, or close this window and choose an existing supplier manually.
-                                </div>
-                            )}
-
-                            <div className="d-flex justify-content-end gap-2">
-                                <Button variant="outline-secondary" onClick={() => setShowSupplierAssistModal(false)}>
-                                    Choose manually
-                                </Button>
-                                <Button variant="outline-primary" onClick={() => setShowQuickSupplierCreate(true)}>
-                                    Create New Supplier
-                                </Button>
-                            </div>
-                        </>
-                    ) : (
-                        <SupplierForm
-                            id={null}
-                            compact
-                            startEditing
-                            onClose={() => setShowQuickSupplierCreate(false)}
-                            onSaved={handleQuickSupplierSaved}
-                        />
-                    )}
-                </Modal.Body>
-            </Modal>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
@@ -829,7 +599,6 @@ function PRView({ id, onBack }) {
                     </div>
 
                     <div className="meta" style={{ marginBottom: 8 }}>
-                        <div><strong>Supplier:</strong> {pr.supplierNameSnapshot || pr.supplierName || "-"}</div>
                         <div><strong>Comment:</strong> {pr.comment || "-"}</div>
                     </div>
 
