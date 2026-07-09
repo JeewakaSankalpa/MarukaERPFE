@@ -152,6 +152,10 @@ export default function QuotationPage() {
             toast.info("Save the quotation before generating invoices");
             return;
         }
+        if (quote.status !== "FINALIZED") {
+            toast.info("Finalize the quotation before generating invoices");
+            return;
+        }
 
         setGeneratingInvoice(true);
         try {
@@ -165,6 +169,23 @@ export default function QuotationPage() {
             toast.error(e.response?.data?.message || "Failed to generate invoice");
         } finally {
             setGeneratingInvoice(false);
+        }
+    };
+
+    const handleFinalize = async () => {
+        const quoteId = quote.id || id;
+        if (!quoteId || isNew) {
+            toast.info("Save the quotation before finalizing");
+            return;
+        }
+        if (!window.confirm("Finalize this quotation? It will be locked for invoicing.")) return;
+        try {
+            await handleSave(true);
+            const res = await api.post(`/quotations/${quoteId}/finalize`);
+            setQuote(res.data);
+            toast.success("Quotation finalized");
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Failed to finalize quotation");
         }
     };
 
@@ -195,6 +216,9 @@ export default function QuotationPage() {
                     <Button variant="primary" onClick={() => handleSave()}>Save</Button>
                     {!isNew && quote.status !== 'CONVERTED' && (
                         <Button variant="success" onClick={handleConvert}>Convert to Project</Button>
+                    )}
+                    {!isNew && quote.status !== 'FINALIZED' && (
+                        <Button variant="warning" onClick={handleFinalize}>Finalize Quotation</Button>
                     )}
                 </div>
             </div>
@@ -272,7 +296,7 @@ export default function QuotationPage() {
                                     products={products}
                                     availMap={availMap}
                                     productById={productById.current}
-                                    readOnly={quote.status === 'CONVERTED'}
+                                    readOnly={quote.status === 'CONVERTED' || quote.status === 'FINALIZED'}
                                 />
                             )}
                         </Card.Body>
@@ -317,6 +341,10 @@ export default function QuotationPage() {
                                     <div className="py-4 text-center text-muted">
                                         <Spinner size="sm" animation="border" className="me-2" />
                                         Loading invoice history...
+                                    </div>
+                                ) : quote.status !== "FINALIZED" ? (
+                                    <div className="py-4 text-center text-muted">
+                                        Finalize this quotation before generating invoices.
                                     </div>
                                 ) : invoices.length === 0 ? (
                                     <div className="py-4 text-center text-muted">

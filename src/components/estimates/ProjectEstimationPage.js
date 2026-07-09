@@ -32,7 +32,7 @@ const getProjectAPI = async (id) => (await api.get(`/projects/${id}`)).data;
 const submitApprovalAPI = async (id, payload) => (await api.post(`/estimations/${id}/submit-approval`, payload)).data;
 const approveAPI = async (id, payload) => (await api.post(`/estimations/${id}/approve`, payload)).data;
 const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/reject`, payload)).data;
-const createRevisionAPI = async (id, payload) => (await api.post(`/estimations/${id}/revision`, payload)).data;
+const createRevisionAPI = async (id, payload, headers = {}) => (await api.post(`/estimations/${id}/revision`, payload, { headers })).data;
 const batchSaveEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}/batch`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 const patchEstimationComponentsAPI = async (projectId, payload) => (await api.patch(`/estimations/by-project/${projectId}/components`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 
@@ -63,6 +63,12 @@ const ESTIMATION_ROW_OVERSCAN = 8;
 const ESTIMATION_SAVE_TIMEOUT_MS = 5 * 60 * 1000;
 const ESTIMATION_BATCH_ITEM_LIMIT = 40;
 const ESTIMATION_BATCH_SAVE_THRESHOLD = 60;
+const ROUNDING_OPTIONS = [
+    { value: "1", label: "Remove cents" },
+    { value: "10", label: "Nearest 10" },
+    { value: "100", label: "Nearest 100" },
+    { value: "1000", label: "Nearest 1000" },
+];
 
 const normalizeLineText = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 
@@ -75,6 +81,13 @@ const duplicateRowKey = (row) => {
 };
 
 const getRowRenderKey = (row, index) => row?.rowKey || row?.productId || `row-${index}`;
+
+const roundUpToPlace = (value, place) => {
+    const amount = Number(value || 0);
+    const step = Math.max(1, Number(place || 1));
+    if (!Number.isFinite(amount) || amount === 0) return 0;
+    return Math.ceil(amount / step) * step;
+};
 
 const isEmptyManualRow = (row) => {
     if (row?.lineType !== LINE_TYPES.MANUAL) return false;
@@ -139,7 +152,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [employees, setEmployees] = useState([]); // Restored
     const [loading, setLoading] = useState(isProjectRoute); // Global loading state
     const [isRefDataLoaded, setIsRefDataLoaded] = useState(false); // NEW: Track ref data load
-    const { employeeId } = useAuth(); // Get real employee ID from context
+    const { employeeId, role, projectRoles } = useAuth(); // Get real employee ID from context
+    const rolesHeader = useMemo(() => {
+        const roles = [role, ...(Array.isArray(projectRoles) ? projectRoles : [])]
+            .filter(Boolean);
+        return roles.join(",");
+    }, [role, projectRoles]);
+    const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
 
     /* ------------ quick indexes ------------ */
     const productById = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
@@ -165,6 +184,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [includeTax, setIncludeTax] = useState(false);
     const [vatPercent, setVatPercent] = useState("");   // number-as-string
     const [taxPercent, setTaxPercent] = useState("");   // number-as-string
+    const [roundingEnabled, setRoundingEnabled] = useState(false);
+    const [roundingPlace, setRoundingPlace] = useState("1");
 
     // Per-component controls (keyed by component name)
     const [compQty, setCompQty] = useState({}); // { [compName]: number|string }
@@ -200,6 +221,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     /* ------------ Workflow State ------------ */
     const [version, setVersion] = useState(1);
     const [versions, setVersions] = useState([]); // History snapshots
+    const [estimationStatus, setEstimationStatus] = useState("DRAFT");
     const [approvalStatus, setApprovalStatus] = useState("DRAFT"); // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED
     const [approverIds, setApproverIds] = useState([]);
     const [approvalHistory, setApprovalHistory] = useState([]); // Current approval cycle records
@@ -304,6 +326,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setIncludeDelivery(true);
             setIncludeVat(true);
             setIncludeTax(false);
+            setRoundingEnabled(false);
+            setRoundingPlace("1");
 
             const cfg = window._sysConfig || {};
             setVatPercent(cfg["app.estimation.vat"] || "18");
@@ -327,6 +351,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setEstimationId(null);
             setVersion(1);
             setVersions([]);
+            setEstimationStatus("DRAFT");
             setApprovalStatus("DRAFT");
             setApproverIds([]);
             setApprovalPolicy("ALL");
@@ -344,6 +369,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setIncludeDelivery(true);
                     setIncludeVat(true);
                     setIncludeTax(false);
+                    setRoundingEnabled(false);
+                    setRoundingPlace("1");
 
                     const cfg = window._sysConfig || {};
                     setVatPercent(cfg["app.estimation.vat"] || "18");
@@ -362,6 +389,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setEstimationId(null);
                     setVersion(1);
                     setVersions([]);
+                    setEstimationStatus("DRAFT");
                     setApprovalStatus("DRAFT");
                     setApproverIds([]);
                     setApprovalPolicy("ALL");
@@ -404,6 +432,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                 // Workflow Fields
                 setVersion(est.version || 1);
+                setEstimationStatus(est.status || "DRAFT");
                 setApprovalStatus(est.approvalStatus || "DRAFT");
                 setApproverIds(est.approverIds || []);
                 setApprovalPolicy(est.approvalPolicy || "ALL");
@@ -451,6 +480,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 if (typeof est.includeDelivery === "boolean") setIncludeDelivery(!!est.includeDelivery);
                 if (typeof est.includeVat === "boolean") setIncludeVat(!!est.includeVat);
                 if (typeof est.includeTax === "boolean") setIncludeTax(!!est.includeTax);
+                setRoundingEnabled(!!est.roundingEnabled);
+                setRoundingPlace(String(est.roundingPlace || 1));
                 setVatPercent(globalSettings.GLOBAL_VAT_PERCENT || "18");
                 setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
                 setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
@@ -906,7 +937,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         if (!isInitialLoad) setIsDirty(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rows, components, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
-        includeDelivery, includeVat, includeTax, discountPercent, customNote, terms]);
+        includeDelivery, includeVat, includeTax, roundingEnabled, roundingPlace, discountPercent, customNote, terms]);
 
     /* ------------ per-component + totals ------------ */
     const mergedRows = useMemo(() => mergeRowsByItem(rows, components), [rows, components]);
@@ -936,6 +967,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
             const taxableAdd = includeDelivery && delTaxable ? del : 0;
             const nonTaxableAdd = includeDelivery && !delTaxable ? del : 0;
+            const taxablePortionRaw = afterMargin + taxableAdd;
+            const nonTaxablePortionRaw = nonTaxableAdd;
+            const lineTotalRaw = taxablePortionRaw + nonTaxablePortionRaw;
+            const lineTotalBeforeTax = roundingEnabled ? roundUpToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw;
+            const roundingDelta = lineTotalBeforeTax - lineTotalRaw;
+            const taxablePortion = taxablePortionRaw > 0 ? taxablePortionRaw + roundingDelta : taxablePortionRaw;
+            const nonTaxablePortion = taxablePortionRaw > 0 ? nonTaxablePortionRaw : nonTaxablePortionRaw + roundingDelta;
 
             return {
                 name: cname,
@@ -950,12 +988,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 unitDelivery,
                 delivery: del,
                 deliveryTaxable: delTaxable,
-                taxablePortion: afterMargin + taxableAdd, // Gross taxable base from this component
-                nonTaxablePortion: nonTaxableAdd,
-                lineTotalBeforeTax: afterMargin + (includeDelivery ? del : 0),
+                taxablePortion, // Gross taxable base from this component
+                nonTaxablePortion,
+                lineTotalBeforeTax,
             };
         });
-    }, [components, mergedRows, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery]);
+    }, [components, mergedRows, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery, roundingEnabled, roundingPlace]);
 
     const totals = useMemo(() => {
         const taxableBaseRaw = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
@@ -987,7 +1025,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const vatAmount = taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100);
         const taxAmount = taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100);
 
-        const grand = taxableBase + nonTaxable + vatAmount + taxAmount;
+        const grandRaw = taxableBase + nonTaxable + vatAmount + taxAmount;
+        const grand = roundingEnabled ? roundUpToPlace(grandRaw, roundingPlace) : grandRaw;
 
         const rawSubtotal = compCalcs.reduce((a, c) => a + c.subtotal, 0);
         const withMargin = compCalcs.reduce((a, c) => a + c.afterMargin, 0);
@@ -1000,11 +1039,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             nonTaxable,
             vatAmount,
             taxAmount,
+            grandRaw,
             grand,
             vatUsed: vatPctNum,
             taxUsed: taxPctNum
         };
-    }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent, discountPercent, globalSettings]);
+    }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent, discountPercent, globalSettings, roundingEnabled, roundingPlace]);
 
     /* ------------ save ------------ */
     const toBigDec = (val) => {
@@ -1075,6 +1115,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             includeDelivery,
             includeVat,
             includeTax,
+            roundingEnabled,
+            roundingPlace: Number(roundingPlace || 1),
             vatPercent: toBigDec(vatUsed),
             taxPercent: toBigDec(taxUsed),
             discountPercent: toBigDec(discountPercent),
@@ -1274,6 +1316,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 policy: null     // Backend Defaults
             });
             setApprovalStatus(res.approvalStatus);
+            setEstimationStatus(res.status || "DRAFT");
             setApproverIds(res.approverIds || []);
             setShowApprovalModal(false); // Close modal on success
             toast.success("Submitted for approval!");
@@ -1291,6 +1334,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const res = await approveAPI(estimationId, { comment: "Approved via Web UI" });
             // Update all approval-related state in place — no page reload needed
             setApprovalStatus(res.approvalStatus);
+            setEstimationStatus(res.status || "DRAFT");
             setApproverIds(res.approverIds || []);
             setApprovalHistory(res.approvals || []);
             setApprovalPolicy(res.approvalPolicy || "ALL");
@@ -1317,6 +1361,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         try {
             const res = await rejectAPI(estimationId, { comment: rejectComment.trim() });
             setApprovalStatus(res.approvalStatus);
+            setEstimationStatus(res.status || "DRAFT");
             setApproverIds(res.approverIds || []);
             setApprovalHistory(res.approvals || []);
             setApprovalPolicy(res.approvalPolicy || "ALL");
@@ -1333,10 +1378,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         if (!estimationId) return;
         if (!revisionReason) { toast.warn("Enter a reason"); return; }
         try {
-            const res = await createRevisionAPI(estimationId, { reason: revisionReason });
+            const res = await createRevisionAPI(estimationId, { reason: revisionReason }, { "X-Roles": rolesHeader });
             // Fully reload to reflect new version/draft state?
             // Actually res is the new state.
             setApprovalStatus(res.approvalStatus);
+            setEstimationStatus(res.status || "DRAFT");
             setVersion(res.version);
             setVersions(res.history || []);
             setShowRevisionModal(false);
@@ -1447,7 +1493,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     <Button variant="danger" onClick={handleReject} disabled={submittingApproveAction}>Reject</Button>
                                 </>
                             )}
-                            {(approvalStatus === "APPROVED" || approvalStatus === "REJECTED" || approvalStatus === "FINALIZED") && (
+                            {(estimationStatus !== "FINALIZED" || isAdmin) && (approvalStatus === "APPROVED" || approvalStatus === "REJECTED") && (
                                 <Button variant="outline-dark" onClick={() => setShowRevisionModal(true)}>
                                     Create Revision
                                 </Button>
@@ -1840,6 +1886,30 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             onChange={e => setIncludeTax(e.target.checked)}
                                         />
                                     </Col>
+                                    <Col md={3}>
+                                        <Form.Check
+                                            type="switch"
+                                            label="Round up totals"
+                                            checked={roundingEnabled}
+                                            disabled={isLocked}
+                                            onChange={e => setRoundingEnabled(e.target.checked)}
+                                        />
+                                    </Col>
+                                    <Col md={3}>
+                                        <Form.Group>
+                                            <Form.Label className="small mb-1">Round up to</Form.Label>
+                                            <Form.Select
+                                                size="sm"
+                                                value={roundingPlace}
+                                                disabled={isLocked || !roundingEnabled}
+                                                onChange={e => setRoundingPlace(e.target.value)}
+                                            >
+                                                {ROUNDING_OPTIONS.map(option => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </Form.Select>
+                                        </Form.Group>
+                                    </Col>
                                 </Row>
 
                                 <hr />
@@ -2036,7 +2106,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     <div className="bg-white shadow rounded p-3 mt-3">
                         <div className="d-flex justify-content-between align-items-center mb-2">
                             <h6 className="mb-0">Version History ({version})</h6>
-                            {isLocked && (canApprove || approvalStatus === 'FINALIZED' || approvalStatus === 'APPROVED') && (
+                            {isLocked && (estimationStatus !== "FINALIZED" || isAdmin) && (approvalStatus === 'APPROVED' || approvalStatus === 'REJECTED') && (
                                 <Button size="sm" variant="outline-dark" onClick={() => setShowRevisionModal(true)}>
                                     New Revision
                                 </Button>

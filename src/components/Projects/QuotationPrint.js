@@ -74,8 +74,17 @@ const statusVariant = (status) => {
 };
 
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
+const roundUpToPlace = (value, place) => {
+    const amount = Number(value || 0);
+    const step = Math.max(1, Number(place || 1));
+    if (!Number.isFinite(amount) || amount === 0) return 0;
+    return Math.ceil(amount / step) * step;
+};
 
 const componentAmount = (component, includeDelivery = true) => {
+    if (component?.lineTotalBeforeTax != null) {
+        return Number(component.lineTotalBeforeTax || 0);
+    }
     const qty = componentQuantity(component);
     const itemsSubtotal = (component?.items || []).reduce(
         (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
@@ -96,6 +105,8 @@ const computeQuotationTotals = (estimation) => {
     const includeDelivery = estimation?.includeDelivery !== false;
     const includeVat = estimation?.includeVat !== false;
     const includeTax = estimation?.includeTax === true;
+    const roundTotals = estimation?.roundingEnabled === true;
+    const roundingPlace = estimation?.roundingPlace || 1;
     let taxableBaseRaw = 0;
     let nonTaxableRaw = 0;
 
@@ -105,17 +116,28 @@ const computeQuotationTotals = (estimation) => {
             (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
             0
         );
-        const overheadAmount = itemsSubtotal * (Number(component?.overheadPercent || 0) / 100);
+        const overheadAmount = component?.subtotalWithMargin != null
+            ? 0
+            : itemsSubtotal * (Number(component?.overheadPercent || 0) / 100);
         const baseForMargin = itemsSubtotal + overheadAmount;
-        const marginAmount = baseForMargin * (Number(component?.marginPercent || 0) / 100);
-        const afterMargin = component?.items?.length
-            ? baseForMargin + marginAmount
-            : Number(component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
+        const marginAmount = component?.subtotalWithMargin != null
+            ? 0
+            : baseForMargin * (Number(component?.marginPercent || 0) / 100);
+        const afterMargin = component?.subtotalWithMargin != null
+            ? Number(component.subtotalWithMargin || 0)
+            : baseForMargin + marginAmount;
         const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
         const deliveryTaxable = includeDelivery && component?.deliveryTaxable === true;
+        const taxableRaw = afterMargin + (deliveryTaxable ? delivery : 0);
+        const nonTaxableRawPart = deliveryTaxable ? 0 : delivery;
+        const lineTotalRaw = taxableRaw + nonTaxableRawPart;
+        const lineTotal = component?.lineTotalBeforeTax != null
+            ? Number(component.lineTotalBeforeTax || 0)
+            : (roundTotals ? roundUpToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw);
+        const roundingDelta = lineTotal - lineTotalRaw;
 
-        taxableBaseRaw += afterMargin + (deliveryTaxable ? delivery : 0);
-        nonTaxableRaw += deliveryTaxable ? 0 : delivery;
+        taxableBaseRaw += taxableRaw > 0 ? taxableRaw + roundingDelta : taxableRaw;
+        nonTaxableRaw += taxableRaw > 0 ? nonTaxableRawPart : nonTaxableRawPart + roundingDelta;
     });
 
     const discountPct = Number(estimation?.discountPercent || 0);
@@ -134,7 +156,9 @@ const computeQuotationTotals = (estimation) => {
     const taxPct = includeTax ? Number(estimation?.taxPercent || 0) : 0;
     const vatAmount = taxableBase * (Number.isFinite(vatPct) ? vatPct / 100 : 0);
     const taxAmount = taxableBase * (Number.isFinite(taxPct) ? taxPct / 100 : 0);
-    const grandTotal = taxableBase + nonTaxable + vatAmount + taxAmount;
+    const grandTotal = estimation?.computedGrandTotal != null
+        ? Number(estimation.computedGrandTotal || 0)
+        : (roundTotals ? roundUpToPlace(taxableBase + nonTaxable + vatAmount + taxAmount, roundingPlace) : taxableBase + nonTaxable + vatAmount + taxAmount);
 
     return {
         subtotal: totalBeforeDiscount || Number(estimation?.computedSubtotal || 0),

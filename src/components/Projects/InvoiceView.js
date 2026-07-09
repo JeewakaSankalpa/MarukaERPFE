@@ -5,6 +5,7 @@ import { Button, Spinner, Badge, Form } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
+import { useAuth } from "../../context/AuthContext";
 
 const money = (value) => Number(value || 0).toLocaleString("en-US", {
     minimumFractionDigits: 3,
@@ -301,7 +302,13 @@ const InvoiceView = () => {
     const [savingPo, setSavingPo] = useState(false);
     const [savingNotes, setSavingNotes] = useState(false);
     const [savingCustomerPhone, setSavingCustomerPhone] = useState(false);
+    const [refreshingInvoice, setRefreshingInvoice] = useState(false);
     const [taxPrintFormat, setTaxPrintFormat] = useState(PRINT_FORMATS.ALL);
+    const { role, projectRoles } = useAuth();
+    const rolesHeader = useMemo(() => [role, ...(Array.isArray(projectRoles) ? projectRoles : [])]
+        .filter(Boolean)
+        .join(","), [role, projectRoles]);
+    const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
 
     const selectedType = searchParams.get("type") || DOC_TYPES.PROFORMA;
     const isProforma = selectedType === DOC_TYPES.PROFORMA;
@@ -495,6 +502,37 @@ const InvoiceView = () => {
         }
     };
 
+    const handleRefreshInvoice = async () => {
+        if (!window.confirm("Refresh this invoice from the current project, quotation, estimation, and payment records?")) return;
+        setRefreshingInvoice(true);
+        try {
+            const refreshConfig = { headers: { "X-Roles": rolesHeader } };
+            let res;
+            try {
+                res = await api.post(`/invoices/${id}/refresh`, {}, refreshConfig);
+            } catch (postError) {
+                if (postError?.response?.status !== 405) {
+                    throw postError;
+                }
+                res = await api.patch(`/invoices/${id}/refresh`, {}, refreshConfig);
+            }
+            setInvoice(res.data);
+            setPoDraft(res.data.poNumber || "");
+            setNotesDraft(res.data.notes || "");
+            setCustomerPhoneDraft(res.data.customerPhoneSnapshot || getCustomerPhone(customer) || "");
+            toast.success("Invoice refreshed");
+        } catch (error) {
+            console.error("Failed to refresh invoice", error);
+            const status = error?.response?.status;
+            const message = status === 405
+                ? "Refresh endpoint is not available on the running backend. Restart/update the backend, then try again."
+                : error.response?.data?.message || "Failed to refresh invoice";
+            toast.error(message);
+        } finally {
+            setRefreshingInvoice(false);
+        }
+    };
+
     const handlePrint = () => window.print();
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -513,7 +551,7 @@ const InvoiceView = () => {
     const invoiceNo = buildDisplayInvoiceNumber(rawDocumentNumber || invoice.invoiceNumber, selectedType);
     const inquiryRef = project?.referenceNumber || project?.inquiryNumber || project?.id || invoice.projectId || "-";
     const jobRef = project?.jobNumber || "-";
-    const totalReceived = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const totalReceived = numberValue(invoice.paidAmount);
     const sourceVatTotal = numberValue(estimation?.computedVatAmount);
     const sourceOtherTaxTotal = numberValue(estimation?.computedTaxAmount);
     const sourceDocumentTotal = numberValue(estimation?.computedGrandTotal);
@@ -783,9 +821,19 @@ const InvoiceView = () => {
                     font-size: 14px;
                 }
                 .invoice-items th:first-child, .invoice-items td:first-child { padding-left: 48px; }
-                .invoice-items th.qty, .invoice-items td.qty { width: 70px; text-align: right; }
-                .invoice-items th.rate, .invoice-items td.rate,
-                .invoice-items th.amount, .invoice-items td.amount { width: 86px; text-align: right; }
+                .invoice-items th.qty, .invoice-items td.qty { width: 76px; text-align: right; }
+                .invoice-items th.rate, .invoice-items td.rate { width: 130px; text-align: right; }
+                .invoice-items th.amount, .invoice-items td.amount { width: 140px; text-align: right; }
+                .invoice-items th.qty,
+                .invoice-items th.rate,
+                .invoice-items th.amount,
+                .invoice-items td.qty,
+                .invoice-items td.rate,
+                .invoice-items td.amount {
+                    box-sizing: border-box;
+                    font-variant-numeric: tabular-nums;
+                    white-space: nowrap;
+                }
                 .invoice-items td {
                     padding: 3px 8px;
                     vertical-align: top;
@@ -1115,6 +1163,11 @@ const InvoiceView = () => {
                             <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
                         </Form.Select>
                     )}
+                    {isAdmin && (
+                        <Button size="sm" variant="outline-warning" onClick={handleRefreshInvoice} disabled={refreshingInvoice}>
+                            {refreshingInvoice ? "Refreshing..." : "Refresh Invoice"}
+                        </Button>
+                    )}
                     <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
                 </div>
             </div>
@@ -1247,6 +1300,16 @@ const InvoiceView = () => {
                             <tr>
                                 <td className="tax-summary-label" colSpan="5"><strong>Total Amount</strong></td>
                                 <td className="amount">{money(printedDocumentTotal)}</td>
+                            </tr>
+                            {totalReceived > 0 && (
+                                <tr>
+                                    <td className="tax-summary-label" colSpan="5">Payments Received</td>
+                                    <td className="amount">{money(totalReceived)}</td>
+                                </tr>
+                            )}
+                            <tr>
+                                <td className="tax-summary-label" colSpan="5"><strong>Total Due</strong></td>
+                                <td className="amount"><strong>{money(balanceDue)}</strong></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1404,17 +1467,17 @@ const InvoiceView = () => {
                                     <span>TOTAL</span>
                                     <span>{money(printedDocumentTotal)}</span>
                                 </div>
-                                {!isProforma && totalReceived > 0 && (
+                                {totalReceived > 0 && (
                                     <div className="invoice-summary-row">
-                                        <span>PAYMENT</span>
+                                        <span>PAYMENTS</span>
                                         <span>{money(totalReceived)}</span>
                                     </div>
                                 )}
                             </>
                         )}
                         <div className="invoice-due">
-                            <div className="invoice-due-label">{isProforma ? "LKR" : "TOTAL DUE"}</div>
-                            <div className="invoice-due-value">LKR {money(isProforma ? printedDocumentTotal : balanceDue)}</div>
+                            <div className="invoice-due-label">TOTAL DUE</div>
+                            <div className="invoice-due-value">LKR {money(balanceDue)}</div>
                         </div>
                     </div>
                 </div>
