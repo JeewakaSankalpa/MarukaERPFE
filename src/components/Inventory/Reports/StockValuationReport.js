@@ -127,7 +127,7 @@ const StockValuationReport = () => {
                             ))}
                             {/* Grand Total Footer */}
                             <tr className="table-light fw-bold border-top border-dark">
-                                <td colSpan="2" className="text-end">GRAND TOTAL ASSETS (ALL STOCK)</td>
+                                <td colSpan="2" className="text-end">GRAND TOTAL ASSETS (STORE STOCK)</td>
                                 <td className="text-end">{totals.qty.toLocaleString()}</td>
                                 <td className="text-end text-primary" style={{ fontSize: "1.1em" }}>
                                     {totals.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

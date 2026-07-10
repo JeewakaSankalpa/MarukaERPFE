@@ -491,6 +491,13 @@ function ReconciliationTab() {
         await loadRows(selectedRun?.id, filter, value);
     };
 
+    const refreshSelectedRun = async () => {
+        await loadHistory();
+        if (selectedRun?.id) {
+            await loadRows(selectedRun.id, filter, page);
+        }
+    };
+
     const toggleRow = (row, checked) => {
         setSelected(current => {
             const next = { ...current };
@@ -594,7 +601,7 @@ function ReconciliationTab() {
                 <div className="bg-white border rounded p-3">
                     <div className="d-flex justify-content-between align-items-center mb-3">
                         <h5 className="mb-0">History</h5>
-                        <Button size="sm" variant="light" onClick={loadHistory} disabled={historyLoading}><RefreshCw size={14} /></Button>
+                        <Button size="sm" variant="light" onClick={refreshSelectedRun} disabled={historyLoading || rowsLoading}><RefreshCw size={14} /></Button>
                     </div>
                     {historyLoading ? <div className="text-center py-4"><Spinner /></div> : (
                         <div className="d-grid gap-2">
