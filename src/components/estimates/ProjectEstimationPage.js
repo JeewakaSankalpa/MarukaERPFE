@@ -1569,13 +1569,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         <Table hover className="estimation-lines-table mb-0">
                             <thead>
                                 <tr>
-                                    <th style={{ minWidth: 360 }}>Product / Description</th>
-                                    <th style={{ width: 110 }}>Unit</th>
-                                    <th className="text-end" style={{ width: 160 }}>Rate</th>
+                                    <th className="estimation-product-col" style={{ minWidth: 360 }}>Product / Description</th>
+                                    <th className="estimation-unit-col" style={{ width: 110 }}>Unit</th>
+                                    <th className="text-end estimation-rate-col" style={{ width: 160 }}>Rate</th>
                                     {components.map((c, idx) => (
-                                        <th key={idx} style={{ width: 140 }}>
-                                            <div className="d-flex gap-1 align-items-center">
+                                        <th key={idx} className="estimation-component-col">
+                                            <div className="estimation-component-header">
                                                 <Form.Control
+                                                    className="estimation-component-name-input"
                                                     value={Object.prototype.hasOwnProperty.call(editingComponentNames, idx) ? editingComponentNames[idx] : c}
                                                     onChange={(e) => renameComponentLive(idx, e.target.value)}
                                                     onBlur={(e) => renameComponentCommit(idx, e.target.value)}
@@ -1586,6 +1587,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         }
                                                     }}
                                                     disabled={isLocked}
+                                                    title={c}
                                                 />
                                                 {!isLocked && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>}
                                             </div>
@@ -1618,7 +1620,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                                     return (
                                         <tr key={rowMapKey} className={highlightedRowKey === rowMapKey ? "estimation-row-highlight" : undefined}>
-                                            <td>
+                                            <td className="estimation-product-col">
                                                 {isManualLine ? (
                                                     <>
                                                         <Form.Control
@@ -1655,7 +1657,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 )}
                                             </td>
 
-                                            <td>
+                                            <td className="estimation-unit-col">
                                                 <Form.Control
                                                     value={r.unit || ""}
                                                     onChange={(e) => setRowField(i, "unit", e.target.value)}
@@ -1664,7 +1666,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 />
                                             </td>
 
-                                            <td>
+                                            <td className="estimation-rate-col">
                                                 <Form.Control
                                                     className="text-end"
                                                     type="number"
@@ -1691,7 +1693,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             </td>
 
                                             {components.map((c) => (
-                                                <td key={`${i}-${c}`}>
+                                                <td key={`${i}-${c}`} className="estimation-component-col" title={`${c} quantity`}>
                                                     <Form.Control
                                                         className="text-end"
                                                         type="number"

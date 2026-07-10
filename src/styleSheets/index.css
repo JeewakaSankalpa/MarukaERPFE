@@ -146,7 +146,9 @@ body {
 }
 
 .estimation-lines-table {
-    min-width: 1120px;
+    min-width: 100%;
+    width: max-content;
+    table-layout: auto;
 }
 
 .estimation-lines-table thead th {
@@ -155,6 +157,61 @@ body {
     z-index: 2;
     background: #f8fafc;
     box-shadow: inset 0 -1px 0 #e2e8f0;
+}
+
+.estimation-lines-table .estimation-product-col {
+    left: 0;
+    min-width: 360px;
+    max-width: 420px;
+    position: sticky;
+    z-index: 1;
+    background: #ffffff;
+    box-shadow: 1px 0 0 #e2e8f0;
+}
+
+.estimation-lines-table thead .estimation-product-col {
+    z-index: 3;
+    background: #f8fafc;
+}
+
+.estimation-lines-table .estimation-unit-col {
+    min-width: 110px;
+}
+
+.estimation-lines-table .estimation-rate-col {
+    min-width: 150px;
+}
+
+.estimation-lines-table .estimation-component-col {
+    min-width: 128px;
+    width: 128px;
+    transition: min-width 160ms ease, width 160ms ease, background-color 160ms ease;
+}
+
+.estimation-lines-table .estimation-component-col:hover,
+.estimation-lines-table .estimation-component-col:focus-within {
+    min-width: 220px;
+    width: 220px;
+    background: #f8fafc;
+}
+
+.estimation-component-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.estimation-component-name-input {
+    min-width: 0;
+    height: auto;
+    min-height: 38px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.estimation-component-col:hover .estimation-component-name-input,
+.estimation-component-col:focus-within .estimation-component-name-input {
+    text-overflow: clip;
 }
 
 .estimation-lines-table tbody td {
