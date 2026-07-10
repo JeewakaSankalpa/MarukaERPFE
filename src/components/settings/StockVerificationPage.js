@@ -681,6 +681,14 @@ function ReconciliationTab() {
                             {filter === "DUPLICATES" ? (
                                 <div className="border rounded" style={{ maxHeight: "62vh", overflow: "auto" }}>
                                     <Table responsive hover size="sm" className="align-middle mb-0 reconciliation-table duplicate-table">
+                                        <colgroup>
+                                            <col className="duplicate-sku-col" />
+                                            <col className="duplicate-system-item-col" />
+                                            <col className="duplicate-number-col" />
+                                            <col className="duplicate-number-col" />
+                                            <col className="duplicate-number-col" />
+                                            <col className="duplicate-uploaded-col" />
+                                        </colgroup>
                                         <thead className="table-light sticky-top" style={{ top: 0, zIndex: 1 }}>
                                             <tr>
                                                 <th>SKU</th>
@@ -700,7 +708,7 @@ function ReconciliationTab() {
                                                         <code>{group.sku}</code>
                                                         <div className="mt-1">{statusBadge("DUPLICATE_UPLOADED_SKU")}</div>
                                                     </td>
-                                                    <td>
+                                                    <td className="duplicate-system-item">
                                                         <div className="fw-semibold">{group.productName || "No matching ERP product"}</div>
                                                         <div className="text-muted small">{group.productId || "Fix the SKU or create/map the product first"}</div>
                                                     </td>
@@ -709,6 +717,13 @@ function ReconciliationTab() {
                                                     <td className="text-end">{formatMoney(group.systemValue)}</td>
                                                     <td>
                                                         <Table size="sm" borderless className="mb-0 nested-reconciliation-table">
+                                                            <colgroup>
+                                                                <col className="nested-row-col" />
+                                                                <col className="nested-product-col" />
+                                                                <col className="nested-number-col" />
+                                                                <col className="nested-number-col" />
+                                                                <col className="nested-number-col" />
+                                                            </colgroup>
                                                             <thead>
                                                                 <tr className="text-muted">
                                                                     <th>CSV Row</th>
@@ -722,7 +737,7 @@ function ReconciliationTab() {
                                                                 {(group.uploadedRows || []).map(row => (
                                                                     <tr key={`${group.sku}-${row.rowNumber}`}>
                                                                         <td>{row.rowNumber}</td>
-                                                                        <td>{row.productName || "-"}</td>
+                                                                        <td className="duplicate-uploaded-product">{row.productName || "-"}</td>
                                                                         <td className="text-end fw-semibold">{formatNumber(row.quantity)}</td>
                                                                         <td className="text-end">{formatMoney(row.unitCost)}</td>
                                                                         <td className="text-end">{formatMoney(row.value)}</td>
@@ -867,10 +882,33 @@ export default function StockVerificationPage() {
                     min-width: 1120px;
                 }
                 .stock-verification-page .duplicate-table {
-                    min-width: 980px;
+                    min-width: 1520px;
+                    table-layout: fixed;
                 }
                 .stock-verification-page .nested-reconciliation-table {
                     table-layout: fixed;
+                    min-width: 560px;
+                }
+                .stock-verification-page .duplicate-sku-col {
+                    width: 170px;
+                }
+                .stock-verification-page .duplicate-system-item-col {
+                    width: 360px;
+                }
+                .stock-verification-page .duplicate-number-col {
+                    width: 130px;
+                }
+                .stock-verification-page .duplicate-uploaded-col {
+                    width: 600px;
+                }
+                .stock-verification-page .nested-row-col {
+                    width: 80px;
+                }
+                .stock-verification-page .nested-product-col {
+                    width: 250px;
+                }
+                .stock-verification-page .nested-number-col {
+                    width: 76px;
                 }
                 .stock-verification-page .decision-history {
                     color: #6b7280;
@@ -885,6 +923,21 @@ export default function StockVerificationPage() {
                     vertical-align: middle;
                     overflow-wrap: anywhere;
                     word-break: normal;
+                }
+                .stock-verification-page .duplicate-table th,
+                .stock-verification-page .nested-reconciliation-table th {
+                    white-space: nowrap;
+                    overflow-wrap: normal;
+                }
+                .stock-verification-page .duplicate-table td,
+                .stock-verification-page .nested-reconciliation-table td {
+                    overflow-wrap: normal;
+                    word-break: normal;
+                }
+                .stock-verification-page .duplicate-system-item,
+                .stock-verification-page .duplicate-uploaded-product {
+                    white-space: normal;
+                    overflow-wrap: anywhere;
                 }
                 .stock-verification-page .reconciliation-table code {
                     white-space: normal;

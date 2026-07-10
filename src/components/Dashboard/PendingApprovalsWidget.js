@@ -6,6 +6,7 @@ import {
     FaBoxes,
     FaCheckCircle,
     FaClipboardCheck,
+    FaFileInvoice,
     FaFileInvoiceDollar,
     FaProjectDiagram,
     FaTruckLoading
@@ -14,6 +15,7 @@ import {
 const TYPE_META = {
     all: { label: "All", icon: FaCheckCircle },
     project: { label: "Projects", icon: FaProjectDiagram },
+    estimation: { label: "Estimations", icon: FaFileInvoice },
     po: { label: "Purchase Orders", icon: FaFileInvoiceDollar },
     grn: { label: "GRNs", icon: FaTruckLoading },
     stock: { label: "Stock Audits", icon: FaClipboardCheck },
@@ -22,6 +24,7 @@ const TYPE_META = {
 
 const badgeVariant = {
     project: "info",
+    estimation: "dark",
     po: "primary",
     grn: "warning",
     stock: "secondary",
@@ -102,6 +105,20 @@ export default function PendingApprovalsWidget() {
             }
 
             if (employeeId) {
+                requests.push(
+                    api.get("/estimations/pending-approvals", { params: { employeeId } })
+                        .then((res) => (res.data || []).map((est) => ({
+                            id: `estimation-${est.estimationId}`,
+                            typeKey: "estimation",
+                            typeLabel: "Estimation Approval",
+                            title: est.projectName || est.projectId || "Project estimation",
+                            subtitle: est.customerName || `Version ${est.version || 1}`,
+                            detail: est.grandTotal ? `LKR ${money(est.grandTotal)}` : "Awaiting approval",
+                            date: est.updatedAt || est.createdAt,
+                            route: `/projects/estimation/${est.projectId}?readOnly=true`
+                        })))
+                );
+
                 requests.push(
                     api.get("/pos/pending-approvals", { params: { employeeId } })
                         .then((res) => (res.data || []).map((po) => ({
@@ -247,7 +264,7 @@ export default function PendingApprovalsWidget() {
             acc[item.typeKey] = (acc[item.typeKey] || 0) + 1;
             acc.all += 1;
             return acc;
-        }, { all: 0, project: 0, po: 0, grn: 0, stock: 0, returns: 0 });
+        }, { all: 0, project: 0, estimation: 0, po: 0, grn: 0, stock: 0, returns: 0 });
     }, [approvals]);
 
     const visibleApprovals = activeTab === "all"
