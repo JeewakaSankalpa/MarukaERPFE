@@ -41,6 +41,7 @@ const emptyFlow = {
     notifications: {},
     backwardTransitions: {},
     visibility: {},
+    globalMinimumApprovals: {},
     estimationApproverRoles: [],
     purchaseOrderApproverRoles: [],
     stockAuditApproverRoles: [],
@@ -198,6 +199,7 @@ export default function WorkflowBuilder() {
                     notifications: wf?.notifications || {},
                     backwardTransitions: wf?.backwardTransitions || {},
                     visibility: wf?.visibility || {},
+                    globalMinimumApprovals: wf?.globalMinimumApprovals || {},
                     estimationApproverRoles: wf?.estimationApproverRoles || [],
                     purchaseOrderApproverRoles: wf?.purchaseOrderApproverRoles || [],
                     stockAuditApproverRoles: wf?.stockAuditApproverRoles || [],
@@ -441,8 +443,27 @@ export default function WorkflowBuilder() {
         const next = current.includes(role)
             ? current.filter(r => r !== role)
             : [...current, role];
-        setFlow(f => ({ ...f, [field]: next }));
+        setFlow(f => {
+            const max = next.length;
+            const currentMin = Number(f.globalMinimumApprovals?.[field] || 0);
+            const minimumApprovals = currentMin > max
+                ? { ...(f.globalMinimumApprovals || {}), [field]: max }
+                : (f.globalMinimumApprovals || {});
+            return { ...f, [field]: next, globalMinimumApprovals: minimumApprovals };
+        });
     }, [flow, setFlow]);
+
+    const setGlobalMinimumApprovals = useCallback((field, value, max) => {
+        const parsed = Number.parseInt(value, 10);
+        const nextValue = Number.isFinite(parsed) ? Math.max(0, Math.min(parsed, max)) : 0;
+        setFlow(f => ({
+            ...f,
+            globalMinimumApprovals: {
+                ...(f.globalMinimumApprovals || {}),
+                [field]: nextValue
+            }
+        }));
+    }, [setFlow]);
 
 
     const save = async (saveAsNew = false) => {
@@ -664,16 +685,20 @@ export default function WorkflowBuilder() {
                     </div>
 
                     {[
-                        { label: 'Estimation Approvers', field: 'estimationApproverRoles' },
-                        { label: 'Purchase Order Approvers', field: 'purchaseOrderApproverRoles' },
-                        { label: 'Stock Audit Approvers', field: 'stockAuditApproverRoles' },
-                        { label: 'Payroll Approvers', field: 'payrollApproverRoles' },
-                        { label: 'Quotation Acceptance Approvers', field: 'quotationAcceptanceRoles' },
-                        { label: 'Project Revision Approvers', field: 'projectRevisionApproverRoles', note: 'Project revision controls are always enabled. Select who can approve revisions.' },
-                        { label: 'GRN Acceptance Approvers', field: 'grnAcceptanceRoles', note: 'Users in these workflow roles can accept posted GRNs so supplier payments can be added.' },
-                        { label: 'GRN Payment Verifiers', field: 'grnPaymentVerifierRoles', note: 'Users in these workflow roles can verify each added supplier payment before it counts as paid.' },
-                        { label: 'GRN Print Approvers', field: 'grnPrintApproverRoles', note: 'Users in these workflow roles can approve GRN report printing.' },
-                    ].map(({ label, field, note }) => (
+                        { label: 'Estimation Approvers', field: 'estimationApproverRoles', quorum: true },
+                        { label: 'Purchase Order Approvers', field: 'purchaseOrderApproverRoles', quorum: true },
+                        { label: 'Stock Audit Approvers', field: 'stockAuditApproverRoles', quorum: true },
+                        { label: 'Payroll Approvers', field: 'payrollApproverRoles', quorum: true },
+                        { label: 'Quotation Acceptance Approvers', field: 'quotationAcceptanceRoles', quorum: true },
+                        { label: 'Project Revision Approvers', field: 'projectRevisionApproverRoles', quorum: true, note: 'Project revision controls are always enabled. Select who can approve revisions.' },
+                        { label: 'GRN Acceptance Approvers', field: 'grnAcceptanceRoles', quorum: true, note: 'Users in these workflow roles can accept posted GRNs so supplier payments can be added.' },
+                        { label: 'GRN Payment Verifiers', field: 'grnPaymentVerifierRoles', quorum: true, note: 'Users in these workflow roles can verify each added supplier payment before it counts as paid.' },
+                        { label: 'GRN Print Approvers', field: 'grnPrintApproverRoles', quorum: true, note: 'Users in these workflow roles can approve GRN report printing.' },
+                    ].map(({ label, field, note, quorum }) => {
+                        const selectedRoles = flow[field] || [];
+                        const selectedCount = selectedRoles.length;
+                        const minValue = flow.globalMinimumApprovals?.[field] ?? 1;
+                        return (
                         <div key={field} className="mb-3">
                             <label className="fw-bold mb-1">{label}</label>
                             {note && <p className="text-muted small mb-1" style={{ fontSize: '0.78rem' }}>{note}</p>}
@@ -693,8 +718,25 @@ export default function WorkflowBuilder() {
                                 })}
                                 {workflowRoles.length === 0 && <small className="text-muted">No roles defined yet. Add roles above first.</small>}
                             </div>
+                            {quorum && selectedCount > 0 && (
+                                <Form.Group className="mt-2">
+                                    <Form.Label className="small mb-1">Minimum approvals required</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        size="sm"
+                                        min={0}
+                                        max={selectedCount}
+                                        value={minValue}
+                                        onChange={e => setGlobalMinimumApprovals(field, e.target.value, selectedCount)}
+                                    />
+                                    <Form.Text className="text-muted small">
+                                        0 = require all selected approvers. Use 2 when any two of the selected approvers are enough.
+                                    </Form.Text>
+                                </Form.Group>
+                            )}
                         </div>
-                    ))}
+                    );
+                    })}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowGlobalSettings(false)}>Close</Button>
