@@ -106,7 +106,7 @@ const StockTakingPage = () => {
                 productId: batch.product.id,
                 productName: batch.product.name,
                 batchId: batch.id,
-                batchNo: batch.batchNumber,
+                batchNo: batch.batchNo,
                 oldQuantity: batch.quantity,
                 newQuantity: parseInt(adjustments[batch.id]),
                 adjustmentQuantity: parseInt(adjustments[batch.id]) - batch.quantity,
@@ -130,7 +130,8 @@ const StockTakingPage = () => {
     // Filter logic
     const filteredBatches = batches.filter(batch => {
         const matchSearch = (batch.product?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (batch.batchNumber || '').toLowerCase().includes(searchQuery.toLowerCase());
+            (batch.batchNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (batch.locationId || '').toLowerCase().includes(searchQuery.toLowerCase());
 
         if (activeTab === 'CHANGED') {
             const physicalQty = adjustments[batch.id];
@@ -235,6 +236,7 @@ const StockTakingPage = () => {
                         <tr>
                             <th>Product Name</th>
                             <th>Batch No</th>
+                            <th>Location</th>
                             <th>Expiry</th>
                             <th className="text-end">System Qty</th>
                             <th className="text-center" style={{ width: '150px' }}>Physical Qty</th>
@@ -250,7 +252,14 @@ const StockTakingPage = () => {
                             return (
                                 <tr key={batch.id} className={hasChange ? 'table-warning' : ''}>
                                     <td>{batch.product.name}</td>
-                                    <td>{batch.batchNumber}</td>
+                                    <td>{batch.batchNumber || 'No Batch No'}</td>
+                                    <td>
+                                        <Badge bg={batch.locationId === 'LOC_STORES_MAIN' ? 'success' : 'secondary'}>
+                                            {batch.locationId === 'LOC_STORES_MAIN'
+                                                ? `Main Store${batch.legacyLocation ? ' (Legacy)' : ''}`
+                                                : (batch.locationId || '-')}
+                                        </Badge>
+                                    </td>
                                     <td>{batch.expiryDate}</td>
                                     <td className="text-end">{batch.quantity}</td>
                                     <td className="text-center">
@@ -271,7 +280,7 @@ const StockTakingPage = () => {
                         })}
                         {filteredBatches.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="text-center py-4 text-muted">No batches found.</td>
+                                <td colSpan={7} className="text-center py-4 text-muted">No batches found.</td>
                             </tr>
                         )}
                     </tbody>

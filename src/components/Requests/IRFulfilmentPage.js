@@ -8,10 +8,22 @@ import { autoTable } from "jspdf-autotable";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 
-// expects [{productId, productName?, availableQty}]
 const fetchMainAvail = async () => {
-    const res = await api.get("/reports/stock");
-    return (res.data || []).map(r => ({ ...r, availableQty: r.quantity }));
+    const res = await api.get("/inventory/available-quantities");
+    return (res.data || []).map((row) => {
+        const mainStore = (row.locationQuantities || [])
+            .filter((loc) => loc.locationId === "LOC_STORES_MAIN")
+            .reduce((sum, loc) => sum + (Number(loc.quantity) || 0), 0);
+        return { ...row, availableQty: mainStore };
+    });
+};
+
+const fetchMainAvailForProduct = async (productId) => {
+    const res = await api.get(`/inventory/available-quantities/${productId}`);
+    return {
+        productId,
+        availableQty: Number(res.data?.availableQty || 0)
+    };
 };
 
 const listIRs = async (page, size, status, filters = {}) => {
@@ -126,6 +138,7 @@ export default function IRFulfilmentPage() {
             setSelected(data);
             setIssue({});
             setAllocations({});
+            await refreshOnHandForItems(data.items || []);
         } catch { toast.error("Failed to load IR details"); }
         setLoadingDetail(false);
     };
@@ -135,6 +148,23 @@ export default function IRFulfilmentPage() {
             const rows = await fetchMainAvail();
             setOnHand(rows.reduce((m, r) => ({ ...m, [r.productId]: r.availableQty }), {}));
         } catch { /* ignore */ }
+    };
+
+    const refreshOnHandForItems = async (items = []) => {
+        const productIds = Array.from(new Set(
+            items.map(item => item.productId).filter(Boolean)
+        ));
+        if (productIds.length === 0) return;
+
+        try {
+            const rows = await Promise.all(productIds.map(fetchMainAvailForProduct));
+            setOnHand(prev => rows.reduce(
+                (next, row) => ({ ...next, [row.productId]: row.availableQty }),
+                { ...prev }
+            ));
+        } catch {
+            await refreshOnHand();
+        }
     };
 
     useEffect(() => { refreshOnHand(); }, []);
@@ -606,7 +636,7 @@ export default function IRFulfilmentPage() {
             setSelected(updated);
             setAllocations({}); // clear allocations on success
             setIssue({});
-            await refreshOnHand();
+            await refreshOnHandForItems(updated.items || []);
             const p = await listIRs(page, 20);
             setIrs(p);
             toast.success("Issued items successfully");
