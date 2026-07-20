@@ -34,12 +34,22 @@ export default function TransfersInbox() {
         if (processing) return;
         setProcessing(true);
         try { await acceptTransfer(id); toast.success("Accepted"); load(); }
+        catch (e) {
+            const message = e?.response?.data?.message || e?.message || "Failed to accept transfer";
+            toast.error(message);
+            console.error("Failed to accept transfer:", e?.response?.data || e);
+        }
         finally { setProcessing(false); }
     };
     const onReject = async (id) => {
         if (processing) return;
         setProcessing(true);
         try { await rejectTransfer(id); toast.info("Rejected"); load(); }
+        catch (e) {
+            const message = e?.response?.data?.message || e?.message || "Failed to reject transfer";
+            toast.error(message);
+            console.error("Failed to reject transfer:", e?.response?.data || e);
+        }
         finally { setProcessing(false); }
     };
 

@@ -106,7 +106,9 @@ export default function ProjectInventoryCard({ projectId, project }) {
             toast.success("Transfer accepted");
             load();
         } catch (e) {
-            toast.error("Failed to accept transfer");
+            const message = e?.response?.data?.message || e?.message || "Failed to accept transfer";
+            toast.error(message);
+            console.error("Failed to accept transfer:", e?.response?.data || e);
         } finally {
             setAcceptingId(null);
         }
@@ -119,7 +121,9 @@ export default function ProjectInventoryCard({ projectId, project }) {
             toast.info("Transfer rejected");
             load();
         } catch (e) {
-            toast.error("Failed to reject transfer");
+            const message = e?.response?.data?.message || e?.message || "Failed to reject transfer";
+            toast.error(message);
+            console.error("Failed to reject transfer:", e?.response?.data || e);
         }
     };
 
