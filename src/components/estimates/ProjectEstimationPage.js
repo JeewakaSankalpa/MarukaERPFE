@@ -1698,6 +1698,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         className="text-end"
                                                         type="number"
                                                         min="0"
+                                                        step="0.01"
                                                         value={(r.quantities || {})[c] ?? 0}
                                                         onChange={(e) => setQty(i, c, e.target.value)}
                                                         disabled={isReadOnly}

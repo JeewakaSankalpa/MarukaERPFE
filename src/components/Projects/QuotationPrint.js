@@ -162,6 +162,7 @@ const computeQuotationTotals = (estimation) => {
 
     return {
         subtotal: totalBeforeDiscount || Number(estimation?.computedSubtotal || 0),
+        discountAmount,
         vatAmount,
         taxAmount,
         taxTotal: vatAmount + taxAmount,
@@ -545,6 +546,12 @@ const QuotationPrint = () => {
                             <td className="text-end fw-bold">Subtotal</td>
                             <td className="text-end" style={{ width: "150px" }}>{money(quoteTotals.subtotal)}</td>
                         </tr>
+                        {quoteTotals.discountAmount > 0 && (
+                            <tr>
+                                <td className="text-end">Discount ({estimation.discountPercent || 0}%)</td>
+                                <td className="text-end">-{money(quoteTotals.discountAmount)}</td>
+                            </tr>
+                        )}
                         {quoteTotals.vatAmount > 0 && (
                             <tr>
                                 <td className="text-end">VAT ({estimation.vatPercent}%)</td>
