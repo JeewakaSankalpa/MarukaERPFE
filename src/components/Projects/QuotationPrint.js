@@ -11,6 +11,11 @@ const money = (value) => Number(value || 0).toLocaleString(undefined, {
     maximumFractionDigits: 3,
 });
 
+const formatQuantity = (value) => {
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? number.toLocaleString("en-US", { maximumFractionDigits: 6 }) : "";
+};
+
 const formatDate = (value) => {
     if (!value) return "-";
     return new Date(value).toLocaleDateString();
@@ -172,7 +177,7 @@ const computeQuotationTotals = (estimation) => {
 
 const componentLabel = (component) => {
     const qty = componentQuantity(component);
-    return qty > 1 ? `${component?.name || "Component"} x ${qty}` : (component?.name || "Component");
+    return qty !== 1 ? `${component?.name || "Component"} x ${formatQuantity(qty)}` : (component?.name || "Component");
 };
 
 const itemDescription = (item) =>
@@ -520,7 +525,7 @@ const QuotationPrint = () => {
                                             <td className="ps-4">{itemDescription(item)}</td>
                                             {printFormat === PRINT_FORMATS.ALL && (
                                                 <>
-                                                    <td className="text-end">{item.quantity}</td>
+                                                    <td className="text-end">{formatQuantity(item.quantity)}</td>
                                                     <td className="text-end">{item.unit || "-"}</td>
                                                     <td className="text-end">{money(item.estUnitCost)}</td>
                                                     <td className="text-end">{money((item.quantity || 0) * (item.estUnitCost || 0))}</td>
@@ -528,7 +533,7 @@ const QuotationPrint = () => {
                                             )}
                                             {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && (
                                                 <>
-                                                    <td className="text-end">{item.quantity}</td>
+                                                    <td className="text-end">{formatQuantity(item.quantity)}</td>
                                                     <td />
                                                 </>
                                             )}

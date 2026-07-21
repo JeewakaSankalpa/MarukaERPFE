@@ -12,6 +12,12 @@ const money = (value) => Number(value || 0).toLocaleString("en-US", {
     maximumFractionDigits: 3,
 });
 
+const formatQuantity = (value) => {
+    if (value === "" || value == null) return "";
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? number.toLocaleString("en-US", { maximumFractionDigits: 6 }) : "";
+};
+
 const decimalTotal = (values = []) =>
     values.reduce((sum, value) => sum + Math.round(Number(value || 0) * 1000), 0) / 1000;
 
@@ -88,7 +94,7 @@ const quotationComponentAmount = (component, includeDelivery = true) => {
 
 const componentLabel = (component) => {
     const qty = componentQuantity(component);
-    return qty > 1 ? `${component?.name || "Component"} x ${qty}` : (component?.name || "Component");
+    return qty !== 1 ? `${component?.name || "Component"} x ${formatQuantity(qty)}` : (component?.name || "Component");
 };
 
 const splitLines = (value) => String(value || "")
@@ -1277,7 +1283,7 @@ const InvoiceView = () => {
                                 >
                                     <td className="code">{item.description ? item.itemCode || "" : ""}</td>
                                     <td className={item.isSubItem ? "tax-subitem" : ""}>{item.description}</td>
-                                    <td className="qty">{item.quantity || ""}</td>
+                                    <td className="qty">{formatQuantity(item.quantity)}</td>
                                     <td className="uom">{item.description ? item.unit || "" : ""}</td>
                                     <td className="unit">{item.description && taxPrintFormat !== PRINT_FORMATS.COMPONENTS_WITH_ITEMS ? money(item.unitPrice) : item.isComponent ? money(item.unitPrice) : ""}</td>
                                     <td className="amount">{item.description && !item.isSubItem ? money(item.total) : ""}</td>
@@ -1421,7 +1427,7 @@ const InvoiceView = () => {
                         {invoiceRows.map((item, index) => (
                             <tr key={item.key || `${item.description}-${index}`}>
                                 <td>{item.description}</td>
-                                <td className="qty">{item.quantity || ""}</td>
+                                <td className="qty">{formatQuantity(item.quantity)}</td>
                                 <td className="rate">{money(item.unitPrice)}</td>
                                 <td className="amount">{money(item.total)}</td>
                             </tr>

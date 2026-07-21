@@ -29,6 +29,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
     const [taxPercent, setTaxPercent] = useState("");
 
     // Per-component Controls
+    const [compQty, setCompQty] = useState({});
     const [compMargin, setCompMargin] = useState({});
     const [compDelivery, setCompDelivery] = useState({});
     const [compDeliveryTaxable, setCompDeliveryTaxable] = useState({});
@@ -52,12 +53,14 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
 
         // Rows & Component Settings
         const initialMargin = {};
+        const initialQty = {};
         const initialDelivery = {};
         const initialDelTax = {};
         const rowMap = new Map();
 
         (d.components || []).forEach(c => {
             const cname = c.name?.trim() || "Component";
+            initialQty[cname] = String(c.quantity == null || Number(c.quantity) <= 0 ? 1 : c.quantity);
             if (c.marginPercent != null) initialMargin[cname] = String(c.marginPercent);
             if (c.deliveryCost != null) initialDelivery[cname] = String(c.deliveryCost);
             if (typeof c.deliveryTaxable === "boolean") initialDelTax[cname] = !!c.deliveryTaxable;
@@ -80,6 +83,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                 if (r.estUnitCost === "" && it.estUnitCost != null) r.estUnitCost = it.estUnitCost;
             });
         });
+        setCompQty(initialQty);
         setCompMargin(initialMargin);
         setCompDelivery(initialDelivery);
         setCompDeliveryTaxable(initialDelTax);
@@ -135,6 +139,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                 return x;
             });
             migrate(setCompMargin);
+            migrate(setCompQty);
             migrate(setCompDelivery);
             migrate(setCompDeliveryTaxable);
         }
@@ -151,7 +156,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
         }));
         // Remove settings
         const del = (setter) => setter(s => { const x = { ...s }; delete x[name]; return x; });
-        del(setCompMargin); del(setCompDelivery); del(setCompDeliveryTaxable);
+        del(setCompQty); del(setCompMargin); del(setCompDelivery); del(setCompDeliveryTaxable);
     };
 
     const addRow = () => setRows([...rows, { productId: "", quantities: {} }]);
@@ -200,12 +205,15 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
     // --- Calculations ---
     const compCalcs = useMemo(() => {
         return components.map(cname => {
-            const subtotal = rows.reduce((acc, r) => acc + (Number(r.estUnitCost || 0) * (Number((r.quantities || {})[cname] || 0))), 0);
+            const parsedSets = Number(compQty[cname]);
+            const sets = Number.isFinite(parsedSets) && parsedSets > 0 ? parsedSets : 1;
+            const unitSubtotal = rows.reduce((acc, r) => acc + (Number(r.estUnitCost || 0) * (Number((r.quantities || {})[cname] || 0))), 0);
+            const subtotal = unitSubtotal * sets;
             const mPct = Number(compMargin[cname] || 0);
             const mAmt = subtotal * (isNaN(mPct) ? 0 : mPct / 100);
             const afterMargin = subtotal + mAmt;
 
-            const del = Number(compDelivery[cname] || 0);
+            const del = Number(compDelivery[cname] || 0) * sets;
             const delTaxable = !!compDeliveryTaxable[cname];
 
             const taxableAdd = (includeDelivery && delTaxable) ? del : 0;
@@ -213,14 +221,14 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
 
             return {
                 name: cname,
-                subtotal, marginPct: mPct, marginAmount: mAmt, afterMargin,
+                sets, unitSubtotal, subtotal, marginPct: mPct, marginAmount: mAmt, afterMargin,
                 delivery: del, deliveryTaxable: delTaxable,
                 taxablePortion: afterMargin + taxableAdd,
                 nonTaxablePortion: nonTaxableAdd,
                 lineTotalBeforeTax: afterMargin + (includeDelivery ? del : 0)
             };
         });
-    }, [components, rows, compMargin, compDelivery, compDeliveryTaxable, includeDelivery]);
+    }, [components, rows, compQty, compMargin, compDelivery, compDeliveryTaxable, includeDelivery]);
 
     const totals = useMemo(() => {
         const taxableBase = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
@@ -261,6 +269,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
             return {
                 name: cname,
                 note: "",
+                quantity: Number.isFinite(Number(compQty[cname])) && Number(compQty[cname]) > 0 ? Number(compQty[cname]) : 1,
                 marginPercent: toBigDec(compMargin[cname]),
                 deliveryCost: toBigDec(compDelivery[cname]),
                 deliveryTaxable: !!compDeliveryTaxable[cname],
@@ -356,6 +365,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                     <thead>
                         <tr>
                             <th>Component</th>
+                            <th style={{ width: 120 }}>Sets</th>
                             <th className="text-end">Subtotal</th>
                             <th style={{ width: 120 }}>Margin %</th>
                             <th className="text-end">After Margin</th>
@@ -368,6 +378,18 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                         {compCalcs.map(cc => (
                             <tr key={cc.name}>
                                 <td>{cc.name}</td>
+                                <td>
+                                    <Form.Control
+                                        type="number"
+                                        size="sm"
+                                        className="text-end"
+                                        min="0.01"
+                                        step="0.01"
+                                        value={compQty[cc.name] ?? "1"}
+                                        onChange={e => setCompQty(s => ({ ...s, [cc.name]: e.target.value }))}
+                                        disabled={readOnly}
+                                    />
+                                </td>
                                 <td className="text-end">{cc.subtotal.toLocaleString()}</td>
                                 <td><Form.Control size="sm" type="number" className="text-end" value={compMargin[cc.name] || ""} onChange={e => setCompMargin(s => ({ ...s, [cc.name]: e.target.value }))} disabled={readOnly} /></td>
                                 <td className="text-end bg-light">{cc.afterMargin.toLocaleString()}</td>

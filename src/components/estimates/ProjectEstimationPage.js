@@ -248,6 +248,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [dirtyComponents, setDirtyComponents] = useState(new Set());
     const [forceFullSave, setForceFullSave] = useState(false);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const forceFullSaveRef = useRef(false);
+    const suppressDirtyRef = useRef(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [completenessIssues, setCompletenessIssues] = useState([]);
     const [showCompletenessModal, setShowCompletenessModal] = useState(false);
@@ -470,7 +472,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             });
                         }
                         const r = rowMap.get(rowKey);
-                        r.quantities[cname] = (r.quantities[cname] || 0) + (it.quantity || 0);
+                        r.quantities[cname] = Number(r.quantities[cname] || 0) + Number(it.quantity || 0);
                         if (r.estUnitCost === "" && it.estUnitCost != null) r.estUnitCost = it.estUnitCost;
                     });
                 }
@@ -491,6 +493,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setIsDirty(false);
                     setDirtyComponents(new Set());
                     setForceFullSave(false);
+                    forceFullSaveRef.current = false;
                     setIsInitialLoad(false);
                 }, 300);
             } catch (e) {
@@ -590,6 +593,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const requireFullSave = () => {
         if (isInitialLoad) return;
+        forceFullSaveRef.current = true;
         setForceFullSave(true);
     };
 
@@ -621,6 +625,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         if (quotationFileInputRef.current) quotationFileInputRef.current.value = "";
 
         setDirtyComponents(new Set());
+        forceFullSaveRef.current = true;
         setForceFullSave(true);
         setIsDirty(true);
         setShowClearEstimationModal(false);
@@ -823,7 +828,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const cp = [...rs];
             const r = { ...cp[i] };
             const q = { ...(r.quantities || {}) };
-            q[comp] = Math.max(0, Number(val || 0));
+            const parsed = Number(val || 0);
+            q[comp] = Number.isFinite(parsed) && parsed >= 0 ? val : "0";
             r.quantities = q;
             cp[i] = r;
             return cp;
@@ -934,7 +940,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     // Track dirty state — fires whenever editable form fields change after initial load
     useEffect(() => {
-        if (!isInitialLoad) setIsDirty(true);
+        if (!isInitialLoad && !suppressDirtyRef.current) setIsDirty(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rows, components, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
         includeDelivery, includeVat, includeTax, roundingEnabled, roundingPlace, discountPercent, customNote, terms]);
@@ -1061,6 +1067,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             rowsForPayload.forEach(r => {
                 const qtyVal = (r.quantities || {})[cname];
                 const qty = Number(qtyVal || 0);
+                const quantity = toBigDec(qtyVal);
                 const isManual = r.lineType === LINE_TYPES.MANUAL;
                 const hasManualDescription = String(r.description || "").trim().length > 0;
                 const hasRate = r.estUnitCost !== "" && r.estUnitCost != null;
@@ -1072,7 +1079,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         productNameSnapshot: productById[r.productId]?.name || r.productOption?.label || r.productId,
                         description: productById[r.productId]?.name || r.productOption?.label || r.description || r.productId,
                         unit: r.unit || "",
-                        quantity: qty, // if NaN, becomes null in JSON
+                        quantity,
                         estUnitCost: toBigDec(r.estUnitCost),
                     });
                 } else if (isManual && hasManualDescription && (qty > 0 || hasRate)) {
@@ -1082,7 +1089,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         productNameSnapshot: null,
                         description: r.description.trim(),
                         unit: r.unit || "",
-                        quantity: qty,
+                        quantity,
                         estUnitCost: toBigDec(r.estUnitCost),
                     });
                 }
@@ -1182,7 +1189,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     };
 
     const canPatchExistingEstimation = (payload) => {
-        if (!estimationId || quotationFile || forceFullSave) return false;
+        if (!estimationId || quotationFile || forceFullSave || forceFullSaveRef.current) return false;
         const dirtyNames = Array.from(dirtyComponents);
         if (dirtyNames.length === 0) return true;
         if (dirtyNames.length >= (payload.components || []).length) return false;
@@ -1256,6 +1263,21 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             if (res.data?.quotationFileUrl) {
                 setExistingFileUrl(res.data.quotationFileUrl);
             }
+            if (Array.isArray(res.data?.components)) {
+                suppressDirtyRef.current = true;
+                const savedComponentQty = {};
+                res.data.components.forEach(component => {
+                    const name = component?.name?.trim() || "Component";
+                    savedComponentQty[name] = String(component?.quantity == null || Number(component.quantity) <= 0
+                        ? 1
+                        : component.quantity);
+                });
+                setCompQty(savedComponentQty);
+                setTimeout(() => {
+                    suppressDirtyRef.current = false;
+                    setIsDirty(false);
+                }, 0);
+            }
             if (quotationFile) {
                 setQuotationFile(null);
                 if (quotationFileInputRef.current) quotationFileInputRef.current.value = "";
@@ -1276,6 +1298,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setIsDirty(false); // Mark as clean after save
             setDirtyComponents(new Set());
             setForceFullSave(false);
+            forceFullSaveRef.current = false;
             return true;
         } catch (e) {
             toast.error(getErrorMessage(e, "Failed to save estimation"));
@@ -1774,7 +1797,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     value={compQty[cc.name] ?? "1"}
                                                     disabled={isLocked}
                                                     onChange={(e) => {
-                                                        markComponentsDirty(cc.name);
+                                                        requireFullSave();
                                                         setCompQty(s => ({ ...s, [cc.name]: e.target.value }));
                                                     }}
                                                     placeholder="1"
