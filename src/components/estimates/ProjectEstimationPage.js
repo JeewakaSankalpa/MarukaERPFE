@@ -944,7 +944,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const compCalcs = useMemo(() => {
         return components.map((cname) => {
-            const sets = Math.max(1, Number(compQty[cname] || 1) || 1);
+            const parsedSets = Number(compQty[cname]);
+            const sets = Number.isFinite(parsedSets) && parsedSets > 0 ? parsedSets : 1;
             const unitSubtotal = mergedRows.reduce(
                 (acc, r) => acc + Number(r.estUnitCost || 0) * Number((r.quantities || {})[cname] || 0),
                 0
@@ -1096,7 +1097,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             return {
                 name: cname,
                 note: "",
-                quantity: Math.max(1, Number(q || 1) || 1),
+                quantity: Number.isFinite(Number(q)) && Number(q) > 0 ? Number(q) : 1,
                 marginPercent: toBigDec(m),
                 overheadPercent: toBigDec(o),
                 deliveryCost: toBigDec(dc),
@@ -1769,7 +1770,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <Form.Control
                                                     className="text-end"
                                                     type="number"
-                                                    min="1" step="1"
+                                                    min="0.01" step="0.01"
                                                     value={compQty[cc.name] ?? "1"}
                                                     disabled={isLocked}
                                                     onChange={(e) => {
