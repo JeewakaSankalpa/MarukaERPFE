@@ -23,7 +23,11 @@ const decimalTotal = (values = []) =>
 
 const formatDate = (value) => {
     if (!value) return "-";
-    return new Date(value).toLocaleDateString("en-GB");
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${month}/${day}/${parsed.getFullYear()}`;
 };
 
 const DOC_TYPES = {
