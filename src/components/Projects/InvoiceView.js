@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/api";
-import { Button, Spinner, Badge, Form } from "react-bootstrap";
+import { Button, Spinner, Badge, Form, Dropdown } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
@@ -47,7 +47,137 @@ const PRINT_FORMATS = {
     COMPONENTS_ONLY: "componentsOnly",
     COMPONENTS_WITH_ITEMS: "componentsWithItems",
     TOTALS_ONLY: "totalsOnly",
+    CUSTOM: "custom",
 };
+
+const TAX_PRINT_PRESETS = {
+    [PRINT_FORMATS.ALL]: {
+        showItemCode: true,
+        showComponents: true,
+        showComponentPrices: true,
+        showItems: false,
+        showItemQuantities: true,
+        showItemUnits: true,
+        showItemUnitPrices: false,
+        showItemTotals: false,
+        showSubtotal: true,
+        showVat: true,
+        showOtherTax: true,
+        showTotalAmount: true,
+        showPayments: true,
+        showTotalDue: true,
+        showAmountWords: true,
+        showModeOfPayment: true,
+        showCustomerRef: true,
+        showTerms: true,
+        showNotes: true,
+        showSignatures: true,
+    },
+    [PRINT_FORMATS.COMPONENTS_ONLY]: {
+        showItemCode: true,
+        showComponents: true,
+        showComponentPrices: true,
+        showItems: false,
+        showItemQuantities: false,
+        showItemUnits: false,
+        showItemUnitPrices: false,
+        showItemTotals: false,
+        showSubtotal: true,
+        showVat: true,
+        showOtherTax: true,
+        showTotalAmount: true,
+        showPayments: true,
+        showTotalDue: true,
+        showAmountWords: true,
+        showModeOfPayment: true,
+        showCustomerRef: true,
+        showTerms: true,
+        showNotes: true,
+        showSignatures: true,
+    },
+    [PRINT_FORMATS.COMPONENTS_WITH_ITEMS]: {
+        showItemCode: true,
+        showComponents: true,
+        showComponentPrices: true,
+        showItems: true,
+        showItemQuantities: true,
+        showItemUnits: true,
+        showItemUnitPrices: false,
+        showItemTotals: false,
+        showSubtotal: true,
+        showVat: true,
+        showOtherTax: true,
+        showTotalAmount: true,
+        showPayments: true,
+        showTotalDue: true,
+        showAmountWords: true,
+        showModeOfPayment: true,
+        showCustomerRef: true,
+        showTerms: true,
+        showNotes: true,
+        showSignatures: true,
+    },
+    [PRINT_FORMATS.TOTALS_ONLY]: {
+        showItemCode: false,
+        showComponents: false,
+        showComponentPrices: false,
+        showItems: false,
+        showItemQuantities: false,
+        showItemUnits: false,
+        showItemUnitPrices: false,
+        showItemTotals: false,
+        showSubtotal: true,
+        showVat: true,
+        showOtherTax: true,
+        showTotalAmount: true,
+        showPayments: true,
+        showTotalDue: true,
+        showAmountWords: true,
+        showModeOfPayment: true,
+        showCustomerRef: true,
+        showTerms: true,
+        showNotes: true,
+        showSignatures: true,
+    },
+};
+
+const TAX_PRINT_OPTION_GROUPS = [
+    {
+        title: "Main components",
+        options: [
+            ["showItemCode", "Item codes"],
+            ["showComponents", "Names"],
+            ["showComponentPrices", "Prices"],
+        ],
+    },
+    {
+        title: "Subcomponents",
+        options: [
+            ["showItems", "Names"],
+            ["showItemQuantities", "Quantities"],
+            ["showItemUnits", "Units"],
+            ["showItemUnitPrices", "Unit prices"],
+            ["showItemTotals", "Totals"],
+        ],
+    },
+    {
+        title: "Totals and footer",
+        options: [
+            ["showSubtotal", "Subtotal"],
+            ["showVat", "VAT"],
+            ["showOtherTax", "Other tax"],
+            ["showTotalAmount", "Total amount"],
+            ["showPayments", "Payments"],
+            ["showTotalDue", "Total due"],
+            ["showAmountWords", "Amount in words"],
+            ["showModeOfPayment", "Mode of payment"],
+            ["showCustomerRef", "Customer reference"],
+            ["showTerms", "Terms"],
+            ["showNotes", "Notes"],
+            ["showSignatures", "Signatures"],
+        ],
+    },
+];
 
 const getAvailableDocTypes = (invoice) =>
     DOC_TYPE_OPTIONS.filter(option => Boolean(invoice?.[option.field]));
@@ -316,6 +446,7 @@ const InvoiceView = () => {
     const [savingCustomerPhone, setSavingCustomerPhone] = useState(false);
     const [refreshingInvoice, setRefreshingInvoice] = useState(false);
     const [taxPrintFormat, setTaxPrintFormat] = useState(PRINT_FORMATS.ALL);
+    const [taxPrintOptions, setTaxPrintOptions] = useState(TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]);
     const { role, projectRoles } = useAuth();
     const rolesHeader = useMemo(() => [role, ...(Array.isArray(projectRoles) ? projectRoles : [])]
         .filter(Boolean)
@@ -547,6 +678,21 @@ const InvoiceView = () => {
 
     const handlePrint = () => window.print();
 
+    const handleTaxPrintFormatChange = (value) => {
+        setTaxPrintFormat(value);
+        if (TAX_PRINT_PRESETS[value]) {
+            setTaxPrintOptions(TAX_PRINT_PRESETS[value]);
+        }
+    };
+
+    const toggleTaxPrintOption = (key) => {
+        setTaxPrintFormat(PRINT_FORMATS.CUSTOM);
+        setTaxPrintOptions((current) => ({
+            ...current,
+            [key]: !current[key],
+        }));
+    };
+
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
     if (!invoice) return <div className="text-center p-5">Invoice not found.</div>;
 
@@ -672,15 +818,13 @@ const InvoiceView = () => {
             isComponent: true,
         }));
 
-        if (taxPrintFormat === PRINT_FORMATS.TOTALS_ONLY) return [];
-        if (componentRows.length && taxPrintFormat !== PRINT_FORMATS.COMPONENTS_WITH_ITEMS) {
-            return rowsWithDiscount;
-        }
-        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_ONLY) return groupedComponentRows;
-        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && componentRows.length) {
-            const rows = componentRows.flatMap((group, groupIdx) => [
-                group,
-                ...(group.items || []).map((item, itemIdx) => ({
+        if (!taxPrintOptions.showComponents && !taxPrintOptions.showItems) return [];
+
+        const sourceRows = componentRows.length ? componentRows : groupedComponentRows;
+        if (sourceRows.length && (taxPrintOptions.showComponents || taxPrintOptions.showItems)) {
+            const rows = sourceRows.flatMap((group, groupIdx) => [
+                ...(taxPrintOptions.showComponents ? [group] : []),
+                ...(taxPrintOptions.showItems ? (group.items || []).map((item, itemIdx) => ({
                     key: `component-${groupIdx}-item-${itemIdx}`,
                     itemCode: item.productId || "",
                     description: item.description,
@@ -689,26 +833,11 @@ const InvoiceView = () => {
                     unitPrice: Number(item.unitPrice || 0),
                     total: Number(item.total || 0),
                     isSubItem: true,
-                })),
+                })) : []),
             ]);
-            return actualDiscountAmount > 0.004
+            return actualDiscountAmount > 0.004 && taxPrintOptions.showComponents
                 ? [...rows, rowsWithDiscount[rowsWithDiscount.length - 1]]
                 : rows;
-        }
-        if (taxPrintFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && groupedItems.length) {
-            return groupedItems.flatMap((group, groupIdx) => [
-                groupedComponentRows[groupIdx],
-                ...(group.items || []).map((item, itemIdx) => ({
-                    key: `component-${groupIdx}-item-${itemIdx}`,
-                    itemCode: item.productId || "",
-                    description: item.description,
-                    quantity: item.quantity,
-                    unit: item.unit || "Nos",
-                    unitPrice: Number(item.unitPrice || 0),
-                    total: Number(item.total || 0),
-                    isSubItem: true,
-                })),
-            ]);
         }
 
         return componentRows.length ? rowsWithDiscount : invoiceRows.map((item, index) => ({
@@ -742,6 +871,25 @@ const InvoiceView = () => {
         ? decimalTotal([printedSubtotal, printedVatTotal, printedOtherTaxTotal])
         : storedDocumentTotal;
     const balanceDue = Math.max(printedDocumentTotal - totalReceived, 0);
+    const showTaxLineColumns = {
+        code: taxPrintOptions.showItemCode,
+        qty: taxPrintOptions.showItemQuantities,
+        unit: taxPrintOptions.showItemUnits,
+        unitPrice: taxPrintOptions.showComponentPrices || taxPrintOptions.showItemUnitPrices,
+        amount: taxPrintOptions.showComponentPrices
+            || taxPrintOptions.showItemTotals
+            || taxPrintOptions.showSubtotal
+            || taxPrintOptions.showVat
+            || taxPrintOptions.showOtherTax
+            || taxPrintOptions.showTotalAmount
+            || taxPrintOptions.showPayments
+            || taxPrintOptions.showTotalDue,
+    };
+    const taxSummaryColSpan = 1
+        + (showTaxLineColumns.code ? 1 : 0)
+        + (showTaxLineColumns.qty ? 1 : 0)
+        + (showTaxLineColumns.unit ? 1 : 0)
+        + (showTaxLineColumns.unitPrice ? 1 : 0);
 
     return (
         <div className="invoice-page bg-white min-vh-100 p-4">
@@ -1163,18 +1311,44 @@ const InvoiceView = () => {
                         {savingCustomerPhone ? "Saving..." : "Save Tel"}
                     </Button>
                     {isTaxInvoice && (
-                        <Form.Select
-                            size="sm"
-                            className="w-auto"
-                            value={taxPrintFormat}
-                            onChange={(e) => setTaxPrintFormat(e.target.value)}
-                            aria-label="Tax invoice print format"
-                        >
-                            <option value={PRINT_FORMATS.ALL}>Show everything</option>
-                            <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
-                            <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
-                            <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
-                        </Form.Select>
+                        <>
+                            <Form.Select
+                                size="sm"
+                                className="w-auto"
+                                value={taxPrintFormat}
+                                onChange={(e) => handleTaxPrintFormatChange(e.target.value)}
+                                aria-label="Tax invoice print format"
+                            >
+                                <option value={PRINT_FORMATS.ALL}>Show everything</option>
+                                <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
+                                <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
+                                <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
+                                <option value={PRINT_FORMATS.CUSTOM}>Custom</option>
+                            </Form.Select>
+                            <Dropdown autoClose="outside" align="end">
+                                <Dropdown.Toggle size="sm" variant="outline-secondary">
+                                    Customize print
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu className="p-3" style={{ minWidth: 290 }}>
+                                    {TAX_PRINT_OPTION_GROUPS.map((group, groupIndex) => (
+                                        <div key={group.title} className={groupIndex > 0 ? "border-top mt-2 pt-2" : ""}>
+                                            <div className="fw-semibold small text-muted mb-1">{group.title}</div>
+                                            {group.options.map(([key, label]) => (
+                                                <Form.Check
+                                                    key={key}
+                                                    type="checkbox"
+                                                    id={`tax-print-${key}`}
+                                                    className="small mb-1"
+                                                    label={label}
+                                                    checked={!!taxPrintOptions[key]}
+                                                    onChange={() => toggleTaxPrintOption(key)}
+                                                />
+                                            ))}
+                                        </div>
+                                    ))}
+                                </Dropdown.Menu>
+                            </Dropdown>
+                        </>
                     )}
                     {isAdmin && (
                         <Button size="sm" variant="outline-warning" onClick={handleRefreshInvoice} disabled={refreshingInvoice}>
@@ -1266,20 +1440,22 @@ const InvoiceView = () => {
                         </div>
                     </div>
 
+                    {taxPrintOptions.showNotes && (
                     <div className="tax-full-box">
                         <strong>Additional Information</strong>
                         <div>{invoice.notes || "-"}</div>
                     </div>
+                    )}
 
                     <table className="tax-items">
                         <thead>
                             <tr>
-                                <th className="code">Item Code</th>
+                                {showTaxLineColumns.code && <th className="code">Item Code</th>}
                                 <th className="desc">Description of Goods or Services</th>
-                                <th className="qty">Quantity</th>
-                                <th className="uom">UoM</th>
-                                <th className="unit">Unit Price</th>
-                                <th className="amount">Amount<br />Excluding VAT<br />(Rs.)</th>
+                                {showTaxLineColumns.qty && <th className="qty">Quantity</th>}
+                                {showTaxLineColumns.unit && <th className="uom">UoM</th>}
+                                {showTaxLineColumns.unitPrice && <th className="unit">Unit Price</th>}
+                                {showTaxLineColumns.amount && <th className="amount">Amount<br />Excluding VAT<br />(Rs.)</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -1288,63 +1464,95 @@ const InvoiceView = () => {
                                     key={item.key || `${item.description}-${index}`}
                                     className={item.isComponent ? "tax-component-row" : ""}
                                 >
-                                    <td className="code">{item.description ? item.itemCode || "" : ""}</td>
+                                    {showTaxLineColumns.code && <td className="code">{item.description ? item.itemCode || "" : ""}</td>}
                                     <td className={item.isSubItem ? "tax-subitem" : ""}>{item.description}</td>
-                                    <td className="qty">{formatQuantity(item.quantity)}</td>
-                                    <td className="uom">{item.description ? item.unit || "" : ""}</td>
-                                    <td className="unit">{item.description && taxPrintFormat !== PRINT_FORMATS.COMPONENTS_WITH_ITEMS ? money(item.unitPrice) : item.isComponent ? money(item.unitPrice) : ""}</td>
-                                    <td className="amount">{item.description && !item.isSubItem ? money(item.total) : ""}</td>
+                                    {showTaxLineColumns.qty && (
+                                        <td className="qty">{item.description && (!item.isSubItem || taxPrintOptions.showItemQuantities) ? formatQuantity(item.quantity) : ""}</td>
+                                    )}
+                                    {showTaxLineColumns.unit && (
+                                        <td className="uom">{item.description && (!item.isSubItem || taxPrintOptions.showItemUnits) ? item.unit || "" : ""}</td>
+                                    )}
+                                    {showTaxLineColumns.unitPrice && (
+                                        <td className="unit">
+                                            {item.description && ((item.isComponent && taxPrintOptions.showComponentPrices) || (item.isSubItem && taxPrintOptions.showItemUnitPrices))
+                                                ? money(item.unitPrice)
+                                                : ""}
+                                        </td>
+                                    )}
+                                    {showTaxLineColumns.amount && (
+                                        <td className="amount">
+                                            {item.description && ((item.isComponent && taxPrintOptions.showComponentPrices) || (item.isSubItem && taxPrintOptions.showItemTotals))
+                                                ? money(item.total)
+                                                : ""}
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
+                            {taxPrintOptions.showSubtotal && (
                             <tr>
-                                <td className="tax-summary-label" colSpan="5">Total Value of Supply</td>
+                                <td className="tax-summary-label" colSpan={taxSummaryColSpan}>Total Value of Supply</td>
                                 <td className="amount">{money(printedSubtotal)}</td>
                             </tr>
+                            )}
+                            {taxPrintOptions.showVat && (
                             <tr>
-                                <td className="tax-summary-label" colSpan="5">VAT Amount (Total Value of Supply @ {printedVatTotal > 0 ? `${vatPercent}%` : "0%"})</td>
+                                <td className="tax-summary-label" colSpan={taxSummaryColSpan}>VAT Amount (Total Value of Supply @ {printedVatTotal > 0 ? `${vatPercent}%` : "0%"})</td>
                                 <td className="amount">{money(printedVatTotal)}</td>
                             </tr>
-                            {printedOtherTaxTotal > 0 && (
+                            )}
+                            {taxPrintOptions.showOtherTax && printedOtherTaxTotal > 0 && (
                                 <tr>
-                                    <td className="tax-summary-label" colSpan="5">Other Tax Amount</td>
+                                    <td className="tax-summary-label" colSpan={taxSummaryColSpan}>Other Tax Amount</td>
                                     <td className="amount">{money(printedOtherTaxTotal)}</td>
                                 </tr>
                             )}
+                            {taxPrintOptions.showTotalAmount && (
                             <tr>
-                                <td className="tax-summary-label" colSpan="5"><strong>Total Amount</strong></td>
+                                <td className="tax-summary-label" colSpan={taxSummaryColSpan}><strong>Total Amount</strong></td>
                                 <td className="amount">{money(printedDocumentTotal)}</td>
                             </tr>
-                            {totalReceived > 0 && (
+                            )}
+                            {taxPrintOptions.showPayments && totalReceived > 0 && (
                                 <tr>
-                                    <td className="tax-summary-label" colSpan="5">Payments Received</td>
+                                    <td className="tax-summary-label" colSpan={taxSummaryColSpan}>Payments Received</td>
                                     <td className="amount">{money(totalReceived)}</td>
                                 </tr>
                             )}
+                            {taxPrintOptions.showTotalDue && (
                             <tr>
-                                <td className="tax-summary-label" colSpan="5"><strong>Total Due</strong></td>
+                                <td className="tax-summary-label" colSpan={taxSummaryColSpan}><strong>Total Due</strong></td>
                                 <td className="amount"><strong>{money(balanceDue)}</strong></td>
                             </tr>
+                            )}
                         </tbody>
                     </table>
 
+                    {(taxPrintOptions.showAmountWords || taxPrintOptions.showModeOfPayment || taxPrintOptions.showCustomerRef) && (
                     <div className="tax-bottom-lines">
+                        {taxPrintOptions.showAmountWords && (
                         <div className="tax-bottom-line">
                             <span className="tax-bottom-label">Total Amount In word</span>
                             <span>{amountToWords(printedDocumentTotal)}</span>
                         </div>
+                        )}
+                        {taxPrintOptions.showModeOfPayment && (
                         <div className="tax-bottom-line">
                             <span className="tax-bottom-label">Mode of Payment</span>
                             <span>{taxModeOfPayment}</span>
                         </div>
+                        )}
+                        {taxPrintOptions.showCustomerRef && (
                         <div className="tax-bottom-line">
                             <span className="tax-bottom-label">Customer Ref No</span>
                             <span>{invoice.poNumber || "-"}</span>
                         </div>
+                        )}
                     </div>
+                    )}
 
-                    {(taxTerms.length > 0 || taxNotes.length > 0) && (
+                    {((taxPrintOptions.showTerms && taxTerms.length > 0) || (taxPrintOptions.showNotes && taxNotes.length > 0)) && (
                         <div className="tax-terms-notes">
-                            {taxTerms.length > 0 && (
+                            {taxPrintOptions.showTerms && taxTerms.length > 0 && (
                                 <>
                                     <div className="tax-terms-title">Terms and Conditions</div>
                                     <ol className="tax-terms-list">
@@ -1354,7 +1562,7 @@ const InvoiceView = () => {
                                     </ol>
                                 </>
                             )}
-                            {taxNotes.length > 0 && (
+                            {taxPrintOptions.showNotes && taxNotes.length > 0 && (
                                 <>
                                     <div className="tax-terms-title">Notes</div>
                                     <ol className="tax-terms-list">
@@ -1367,11 +1575,13 @@ const InvoiceView = () => {
                         </div>
                     )}
 
+                    {taxPrintOptions.showSignatures && (
                     <div className="tax-signatures">
                         <div>Prepared By</div>
                         <div>Checked By</div>
                         <div>Authorized By</div>
                     </div>
+                    )}
                 </section>
             ) : (
             <section className="invoice-sheet">

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
-import { Button, Spinner, Table, Alert, Modal, Form, Tabs, Tab, Badge } from "react-bootstrap";
+import { Button, Spinner, Table, Alert, Modal, Form, Tabs, Tab, Badge, Dropdown } from "react-bootstrap";
 import ReportLayout from "../ReusableComponents/ReportLayout";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -26,7 +26,112 @@ const PRINT_FORMATS = {
     COMPONENTS_ONLY: "componentsOnly",
     COMPONENTS_WITH_ITEMS: "componentsWithItems",
     TOTALS_ONLY: "totalsOnly",
+    CUSTOM: "custom",
 };
+
+const PRINT_PRESETS = {
+    [PRINT_FORMATS.ALL]: {
+        showComponents: true,
+        showComponentPrices: true,
+        showItems: true,
+        showItemQuantities: true,
+        showItemUnits: true,
+        showItemUnitPrices: true,
+        showItemTotals: true,
+        showSubtotal: true,
+        showDiscount: true,
+        showVat: true,
+        showOtherTax: true,
+        showGrandTotal: true,
+        showNotes: true,
+        showTerms: true,
+        showSignatures: true,
+    },
+    [PRINT_FORMATS.COMPONENTS_ONLY]: {
+        showComponents: true,
+        showComponentPrices: true,
+        showItems: false,
+        showItemQuantities: false,
+        showItemUnits: false,
+        showItemUnitPrices: false,
+        showItemTotals: false,
+        showSubtotal: true,
+        showDiscount: true,
+        showVat: true,
+        showOtherTax: true,
+        showGrandTotal: true,
+        showNotes: true,
+        showTerms: true,
+        showSignatures: true,
+    },
+    [PRINT_FORMATS.COMPONENTS_WITH_ITEMS]: {
+        showComponents: true,
+        showComponentPrices: true,
+        showItems: true,
+        showItemQuantities: true,
+        showItemUnits: false,
+        showItemUnitPrices: false,
+        showItemTotals: false,
+        showSubtotal: true,
+        showDiscount: true,
+        showVat: true,
+        showOtherTax: true,
+        showGrandTotal: true,
+        showNotes: true,
+        showTerms: true,
+        showSignatures: true,
+    },
+    [PRINT_FORMATS.TOTALS_ONLY]: {
+        showComponents: false,
+        showComponentPrices: false,
+        showItems: false,
+        showItemQuantities: false,
+        showItemUnits: false,
+        showItemUnitPrices: false,
+        showItemTotals: false,
+        showSubtotal: true,
+        showDiscount: true,
+        showVat: true,
+        showOtherTax: true,
+        showGrandTotal: true,
+        showNotes: true,
+        showTerms: true,
+        showSignatures: true,
+    },
+};
+
+const PRINT_OPTION_GROUPS = [
+    {
+        title: "Main components",
+        options: [
+            ["showComponents", "Names"],
+            ["showComponentPrices", "Prices"],
+        ],
+    },
+    {
+        title: "Subcomponents",
+        options: [
+            ["showItems", "Names"],
+            ["showItemQuantities", "Quantities"],
+            ["showItemUnits", "Units"],
+            ["showItemUnitPrices", "Unit prices"],
+            ["showItemTotals", "Totals"],
+        ],
+    },
+    {
+        title: "Totals and footer",
+        options: [
+            ["showSubtotal", "Subtotal"],
+            ["showDiscount", "Discount"],
+            ["showVat", "VAT"],
+            ["showOtherTax", "Other tax"],
+            ["showGrandTotal", "Grand total"],
+            ["showNotes", "Notes"],
+            ["showTerms", "Terms"],
+            ["showSignatures", "Signatures"],
+        ],
+    },
+];
 
 const INVOICE_TYPES = {
     PROFORMA: "proforma",
@@ -232,6 +337,7 @@ const QuotationPrint = () => {
     const [invoices, setInvoices] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [printFormat, setPrintFormat] = useState(PRINT_FORMATS.ALL);
+    const [printOptions, setPrintOptions] = useState(PRINT_PRESETS[PRINT_FORMATS.ALL]);
     const [invoiceType, setInvoiceType] = useState(INVOICE_TYPES.PROFORMA);
     const [activeTab, setActiveTab] = useState("quotation");
 
@@ -308,6 +414,21 @@ const QuotationPrint = () => {
 
     const handlePrint = () => window.print();
 
+    const handlePrintFormatChange = (value) => {
+        setPrintFormat(value);
+        if (PRINT_PRESETS[value]) {
+            setPrintOptions(PRINT_PRESETS[value]);
+        }
+    };
+
+    const togglePrintOption = (key) => {
+        setPrintFormat(PRINT_FORMATS.CUSTOM);
+        setPrintOptions((current) => ({
+            ...current,
+            [key]: !current[key],
+        }));
+    };
+
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
     if (!estimation) return <div className="text-center p-5">No estimation found for this project.</div>;
 
@@ -329,6 +450,16 @@ const QuotationPrint = () => {
     const subtitleParts = [`Inquiry: ${inquiryRef}`];
     if (project?.jobNumber) subtitleParts.push(`Job: ${project.jobNumber}`);
     const quoteTotals = computeQuotationTotals(estimation);
+    const showQuotationLines = printOptions.showComponents || printOptions.showItems;
+    const showQuotationQtyColumn = printOptions.showItemQuantities;
+    const showQuotationUnitColumn = printOptions.showItemUnits;
+    const showQuotationUnitPriceColumn = printOptions.showItemUnitPrices;
+    const showQuotationTotalColumn = printOptions.showComponentPrices || printOptions.showItemTotals;
+    const showQuotationTotalsTable = printOptions.showSubtotal
+        || (printOptions.showDiscount && quoteTotals.discountAmount > 0)
+        || (printOptions.showVat && quoteTotals.vatAmount > 0)
+        || (printOptions.showOtherTax && quoteTotals.taxAmount > 0)
+        || printOptions.showGrandTotal;
 
     return (
         <div className="bg-white min-vh-100 p-4">
@@ -350,14 +481,38 @@ const QuotationPrint = () => {
                                 size="sm"
                                 className="w-auto"
                                 value={printFormat}
-                                onChange={(e) => setPrintFormat(e.target.value)}
+                                onChange={(e) => handlePrintFormatChange(e.target.value)}
                                 aria-label="Quotation print format"
                             >
                                 <option value={PRINT_FORMATS.ALL}>Show everything</option>
                                 <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
                                 <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
                                 <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
+                                <option value={PRINT_FORMATS.CUSTOM}>Custom</option>
                             </Form.Select>
+                            <Dropdown autoClose="outside" align="end">
+                                <Dropdown.Toggle size="sm" variant="outline-secondary">
+                                    Customize print
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu className="p-3" style={{ minWidth: 280 }}>
+                                    {PRINT_OPTION_GROUPS.map((group, groupIndex) => (
+                                        <div key={group.title} className={groupIndex > 0 ? "border-top mt-2 pt-2" : ""}>
+                                            <div className="fw-semibold small text-muted mb-1">{group.title}</div>
+                                            {group.options.map(([key, label]) => (
+                                                <Form.Check
+                                                    key={key}
+                                                    type="checkbox"
+                                                    id={`quotation-print-${key}`}
+                                                    className="small mb-1"
+                                                    label={label}
+                                                    checked={!!printOptions[key]}
+                                                    onChange={() => togglePrintOption(key)}
+                                                />
+                                            ))}
+                                        </div>
+                                    ))}
+                                </Dropdown.Menu>
+                            </Dropdown>
                             {!isFinalized && (
                                 <Button variant="success" onClick={handleFinalize}>Finalize Quote</Button>
                             )}
@@ -493,49 +648,55 @@ const QuotationPrint = () => {
                     </div>
                 </div>
 
-                {printFormat !== PRINT_FORMATS.TOTALS_ONLY && (
+                {showQuotationLines && (
                     <Table bordered size="sm">
                         <thead className="table-light">
                             <tr>
                                 <th>Description</th>
-                                {(printFormat === PRINT_FORMATS.ALL ||
-                                    printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS) && (
+                                {showQuotationQtyColumn && (
                                     <th className="text-end" style={{ width: "100px" }}>Qty</th>
                                 )}
-                                {printFormat === PRINT_FORMATS.ALL && (
-                                    <>
-                                        <th className="text-end" style={{ width: "90px" }}>Unit</th>
-                                        <th className="text-end" style={{ width: "150px" }}>Unit Price</th>
-                                    </>
+                                {showQuotationUnitColumn && (
+                                    <th className="text-end" style={{ width: "90px" }}>Unit</th>
                                 )}
-                                <th className="text-end" style={{ width: "150px" }}>Total</th>
+                                {showQuotationUnitPriceColumn && (
+                                    <th className="text-end" style={{ width: "150px" }}>Unit Price</th>
+                                )}
+                                {showQuotationTotalColumn && (
+                                    <th className="text-end" style={{ width: "150px" }}>Total</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
                             {estimation.components?.map((comp, idx) => (
                                 <React.Fragment key={idx}>
-                                    <tr className="table-secondary">
-                                        <td><strong>{componentLabel(comp)}</strong></td>
-                                        {printFormat === PRINT_FORMATS.ALL && <td colSpan="3" />}
-                                        {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && <td />}
-                                        <td className="text-end fw-bold">{money(componentAmount(comp, estimation.includeDelivery !== false))}</td>
-                                    </tr>
-                                    {printFormat !== PRINT_FORMATS.COMPONENTS_ONLY && aggregateItems(comp.items, componentQuantity(comp)).map((item, i) => (
+                                    {printOptions.showComponents && (
+                                        <tr className="table-secondary">
+                                            <td><strong>{componentLabel(comp)}</strong></td>
+                                            {showQuotationQtyColumn && <td />}
+                                            {showQuotationUnitColumn && <td />}
+                                            {showQuotationUnitPriceColumn && <td />}
+                                            {showQuotationTotalColumn && (
+                                                <td className="text-end fw-bold">
+                                                    {printOptions.showComponentPrices ? money(componentAmount(comp, estimation.includeDelivery !== false)) : ""}
+                                                </td>
+                                            )}
+                                        </tr>
+                                    )}
+                                    {printOptions.showItems && aggregateItems(comp.items, componentQuantity(comp)).map((item, i) => (
                                         <tr key={item.key || `${idx}-${i}`}>
                                             <td className="ps-4">{itemDescription(item)}</td>
-                                            {printFormat === PRINT_FORMATS.ALL && (
-                                                <>
-                                                    <td className="text-end">{formatQuantity(item.quantity)}</td>
-                                                    <td className="text-end">{item.unit || "-"}</td>
-                                                    <td className="text-end">{money(item.estUnitCost)}</td>
-                                                    <td className="text-end">{money((item.quantity || 0) * (item.estUnitCost || 0))}</td>
-                                                </>
+                                            {showQuotationQtyColumn && (
+                                                <td className="text-end">{printOptions.showItemQuantities ? formatQuantity(item.quantity) : ""}</td>
                                             )}
-                                            {printFormat === PRINT_FORMATS.COMPONENTS_WITH_ITEMS && (
-                                                <>
-                                                    <td className="text-end">{formatQuantity(item.quantity)}</td>
-                                                    <td />
-                                                </>
+                                            {showQuotationUnitColumn && (
+                                                <td className="text-end">{printOptions.showItemUnits ? item.unit || "-" : ""}</td>
+                                            )}
+                                            {showQuotationUnitPriceColumn && (
+                                                <td className="text-end">{printOptions.showItemUnitPrices ? money(item.estUnitCost) : ""}</td>
+                                            )}
+                                            {showQuotationTotalColumn && (
+                                                <td className="text-end">{printOptions.showItemTotals ? money((item.quantity || 0) * (item.estUnitCost || 0)) : ""}</td>
                                             )}
                                         </tr>
                                     ))}
@@ -545,44 +706,51 @@ const QuotationPrint = () => {
                     </Table>
                 )}
 
-                <Table bordered size="sm" className={printFormat === PRINT_FORMATS.TOTALS_ONLY ? "" : "mt-3"}>
+                {showQuotationTotalsTable && (
+                <Table bordered size="sm" className={showQuotationLines ? "mt-3" : ""}>
                     <tfoot>
+                        {printOptions.showSubtotal && (
                         <tr>
                             <td className="text-end fw-bold">Subtotal</td>
                             <td className="text-end" style={{ width: "150px" }}>{money(quoteTotals.subtotal)}</td>
                         </tr>
-                        {quoteTotals.discountAmount > 0 && (
+                        )}
+                        {printOptions.showDiscount && quoteTotals.discountAmount > 0 && (
                             <tr>
                                 <td className="text-end">Discount ({estimation.discountPercent || 0}%)</td>
                                 <td className="text-end">-{money(quoteTotals.discountAmount)}</td>
                             </tr>
                         )}
-                        {quoteTotals.vatAmount > 0 && (
+                        {printOptions.showVat && quoteTotals.vatAmount > 0 && (
                             <tr>
                                 <td className="text-end">VAT ({estimation.vatPercent}%)</td>
                                 <td className="text-end">{money(quoteTotals.vatAmount)}</td>
                             </tr>
                         )}
-                        {quoteTotals.taxAmount > 0 && (
+                        {printOptions.showOtherTax && quoteTotals.taxAmount > 0 && (
                             <tr>
                                 <td className="text-end">Other Tax ({estimation.taxPercent}%)</td>
                                 <td className="text-end">{money(quoteTotals.taxAmount)}</td>
                             </tr>
                         )}
+                        {printOptions.showGrandTotal && (
                         <tr className="table-active fw-bold fs-5">
                             <td className="text-end">GRAND TOTAL</td>
                             <td className="text-end">{money(quoteTotals.grandTotal)}</td>
                         </tr>
+                        )}
                     </tfoot>
                 </Table>
+                )}
 
-                {(estimation.customNote) && (
+                {(printOptions.showNotes && estimation.customNote) && (
                     <div className="mt-4 p-3 bg-light border rounded no-print-bg">
                         <strong>Notes:</strong>
                         <p className="mb-0 small" style={{ whiteSpace: "pre-wrap" }}>{estimation.customNote}</p>
                     </div>
                 )}
 
+                {printOptions.showTerms && (
                 <div className="mt-4">
                     <strong>Terms & Conditions:</strong>
                     {estimation.terms && estimation.terms.length > 0 ? (
@@ -604,7 +772,9 @@ const QuotationPrint = () => {
                         </ul>
                     )}
                 </div>
+                )}
 
+                {printOptions.showSignatures && (
                 <div className="mt-5 d-flex justify-content-between gap-5">
                     <div style={{ width: "45%" }}>
                         <div className="border-top pt-2 small text-muted">Prepared By</div>
@@ -613,6 +783,7 @@ const QuotationPrint = () => {
                         <div className="border-top pt-2 small text-muted">Accepted By / Date</div>
                     </div>
                 </div>
+                )}
                     </ReportLayout>
                 </>
             )}
