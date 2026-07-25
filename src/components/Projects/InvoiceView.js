@@ -271,6 +271,8 @@ const getSnapshotCustomer = (invoice) => ({
 });
 
 const buildDisplayInvoiceNumber = (rawNumber, docType) => {
+    if (docType === DOC_TYPES.TAX) return rawNumber || "-";
+
     const prefix = docType === DOC_TYPES.PROFORMA
         ? "MT/PI/"
         : docType === DOC_TYPES.NORMAL
@@ -558,7 +560,8 @@ const InvoiceView = () => {
         : isTaxInvoice
             ? invoice.taxInvoiceNumber
             : invoice.normalInvoiceNumber;
-    const invoiceNo = buildDisplayInvoiceNumber(rawDocumentNumber || invoice.invoiceNumber, selectedType);
+    const fallbackDocumentNumber = isTaxInvoice ? "" : invoice.invoiceNumber;
+    const invoiceNo = buildDisplayInvoiceNumber(rawDocumentNumber || fallbackDocumentNumber, selectedType);
     const inquiryRef = project?.referenceNumber || project?.inquiryNumber || project?.id || invoice.projectId || "-";
     const jobRef = project?.jobNumber || "-";
     const totalReceived = numberValue(invoice.paidAmount);
