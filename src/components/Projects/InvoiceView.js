@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/api";
-import { Button, Spinner, Badge, Form, Dropdown } from "react-bootstrap";
+import { Button, Spinner, Badge, Form, Dropdown, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
@@ -28,6 +28,19 @@ const formatDate = (value) => {
     const month = String(parsed.getMonth() + 1).padStart(2, "0");
     const day = String(parsed.getDate()).padStart(2, "0");
     return `${month}/${day}/${parsed.getFullYear()}`;
+};
+
+const formatDateTime = (value) => {
+    if (!value) return "-";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleString("en-GB", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
 };
 
 const DOC_TYPES = {
@@ -445,6 +458,9 @@ const InvoiceView = () => {
     const [savingNotes, setSavingNotes] = useState(false);
     const [savingCustomerPhone, setSavingCustomerPhone] = useState(false);
     const [refreshingInvoice, setRefreshingInvoice] = useState(false);
+    const [savingPrintLayout, setSavingPrintLayout] = useState(false);
+    const [recordingPrint, setRecordingPrint] = useState(false);
+    const [previewPrintEntry, setPreviewPrintEntry] = useState(null);
     const [taxPrintFormat, setTaxPrintFormat] = useState(PRINT_FORMATS.ALL);
     const [taxPrintOptions, setTaxPrintOptions] = useState(TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]);
     const { role, projectRoles } = useAuth();
@@ -455,6 +471,13 @@ const InvoiceView = () => {
 
     const selectedType = searchParams.get("type") || DOC_TYPES.PROFORMA;
     const isProforma = selectedType === DOC_TYPES.PROFORMA;
+    const isFinalInvoiceType = selectedType === DOC_TYPES.NORMAL || selectedType === DOC_TYPES.TAX;
+    const currentPrintLayout = invoice?.printLayouts?.[selectedType];
+    const isPrintLayoutLocked = isFinalInvoiceType && currentPrintLayout?.locked === true;
+    const canEditPrintLayout = !isPrintLayoutLocked || isAdmin;
+    const currentPrintAuditEntries = Array.isArray(invoice?.printAuditTrail)
+        ? invoice.printAuditTrail.filter(entry => entry.documentType === selectedType)
+        : [];
 
     useEffect(() => {
         const fetchData = async () => {
@@ -527,6 +550,16 @@ const InvoiceView = () => {
         params.set("type", fallbackType);
         setSearchParams(params, { replace: true });
     }, [invoice, searchParams, selectedType, setSearchParams]);
+
+    useEffect(() => {
+        const layout = invoice?.printLayouts?.[selectedType];
+        if (!layout?.locked || !isFinalInvoiceType) return;
+        setTaxPrintFormat(layout.printFormat || PRINT_FORMATS.CUSTOM);
+        setTaxPrintOptions({
+            ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
+            ...(layout.printOptions || {}),
+        });
+    }, [invoice, selectedType, isFinalInvoiceType]);
 
     const groupedItems = useMemo(() => {
         if (estimation?.components?.length) {
@@ -676,7 +709,55 @@ const InvoiceView = () => {
         }
     };
 
-    const handlePrint = () => window.print();
+    const currentPrintPayload = () => ({
+        documentType: selectedType,
+        printFormat: taxPrintFormat,
+        printOptions: taxPrintOptions,
+    });
+
+    const applyPrintLayoutFromInvoice = (updatedInvoice) => {
+        const layout = updatedInvoice?.printLayouts?.[selectedType];
+        if (!layout?.locked || !isFinalInvoiceType) return;
+        setTaxPrintFormat(layout.printFormat || PRINT_FORMATS.CUSTOM);
+        setTaxPrintOptions({
+            ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
+            ...(layout.printOptions || {}),
+        });
+    };
+
+    const handleApplyPrintLayout = async () => {
+        if (!isAdmin) return;
+        setSavingPrintLayout(true);
+        try {
+            const res = await api.patch(`/invoices/${id}/print-layout`, {
+                ...currentPrintPayload(),
+                reason: "Admin applied invoice print format",
+            }, { headers: { "X-Roles": rolesHeader } });
+            setInvoice(res.data);
+            applyPrintLayoutFromInvoice(res.data);
+            toast.success("Print format version saved");
+        } catch (error) {
+            console.error("Failed to save print format", error);
+            toast.error(error.response?.data?.message || "Failed to save print format");
+        } finally {
+            setSavingPrintLayout(false);
+        }
+    };
+
+    const handlePrint = async () => {
+        setRecordingPrint(true);
+        try {
+            const res = await api.post(`/invoices/${id}/print-events`, currentPrintPayload());
+            setInvoice(res.data);
+            applyPrintLayoutFromInvoice(res.data);
+            setTimeout(() => window.print(), 0);
+        } catch (error) {
+            console.error("Failed to record invoice print", error);
+            toast.error(error.response?.data?.message || "Could not record print audit. Print cancelled.");
+        } finally {
+            setRecordingPrint(false);
+        }
+    };
 
     const handleTaxPrintFormatChange = (value) => {
         setTaxPrintFormat(value);
@@ -890,6 +971,46 @@ const InvoiceView = () => {
         + (showTaxLineColumns.qty ? 1 : 0)
         + (showTaxLineColumns.unit ? 1 : 0)
         + (showTaxLineColumns.unitPrice ? 1 : 0);
+    const showStandardLines = taxPrintOptions.showComponents || taxPrintOptions.showItems;
+    const showStandardQty = taxPrintOptions.showItemQuantities;
+    const showStandardRate = taxPrintOptions.showComponentPrices || taxPrintOptions.showItemUnitPrices;
+    const showStandardAmount = taxPrintOptions.showComponentPrices || taxPrintOptions.showItemTotals;
+    const showStandardSummary = taxPrintOptions.showSubtotal
+        || taxPrintOptions.showVat
+        || taxPrintOptions.showOtherTax
+        || taxPrintOptions.showTotalAmount
+        || taxPrintOptions.showPayments
+        || taxPrintOptions.showTotalDue;
+    const previewOptions = previewPrintEntry
+        ? { ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL], ...(previewPrintEntry.printOptions || {}) }
+        : null;
+    const previewRows = previewOptions
+        ? groupedItems.flatMap((group, groupIdx) => [
+            ...(previewOptions.showComponents ? [{
+                key: `preview-component-${groupIdx}`,
+                description: group.description,
+                quantity: group.quantity,
+                unit: "Lot",
+                unitPrice: group.unitPrice,
+                total: group.total,
+                isComponent: true,
+            }] : []),
+            ...(previewOptions.showItems ? (group.items || []).slice(0, 3).map((item, itemIdx) => ({
+                key: `preview-item-${groupIdx}-${itemIdx}`,
+                description: item.description,
+                quantity: item.quantity,
+                unit: item.unit || "Nos",
+                unitPrice: item.unitPrice,
+                total: item.total,
+                isSubItem: true,
+            })) : []),
+        ]).slice(0, 8)
+        : [];
+    const visiblePreviewOptions = previewPrintEntry
+        ? TAX_PRINT_OPTION_GROUPS.flatMap(group => group.options)
+            .filter(([key]) => previewOptions?.[key])
+            .map(([, label]) => label)
+        : [];
 
     return (
         <div className="invoice-page bg-white min-vh-100 p-4">
@@ -1274,6 +1395,99 @@ const InvoiceView = () => {
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="no-print" />
 
+            <Modal show={!!previewPrintEntry} onHide={() => setPreviewPrintEntry(null)} size="lg" centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        Print Version Preview
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {previewPrintEntry && previewOptions && (
+                        <>
+                            <div className="d-flex justify-content-between gap-3 flex-wrap mb-3">
+                                <div>
+                                    <div className="fw-semibold">{String(previewPrintEntry.documentType || selectedType).toUpperCase()} version {previewPrintEntry.version || "-"}</div>
+                                    <div className="small text-muted">
+                                        {previewPrintEntry.action || "FORMAT"} by {previewPrintEntry.performedBy || "system"} on {formatDateTime(previewPrintEntry.performedAt)}
+                                    </div>
+                                </div>
+                                <Badge bg="secondary">{previewPrintEntry.printFormat || "custom"}</Badge>
+                            </div>
+
+                            <div className="border rounded p-3 bg-white">
+                                <div className="d-flex justify-content-between gap-3 mb-3">
+                                    <div>
+                                        <div className="fw-bold">{company.name}</div>
+                                        <div className="small text-muted">{company.addressLines.join(", ")}</div>
+                                    </div>
+                                    <div className="text-end">
+                                        <div className="fw-bold">{String(previewPrintEntry.documentType || selectedType).toUpperCase()} INVOICE</div>
+                                        <div className="small text-muted">{invoiceNo}</div>
+                                    </div>
+                                </div>
+                                <div className="small mb-2">
+                                    <strong>Bill To:</strong> {displayCustomer?.comName || displayCustomer?.name || "N/A"}
+                                </div>
+                                {(previewOptions.showComponents || previewOptions.showItems) && (
+                                    <div className="table-responsive">
+                                        <table className="table table-sm table-bordered mb-3">
+                                            <thead className="table-light">
+                                                <tr>
+                                                    <th>Description</th>
+                                                    {previewOptions.showItemQuantities && <th className="text-end">Qty</th>}
+                                                    {previewOptions.showItemUnits && <th className="text-end">Unit</th>}
+                                                    {(previewOptions.showComponentPrices || previewOptions.showItemUnitPrices) && <th className="text-end">Unit Price</th>}
+                                                    {(previewOptions.showComponentPrices || previewOptions.showItemTotals) && <th className="text-end">Amount</th>}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(previewRows.length ? previewRows : [{ key: "empty", description: "No line items shown" }]).map(row => (
+                                                    <tr key={row.key}>
+                                                        <td className={row.isSubItem ? "ps-4" : ""}>{row.description}</td>
+                                                        {previewOptions.showItemQuantities && <td className="text-end">{row.description && (!row.isSubItem || previewOptions.showItemQuantities) ? formatQuantity(row.quantity) : ""}</td>}
+                                                        {previewOptions.showItemUnits && <td className="text-end">{row.unit || ""}</td>}
+                                                        {(previewOptions.showComponentPrices || previewOptions.showItemUnitPrices) && (
+                                                            <td className="text-end">
+                                                                {(row.isComponent && previewOptions.showComponentPrices) || (row.isSubItem && previewOptions.showItemUnitPrices) ? money(row.unitPrice) : ""}
+                                                            </td>
+                                                        )}
+                                                        {(previewOptions.showComponentPrices || previewOptions.showItemTotals) && (
+                                                            <td className="text-end">
+                                                                {(row.isComponent && previewOptions.showComponentPrices) || (row.isSubItem && previewOptions.showItemTotals) ? money(row.total) : ""}
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                                <div className="d-flex justify-content-end">
+                                    <div style={{ minWidth: 260 }}>
+                                        {previewOptions.showSubtotal && <div className="d-flex justify-content-between"><span>Subtotal</span><span>{money(printedSubtotal)}</span></div>}
+                                        {(previewOptions.showVat || previewOptions.showOtherTax) && <div className="d-flex justify-content-between"><span>Tax</span><span>{money(printedTaxTotal)}</span></div>}
+                                        {previewOptions.showTotalAmount && <div className="d-flex justify-content-between fw-bold"><span>Total</span><span>{money(printedDocumentTotal)}</span></div>}
+                                        {previewOptions.showTotalDue && <div className="d-flex justify-content-between fw-bold border-top mt-2 pt-2"><span>Total Due</span><span>{money(balanceDue)}</span></div>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-3">
+                                <div className="fw-semibold small mb-2">Visible fields in this version</div>
+                                <div className="d-flex gap-2 flex-wrap">
+                                    {visiblePreviewOptions.length
+                                        ? visiblePreviewOptions.map(label => <Badge bg="light" text="dark" key={label}>{label}</Badge>)
+                                        : <span className="small text-muted">No optional fields were enabled.</span>}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setPreviewPrintEntry(null)}>Close</Button>
+                </Modal.Footer>
+            </Modal>
+
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
                 <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
@@ -1310,54 +1524,150 @@ const InvoiceView = () => {
                     <Button size="sm" variant="outline-primary" onClick={handleSaveCustomerPhone} disabled={savingCustomerPhone}>
                         {savingCustomerPhone ? "Saving..." : "Save Tel"}
                     </Button>
-                    {isTaxInvoice && (
-                        <>
-                            <Form.Select
-                                size="sm"
-                                className="w-auto"
-                                value={taxPrintFormat}
-                                onChange={(e) => handleTaxPrintFormatChange(e.target.value)}
-                                aria-label="Tax invoice print format"
-                            >
-                                <option value={PRINT_FORMATS.ALL}>Show everything</option>
-                                <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
-                                <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
-                                <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
-                                <option value={PRINT_FORMATS.CUSTOM}>Custom</option>
-                            </Form.Select>
-                            <Dropdown autoClose="outside" align="end">
-                                <Dropdown.Toggle size="sm" variant="outline-secondary">
-                                    Customize print
-                                </Dropdown.Toggle>
-                                <Dropdown.Menu className="p-3" style={{ minWidth: 290 }}>
-                                    {TAX_PRINT_OPTION_GROUPS.map((group, groupIndex) => (
-                                        <div key={group.title} className={groupIndex > 0 ? "border-top mt-2 pt-2" : ""}>
-                                            <div className="fw-semibold small text-muted mb-1">{group.title}</div>
-                                            {group.options.map(([key, label]) => (
-                                                <Form.Check
-                                                    key={key}
-                                                    type="checkbox"
-                                                    id={`tax-print-${key}`}
-                                                    className="small mb-1"
-                                                    label={label}
-                                                    checked={!!taxPrintOptions[key]}
-                                                    onChange={() => toggleTaxPrintOption(key)}
-                                                />
-                                            ))}
-                                        </div>
+                    <Form.Select
+                        size="sm"
+                        className="w-auto"
+                        value={taxPrintFormat}
+                        onChange={(e) => handleTaxPrintFormatChange(e.target.value)}
+                        aria-label="Invoice print format"
+                        disabled={!canEditPrintLayout}
+                    >
+                        <option value={PRINT_FORMATS.ALL}>Show everything</option>
+                        <option value={PRINT_FORMATS.COMPONENTS_ONLY}>Main components only</option>
+                        <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
+                        <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
+                        <option value={PRINT_FORMATS.CUSTOM}>Custom</option>
+                    </Form.Select>
+                    <Dropdown autoClose="outside" align="end">
+                        <Dropdown.Toggle size="sm" variant="outline-secondary" disabled={!canEditPrintLayout}>
+                            Customize print
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu className="p-3" style={{ minWidth: 290 }}>
+                            {TAX_PRINT_OPTION_GROUPS.map((group, groupIndex) => (
+                                <div key={group.title} className={groupIndex > 0 ? "border-top mt-2 pt-2" : ""}>
+                                    <div className="fw-semibold small text-muted mb-1">{group.title}</div>
+                                    {group.options.map(([key, label]) => (
+                                        <Form.Check
+                                            key={key}
+                                            type="checkbox"
+                                            id={`invoice-print-${key}`}
+                                            className="small mb-1"
+                                            label={label}
+                                            checked={!!taxPrintOptions[key]}
+                                            onChange={() => toggleTaxPrintOption(key)}
+                                            disabled={!canEditPrintLayout}
+                                        />
                                     ))}
-                                </Dropdown.Menu>
-                            </Dropdown>
-                        </>
+                                </div>
+                            ))}
+                        </Dropdown.Menu>
+                    </Dropdown>
+                    {isAdmin && isFinalInvoiceType && (
+                        <Button size="sm" variant="outline-success" onClick={handleApplyPrintLayout} disabled={savingPrintLayout}>
+                            {savingPrintLayout ? "Saving Format..." : "Apply Format"}
+                        </Button>
                     )}
                     {isAdmin && (
                         <Button size="sm" variant="outline-warning" onClick={handleRefreshInvoice} disabled={refreshingInvoice}>
                             {refreshingInvoice ? "Refreshing..." : "Refresh Invoice"}
                         </Button>
                     )}
-                    <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
+                    <Button variant="primary" onClick={handlePrint} disabled={recordingPrint}>
+                        {recordingPrint ? "Recording..." : "Print / Save PDF"}
+                    </Button>
                 </div>
             </div>
+
+            {(isPrintLayoutLocked || currentPrintAuditEntries.length > 0) && (
+                <div className="no-print mb-3 border rounded p-3 bg-light">
+                    <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                        <div>
+                            <div className="fw-semibold">{isPrintLayoutLocked ? "Print format locked" : "Print activity"}</div>
+                            <div className="small text-muted">
+                                {isPrintLayoutLocked
+                                    ? `Version ${currentPrintLayout.version || 1} applied by ${currentPrintLayout.updatedBy || "system"} on ${formatDateTime(currentPrintLayout.updatedAt)}.`
+                                    : "This document type can be reprinted with the selected format."}
+                                {isPrintLayoutLocked && !isAdmin && " Only an admin or super admin can change this print format."}
+                            </div>
+                        </div>
+                        <Badge bg="secondary">{selectedType.toUpperCase()}</Badge>
+                    </div>
+                    {currentPrintAuditEntries.length > 0 && (
+                        <div className="mt-3">
+                            <div className="fw-semibold small mb-2">Recent print activity</div>
+                            <div className="table-responsive">
+                                <table className="table table-sm mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Action</th>
+                                            <th>Version</th>
+                                            <th>User</th>
+                                            <th>Time</th>
+                                            <th>Reason</th>
+                                            <th className="text-end">Preview</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {currentPrintAuditEntries
+                                            .slice(-5)
+                                            .reverse()
+                                            .map((entry, index) => (
+                                                <tr key={`${entry.action}-${entry.performedAt}-${index}`}>
+                                                    <td>{entry.action}</td>
+                                                    <td>{entry.version || "-"}</td>
+                                                    <td>{entry.performedBy || "system"}</td>
+                                                    <td>{formatDateTime(entry.performedAt)}</td>
+                                                    <td>{entry.reason || "-"}</td>
+                                                    <td className="text-end">
+                                                        <Button size="sm" variant="outline-secondary" onClick={() => setPreviewPrintEntry(entry)}>
+                                                            View
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                    {isTaxInvoice && Array.isArray(invoice.taxInvoiceVersions) && invoice.taxInvoiceVersions.length > 0 && (
+                        <div className="mt-3">
+                            <div className="fw-semibold small mb-2">Tax invoice version history</div>
+                            <div className="table-responsive">
+                                <table className="table table-sm mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Version</th>
+                                            <th>Action</th>
+                                            <th>User</th>
+                                            <th>Time</th>
+                                            <th className="text-end">Preview</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {invoice.taxInvoiceVersions
+                                            .slice()
+                                            .reverse()
+                                            .map((entry, index) => (
+                                                <tr key={`${entry.action}-${entry.performedAt}-${index}`}>
+                                                    <td>{entry.version || "-"}</td>
+                                                    <td>{entry.action}</td>
+                                                    <td>{entry.performedBy || "system"}</td>
+                                                    <td>{formatDateTime(entry.performedAt)}</td>
+                                                    <td className="text-end">
+                                                        <Button size="sm" variant="outline-secondary" onClick={() => setPreviewPrintEntry({ ...entry, documentType: DOC_TYPES.TAX })}>
+                                                            View
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {isTaxInvoice && (
                 <div className="no-print mb-3 border rounded p-3 bg-light">
@@ -1631,28 +1941,32 @@ const InvoiceView = () => {
                     </div>
                 </div>
 
+                {showStandardLines && (
                 <table className="invoice-items">
                     <thead>
                         <tr>
                             <th>DESCRIPTION</th>
-                            <th className="qty">QTY</th>
-                            <th className="rate">RATE</th>
-                            <th className="amount">AMOUNT</th>
+                            {showStandardQty && <th className="qty">QTY</th>}
+                            {showStandardRate && <th className="rate">RATE</th>}
+                            {showStandardAmount && <th className="amount">AMOUNT</th>}
                         </tr>
                     </thead>
                     <tbody>
                         {invoiceRows.map((item, index) => (
                             <tr key={item.key || `${item.description}-${index}`}>
                                 <td>{item.description}</td>
-                                <td className="qty">{formatQuantity(item.quantity)}</td>
-                                <td className="rate">{money(item.unitPrice)}</td>
-                                <td className="amount">{money(item.total)}</td>
+                                {showStandardQty && <td className="qty">{formatQuantity(item.quantity)}</td>}
+                                {showStandardRate && <td className="rate">{money(item.unitPrice)}</td>}
+                                {showStandardAmount && <td className="amount">{money(item.total)}</td>}
                             </tr>
                         ))}
                     </tbody>
                 </table>
+                )}
 
+                {(taxPrintOptions.showNotes || showStandardSummary) && (
                 <div className="invoice-footer-grid">
+                    {taxPrintOptions.showNotes && (
                     <div className="invoice-notes">
                         <p><strong>Warranty</strong></p>
                         <p>One Year Against Manufacturing Defects</p>
@@ -1672,25 +1986,31 @@ const InvoiceView = () => {
                             </>
                         )}
                     </div>
+                    )}
 
+                    {showStandardSummary && (
                     <div className="invoice-summary">
                         {(showTax || isProforma || totalReceived > 0) && (
                             <>
+                                {taxPrintOptions.showSubtotal && (
                                 <div className="invoice-summary-row">
                                     <span>SUBTOTAL</span>
                                     <span>{money(printedSubtotal)}</span>
                                 </div>
-                                {showTax && (
+                                )}
+                                {showTax && (taxPrintOptions.showVat || taxPrintOptions.showOtherTax) && (
                                     <div className="invoice-summary-row">
                                         <span>TAX</span>
                                         <span>{money(printedTaxTotal)}</span>
                                     </div>
                                 )}
+                                {taxPrintOptions.showTotalAmount && (
                                 <div className="invoice-summary-row">
                                     <span>TOTAL</span>
                                     <span>{money(printedDocumentTotal)}</span>
                                 </div>
-                                {totalReceived > 0 && (
+                                )}
+                                {taxPrintOptions.showPayments && totalReceived > 0 && (
                                     <div className="invoice-summary-row">
                                         <span>PAYMENTS</span>
                                         <span>{money(totalReceived)}</span>
@@ -1698,14 +2018,18 @@ const InvoiceView = () => {
                                 )}
                             </>
                         )}
+                        {taxPrintOptions.showTotalDue && (
                         <div className="invoice-due">
                             <div className="invoice-due-label">TOTAL DUE</div>
                             <div className="invoice-due-value">LKR {money(balanceDue)}</div>
                         </div>
+                        )}
                     </div>
+                    )}
                 </div>
+                )}
 
-                {isProforma && (
+                {isProforma && taxPrintOptions.showSignatures && (
                     <div className="acceptance">
                         <div>Accepted By</div>
                         <div>Accepted Date</div>
