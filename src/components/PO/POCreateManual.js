@@ -82,6 +82,8 @@ export default function POCreateManual({ poId, onCreated }) {
     const [enableOtherTax, setEnableOtherTax] = useState(false);
 
     const [deliveryCharge, setDeliveryCharge] = useState(""); // User input
+    const [poApprovalStatus, setPoApprovalStatus] = useState("");
+    const [adminEditReason, setAdminEditReason] = useState("");
 
     useEffect(() => {
         if (!poId) return;
@@ -91,6 +93,8 @@ export default function POCreateManual({ poId, onCreated }) {
                 const po = await getPO(poId);
                 setPoNumber(po.poNumber || "");
                 setPoStatus(po.status || "");
+                setPoApprovalStatus(po.approvalStatus || "");
+                setAdminEditReason("");
                 setQuotationRef(po.quotationRef || "");
                 setEtaDate(po.etaDate || "");
                 setNote(po.note || "");
@@ -208,7 +212,10 @@ export default function POCreateManual({ poId, onCreated }) {
 
     const setRow = (i, k, v) => setRows(prev => { const cp = [...prev]; cp[i] = { ...cp[i], [k]: v }; return cp; });
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
-    const canEditRow = (row) => !isEditMode || Number(row.receivedQty || 0) <= 0;
+    const isDraftEditState = (poStatus === "CREATED" || poStatus === "DRAFT")
+        && (!poApprovalStatus || poApprovalStatus === "DRAFT" || poApprovalStatus === "REJECTED");
+    const isAdminPartialEdit = isEditMode && !isDraftEditState;
+    const canEditRow = (row) => !isAdminPartialEdit || (isAdmin && Number(row.receivedQty || 0) <= 0);
 
     const resetForm = () => {
         setSupplier(null);
@@ -477,6 +484,10 @@ export default function POCreateManual({ poId, onCreated }) {
             }));
 
             if (items.length === 0) { toast.warn("Add at least one product line"); return; }
+            if (isAdminPartialEdit && !adminEditReason.trim()) {
+                toast.warn("Enter an admin edit note before updating this PO");
+                return;
+            }
 
             const payload = {
                 supplierId: supplier.id,
@@ -489,7 +500,8 @@ export default function POCreateManual({ poId, onCreated }) {
                 vatAmount: totals.vat,
                 otherTaxAmount: totals.other,
                 grandTotal: totals.grand,
-                taxTotal: totals.vat + totals.other
+                taxTotal: totals.vat + totals.other,
+                adminEditReason: isAdminPartialEdit ? adminEditReason.trim() : undefined
             };
 
             const po = isEditMode ? await updatePOManual(poId, payload) : await createPOManual(payload);
@@ -540,7 +552,7 @@ export default function POCreateManual({ poId, onCreated }) {
                         <Badge bg="info" className="p-2">Format: MT/PO-{new Date().getFullYear().toString().slice(-2)}-MM-XXXXXX</Badge>
                     )}
                 </div>
-                {isEditMode && poStatus && poStatus !== "CREATED" && poStatus !== "DRAFT" && (
+                {isAdminPartialEdit && (
                     <div className="alert alert-warning py-2">
                         {isAdmin
                             ? "Admin edit mode: PO lines that already have GRNs are locked. Only unreceived lines can be changed or replaced."
@@ -658,6 +670,18 @@ export default function POCreateManual({ poId, onCreated }) {
                                     </Form.Group>
                                 </Col>
                             </Row>
+                            {isAdminPartialEdit && (
+                                <Form.Group className="mb-2">
+                                    <Form.Label>Admin Edit Note <span className="text-danger">*</span></Form.Label>
+                                    <Form.Control
+                                        as="textarea"
+                                        rows={3}
+                                        value={adminEditReason}
+                                        onChange={e => setAdminEditReason(e.target.value)}
+                                        placeholder="Explain what changed and why"
+                                    />
+                                </Form.Group>
+                            )}
 
                             <hr className="my-2" />
 
@@ -804,7 +828,7 @@ export default function POCreateManual({ poId, onCreated }) {
                                     </tr>
                                 </tbody>
                             </Table>
-                            <Button className="w-100 mt-2" variant="success" size="lg" onClick={save} disabled={isSubmitting}>
+                            <Button className="w-100 mt-2" variant="success" size="lg" onClick={save} disabled={isSubmitting || (isAdminPartialEdit && !isAdmin)}>
                                 {isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update PO' : 'Create PO')}
                             </Button>
                         </Col>

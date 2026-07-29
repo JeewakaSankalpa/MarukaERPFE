@@ -54,6 +54,7 @@ export default function PurchaseOrderDetails() {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [showRevertModal, setShowRevertModal] = useState(false);
+    const [selectedAdminEdit, setSelectedAdminEdit] = useState(null);
     const [revertReason, setRevertReason] = useState("");
 
     // Loading states for async actions
@@ -249,6 +250,7 @@ export default function PurchaseOrderDetails() {
     const { approvalStatus, approverIds = [], approvals = [] } = po;
     const quotationAttachments = po.quotationAttachments || [];
     const revisionHistory = po.revisionHistory || [];
+    const adminEditHistory = po.adminEditHistory || [];
     const employeeByIdOrUsername = new Map();
     employees.forEach(emp => {
         if (emp?.id) employeeByIdOrUsername.set(emp.id, emp);
@@ -266,7 +268,6 @@ export default function PurchaseOrderDetails() {
     const finalApprovalRecord = approvals.slice().reverse().find(r => r.status === 'APPROVED');
     const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
     const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
-    const hasReceivedLines = (po.items || []).some(item => Number(item.receivedQty || 0) > 0);
     const hasUnreceivedLines = (po.items || []).some(item => Number(item.receivedQty || 0) <= 0);
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
     const canAdminEditUnreceivedLines = isAdmin && !isDraft && hasUnreceivedLines;
@@ -301,6 +302,61 @@ export default function PurchaseOrderDetails() {
         const dateB = new Date(a.revertedAt || a.acceptedAt || 0).getTime();
         return dateA - dateB;
     });
+    const money = (value) => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const snapshotItemByProduct = (snapshot) => new Map((snapshot?.items || []).map(item => [item.productId, item]));
+    const adminEditChanged = (edit, productId, field) => {
+        const beforeItem = snapshotItemByProduct(edit?.beforeSnapshot).get(productId);
+        const afterItem = snapshotItemByProduct(edit?.afterSnapshot).get(productId);
+        if (!beforeItem || !afterItem) return true;
+        return String(beforeItem[field] ?? "") !== String(afterItem[field] ?? "");
+    };
+    const renderSnapshotItems = (snapshot, edit, side) => (
+        <Table responsive bordered size="sm" className="mb-0">
+            <thead className="bg-light">
+                <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th className="text-end">Qty</th>
+                    <th className="text-end">Unit Price</th>
+                    <th className="text-end">Received</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {(snapshot?.items || []).map(item => {
+                    const changedClass = (field) => adminEditChanged(edit, item.productId, field) ? "table-warning" : "";
+                    return (
+                        <tr key={`${side}-${item.productId}`}>
+                            <td className={changedClass("productNameSnapshot")}>{item.productNameSnapshot || item.productId}</td>
+                            <td className={changedClass("sku")}>{item.sku || "-"}</td>
+                            <td className={`text-end ${changedClass("orderedQty")}`}>{item.orderedQty || 0}</td>
+                            <td className={`text-end ${changedClass("unitPrice")}`}>{item.unitPrice != null ? money(item.unitPrice) : "-"}</td>
+                            <td className="text-end">{item.receivedQty || 0}</td>
+                            <td className={changedClass("note")}>{item.note || "-"}</td>
+                        </tr>
+                    );
+                })}
+                {(snapshot?.items || []).length === 0 && (
+                    <tr><td colSpan="6" className="text-center text-muted">No items</td></tr>
+                )}
+            </tbody>
+        </Table>
+    );
+    const renderSnapshotMeta = (snapshot) => (
+        <Table size="sm" borderless className="mb-3">
+            <tbody>
+                <tr><td className="text-muted">Supplier</td><td>{snapshot?.supplierNameSnapshot || snapshot?.supplierId || "-"}</td></tr>
+                <tr><td className="text-muted">Quotation</td><td>{snapshot?.quotationRef || "-"}</td></tr>
+                <tr><td className="text-muted">ETA</td><td>{snapshot?.etaDate || "-"}</td></tr>
+                <tr><td className="text-muted">PO Note</td><td style={{ whiteSpace: "pre-wrap" }}>{snapshot?.note || "-"}</td></tr>
+                <tr><td className="text-muted">Subtotal</td><td>{money(snapshot?.subTotal)}</td></tr>
+                <tr><td className="text-muted">Delivery</td><td>{money(snapshot?.deliveryCharge)}</td></tr>
+                <tr><td className="text-muted">VAT</td><td>{money(snapshot?.vatAmount)}</td></tr>
+                <tr><td className="text-muted">Other Tax</td><td>{money(snapshot?.otherTaxAmount)}</td></tr>
+                <tr><td className="text-muted">Grand Total</td><td className="fw-semibold">{money(snapshot?.grandTotal)}</td></tr>
+            </tbody>
+        </Table>
+    );
 
     return (
         <Container className="py-4">
@@ -675,6 +731,50 @@ export default function PurchaseOrderDetails() {
                 )}
             </div>
 
+            <div className="bg-white shadow rounded p-3 mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h6 className="mb-0">Admin Edit History</h6>
+                    <Badge bg="light" text="dark">{adminEditHistory.length} version{adminEditHistory.length === 1 ? "" : "s"}</Badge>
+                </div>
+                {adminEditHistory.length > 0 ? (
+                    <Table hover responsive bordered size="sm" className="mb-0">
+                        <thead className="bg-light">
+                            <tr>
+                                <th style={{ width: 110 }}>Version</th>
+                                <th>Changed By</th>
+                                <th>Changed At</th>
+                                <th>Note</th>
+                                <th>Summary</th>
+                                <th className="text-end" style={{ width: 90 }}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...adminEditHistory].sort((a, b) => (b.editVersion || 0) - (a.editVersion || 0)).map(record => (
+                                <tr key={`admin-edit-${record.editVersion}-${record.changedAt}`}>
+                                    <td className="fw-semibold">v{record.editVersion}</td>
+                                    <td>{formatEmployee(record.changedById, record.changedByName)}</td>
+                                    <td>{record.changedAt ? new Date(record.changedAt).toLocaleString() : "-"}</td>
+                                    <td style={{ whiteSpace: "pre-wrap" }}>{record.reason || "-"}</td>
+                                    <td>
+                                        {(record.summary || []).slice(0, 3).map((line, idx) => (
+                                            <div key={`${record.editVersion}-summary-${idx}`} className="small">{line}</div>
+                                        ))}
+                                        {(record.summary || []).length > 3 && (
+                                            <div className="small text-muted">+{record.summary.length - 3} more</div>
+                                        )}
+                                    </td>
+                                    <td className="text-end">
+                                        <Button size="sm" variant="outline-primary" onClick={() => setSelectedAdminEdit(record)}>View</Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                ) : (
+                    <div className="text-muted small">No admin edits have been recorded yet.</div>
+                )}
+            </div>
+
             {/* Submit Modal */}
             <Modal show={showSubmitModal} onHide={() => setShowSubmitModal(false)}>
                 <Modal.Header closeButton><Modal.Title>Submit for Approval</Modal.Title></Modal.Header>
@@ -868,6 +968,51 @@ export default function PurchaseOrderDetails() {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowAddressModal(false)}>Cancel</Button>
                     <Button variant="primary" onClick={handleUpdateAddress}>Update Address</Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={Boolean(selectedAdminEdit)} onHide={() => setSelectedAdminEdit(null)} size="xl" centered scrollable>
+                <Modal.Header closeButton>
+                    <Modal.Title>Admin Edit v{selectedAdminEdit?.editVersion}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {selectedAdminEdit && (
+                        <>
+                            <div className="border rounded p-3 bg-light mb-3">
+                                <div className="d-flex flex-wrap gap-3 mb-2">
+                                    <div><span className="text-muted">Changed By:</span> <strong>{formatEmployee(selectedAdminEdit.changedById, selectedAdminEdit.changedByName)}</strong></div>
+                                    <div><span className="text-muted">Changed At:</span> <strong>{selectedAdminEdit.changedAt ? new Date(selectedAdminEdit.changedAt).toLocaleString() : "-"}</strong></div>
+                                </div>
+                                <div className="mb-2">
+                                    <span className="text-muted">Admin Note:</span>
+                                    <div style={{ whiteSpace: "pre-wrap" }}>{selectedAdminEdit.reason || "-"}</div>
+                                </div>
+                                <div>
+                                    <span className="text-muted">Summary:</span>
+                                    <ul className="mb-0">
+                                        {(selectedAdminEdit.summary || []).map((line, idx) => (
+                                            <li key={`selected-summary-${idx}`}>{line}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                            <Row className="g-3">
+                                <Col lg={6}>
+                                    <h6 className="border-bottom pb-2">Before</h6>
+                                    {renderSnapshotMeta(selectedAdminEdit.beforeSnapshot)}
+                                    {renderSnapshotItems(selectedAdminEdit.beforeSnapshot, selectedAdminEdit, "before")}
+                                </Col>
+                                <Col lg={6}>
+                                    <h6 className="border-bottom pb-2">After</h6>
+                                    {renderSnapshotMeta(selectedAdminEdit.afterSnapshot)}
+                                    {renderSnapshotItems(selectedAdminEdit.afterSnapshot, selectedAdminEdit, "after")}
+                                </Col>
+                            </Row>
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setSelectedAdminEdit(null)}>Close</Button>
                 </Modal.Footer>
             </Modal>
 
