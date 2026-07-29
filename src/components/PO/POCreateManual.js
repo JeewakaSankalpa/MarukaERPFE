@@ -10,6 +10,7 @@ import CompletenessModal from '../ReusableComponents/CompletenessModal';
 import { buildCompletenessIssues, hasBlockingIssues } from '../../utils/entityCompleteness';
 import { ProductForm } from '../Inventory/ProductPage';
 import { SupplierForm } from '../Supplier/SupplierPage';
+import { useAuth } from '../../context/AuthContext';
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -43,8 +44,11 @@ const writeManualPODrafts = (drafts) => {
 /* ========== PAGE ========== */
 export default function POCreateManual({ poId, onCreated }) {
     const navigate = useNavigate();
+    const { role } = useAuth();
     const isEditMode = Boolean(poId);
+    const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
     const [poNumber, setPoNumber] = useState("");
+    const [poStatus, setPoStatus] = useState("");
     const [supplierQ, setSupplierQ] = useState("");
     const [supplierPage, setSupplierPage] = useState(0);
     const [supplierData, setSupplierData] = useState({ content: [], totalPages: 0 });
@@ -86,6 +90,7 @@ export default function POCreateManual({ poId, onCreated }) {
             try {
                 const po = await getPO(poId);
                 setPoNumber(po.poNumber || "");
+                setPoStatus(po.status || "");
                 setQuotationRef(po.quotationRef || "");
                 setEtaDate(po.etaDate || "");
                 setNote(po.note || "");
@@ -124,7 +129,8 @@ export default function POCreateManual({ poId, onCreated }) {
                         qty: item.orderedQty || "",
                         unitPrice: item.unitPrice ?? "",
                         taxPercent: item.taxPercent ?? "",
-                        note: item.note || ""
+                        note: item.note || "",
+                        receivedQty: Number(item.receivedQty || 0)
                     };
                 }));
                 setRows(loadedRows);
@@ -202,6 +208,7 @@ export default function POCreateManual({ poId, onCreated }) {
 
     const setRow = (i, k, v) => setRows(prev => { const cp = [...prev]; cp[i] = { ...cp[i], [k]: v }; return cp; });
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
+    const canEditRow = (row) => !isEditMode || Number(row.receivedQty || 0) <= 0;
 
     const resetForm = () => {
         setSupplier(null);
@@ -533,6 +540,13 @@ export default function POCreateManual({ poId, onCreated }) {
                         <Badge bg="info" className="p-2">Format: MT/PO-{new Date().getFullYear().toString().slice(-2)}-MM-XXXXXX</Badge>
                     )}
                 </div>
+                {isEditMode && poStatus && poStatus !== "CREATED" && poStatus !== "DRAFT" && (
+                    <div className="alert alert-warning py-2">
+                        {isAdmin
+                            ? "Admin edit mode: PO lines that already have GRNs are locked. Only unreceived lines can be changed or replaced."
+                            : "This PO has receiving activity and can only be partially edited by an Admin or Super Admin."}
+                    </div>
+                )}
                 {!isEditMode && <div className="border rounded p-3 mb-4 bg-light">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                         <div>
@@ -719,16 +733,28 @@ export default function POCreateManual({ poId, onCreated }) {
                             {rows.map((r, i) => {
                                 const qty = Number(r.qty || 0), price = Number(r.unitPrice || 0);
                                 const line = qty * price;
+                                const rowEditable = canEditRow(r);
                                 return (
                                     <tr key={r.productId}>
                                         <td>
                                             <div>{r.name}</div>
                                             <small className="text-muted">{r.sku}</small>
+                                            {Number(r.receivedQty || 0) > 0 && (
+                                                <div><Badge bg="secondary">GRN received: {r.receivedQty}</Badge></div>
+                                            )}
                                         </td>
-                                        <td><Form.Control size="sm" type="number" min="0" value={r.qty} onChange={e => setRow(i, "qty", e.target.value)} /></td>
-                                        <td><Form.Control size="sm" type="number" value={r.unitPrice} onChange={e => setRow(i, "unitPrice", e.target.value)} /></td>
+                                        <td><Form.Control size="sm" type="number" min="0" value={r.qty} disabled={!rowEditable} onChange={e => setRow(i, "qty", e.target.value)} /></td>
+                                        <td><Form.Control size="sm" type="number" value={r.unitPrice} disabled={!rowEditable} onChange={e => setRow(i, "unitPrice", e.target.value)} /></td>
                                         <td className="text-end align-middle">{line.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        <td className="align-middle"><Button size="sm" variant="close" onClick={() => removeRow(i)} /></td>
+                                        <td className="align-middle">
+                                            <Button
+                                                size="sm"
+                                                variant="close"
+                                                disabled={!rowEditable}
+                                                title={!rowEditable ? "This line already has a GRN and cannot be changed" : ""}
+                                                onClick={() => removeRow(i)}
+                                            />
+                                        </td>
                                     </tr>
                                 );
                             })}

@@ -40,7 +40,7 @@ const uploadQuotationAttachmentsAPI = async (id, files) => {
 export default function PurchaseOrderDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { employeeId } = useAuth();
+    const { employeeId, role } = useAuth();
 
     const [po, setPo] = useState(null);
     const [employees, setEmployees] = useState([]);
@@ -266,6 +266,10 @@ export default function PurchaseOrderDetails() {
     const finalApprovalRecord = approvals.slice().reverse().find(r => r.status === 'APPROVED');
     const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
     const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
+    const hasReceivedLines = (po.items || []).some(item => Number(item.receivedQty || 0) > 0);
+    const hasUnreceivedLines = (po.items || []).some(item => Number(item.receivedQty || 0) <= 0);
+    const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
+    const canAdminEditUnreceivedLines = isAdmin && !isDraft && hasUnreceivedLines;
     const purchaseForSources = getPurchaseForSources(po);
     const canPrintPO = ["APPROVED", "FINALIZED"].includes(String(approvalStatus || "").toUpperCase());
     const currentAcceptedById = po.approvedById || finalApprovalRecord?.approverId;
@@ -340,6 +344,15 @@ export default function PurchaseOrderDetails() {
                                     : 'Submit for Approval'}
                             </Button>
                         </>
+                    )}
+                    {canAdminEditUnreceivedLines && (
+                        <Button
+                            variant="outline-primary"
+                            onClick={() => navigate(`/pos/${id}/edit`)}
+                            title="Only PO lines without GRNs can be changed"
+                        >
+                            Edit Unreceived Items
+                        </Button>
                     )}
                     {approvalStatus === 'PENDING_APPROVAL' && isApprover && myApprovalStatus === 'PENDING' && (
                         <div className="d-flex gap-2">
