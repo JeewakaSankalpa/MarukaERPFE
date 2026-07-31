@@ -52,7 +52,7 @@ const parsePhysicalUpload = (text = "") => {
     const header = splitCsvLine(lines[0]).map(value => value.trim().toLowerCase());
     const hasHeader = header.some(value => ["sku", "quantity", "qty", "unitcost", "unit cost", "price", "cost", "rate", "reorderlevel", "reorder level", "reorder", "supplier"].includes(value));
     const start = hasHeader ? 1 : 0;
-    const columns = hasHeader ? header : ["sku", "quantity", "unitcost", "productname", "reorderlevel", "supplier", "minorderqty"];
+    const columns = hasHeader ? header : ["sku", "quantity", "unitcost", "productname", "reorderlevel", "supplier"];
     const find = (...names) => names.map(name => columns.indexOf(name)).find(index => index >= 0);
     const skuIndex = find("sku", "item code", "itemcode", "code");
     const qtyIndex = find("quantity", "qty", "stock", "physical qty", "physical quantity");
@@ -88,7 +88,7 @@ const parsePhysicalUpload = (text = "") => {
         if (!unitCostRaw) report.missingRate.push(item);
         if (!supplierName) report.missingSupplier.push(item);
         if (!reorderRaw) report.missingMinimumOrderLevel.push(item);
-        if (!minOrderQtyRaw) report.missingMinimumOrderQty.push(item);
+        if (minOrderQtyIndex != null && !minOrderQtyRaw) report.missingMinimumOrderQty.push(item);
 
         return {
             sku,
@@ -97,7 +97,7 @@ const parsePhysicalUpload = (text = "") => {
             unitCost: Number.isFinite(unitCost) ? unitCost : 0,
             reorderLevel: Number.isFinite(reorderLevel) ? reorderLevel : 0,
             supplierName,
-            minOrderQty: Number.isFinite(minOrderQty) ? minOrderQty : 0,
+            minOrderQty: minOrderQtyIndex == null ? undefined : (Number.isFinite(minOrderQty) ? minOrderQty : 0),
         };
     }).filter(Boolean);
 
@@ -174,6 +174,65 @@ const sourceLabel = (source) => ({
 const latestResolution = (row) => {
     const history = row?.resolutionHistory || [];
     return history.length ? history[history.length - 1] : null;
+};
+
+const addPrintableIssue = (map, row, issue) => {
+    const key = row.sku || `ROW-${row.rowNumber}`;
+    const existing = map.get(key) || {
+        rowNumber: row.rowNumber,
+        sku: row.sku || "-",
+        productName: row.productName || "-",
+        issues: [],
+    };
+    if (!existing.issues.includes(issue)) existing.issues.push(issue);
+    map.set(key, existing);
+};
+
+const buildPrintableUploadIssues = (report = emptyUploadReport()) => {
+    const map = new Map();
+    (report.ignoredNoSku || []).forEach(row => addPrintableIssue(map, row, "No SKU - row ignored"));
+    (report.missingDescription || []).forEach(row => addPrintableIssue(map, row, "Missing item description"));
+    (report.missingQuantity || []).forEach(row => addPrintableIssue(map, row, "Missing quantity - treated as 0"));
+    (report.missingRate || []).forEach(row => addPrintableIssue(map, row, "Missing item rate - treated as 0"));
+    (report.missingSupplier || []).forEach(row => addPrintableIssue(map, row, "Missing supplier - existing supplier kept"));
+    (report.missingMinimumOrderLevel || []).forEach(row => addPrintableIssue(map, row, "Missing reorder level - treated as 0"));
+    (report.missingMinimumOrderQty || []).forEach(row => addPrintableIssue(map, row, "Missing MOQ"));
+    return Array.from(map.values()).sort((a, b) => (a.rowNumber || 0) - (b.rowNumber || 0));
+};
+
+const buildPrintableDifferences = (rows = [], duplicateGroups = []) => {
+    const differences = [];
+    rows.forEach(row => {
+        const issues = [];
+        if (row.matchStatus === "UPLOADED_ONLY") issues.push("New SKU / uploaded only");
+        if (row.matchStatus === "MISSING_FROM_UPLOAD") issues.push("System item missing from upload");
+        if (row.qtyDifference != null && row.qtyDifference !== 0) {
+            issues.push(`Qty: system ${formatNumber(row.systemQty)} / uploaded ${formatNumber(row.uploadedQty)} / diff ${formatNumber(row.qtyDifference)}`);
+        }
+        if (row.uploadedUnitCost != null && Number(row.uploadedUnitCost) !== Number(row.systemUnitCost)) {
+            issues.push(`Rate: system ${formatMoney(row.systemUnitCost)} / uploaded ${formatMoney(row.uploadedUnitCost)}`);
+        }
+        if (row.uploadedReorderLevel != null && row.uploadedReorderLevel !== row.systemReorderLevel) {
+            issues.push(`Reorder: system ${row.systemReorderLevel ?? "-"} / uploaded ${row.uploadedReorderLevel ?? "-"} / diff ${row.reorderLevelDifference ?? "-"}`);
+        }
+        if (issues.length) {
+            differences.push({
+                sku: row.sku || "-",
+                productName: row.productName || "Unknown product",
+                status: row.matchStatus,
+                issues,
+            });
+        }
+    });
+    duplicateGroups.forEach(group => {
+        differences.push({
+            sku: group.sku || "-",
+            productName: group.productName || "No matching ERP product",
+            status: "DUPLICATE_UPLOADED_SKU",
+            issues: [`Duplicate uploaded rows: ${(group.uploadedRows || []).map(row => `row ${row.rowNumber}`).join(", ")}`],
+        });
+    });
+    return differences.sort((a, b) => String(a.sku).localeCompare(String(b.sku), undefined, { numeric: true, sensitivity: "base" }));
 };
 
 function SummaryBox({ label, value, tone }) {
@@ -294,6 +353,94 @@ function ProductRows({ rows, onToggleStatus, actionBusy, showStockValues = false
                 )}
             </tbody>
         </Table>
+    );
+}
+
+function PrintableReport({ title, selectedRun, uploadReport, reportRows, duplicateGroups }) {
+    const uploadIssues = buildPrintableUploadIssues(uploadReport);
+    const differences = buildPrintableDifferences(reportRows, duplicateGroups);
+    return (
+        <div className="printable-physical-report">
+            <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                    <h2 className="mb-1">Physical Count Reconciliation Report</h2>
+                    <div className="text-muted">{title || selectedRun?.title || "Physical stock reconciliation"}</div>
+                </div>
+                <div className="text-end small text-muted">
+                    <div>Created: {formatDate(selectedRun?.createdAt)}</div>
+                    <div>Printed: {formatDate(new Date().toISOString())}</div>
+                </div>
+            </div>
+
+            <Table bordered size="sm" className="print-summary-table mb-4">
+                <tbody>
+                    <tr>
+                        <th>Uploaded rows</th>
+                        <td>{uploadReport.uploadedRowCount || selectedRun?.uploadedRowCount || 0}</td>
+                        <th>Unique SKUs</th>
+                        <td>{uploadReport.uniqueSkuCount || selectedRun?.uniqueUploadedSkuCount || 0}</td>
+                        <th>Ignored no SKU</th>
+                        <td>{uploadReport.ignoredNoSku?.length || 0}</td>
+                    </tr>
+                    <tr>
+                        <th>System value</th>
+                        <td>{formatMoney(selectedRun?.systemValue)}</td>
+                        <th>Uploaded value</th>
+                        <td>{formatMoney(selectedRun?.uploadedValue)}</td>
+                        <th>Difference</th>
+                        <td>{formatMoney(selectedRun?.valueDifference)}</td>
+                    </tr>
+                </tbody>
+            </Table>
+
+            <h4>Upload File Issues</h4>
+            <Table bordered size="sm" className="print-detail-table">
+                <thead>
+                    <tr>
+                        <th style={{ width: "70px" }}>CSV Row</th>
+                        <th style={{ width: "130px" }}>SKU</th>
+                        <th>Product</th>
+                        <th>Issues</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {uploadIssues.length ? uploadIssues.map(row => (
+                        <tr key={`print-upload-${row.rowNumber}-${row.sku}`}>
+                            <td>{row.rowNumber || "-"}</td>
+                            <td><code>{row.sku}</code></td>
+                            <td>{row.productName}</td>
+                            <td>{row.issues.join("; ")}</td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="4" className="text-center text-muted">No upload file issues.</td></tr>
+                    )}
+                </tbody>
+            </Table>
+
+            <h4 className="mt-4">System vs Uploaded Differences</h4>
+            <Table bordered size="sm" className="print-detail-table">
+                <thead>
+                    <tr>
+                        <th style={{ width: "130px" }}>SKU</th>
+                        <th>Product</th>
+                        <th style={{ width: "150px" }}>Status</th>
+                        <th>Differences</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {differences.length ? differences.map(row => (
+                        <tr key={`print-diff-${row.status}-${row.sku}`}>
+                            <td><code>{row.sku}</code></td>
+                            <td>{row.productName}</td>
+                            <td>{row.status}</td>
+                            <td>{row.issues.join("; ")}</td>
+                        </tr>
+                    )) : (
+                        <tr><td colSpan="4" className="text-center text-muted">No system/upload differences.</td></tr>
+                    )}
+                </tbody>
+            </Table>
+        </div>
     );
 }
 
@@ -747,14 +894,14 @@ function ReconciliationTab() {
                     <Form.Group className="mb-3">
                         <Form.Label>Upload CSV</Form.Label>
                         <Form.Control type="file" accept=".csv,.txt" onChange={handleFile} />
-                        <Form.Text>Columns: sku, quantity, unitCost/rate, productName, reorderLevel, supplier, minOrderQty</Form.Text>
+                        <Form.Text>Columns: sku, quantity, unitCost/rate, productName, reorderLevel, supplier</Form.Text>
                     </Form.Group>
                     <Form.Control
                         as="textarea"
                         rows={8}
                         value={uploadText}
                         onChange={e => setUploadText(e.target.value)}
-                        placeholder={"sku,quantity,unitCost,productName,reorderLevel,supplier,minOrderQty\nABC001,10,2500,Product A,5,Main Supplier,1"}
+                        placeholder={"sku,quantity,unitCost,productName,reorderLevel,supplier\nABC001,10,2500,Product A,5,Main Supplier"}
                     />
                     <div className="d-flex justify-content-between text-muted small my-3">
                         <span>{parsedRows.length} parsed rows</span>
@@ -768,7 +915,9 @@ function ReconciliationTab() {
                             <div className="d-flex justify-content-between"><span>Missing rates set to 0</span><strong>{uploadReport.missingRate.length}</strong></div>
                             <div className="d-flex justify-content-between"><span>Missing suppliers</span><strong>{uploadReport.missingSupplier.length}</strong></div>
                             <div className="d-flex justify-content-between"><span>Missing minimum levels set to 0</span><strong>{uploadReport.missingMinimumOrderLevel.length}</strong></div>
-                            <div className="d-flex justify-content-between"><span>Missing MOQ set to 0</span><strong>{uploadReport.missingMinimumOrderQty.length}</strong></div>
+                            {uploadReport.missingMinimumOrderQty.length > 0 && (
+                                <div className="d-flex justify-content-between"><span>Missing MOQ set to 0</span><strong>{uploadReport.missingMinimumOrderQty.length}</strong></div>
+                            )}
                             <Button size="sm" variant="outline-secondary" className="w-100 mt-2" onClick={openFullReport}>
                                 View Upload Report
                             </Button>
@@ -1057,6 +1206,19 @@ function ReconciliationTab() {
                 <Modal.Title>Physical Count Full Report</Modal.Title>
             </Modal.Header>
             <Modal.Body>
+                <div className="print-hidden d-flex justify-content-end mb-3">
+                    <Button variant="outline-primary" onClick={() => window.print()} disabled={reportLoading}>
+                        <Printer size={16} className="me-1" /> Print Report
+                    </Button>
+                </div>
+                <PrintableReport
+                    title={title}
+                    selectedRun={selectedRun}
+                    uploadReport={activeUploadReport}
+                    reportRows={reportRows}
+                    duplicateGroups={reportDuplicateGroups}
+                />
+                <div className="interactive-report">
                 <Row className="g-2 mb-3">
                     <Col md={3}><SummaryBox label="Uploaded rows" value={activeUploadReport.uploadedRowCount || selectedRun?.uploadedRowCount || 0} /></Col>
                     <Col md={3}><SummaryBox label="Unique SKUs" value={activeUploadReport.uniqueSkuCount || selectedRun?.uniqueUploadedSkuCount || 0} /></Col>
@@ -1090,9 +1252,11 @@ function ReconciliationTab() {
                             <Col lg={6}>
                                 <UploadIssueTable title="Missing Minimum Order Level" rows={activeUploadReport.missingMinimumOrderLevel} note="Allowed. Reorder level is treated as 0." />
                             </Col>
-                            <Col lg={6}>
-                                <UploadIssueTable title="Missing Minimum Order Quantity" rows={activeUploadReport.missingMinimumOrderQty} note="Allowed. MOQ is treated as 0 for reporting." />
-                            </Col>
+                            {activeUploadReport.missingMinimumOrderQty?.length > 0 && (
+                                <Col lg={6}>
+                                    <UploadIssueTable title="Missing Minimum Order Quantity" rows={activeUploadReport.missingMinimumOrderQty} note="Only applies when the uploaded file includes an MOQ column. Existing system MOQ/supplier details are kept." />
+                                </Col>
+                            )}
                         </Row>
 
                         <h5 className="mt-3 mb-3">System vs Uploaded Differences</h5>
@@ -1170,6 +1334,7 @@ function ReconciliationTab() {
                         </div>
                     </>
                 )}
+                </div>
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={() => setReportOpen(false)}>Close</Button>
@@ -1274,13 +1439,31 @@ export default function StockVerificationPage() {
                 .stock-verification-page .btn {
                     white-space: normal;
                 }
+                .printable-physical-report {
+                    display: none;
+                }
+                .print-detail-table th,
+                .print-detail-table td,
+                .print-summary-table th,
+                .print-summary-table td {
+                    vertical-align: top;
+                    overflow-wrap: anywhere;
+                }
                 @media print {
                     body * { visibility: hidden; }
                     .print-area, .print-area * { visibility: visible; }
                     .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+                    .modal, .modal * { visibility: visible; }
+                    .modal { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; overflow: visible !important; }
+                    .modal-dialog { max-width: none !important; width: 100% !important; margin: 0 !important; }
+                    .modal-content { border: 0 !important; box-shadow: none !important; }
+                    .modal-header, .modal-footer, .interactive-report { display: none !important; }
+                    .printable-physical-report { display: block !important; }
                     .print-hidden { display: none !important; }
                     .page-content { padding: 0 !important; }
                     table { font-size: 11px; }
+                    h2 { font-size: 20px; }
+                    h4 { font-size: 14px; margin-top: 16px; }
                 }
             `}</style>
             <div className="d-flex justify-content-between align-items-center mb-3 print-hidden">
