@@ -763,6 +763,7 @@ function ReconciliationTab() {
             const res = await api.post("/stock-reconciliations", {
                 title: title || undefined,
                 rows: parsedRows,
+                uploadReport,
             }, { timeout: RECONCILIATION_TIMEOUT_MS });
             setSelectedRun(res.data);
             setUploadReportsByRun(current => ({ ...current, [res.data.id]: uploadReport }));
@@ -874,7 +875,7 @@ function ReconciliationTab() {
         }
     };
 
-    const activeUploadReport = selectedUploadReport || uploadReport || emptyUploadReport();
+    const activeUploadReport = selectedRun?.uploadReport || selectedUploadReport || uploadReport || emptyUploadReport();
     const quantityDifferences = reportRows.filter(row => row.qtyDifference != null && row.qtyDifference !== 0);
     const costDifferences = reportRows.filter(row => row.uploadedUnitCost != null && Number(row.uploadedUnitCost) !== Number(row.systemUnitCost));
     const reorderDifferences = reportRows.filter(row => row.uploadedReorderLevel != null && row.uploadedReorderLevel !== row.systemReorderLevel);
