@@ -40,8 +40,8 @@ export default function QuotationPage() {
     };
 
     const formatMoney = (value) => Number(value || 0).toLocaleString("en-US", {
-        minimumFractionDigits: 3,
-        maximumFractionDigits: 3,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     });
 
     const formatDateTime = (value) => {

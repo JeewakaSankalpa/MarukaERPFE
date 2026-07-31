@@ -8,8 +8,8 @@ import logo from "../../assets/logo.jpeg";
 import { useAuth } from "../../context/AuthContext";
 
 const money = (value) => Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
 });
 
 const formatQuantity = (value) => {
@@ -19,7 +19,7 @@ const formatQuantity = (value) => {
 };
 
 const decimalTotal = (values = []) =>
-    values.reduce((sum, value) => sum + Math.round(Number(value || 0) * 1000), 0) / 1000;
+    values.reduce((sum, value) => sum + Math.round(Number(value || 0) * 100), 0) / 100;
 
 const formatDate = (value) => {
     if (!value) return "-";

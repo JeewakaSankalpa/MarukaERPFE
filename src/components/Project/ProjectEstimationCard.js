@@ -51,35 +51,38 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
     // Helper to safely get number
     const val = (n) => Number(n || 0);
     const money = (n) => val(n).toLocaleString(undefined, {
-        minimumFractionDigits: 3,
-        maximumFractionDigits: 3,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     });
+    const roundMoney = (n) => Math.round(val(n) * 100) / 100;
+    const decimalTotal = (values = []) =>
+        values.reduce((sum, value) => roundMoney(sum + roundMoney(value)), 0);
     const components = est?.components || [];
     const componentQuantity = (component) => Math.max(1, val(component?.quantity) || 1);
     const componentTotals = (component) => {
         const qty = componentQuantity(component);
         const itemsSubtotal = (component?.items || []).reduce(
-            (sum, item) => sum + val(item?.estUnitCost) * val(item?.quantity) * qty,
+            (sum, item) => decimalTotal([sum, val(item?.estUnitCost) * val(item?.quantity) * qty]),
             0
         );
         if (component?.items?.length) {
-            const overheadAmount = itemsSubtotal * (val(component?.overheadPercent) / 100);
-            const baseForMargin = itemsSubtotal + overheadAmount;
-            const marginAmount = baseForMargin * (val(component?.marginPercent) / 100);
-            const delivery = est?.includeDelivery !== false ? val(component?.deliveryCost) * qty : 0;
-            const freight = est?.includeFreight !== false ? val(component?.freightCost) * qty : 0;
+            const overheadAmount = roundMoney(itemsSubtotal * (val(component?.overheadPercent) / 100));
+            const baseForMargin = decimalTotal([itemsSubtotal, overheadAmount]);
+            const marginAmount = roundMoney(baseForMargin * (val(component?.marginPercent) / 100));
+            const delivery = est?.includeDelivery !== false ? roundMoney(val(component?.deliveryCost) * qty) : 0;
+            const freight = est?.includeFreight !== false ? roundMoney(val(component?.freightCost) * qty) : 0;
             return {
                 itemsSubtotal,
-                subtotalWithMargin: baseForMargin + marginAmount,
+                subtotalWithMargin: decimalTotal([baseForMargin, marginAmount]),
                 delivery,
                 deliveryTaxable: component?.deliveryTaxable === true,
                 freight,
                 freightTaxable: component?.freightTaxable === true,
-                lineTotalBeforeTax: baseForMargin + marginAmount + delivery + freight,
+                lineTotalBeforeTax: decimalTotal([baseForMargin, marginAmount, delivery, freight]),
             };
         }
-        const delivery = est?.includeDelivery !== false ? val(component?.deliveryCost) * qty : 0;
-        const freight = est?.includeFreight !== false ? val(component?.freightCost) * qty : 0;
+        const delivery = est?.includeDelivery !== false ? roundMoney(val(component?.deliveryCost) * qty) : 0;
+        const freight = est?.includeFreight !== false ? roundMoney(val(component?.freightCost) * qty) : 0;
         return {
             itemsSubtotal: val(component?.itemsSubtotal),
             subtotalWithMargin: val(component?.subtotalWithMargin ?? component?.itemsSubtotal),
@@ -87,7 +90,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
             deliveryTaxable: component?.deliveryTaxable === true,
             freight,
             freightTaxable: component?.freightTaxable === true,
-            lineTotalBeforeTax: val(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal) + delivery + freight,
+            lineTotalBeforeTax: decimalTotal([component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal, delivery, freight]),
         };
     };
     const displayTotals = (() => {
@@ -99,27 +102,33 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
 
         components.forEach((component) => {
             const totals = componentTotals(component);
-            subtotalWithMargin += totals.subtotalWithMargin;
-            deliveryTotal += totals.delivery;
-            freightTotal += totals.freight;
-            taxableBaseRaw += totals.subtotalWithMargin
-                + (totals.deliveryTaxable ? totals.delivery : 0)
-                + (totals.freightTaxable ? totals.freight : 0);
-            nonTaxableRaw += (totals.deliveryTaxable ? 0 : totals.delivery)
-                + (totals.freightTaxable ? 0 : totals.freight);
+            subtotalWithMargin = decimalTotal([subtotalWithMargin, totals.subtotalWithMargin]);
+            deliveryTotal = decimalTotal([deliveryTotal, totals.delivery]);
+            freightTotal = decimalTotal([freightTotal, totals.freight]);
+            taxableBaseRaw = decimalTotal([
+                taxableBaseRaw,
+                totals.subtotalWithMargin,
+                totals.deliveryTaxable ? totals.delivery : 0,
+                totals.freightTaxable ? totals.freight : 0,
+            ]);
+            nonTaxableRaw = decimalTotal([
+                nonTaxableRaw,
+                totals.deliveryTaxable ? 0 : totals.delivery,
+                totals.freightTaxable ? 0 : totals.freight,
+            ]);
         });
 
-        const totalBeforeDiscount = taxableBaseRaw + nonTaxableRaw;
-        const discountAmount = totalBeforeDiscount * (val(est?.discountPercent) / 100);
+        const totalBeforeDiscount = decimalTotal([taxableBaseRaw, nonTaxableRaw]);
+        const discountAmount = roundMoney(totalBeforeDiscount * (val(est?.discountPercent) / 100));
         let taxableBase = taxableBaseRaw;
         let nonTaxable = nonTaxableRaw;
         if (totalBeforeDiscount > 0) {
             const taxableRatio = taxableBaseRaw / totalBeforeDiscount;
-            taxableBase -= discountAmount * taxableRatio;
-            nonTaxable -= discountAmount * (1 - taxableRatio);
+            taxableBase = roundMoney(taxableBase - roundMoney(discountAmount * taxableRatio));
+            nonTaxable = roundMoney(nonTaxable - roundMoney(discountAmount * (1 - taxableRatio)));
         }
-        const vatAmount = est?.includeVat !== false ? taxableBase * (val(est?.vatPercent) / 100) : 0;
-        const taxAmount = est?.includeTax === true ? taxableBase * (val(est?.taxPercent) / 100) : 0;
+        const vatAmount = est?.includeVat !== false ? roundMoney(taxableBase * (val(est?.vatPercent) / 100)) : 0;
+        const taxAmount = est?.includeTax === true ? roundMoney(taxableBase * (val(est?.taxPercent) / 100)) : 0;
 
         return {
             subtotalWithMargin,
@@ -128,7 +137,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
             discountAmount,
             vatAmount,
             taxAmount,
-            grandTotal: taxableBase + nonTaxable + vatAmount + taxAmount,
+            grandTotal: decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]),
         };
     })();
 

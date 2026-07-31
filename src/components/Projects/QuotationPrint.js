@@ -7,9 +7,17 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const money = (value) => Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
 });
+
+const roundMoney = (value) => {
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+};
+
+const decimalTotal = (values = []) =>
+    values.reduce((sum, value) => roundMoney(sum + roundMoney(value)), 0);
 
 const formatQuantity = (value) => {
     const number = Number(value || 0);
@@ -193,22 +201,22 @@ const roundUpToPlace = (value, place) => {
 
 const componentAmount = (component, includeDelivery = true, includeFreight = true) => {
     if (component?.lineTotalBeforeTax != null) {
-        return Number(component.lineTotalBeforeTax || 0);
+        return roundMoney(component.lineTotalBeforeTax);
     }
     const qty = componentQuantity(component);
     const itemsSubtotal = (component?.items || []).reduce(
-        (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
+        (sum, item) => decimalTotal([sum, Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty]),
         0
     );
     if (component?.items?.length) {
-        const overheadAmount = itemsSubtotal * (Number(component?.overheadPercent || 0) / 100);
-        const baseForMargin = itemsSubtotal + overheadAmount;
-        const marginAmount = baseForMargin * (Number(component?.marginPercent || 0) / 100);
-        const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
-        const freight = includeFreight ? Number(component?.freightCost || 0) * qty : 0;
-        return baseForMargin + marginAmount + delivery + freight;
+        const overheadAmount = roundMoney(itemsSubtotal * (Number(component?.overheadPercent || 0) / 100));
+        const baseForMargin = decimalTotal([itemsSubtotal, overheadAmount]);
+        const marginAmount = roundMoney(baseForMargin * (Number(component?.marginPercent || 0) / 100));
+        const delivery = includeDelivery ? roundMoney(Number(component?.deliveryCost || 0) * qty) : 0;
+        const freight = includeFreight ? roundMoney(Number(component?.freightCost || 0) * qty) : 0;
+        return decimalTotal([baseForMargin, marginAmount, delivery, freight]);
     }
-    return component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0;
+    return roundMoney(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
 };
 
 const computeQuotationTotals = (estimation) => {
@@ -225,57 +233,57 @@ const computeQuotationTotals = (estimation) => {
     components.forEach((component) => {
         const qty = componentQuantity(component);
         const itemsSubtotal = (component?.items || []).reduce(
-            (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
+            (sum, item) => decimalTotal([sum, Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty]),
             0
         );
         const overheadAmount = component?.subtotalWithMargin != null
             ? 0
-            : itemsSubtotal * (Number(component?.overheadPercent || 0) / 100);
-        const baseForMargin = itemsSubtotal + overheadAmount;
+            : roundMoney(itemsSubtotal * (Number(component?.overheadPercent || 0) / 100));
+        const baseForMargin = decimalTotal([itemsSubtotal, overheadAmount]);
         const marginAmount = component?.subtotalWithMargin != null
             ? 0
-            : baseForMargin * (Number(component?.marginPercent || 0) / 100);
+            : roundMoney(baseForMargin * (Number(component?.marginPercent || 0) / 100));
         const afterMargin = component?.subtotalWithMargin != null
-            ? Number(component.subtotalWithMargin || 0)
-            : baseForMargin + marginAmount;
-        const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
+            ? roundMoney(component.subtotalWithMargin || 0)
+            : decimalTotal([baseForMargin, marginAmount]);
+        const delivery = includeDelivery ? roundMoney(Number(component?.deliveryCost || 0) * qty) : 0;
         const deliveryTaxable = includeDelivery && component?.deliveryTaxable === true;
-        const freight = includeFreight ? Number(component?.freightCost || 0) * qty : 0;
+        const freight = includeFreight ? roundMoney(Number(component?.freightCost || 0) * qty) : 0;
         const freightTaxable = includeFreight && component?.freightTaxable === true;
-        const taxableRaw = afterMargin + (deliveryTaxable ? delivery : 0) + (freightTaxable ? freight : 0);
-        const nonTaxableRawPart = (deliveryTaxable ? 0 : delivery) + (freightTaxable ? 0 : freight);
-        const lineTotalRaw = taxableRaw + nonTaxableRawPart;
+        const taxableRaw = decimalTotal([afterMargin, deliveryTaxable ? delivery : 0, freightTaxable ? freight : 0]);
+        const nonTaxableRawPart = decimalTotal([deliveryTaxable ? 0 : delivery, freightTaxable ? 0 : freight]);
+        const lineTotalRaw = decimalTotal([taxableRaw, nonTaxableRawPart]);
         const lineTotal = component?.lineTotalBeforeTax != null
             ? Number(component.lineTotalBeforeTax || 0)
             : (roundTotals ? roundUpToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw);
         const roundingDelta = lineTotal - lineTotalRaw;
 
-        taxableBaseRaw += taxableRaw > 0 ? taxableRaw + roundingDelta : taxableRaw;
-        nonTaxableRaw += taxableRaw > 0 ? nonTaxableRawPart : nonTaxableRawPart + roundingDelta;
+        taxableBaseRaw = decimalTotal([taxableBaseRaw, taxableRaw > 0 ? taxableRaw + roundingDelta : taxableRaw]);
+        nonTaxableRaw = decimalTotal([nonTaxableRaw, taxableRaw > 0 ? nonTaxableRawPart : nonTaxableRawPart + roundingDelta]);
     });
 
     const discountPct = Number(estimation?.discountPercent || 0);
     const totalBeforeDiscount = taxableBaseRaw + nonTaxableRaw;
-    const discountAmount = totalBeforeDiscount * (Number.isFinite(discountPct) ? discountPct / 100 : 0);
+    const discountAmount = roundMoney(totalBeforeDiscount * (Number.isFinite(discountPct) ? discountPct / 100 : 0));
     let taxableBase = taxableBaseRaw;
     let nonTaxable = nonTaxableRaw;
 
     if (totalBeforeDiscount > 0) {
         const taxableRatio = taxableBaseRaw / totalBeforeDiscount;
-        taxableBase -= discountAmount * taxableRatio;
-        nonTaxable -= discountAmount * (1 - taxableRatio);
+        taxableBase = roundMoney(taxableBase - roundMoney(discountAmount * taxableRatio));
+        nonTaxable = roundMoney(nonTaxable - roundMoney(discountAmount * (1 - taxableRatio)));
     }
 
     const vatPct = includeVat ? Number(estimation?.vatPercent || 0) : 0;
     const taxPct = includeTax ? Number(estimation?.taxPercent || 0) : 0;
-    const vatAmount = taxableBase * (Number.isFinite(vatPct) ? vatPct / 100 : 0);
-    const taxAmount = taxableBase * (Number.isFinite(taxPct) ? taxPct / 100 : 0);
+    const vatAmount = roundMoney(taxableBase * (Number.isFinite(vatPct) ? vatPct / 100 : 0));
+    const taxAmount = roundMoney(taxableBase * (Number.isFinite(taxPct) ? taxPct / 100 : 0));
     const grandTotal = estimation?.computedGrandTotal != null
-        ? Number(estimation.computedGrandTotal || 0)
-        : (roundTotals ? roundUpToPlace(taxableBase + nonTaxable + vatAmount + taxAmount, roundingPlace) : taxableBase + nonTaxable + vatAmount + taxAmount);
+        ? roundMoney(estimation.computedGrandTotal)
+        : (roundTotals ? roundUpToPlace(decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]), roundingPlace) : decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]));
 
     return {
-        subtotal: totalBeforeDiscount || Number(estimation?.computedSubtotal || 0),
+        subtotal: totalBeforeDiscount || roundMoney(estimation?.computedSubtotal || 0),
         discountAmount,
         vatAmount,
         taxAmount,

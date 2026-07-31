@@ -161,8 +161,7 @@ export default function ProjectDetails() {
             }
         })();
         return () => { alive = false; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, role]);
+    }, [id, rolesHeader]);
 
     const openDatesModal = () => {
         if (!project || !!viewVersion) return;

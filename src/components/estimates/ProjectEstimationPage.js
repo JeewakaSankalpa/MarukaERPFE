@@ -89,6 +89,19 @@ const roundUpToPlace = (value, place) => {
     return Math.ceil(amount / step) * step;
 };
 
+const roundMoney = (value) => {
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+};
+
+const decimalTotal = (values = []) =>
+    values.reduce((sum, value) => roundMoney(sum + roundMoney(value)), 0);
+
+const formatMoney = (value) => roundMoney(value).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+});
+
 const isEmptyManualRow = (row) => {
     if (row?.lineType !== LINE_TYPES.MANUAL) return false;
     const hasDescription = String(row.description || "").trim().length > 0;
@@ -988,26 +1001,26 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const parsedSets = Number(compQty[cname]);
             const sets = Number.isFinite(parsedSets) && parsedSets > 0 ? parsedSets : 1;
             const unitSubtotal = mergedRows.reduce(
-                (acc, r) => acc + Number(r.estUnitCost || 0) * Number((r.quantities || {})[cname] || 0),
+                (acc, r) => decimalTotal([acc, Number(r.estUnitCost || 0) * Number((r.quantities || {})[cname] || 0)]),
                 0
             );
-            const subtotal = unitSubtotal * sets;
+            const subtotal = roundMoney(unitSubtotal * sets);
 
             // 1. Overhead
             const oPct = Number(compOverhead[cname] || 0);
-            const oAmt = subtotal * (isNaN(oPct) ? 0 : oPct / 100);
-            const baseForMargin = subtotal + oAmt;
+            const oAmt = roundMoney(subtotal * (isNaN(oPct) ? 0 : oPct / 100));
+            const baseForMargin = decimalTotal([subtotal, oAmt]);
 
             // 2. Margin
             const mPct = Number(compMargin[cname] || 0);
-            const mAmt = baseForMargin * (isNaN(mPct) ? 0 : mPct / 100);
-            const afterMargin = baseForMargin + mAmt;
+            const mAmt = roundMoney(baseForMargin * (isNaN(mPct) ? 0 : mPct / 100));
+            const afterMargin = decimalTotal([baseForMargin, mAmt]);
 
             const unitDelivery = Number(compDelivery[cname] || 0);
-            const del = unitDelivery * sets;
+            const del = roundMoney(unitDelivery * sets);
             const delTaxable = !!compDeliveryTaxable[cname];
             const unitFreight = Number(compFreight[cname] || 0);
-            const freight = unitFreight * sets;
+            const freight = roundMoney(unitFreight * sets);
             const freightTaxable = !!compFreightTaxable[cname];
 
             const taxableAdd = includeDelivery && delTaxable ? del : 0;
@@ -1016,7 +1029,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const nonTaxableFreightAdd = includeFreight && !freightTaxable ? freight : 0;
             const taxablePortionRaw = afterMargin + taxableAdd + taxableFreightAdd;
             const nonTaxablePortionRaw = nonTaxableAdd + nonTaxableFreightAdd;
-            const lineTotalRaw = taxablePortionRaw + nonTaxablePortionRaw;
+            const lineTotalRaw = decimalTotal([taxablePortionRaw, nonTaxablePortionRaw]);
             const lineTotalBeforeTax = roundingEnabled ? roundUpToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw;
             const roundingDelta = lineTotalBeforeTax - lineTotalRaw;
             const taxablePortion = taxablePortionRaw > 0 ? taxablePortionRaw + roundingDelta : taxablePortionRaw;
@@ -1047,13 +1060,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         compFreight, compFreightTaxable, includeDelivery, includeFreight, roundingEnabled, roundingPlace]);
 
     const totals = useMemo(() => {
-        const taxableBaseRaw = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
-        const nonTaxableRaw = compCalcs.reduce((a, c) => a + c.nonTaxablePortion, 0);
+        const taxableBaseRaw = decimalTotal(compCalcs.map(c => c.taxablePortion));
+        const nonTaxableRaw = decimalTotal(compCalcs.map(c => c.nonTaxablePortion));
 
         // 3. Discount
         const discPct = Number(discountPercent || 0);
-        const totalBeforeDisc = taxableBaseRaw + nonTaxableRaw;
-        const discAmt = totalBeforeDisc * (isNaN(discPct) ? 0 : discPct / 100);
+        const totalBeforeDisc = decimalTotal([taxableBaseRaw, nonTaxableRaw]);
+        const discAmt = roundMoney(totalBeforeDisc * (isNaN(discPct) ? 0 : discPct / 100));
 
         // Split discount proportionally
         let taxableBase = taxableBaseRaw;
@@ -1061,8 +1074,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
         if (totalBeforeDisc > 0) {
             const ratio = taxableBaseRaw / totalBeforeDisc;
-            taxableBase = taxableBaseRaw - (discAmt * ratio);
-            nonTaxable = nonTaxableRaw - (discAmt * (1 - ratio));
+            taxableBase = roundMoney(taxableBaseRaw - roundMoney(discAmt * ratio));
+            nonTaxable = roundMoney(nonTaxableRaw - roundMoney(discAmt * (1 - ratio)));
         }
 
         // Use global settings if toggles on
@@ -1073,14 +1086,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             ? (globalSettings.GLOBAL_TAX_PERCENT ? Number(globalSettings.GLOBAL_TAX_PERCENT) : Number(taxPercent || 0))
             : 0;
 
-        const vatAmount = taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100);
-        const taxAmount = taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100);
+        const vatAmount = roundMoney(taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100));
+        const taxAmount = roundMoney(taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100));
 
-        const grandRaw = taxableBase + nonTaxable + vatAmount + taxAmount;
+        const grandRaw = decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]);
         const grand = roundingEnabled ? roundUpToPlace(grandRaw, roundingPlace) : grandRaw;
 
-        const rawSubtotal = compCalcs.reduce((a, c) => a + c.subtotal, 0);
-        const withMargin = compCalcs.reduce((a, c) => a + c.afterMargin, 0);
+        const rawSubtotal = decimalTotal(compCalcs.map(c => c.subtotal));
+        const withMargin = decimalTotal(compCalcs.map(c => c.afterMargin));
 
         return {
             rawSubtotal,
@@ -2117,37 +2130,37 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <h6 className="card-title">Estimated Totals</h6>
                                                 <div className="d-flex justify-content-between mb-1">
                                                     <span>Subtotal (Comp):</span>
-                                                    <span>{totals.rawSubtotal.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
+                                                    <span>{formatMoney(totals.rawSubtotal)}</span>
                                                 </div>
                                                 <div className="d-flex justify-content-between mb-1 text-muted small">
                                                     <span>With Margin & Overhead:</span>
-                                                    <span>{totals.withMargin.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
+                                                    <span>{formatMoney(totals.withMargin)}</span>
                                                 </div>
                                                 <div className="d-flex justify-content-between mb-1 text-danger">
                                                     <span>Discount ({discountPercent || 0}%):</span>
-                                                    <span>-{totals.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
+                                                    <span>-{formatMoney(totals.discountAmount)}</span>
                                                 </div>
                                                 <hr />
                                                 <div className="d-flex justify-content-between mb-1">
                                                     <span>Taxable Base:</span>
-                                                    <span>{totals.taxableBase.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
+                                                    <span>{formatMoney(totals.taxableBase)}</span>
                                                 </div>
                                                 {includeVat && (
                                                     <div className="d-flex justify-content-between mb-1">
                                                         <span>VAT ({totals.vatUsed}%):</span>
-                                                        <span>{totals.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
+                                                        <span>{formatMoney(totals.vatAmount)}</span>
                                                     </div>
                                                 )}
                                                 {includeTax && (
                                                     <div className="d-flex justify-content-between mb-1">
                                                         <span>Tax ({totals.taxUsed}%):</span>
-                                                        <span>{totals.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
+                                                        <span>{formatMoney(totals.taxAmount)}</span>
                                                     </div>
                                                 )}
                                                 <hr />
                                                 <div className="d-flex justify-content-between fw-bold">
                                                     <span>Grand Total:</span>
-                                                    <span>{totals.grand.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
+                                                    <span>{formatMoney(totals.grand)}</span>
                                                 </div>
                                             </Card.Body>
                                         </Card>
