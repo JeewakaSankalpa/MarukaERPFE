@@ -294,6 +294,12 @@ const itemDescription = (item) =>
 
 const normalizeLineText = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 
+const getApiErrorMessage = (error, fallback) => {
+    const data = error?.response?.data;
+    if (typeof data === "string") return data;
+    return data?.message || data?.error || error?.message || fallback;
+};
+
 const aggregateItems = (items = [], multiplier = 1) => {
     const groups = new Map();
     const qtyMultiplier = Math.max(1, Number(multiplier || 1) || 1);
@@ -390,12 +396,29 @@ const QuotationPrint = () => {
     }, [invoices, invoiceType]);
 
     const handleFinalize = async () => {
+        if (!estimation?.id) {
+            toast.error("Estimation not loaded");
+            return;
+        }
+        if (!["APPROVED", "FINALIZED"].includes(String(estimation.approvalStatus || estimation.status || "").toUpperCase())) {
+            toast.warn("Estimation must be approved before finalizing the quotation.");
+            return;
+        }
+        if (!project?.customerId) {
+            toast.warn("A customer record is required before finalizing the quotation.");
+            return;
+        }
+        if (!project?.jobNumber) {
+            toast.warn("Record the customer Purchase Order before finalizing the quotation.");
+            return;
+        }
         if (!window.confirm("Are you sure you want to finalize this quotation? It will be locked.")) return;
         try {
             await api.post(`/estimations/${estimation.id}/finalize`);
-            fetchData();
+            toast.success("Quotation finalized");
+            await fetchData();
         } catch (error) {
-            toast.error("Failed to finalize quotation");
+            toast.error(getApiErrorMessage(error, "Failed to finalize quotation"));
         }
     };
 
