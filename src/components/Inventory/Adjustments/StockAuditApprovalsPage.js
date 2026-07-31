@@ -244,6 +244,8 @@ const StockAuditApprovalsPage = () => {
                                             <th className="text-end">Adjustment</th>
                                             <th className="text-end">Old Cost</th>
                                             <th className="text-end">New Cost</th>
+                                            <th className="text-end">Old Reorder</th>
+                                            <th className="text-end">New Reorder</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -258,6 +260,8 @@ const StockAuditApprovalsPage = () => {
                                                 </td>
                                                 <td className="text-end">{item.oldUnitCost ?? '-'}</td>
                                                 <td className="text-end fw-bold">{item.newUnitCost ?? '-'}</td>
+                                                <td className="text-end">{item.oldReorderLevel ?? '-'}</td>
+                                                <td className="text-end fw-bold">{item.newReorderLevel ?? '-'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -289,7 +293,7 @@ const StockAuditApprovalsPage = () => {
                 </Modal.Header>
                 <Modal.Body>
                     Are you sure you want to approve this stock audit? 
-                    This will immediately update current stock levels in the system.
+                    This will immediately update current stock levels and reorder levels in the system.
                     {approving && approvalProgress && (
                         <div className="mt-3 small text-secondary">
                             Applying import rows {approvalProgress.processed}

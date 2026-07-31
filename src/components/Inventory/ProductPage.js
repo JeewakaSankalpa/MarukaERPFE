@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from "react";
 import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab, Spinner } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import Select from "react-select";
@@ -21,6 +21,10 @@ const updateProduct = async (id, payload) => (await api.put(`/products/${id}`, p
 const patchProductStatus = async (id, status) =>
     (await api.patch(`/products/${id}/status`, { status })).data;
 const getReorderSuggestion = async (id) => (await api.get(`/products/${id}/reorder-suggestion`)).data;
+const PRODUCT_FORM_DEFAULTS = {
+    sku: "", barcode: "", name: "", categoryId: "", unit: "pcs", status: "ACTIVE",
+    originalCostPrice: "", defaultSellingPrice: "", reorderLevel: "", suppliers: []
+};
 
 const listSuppliersQuick = async () =>
     (await api.get(`/suppliers?${qp({ status: "ACTIVE", page: 0, size: 100, sort: "name,asc" })}`)).data?.content || [];
@@ -124,12 +128,9 @@ function ProductList({ onOpen }) {
 }
 
 /* ================== Form ================== */
-export function ProductForm({ id, onClose, onSaved, startEditing = false, compact = false }) {
+export function ProductForm({ id, onClose, onSaved, startEditing = false, compact = false, initialValues = null }) {
     const isEdit = Boolean(id);
-    const [form, setForm] = useState({
-        sku: "", barcode: "", name: "", categoryId: "", unit: "", status: "ACTIVE",
-        originalCostPrice: "", defaultSellingPrice: "", reorderLevel: "", suppliers: []
-    });
+    const [form, setForm] = useState({ ...PRODUCT_FORM_DEFAULTS, ...(initialValues || {}) });
     const [supplierOptions, setSupplierOptions] = useState([]);
     const [validated, setValidated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(!id || startEditing);
@@ -169,7 +170,11 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
             try {
                 setSupplierOptions(await listSuppliersQuick());
             } catch { /* non-blocking */ }
-            if (!id) { setIsEditMode(true); return; }
+            if (!id) {
+                setForm({ ...PRODUCT_FORM_DEFAULTS, ...(initialValues || {}) });
+                setIsEditMode(true);
+                return;
+            }
             try {
                 const d = await getProduct(id);
                 setForm({
@@ -188,7 +193,7 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                 loadReorderSuggestion();
             } catch { toast.error("Failed to load product"); }
         })();
-    }, [id, startEditing]);
+    }, [id, startEditing, initialValues]);
 
     const bind = (k, sub) => e => {
         const v = e.target.value;
@@ -220,6 +225,7 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
             categoryId: form.categoryId || undefined,
             unit: form.unit || undefined,
             status: form.status,
+            originalCostPrice: form.originalCostPrice !== "" && form.originalCostPrice !== undefined ? Number(form.originalCostPrice) : undefined,
             defaultSellingPrice: form.defaultSellingPrice,
             reorderLevel: form.reorderLevel !== "" && form.reorderLevel !== undefined ? Number(form.reorderLevel) : undefined,
             suppliers: (form.suppliers || []).map(s => ({
@@ -329,7 +335,14 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                     </Row>
 
                     <Row className="g-3 mt-1">
-                        <Col md={6}>
+                        <Col md={4}>
+                            <Form.Group>
+                                <Form.Label>Original Cost Price</Form.Label>
+                                <Form.Control type="number" min="0" step="0.01"
+                                              value={form.originalCostPrice} onChange={bind("originalCostPrice")} disabled={!isEditMode} />
+                            </Form.Group>
+                        </Col>
+                        <Col md={4}>
                             <Form.Group>
                                 <Form.Label>Default Selling Price *</Form.Label>
                                 <Form.Control required isInvalid={validated && !form.defaultSellingPrice}
@@ -337,7 +350,7 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                                 <Form.Control.Feedback type="invalid">Selling price is required.</Form.Control.Feedback>
                             </Form.Group>
                         </Col>
-                        <Col md={6}>
+                        <Col md={4}>
                             <Form.Group>
                                 <Form.Label>Reorder Level (Low Stock Alert)</Form.Label>
                                 <Form.Control type="number" min="0" value={form.reorderLevel} onChange={bind("reorderLevel")} disabled={!isEditMode} />
@@ -535,10 +548,22 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
 
 /* ================== Page (switch) ================== */
 export default function ProductsPage() {
+    const location = useLocation();
     const [currentId, setCurrentId] = useState(undefined); // undefined=list, null=create, string=edit
-    useEffect(() => { setCurrentId(undefined); }, []);
+    const initialValues = useMemo(() => {
+        const params = new URLSearchParams(location.search);
+        return {
+            sku: params.get("sku") || "",
+            name: params.get("name") || "",
+            originalCostPrice: params.get("costPrice") || "",
+            reorderLevel: params.get("reorderLevel") || "",
+        };
+    }, [location.search]);
+    const hasPrefill = Object.values(initialValues).some(Boolean);
+
+    useEffect(() => { setCurrentId(hasPrefill ? null : undefined); }, [hasPrefill, location.search]);
 
     return currentId === undefined
         ? <ProductList onOpen={(id) => setCurrentId(id)} />
-        : <ProductForm id={currentId} onSaved={() => setCurrentId(undefined)} onClose={() => setCurrentId(undefined)} />;
+        : <ProductForm id={currentId} initialValues={currentId === null ? initialValues : null} onSaved={() => setCurrentId(undefined)} onClose={() => setCurrentId(undefined)} />;
 }
