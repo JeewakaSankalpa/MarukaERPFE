@@ -452,6 +452,7 @@ const InvoiceView = () => {
     const [quotation, setQuotation] = useState(null);
     const [payments, setPayments] = useState([]);
     const [estimation, setEstimation] = useState(null);
+    const [deliverySchedule, setDeliverySchedule] = useState(null);
     const [settings, setSettings] = useState({});
     const [poDraft, setPoDraft] = useState("");
     const [notesDraft, setNotesDraft] = useState("");
@@ -515,6 +516,13 @@ const InvoiceView = () => {
 
                     const projRes = await api.get(`/projects/${invRes.data.projectId}`);
                     setProject(projRes.data);
+
+                    try {
+                        const deliveryRes = await api.get(`/projects/${invRes.data.projectId}/delivery`);
+                        setDeliverySchedule(deliveryRes.data || null);
+                    } catch (deliveryErr) {
+                        console.warn("Could not fetch delivery schedule", deliveryErr);
+                    }
 
                     if (projRes.data.customerId) {
                         const custRes = await api.get(`/customer/${projRes.data.customerId}`);
@@ -809,6 +817,7 @@ const InvoiceView = () => {
     const storedOtherTaxTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
     const storedDocumentTotal = showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : storedSubtotal;
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
+    const deliveryDate = deliverySchedule?.scheduledDate || project?.estimatedEnd || invoice.issuedDate;
     const projectText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
     const baseCustomer = customer || getSnapshotCustomer(invoice);
     const customerPhone = invoice.customerPhoneSnapshot || getCustomerPhone(baseCustomer);
@@ -1736,7 +1745,7 @@ const InvoiceView = () => {
                     <div className="tax-meta-grid">
                         <div className="tax-box">
                             <span className="tax-label">Date of Delivery</span>
-                            <span className="tax-value">{formatDate(project?.deliveryDate || project?.endDate || invoice.issuedDate)}</span>
+                            <span className="tax-value">{formatDate(deliveryDate)}</span>
                         </div>
                         <div className="tax-box">
                             <span className="tax-label">Place of Supply</span>
