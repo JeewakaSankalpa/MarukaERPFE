@@ -212,7 +212,7 @@ const bankDetails = [
 
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
 
-const componentAmount = (component, includeDelivery = true) => {
+const componentAmount = (component, includeDelivery = true, includeFreight = true) => {
     const qty = componentQuantity(component);
     const itemsSubtotal = (component?.items || []).reduce(
         (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
@@ -223,12 +223,13 @@ const componentAmount = (component, includeDelivery = true) => {
         const baseForMargin = itemsSubtotal + overheadAmount;
         const marginAmount = baseForMargin * (Number(component?.marginPercent || 0) / 100);
         const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
-        return baseForMargin + marginAmount + delivery;
+        const freight = includeFreight ? Number(component?.freightCost || 0) * qty : 0;
+        return baseForMargin + marginAmount + delivery + freight;
     }
     return Number(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0);
 };
 
-const quotationComponentAmount = (component, includeDelivery = true) => {
+const quotationComponentAmount = (component, includeDelivery = true, includeFreight = true) => {
     const qty = componentQuantity(component);
     const itemsSubtotal = (component?.items || []).reduce((sum, item) => {
         const unit = Number(item?.unitPrice ?? item?.unitCost ?? 0);
@@ -236,7 +237,8 @@ const quotationComponentAmount = (component, includeDelivery = true) => {
     }, 0);
     const marginAmount = itemsSubtotal * (Number(component?.marginPercent || 0) / 100);
     const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
-    return itemsSubtotal + marginAmount + delivery;
+    const freight = includeFreight ? Number(component?.freightCost || 0) * qty : 0;
+    return itemsSubtotal + marginAmount + delivery + freight;
 };
 
 const componentLabel = (component) => {
@@ -566,8 +568,8 @@ const InvoiceView = () => {
             return estimation.components.map((comp) => ({
                 description: componentLabel(comp),
                 quantity: componentQuantity(comp),
-                unitPrice: componentQuantity(comp) > 0 ? componentAmount(comp, estimation.includeDelivery !== false) / componentQuantity(comp) : componentAmount(comp, estimation.includeDelivery !== false),
-                total: componentAmount(comp, estimation.includeDelivery !== false),
+                unitPrice: componentQuantity(comp) > 0 ? componentAmount(comp, estimation.includeDelivery !== false, estimation.includeFreight !== false) / componentQuantity(comp) : componentAmount(comp, estimation.includeDelivery !== false, estimation.includeFreight !== false),
+                total: componentAmount(comp, estimation.includeDelivery !== false, estimation.includeFreight !== false),
                 items: aggregateLineItems(comp.items || [], {
                     getDescription: (item) => item.productNameSnapshot || item.description || item.productId,
                     getUnitPrice: (item) => Number(item.estUnitCost || 0),
@@ -831,7 +833,7 @@ const InvoiceView = () => {
         const estimationComponentRows = estimation?.components?.length
             ? estimation.components.map((component, index) => {
                 const quantity = componentQuantity(component);
-                const total = componentAmount(component, estimation.includeDelivery !== false);
+                const total = componentAmount(component, estimation.includeDelivery !== false, estimation.includeFreight !== false);
                 return {
                     key: `est-component-${index}`,
                     itemCode: inquiryRef,
@@ -853,7 +855,7 @@ const InvoiceView = () => {
         const quotationComponentRows = !estimationComponentRows.length && quotation?.components?.length
             ? quotation.components.map((component, index) => {
                 const quantity = componentQuantity(component);
-                const total = quotationComponentAmount(component, quotation.includeDelivery !== false);
+                const total = quotationComponentAmount(component, quotation.includeDelivery !== false, quotation.includeFreight !== false);
                 return {
                     key: `quote-component-${index}`,
                     itemCode: inquiryRef,

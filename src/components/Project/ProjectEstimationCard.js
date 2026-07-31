@@ -67,21 +67,27 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
             const baseForMargin = itemsSubtotal + overheadAmount;
             const marginAmount = baseForMargin * (val(component?.marginPercent) / 100);
             const delivery = est?.includeDelivery !== false ? val(component?.deliveryCost) * qty : 0;
+            const freight = est?.includeFreight !== false ? val(component?.freightCost) * qty : 0;
             return {
                 itemsSubtotal,
                 subtotalWithMargin: baseForMargin + marginAmount,
                 delivery,
                 deliveryTaxable: component?.deliveryTaxable === true,
-                lineTotalBeforeTax: baseForMargin + marginAmount + delivery,
+                freight,
+                freightTaxable: component?.freightTaxable === true,
+                lineTotalBeforeTax: baseForMargin + marginAmount + delivery + freight,
             };
         }
         const delivery = est?.includeDelivery !== false ? val(component?.deliveryCost) * qty : 0;
+        const freight = est?.includeFreight !== false ? val(component?.freightCost) * qty : 0;
         return {
             itemsSubtotal: val(component?.itemsSubtotal),
             subtotalWithMargin: val(component?.subtotalWithMargin ?? component?.itemsSubtotal),
             delivery,
             deliveryTaxable: component?.deliveryTaxable === true,
-            lineTotalBeforeTax: val(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal) + delivery,
+            freight,
+            freightTaxable: component?.freightTaxable === true,
+            lineTotalBeforeTax: val(component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal) + delivery + freight,
         };
     };
     const displayTotals = (() => {
@@ -89,13 +95,18 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
         let nonTaxableRaw = 0;
         let subtotalWithMargin = 0;
         let deliveryTotal = 0;
+        let freightTotal = 0;
 
         components.forEach((component) => {
             const totals = componentTotals(component);
             subtotalWithMargin += totals.subtotalWithMargin;
             deliveryTotal += totals.delivery;
-            taxableBaseRaw += totals.subtotalWithMargin + (totals.deliveryTaxable ? totals.delivery : 0);
-            nonTaxableRaw += totals.deliveryTaxable ? 0 : totals.delivery;
+            freightTotal += totals.freight;
+            taxableBaseRaw += totals.subtotalWithMargin
+                + (totals.deliveryTaxable ? totals.delivery : 0)
+                + (totals.freightTaxable ? totals.freight : 0);
+            nonTaxableRaw += (totals.deliveryTaxable ? 0 : totals.delivery)
+                + (totals.freightTaxable ? 0 : totals.freight);
         });
 
         const totalBeforeDiscount = taxableBaseRaw + nonTaxableRaw;
@@ -113,6 +124,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
         return {
             subtotalWithMargin,
             deliveryTotal,
+            freightTotal,
             discountAmount,
             vatAmount,
             taxAmount,
@@ -131,14 +143,16 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
             }, 0);
             // Old model didn't have root delivery, but if it did:
             const delivery = val(est?.deliveryCost);
+            const freight = val(est?.freightCost);
             const taxPct = val(est?.taxPercent); // VAT
-            const taxAmt = (subtotal + delivery) * (taxPct / 100);
-            const grand = subtotal + delivery + taxAmt;
+            const taxAmt = (subtotal + delivery + freight) * (taxPct / 100);
+            const grand = subtotal + delivery + freight + taxAmt;
 
             return (
                 <>
                     <tr><td>Subtotal (Est)</td><td className="text-end">{money(subtotal)}</td></tr>
                     <tr><td>Delivery</td><td className="text-end">{money(delivery)}</td></tr>
+                    <tr><td>Freight</td><td className="text-end">{money(freight)}</td></tr>
                     <tr><td>VAT ({taxPct}%)</td><td className="text-end">{money(taxAmt)}</td></tr>
                     <tr><td><strong>Grand Total</strong></td><td className="text-end"><strong>{money(grand)}</strong></td></tr>
                     <tr><td colSpan="2" className="text-center text-warning small">Please Edit & Save to update details</td></tr>
@@ -148,6 +162,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
 
         // New Format
         const totalDelivery = displayTotals.deliveryTotal;
+        const totalFreight = displayTotals.freightTotal;
 
         return (
             <>
@@ -164,6 +179,12 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
                     <tr>
                         <td>Delivery</td>
                         <td className="text-end">{currency} {money(totalDelivery)}</td>
+                    </tr>
+                )}
+                {totalFreight > 0 && (
+                    <tr>
+                        <td>Freight</td>
+                        <td className="text-end">{currency} {money(totalFreight)}</td>
                     </tr>
                 )}
 

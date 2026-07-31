@@ -191,7 +191,7 @@ const roundUpToPlace = (value, place) => {
     return Math.ceil(amount / step) * step;
 };
 
-const componentAmount = (component, includeDelivery = true) => {
+const componentAmount = (component, includeDelivery = true, includeFreight = true) => {
     if (component?.lineTotalBeforeTax != null) {
         return Number(component.lineTotalBeforeTax || 0);
     }
@@ -205,7 +205,8 @@ const componentAmount = (component, includeDelivery = true) => {
         const baseForMargin = itemsSubtotal + overheadAmount;
         const marginAmount = baseForMargin * (Number(component?.marginPercent || 0) / 100);
         const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
-        return baseForMargin + marginAmount + delivery;
+        const freight = includeFreight ? Number(component?.freightCost || 0) * qty : 0;
+        return baseForMargin + marginAmount + delivery + freight;
     }
     return component?.lineTotalBeforeTax ?? component?.subtotalWithMargin ?? component?.itemsSubtotal ?? 0;
 };
@@ -213,6 +214,7 @@ const componentAmount = (component, includeDelivery = true) => {
 const computeQuotationTotals = (estimation) => {
     const components = estimation?.components || [];
     const includeDelivery = estimation?.includeDelivery !== false;
+    const includeFreight = estimation?.includeFreight !== false;
     const includeVat = estimation?.includeVat !== false;
     const includeTax = estimation?.includeTax === true;
     const roundTotals = estimation?.roundingEnabled === true;
@@ -238,8 +240,10 @@ const computeQuotationTotals = (estimation) => {
             : baseForMargin + marginAmount;
         const delivery = includeDelivery ? Number(component?.deliveryCost || 0) * qty : 0;
         const deliveryTaxable = includeDelivery && component?.deliveryTaxable === true;
-        const taxableRaw = afterMargin + (deliveryTaxable ? delivery : 0);
-        const nonTaxableRawPart = deliveryTaxable ? 0 : delivery;
+        const freight = includeFreight ? Number(component?.freightCost || 0) * qty : 0;
+        const freightTaxable = includeFreight && component?.freightTaxable === true;
+        const taxableRaw = afterMargin + (deliveryTaxable ? delivery : 0) + (freightTaxable ? freight : 0);
+        const nonTaxableRawPart = (deliveryTaxable ? 0 : delivery) + (freightTaxable ? 0 : freight);
         const lineTotalRaw = taxableRaw + nonTaxableRawPart;
         const lineTotal = component?.lineTotalBeforeTax != null
             ? Number(component.lineTotalBeforeTax || 0)
@@ -678,7 +682,7 @@ const QuotationPrint = () => {
                                             {showQuotationUnitPriceColumn && <td />}
                                             {showQuotationTotalColumn && (
                                                 <td className="text-end fw-bold">
-                                                    {printOptions.showComponentPrices ? money(componentAmount(comp, estimation.includeDelivery !== false)) : ""}
+                                                    {printOptions.showComponentPrices ? money(componentAmount(comp, estimation.includeDelivery !== false, estimation.includeFreight !== false)) : ""}
                                                 </td>
                                             )}
                                         </tr>

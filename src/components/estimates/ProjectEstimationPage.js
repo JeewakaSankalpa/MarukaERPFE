@@ -180,6 +180,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     // Global include toggles / rates for printing & totals
     const [includeDelivery, setIncludeDelivery] = useState(true);
+    const [includeFreight, setIncludeFreight] = useState(true);
     const [includeVat, setIncludeVat] = useState(true);
     const [includeTax, setIncludeTax] = useState(false);
     const [vatPercent, setVatPercent] = useState("");   // number-as-string
@@ -192,6 +193,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [compMargin, setCompMargin] = useState({}); // { [compName]: number|string }
     const [compDelivery, setCompDelivery] = useState({}); // { [compName]: number|string }
     const [compDeliveryTaxable, setCompDeliveryTaxable] = useState({}); // { [compName]: boolean }
+    const [compFreight, setCompFreight] = useState({}); // { [compName]: number|string }
+    const [compFreightTaxable, setCompFreightTaxable] = useState({}); // { [compName]: boolean }
 
     // Print Settings
     // Print Settings
@@ -326,6 +329,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setComponents(["Component A"]);
             setRows([]);
             setIncludeDelivery(true);
+            setIncludeFreight(true);
             setIncludeVat(true);
             setIncludeTax(false);
             setRoundingEnabled(false);
@@ -343,6 +347,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
             setCompDelivery({});
             setCompDeliveryTaxable({});
+            setCompFreight({});
+            setCompFreightTaxable({});
             setCompOverhead({});
             setDiscountPercent("");
             setCustomNote("");
@@ -369,6 +375,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setComponents(["Component A"]);
                     setRows([]);
                     setIncludeDelivery(true);
+                    setIncludeFreight(true);
                     setIncludeVat(true);
                     setIncludeTax(false);
                     setRoundingEnabled(false);
@@ -383,6 +390,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                     setCompDelivery({});
                     setCompDeliveryTaxable({});
+                    setCompFreight({});
+                    setCompFreightTaxable({});
                     setExistingFileUrl(null);
                     setVatPercent(globalSettings.GLOBAL_VAT_PERCENT || "18");
                     setTaxPercent(globalSettings.GLOBAL_TAX_PERCENT || "0");
@@ -413,6 +422,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 const initialQty = {};
                 const initialDelivery = {};
                 const initialDelTax = {};
+                const initialFreight = {};
+                const initialFreightTax = {};
                 const initialOverhead = {};
                 (est.components || []).forEach(c => {
                     const name = c.name?.trim() || "Component";
@@ -421,12 +432,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     if (c.overheadPercent != null) initialOverhead[name] = String(c.overheadPercent);
                     if (c.deliveryCost != null) initialDelivery[name] = String(c.deliveryCost);
                     if (typeof c.deliveryTaxable === "boolean") initialDelTax[name] = !!c.deliveryTaxable;
+                    if (c.freightCost != null) initialFreight[name] = String(c.freightCost);
+                    if (typeof c.freightTaxable === "boolean") initialFreightTax[name] = !!c.freightTaxable;
                 });
                 setCompMargin(initialMargin);
                 setCompQty(initialQty);
                 setCompOverhead(initialOverhead);
                 setCompDelivery(initialDelivery);
                 setCompDeliveryTaxable(initialDelTax);
+                setCompFreight(initialFreight);
+                setCompFreightTaxable(initialFreightTax);
 
                 setDiscountPercent(est.discountPercent != null ? String(est.discountPercent) : "");
                 setCustomNote(est.customNote || "");
@@ -480,6 +495,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                 // global flags
                 if (typeof est.includeDelivery === "boolean") setIncludeDelivery(!!est.includeDelivery);
+                if (typeof est.includeFreight === "boolean") setIncludeFreight(!!est.includeFreight);
                 if (typeof est.includeVat === "boolean") setIncludeVat(!!est.includeVat);
                 if (typeof est.includeTax === "boolean") setIncludeTax(!!est.includeTax);
                 setRoundingEnabled(!!est.roundingEnabled);
@@ -618,6 +634,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         setCompOverhead({});
         setCompDelivery({});
         setCompDeliveryTaxable({});
+        setCompFreight({});
+        setCompFreightTaxable({});
         setDiscountPercent("");
         setCustomNote("");
         setTerms([]);
@@ -718,6 +736,20 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 }
                 return x;
             });
+            setCompFreight(s => {
+                const x = { ...s };
+                if (Object.prototype.hasOwnProperty.call(x, oldName)) {
+                    x[newName] = x[oldName]; delete x[oldName];
+                }
+                return x;
+            });
+            setCompFreightTaxable(s => {
+                const x = { ...s };
+                if (Object.prototype.hasOwnProperty.call(x, oldName)) {
+                    x[newName] = x[oldName]; delete x[oldName];
+                }
+                return x;
+            });
             setCompOverhead(s => {
                 const x = { ...s };
                 if (Object.prototype.hasOwnProperty.call(x, oldName)) {
@@ -747,6 +779,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         setCompOverhead(s => { const x = { ...s }; delete x[name]; return x; });
         setCompDelivery(s => { const x = { ...s }; delete x[name]; return x; });
         setCompDeliveryTaxable(s => { const x = { ...s }; delete x[name]; return x; });
+        setCompFreight(s => { const x = { ...s }; delete x[name]; return x; });
+        setCompFreightTaxable(s => { const x = { ...s }; delete x[name]; return x; });
     };
 
     const addRow = () => {
@@ -943,7 +977,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         if (!isInitialLoad && !suppressDirtyRef.current) setIsDirty(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rows, components, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
-        includeDelivery, includeVat, includeTax, roundingEnabled, roundingPlace, discountPercent, customNote, terms]);
+        compFreight, compFreightTaxable, includeDelivery, includeFreight, includeVat, includeTax,
+        roundingEnabled, roundingPlace, discountPercent, customNote, terms]);
 
     /* ------------ per-component + totals ------------ */
     const mergedRows = useMemo(() => mergeRowsByItem(rows, components), [rows, components]);
@@ -971,11 +1006,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const unitDelivery = Number(compDelivery[cname] || 0);
             const del = unitDelivery * sets;
             const delTaxable = !!compDeliveryTaxable[cname];
+            const unitFreight = Number(compFreight[cname] || 0);
+            const freight = unitFreight * sets;
+            const freightTaxable = !!compFreightTaxable[cname];
 
             const taxableAdd = includeDelivery && delTaxable ? del : 0;
             const nonTaxableAdd = includeDelivery && !delTaxable ? del : 0;
-            const taxablePortionRaw = afterMargin + taxableAdd;
-            const nonTaxablePortionRaw = nonTaxableAdd;
+            const taxableFreightAdd = includeFreight && freightTaxable ? freight : 0;
+            const nonTaxableFreightAdd = includeFreight && !freightTaxable ? freight : 0;
+            const taxablePortionRaw = afterMargin + taxableAdd + taxableFreightAdd;
+            const nonTaxablePortionRaw = nonTaxableAdd + nonTaxableFreightAdd;
             const lineTotalRaw = taxablePortionRaw + nonTaxablePortionRaw;
             const lineTotalBeforeTax = roundingEnabled ? roundUpToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw;
             const roundingDelta = lineTotalBeforeTax - lineTotalRaw;
@@ -995,12 +1035,16 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 unitDelivery,
                 delivery: del,
                 deliveryTaxable: delTaxable,
+                unitFreight,
+                freight,
+                freightTaxable,
                 taxablePortion, // Gross taxable base from this component
                 nonTaxablePortion,
                 lineTotalBeforeTax,
             };
         });
-    }, [components, mergedRows, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable, includeDelivery, roundingEnabled, roundingPlace]);
+    }, [components, mergedRows, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
+        compFreight, compFreightTaxable, includeDelivery, includeFreight, roundingEnabled, roundingPlace]);
 
     const totals = useMemo(() => {
         const taxableBaseRaw = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
@@ -1100,6 +1144,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const o = compOverhead[cname];
             const dc = compDelivery[cname];
             const dt = !!compDeliveryTaxable[cname];
+            const fc = compFreight[cname];
+            const ft = !!compFreightTaxable[cname];
 
             return {
                 name: cname,
@@ -1109,6 +1155,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 overheadPercent: toBigDec(o),
                 deliveryCost: toBigDec(dc),
                 deliveryTaxable: dt,
+                freightCost: toBigDec(fc),
+                freightTaxable: ft,
                 items
             };
         });
@@ -1121,6 +1169,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return {
             components: comps,
             includeDelivery,
+            includeFreight,
             includeVat,
             includeTax,
             roundingEnabled,
@@ -1782,6 +1831,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         <th className="text-end" style={{ width: 140 }}>After Margin</th>
                                         <th style={{ width: 180 }}>Delivery / Set</th>
                                         <th style={{ width: 150 }}>Delivery Taxable?</th>
+                                        <th style={{ width: 180 }}>Freight / Set</th>
+                                        <th style={{ width: 150 }}>Freight Taxable?</th>
                                         <th className="text-end" style={{ width: 160 }}>Line Total (pre-tax)</th>
                                     </tr>
                                 </thead>
@@ -1860,6 +1911,32 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     label=""
                                                 />
                                             </td>
+                                            <td>
+                                                <Form.Control
+                                                    className="text-end"
+                                                    type="number"
+                                                    min="0" step="0.01"
+                                                    value={compFreight[cc.name] ?? ""}
+                                                    disabled={isLocked}
+                                                    onChange={(e) => {
+                                                        markComponentsDirty(cc.name);
+                                                        setCompFreight(s => ({ ...s, [cc.name]: e.target.value }));
+                                                    }}
+                                                    placeholder="0"
+                                                />
+                                            </td>
+                                            <td className="text-center">
+                                                <Form.Check
+                                                    type="switch"
+                                                    checked={!!compFreightTaxable[cc.name]}
+                                                    onChange={(e) => {
+                                                        markComponentsDirty(cc.name);
+                                                        setCompFreightTaxable(s => ({ ...s, [cc.name]: e.target.checked }));
+                                                    }}
+                                                    disabled={!includeFreight || isLocked}
+                                                    label=""
+                                                />
+                                            </td>
                                             <td className="text-end align-middle">{cc.lineTotalBeforeTax.toLocaleString()}</td>
                                         </tr>
                                     ))}
@@ -1877,6 +1954,15 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                             checked={includeDelivery}
                                             disabled={isLocked}
                                             onChange={e => setIncludeDelivery(e.target.checked)}
+                                        />
+                                    </Col>
+                                    <Col md={3}>
+                                        <Form.Check
+                                            type="switch"
+                                            label="Include Freight in Total"
+                                            checked={includeFreight}
+                                            disabled={isLocked}
+                                            onChange={e => setIncludeFreight(e.target.checked)}
                                         />
                                     </Col>
                                     <Col md={3}>

@@ -23,6 +23,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
 
     // Global Knobs
     const [includeDelivery, setIncludeDelivery] = useState(true);
+    const [includeFreight, setIncludeFreight] = useState(true);
     const [includeVat, setIncludeVat] = useState(true);
     const [includeTax, setIncludeTax] = useState(false);
     const [vatPercent, setVatPercent] = useState("");
@@ -33,6 +34,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
     const [compMargin, setCompMargin] = useState({});
     const [compDelivery, setCompDelivery] = useState({});
     const [compDeliveryTaxable, setCompDeliveryTaxable] = useState({});
+    const [compFreight, setCompFreight] = useState({});
+    const [compFreightTaxable, setCompFreightTaxable] = useState({});
 
     // --- Initialization ---
     useEffect(() => {
@@ -46,6 +49,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
 
         // Global
         if (typeof d.includeDelivery === "boolean") setIncludeDelivery(d.includeDelivery);
+        if (typeof d.includeFreight === "boolean") setIncludeFreight(d.includeFreight);
         if (typeof d.includeVat === "boolean") setIncludeVat(d.includeVat);
         if (typeof d.includeTax === "boolean") setIncludeTax(d.includeTax);
         if (d.vatPercent != null) setVatPercent(String(d.vatPercent));
@@ -56,6 +60,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
         const initialQty = {};
         const initialDelivery = {};
         const initialDelTax = {};
+        const initialFreight = {};
+        const initialFreightTax = {};
         const rowMap = new Map();
 
         (d.components || []).forEach(c => {
@@ -64,6 +70,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
             if (c.marginPercent != null) initialMargin[cname] = String(c.marginPercent);
             if (c.deliveryCost != null) initialDelivery[cname] = String(c.deliveryCost);
             if (typeof c.deliveryTaxable === "boolean") initialDelTax[cname] = !!c.deliveryTaxable;
+            if (c.freightCost != null) initialFreight[cname] = String(c.freightCost);
+            if (typeof c.freightTaxable === "boolean") initialFreightTax[cname] = !!c.freightTaxable;
 
             (c.items || []).forEach(it => {
                 if (!it.productId) return;
@@ -87,6 +95,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
         setCompMargin(initialMargin);
         setCompDelivery(initialDelivery);
         setCompDeliveryTaxable(initialDelTax);
+        setCompFreight(initialFreight);
+        setCompFreightTaxable(initialFreightTax);
         setRows(Array.from(rowMap.values()));
 
     }, [initialData, productById]);
@@ -142,6 +152,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
             migrate(setCompQty);
             migrate(setCompDelivery);
             migrate(setCompDeliveryTaxable);
+            migrate(setCompFreight);
+            migrate(setCompFreightTaxable);
         }
     };
 
@@ -157,6 +169,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
         // Remove settings
         const del = (setter) => setter(s => { const x = { ...s }; delete x[name]; return x; });
         del(setCompQty); del(setCompMargin); del(setCompDelivery); del(setCompDeliveryTaxable);
+        del(setCompFreight); del(setCompFreightTaxable);
     };
 
     const addRow = () => setRows([...rows, { productId: "", quantities: {} }]);
@@ -215,20 +228,26 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
 
             const del = Number(compDelivery[cname] || 0) * sets;
             const delTaxable = !!compDeliveryTaxable[cname];
+            const freight = Number(compFreight[cname] || 0) * sets;
+            const freightTaxable = !!compFreightTaxable[cname];
 
             const taxableAdd = (includeDelivery && delTaxable) ? del : 0;
             const nonTaxableAdd = (includeDelivery && !delTaxable) ? del : 0;
+            const taxableFreightAdd = (includeFreight && freightTaxable) ? freight : 0;
+            const nonTaxableFreightAdd = (includeFreight && !freightTaxable) ? freight : 0;
 
             return {
                 name: cname,
                 sets, unitSubtotal, subtotal, marginPct: mPct, marginAmount: mAmt, afterMargin,
                 delivery: del, deliveryTaxable: delTaxable,
-                taxablePortion: afterMargin + taxableAdd,
-                nonTaxablePortion: nonTaxableAdd,
-                lineTotalBeforeTax: afterMargin + (includeDelivery ? del : 0)
+                freight, freightTaxable,
+                taxablePortion: afterMargin + taxableAdd + taxableFreightAdd,
+                nonTaxablePortion: nonTaxableAdd + nonTaxableFreightAdd,
+                lineTotalBeforeTax: afterMargin + (includeDelivery ? del : 0) + (includeFreight ? freight : 0)
             };
         });
-    }, [components, rows, compQty, compMargin, compDelivery, compDeliveryTaxable, includeDelivery]);
+    }, [components, rows, compQty, compMargin, compDelivery, compDeliveryTaxable, compFreight, compFreightTaxable,
+        includeDelivery, includeFreight]);
 
     const totals = useMemo(() => {
         const taxableBase = compCalcs.reduce((a, c) => a + c.taxablePortion, 0);
@@ -273,13 +292,15 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                 marginPercent: toBigDec(compMargin[cname]),
                 deliveryCost: toBigDec(compDelivery[cname]),
                 deliveryTaxable: !!compDeliveryTaxable[cname],
+                freightCost: toBigDec(compFreight[cname]),
+                freightTaxable: !!compFreightTaxable[cname],
                 items
             };
         });
 
         return {
             components: comps,
-            includeDelivery, includeVat, includeTax,
+            includeDelivery, includeFreight, includeVat, includeTax,
             vatPercent: toBigDec(vatPercent),
             taxPercent: toBigDec(taxPercent)
         };
@@ -371,6 +392,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                             <th className="text-end">After Margin</th>
                             <th style={{ width: 120 }}>Delivery</th>
                             <th className="text-center" style={{ width: 100 }}>Tax Del?</th>
+                            <th style={{ width: 120 }}>Freight</th>
+                            <th className="text-center" style={{ width: 100 }}>Tax Freight?</th>
                             <th className="text-end">Line Total</th>
                         </tr>
                     </thead>
@@ -395,6 +418,8 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                                 <td className="text-end bg-light">{cc.afterMargin.toLocaleString()}</td>
                                 <td><Form.Control size="sm" type="number" className="text-end" value={compDelivery[cc.name] || ""} onChange={e => setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }))} disabled={readOnly} /></td>
                                 <td className="text-center"><Form.Check type="switch" checked={!!compDeliveryTaxable[cc.name]} onChange={e => setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }))} disabled={readOnly || !includeDelivery} /></td>
+                                <td><Form.Control size="sm" type="number" className="text-end" value={compFreight[cc.name] || ""} onChange={e => setCompFreight(s => ({ ...s, [cc.name]: e.target.value }))} disabled={readOnly} /></td>
+                                <td className="text-center"><Form.Check type="switch" checked={!!compFreightTaxable[cc.name]} onChange={e => setCompFreightTaxable(s => ({ ...s, [cc.name]: e.target.checked }))} disabled={readOnly || !includeFreight} /></td>
                                 <td className="text-end fw-bold">{cc.lineTotalBeforeTax.toLocaleString()}</td>
                             </tr>
                         ))}
@@ -405,6 +430,7 @@ const BoqEditor = forwardRef(({ initialData, products, availMap, productById, re
                 <Row className="mt-3">
                     <Col md={3}>
                         <Form.Check type="switch" label="Include Delivery" checked={includeDelivery} onChange={e => setIncludeDelivery(e.target.checked)} disabled={readOnly} />
+                        <Form.Check type="switch" label="Include Freight" checked={includeFreight} onChange={e => setIncludeFreight(e.target.checked)} disabled={readOnly} />
                         <Form.Check type="switch" label="Include VAT" checked={includeVat} onChange={e => setIncludeVat(e.target.checked)} disabled={readOnly} />
                         <Form.Check type="switch" label="Include Other Tax" checked={includeTax} onChange={e => setIncludeTax(e.target.checked)} disabled={readOnly} />
                     </Col>
