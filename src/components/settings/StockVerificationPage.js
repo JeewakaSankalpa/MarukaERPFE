@@ -1201,7 +1201,7 @@ function ReconciliationTab() {
                 </div>
             </Col>
         </Row>
-        <Modal show={reportOpen} onHide={() => setReportOpen(false)} size="xl" centered scrollable>
+        <Modal show={reportOpen} onHide={() => setReportOpen(false)} size="xl" centered>
             <Modal.Header closeButton>
                 <Modal.Title>Physical Count Full Report</Modal.Title>
             </Modal.Header>
@@ -1457,6 +1457,7 @@ export default function StockVerificationPage() {
                     .modal { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; overflow: visible !important; }
                     .modal-dialog { max-width: none !important; width: 100% !important; margin: 0 !important; }
                     .modal-content { border: 0 !important; box-shadow: none !important; }
+                    .modal-body { overflow: visible !important; max-height: none !important; height: auto !important; }
                     .modal-header, .modal-footer, .interactive-report { display: none !important; }
                     .printable-physical-report { display: block !important; }
                     .print-hidden { display: none !important; }
