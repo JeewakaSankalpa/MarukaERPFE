@@ -12,6 +12,18 @@ const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
 const searchPOs = async (q) => (await api.get(`/pos?q=${q}`)).data;
 const createGRN = async (payload) => (await api.post(`/grns`, payload)).data;
 
+const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+const calculateDiscountAdjustedUnitCost = (item, subtotal, discountAmount) => {
+    const qty = Number(item.orderedQty || 0);
+    const unitPrice = Number(item.unitPrice || 0);
+    if (qty <= 0 || unitPrice <= 0) return "";
+    const lineTotal = qty * unitPrice;
+    const discount = Math.min(Math.max(Number(discountAmount || 0), 0), Number(subtotal || 0));
+    const discountShare = subtotal > 0 ? discount * (lineTotal / subtotal) : 0;
+    return roundMoney((lineTotal - discountShare) / qty).toFixed(2);
+};
+
 export default function GRNReceivePage({ poId: initialPoId }) {
     const navigate = useNavigate();
     const [poInput, setPoInput] = useState(initialPoId || "");  // what the user types
@@ -24,6 +36,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
     const [creditPeriodDays, setCreditPeriodDays] = useState("");
     const [vatAmount, setVatAmount] = useState("");
+    const [discountAmount, setDiscountAmount] = useState("");
     const [deliveryCharge, setDeliveryCharge] = useState("");
 
     const [posting, setPosting] = useState(false);
@@ -48,6 +61,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     }
                 }
                 const d = await getPO(actualId);
+                const subtotal = Number(d.subTotal || (d.items || []).reduce((sum, it) => sum + ((Number(it.orderedQty) || 0) * (Number(it.unitPrice) || 0)), 0));
+                const discount = Number(d.discountAmount || 0);
                 setPoInput(d.poNumber); // update the label with full number
                 setPo(d);
                 setRows((d.items || []).map(it => ({
@@ -56,8 +71,11 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     sku: it.sku,
                     unit: it.unit || "pcs",
                     orderedQty: it.orderedQty,
+                    unitPrice: it.unitPrice,
+                    adjustedUnitCost: calculateDiscountAdjustedUnitCost(it, subtotal, discount),
                     batches: []
                 })));
+                setDiscountAmount(d.discountAmount ?? "");
                 if (d.deliveryCharge) setDeliveryCharge(d.deliveryCharge);
                 if (d.vatAmount) setVatAmount(d.vatAmount);
             } catch (e) { console.error(e); toast.error(e?.response?.data?.message || e?.message || "Failed to load PO"); }
@@ -66,7 +84,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
 
     const addBatch = (i) => setRows(rs => {
         const cp = [...rs];
-        cp[i] = { ...cp[i], batches: [...(cp[i].batches || []), { batchNo: "", expiryDate: "", qty: "", unitCost: "" }] };
+        cp[i] = { ...cp[i], batches: [...(cp[i].batches || []), { batchNo: "", expiryDate: "", qty: "", unitCost: cp[i].adjustedUnitCost || "" }] };
         return cp;
     });
     const setBatch = (i, bi, k, v) => setRows(rs => {
@@ -119,6 +137,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 supplierInvoiceDate: supplierInvoiceDate || undefined,
                 creditPeriodDays: creditPeriodDays ? Number(creditPeriodDays) : undefined,
                 vatAmount: vatAmount ? Number(vatAmount) : 0,
+                discountAmount: discountAmount ? Number(discountAmount) : 0,
                 deliveryCharge: deliveryCharge ? Number(deliveryCharge) : 0
             };
 
@@ -130,6 +149,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             setPoInput(""); setPoId(""); setPo(null); setRows([]);
             setSupplierInvoiceNo(""); setSupplierInvoiceDate("");
             setCreditPeriodDays("");
+            setDiscountAmount("");
 
             // Fetch created batches for QR display
             try {
@@ -237,11 +257,17 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     </Col>
                     <Col md={3}>
                         <Form.Group>
+                            <Form.Label>Seller Discount</Form.Label>
+                            <Form.Control type="number" value={discountAmount} readOnly style={{ backgroundColor: '#e9ecef' }} />
+                        </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                        <Form.Group>
                             <Form.Label>Delivery Charge</Form.Label>
                             <Form.Control type="number" value={deliveryCharge} onChange={e => setDeliveryCharge(e.target.value)} />
                         </Form.Group>
                     </Col>
-                    <Col md={6}>
+                    <Col md={3}>
                         {po && (
                             <div className="d-flex gap-3 align-items-center mt-4">
                                 <Badge bg="light" text="dark">PO: {po.poNumber}</Badge>
@@ -310,6 +336,11 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                         ))}
                                                         <div>
                                                             <Button size="sm" variant="outline-secondary" onClick={() => addBatch(i)}>+ Batch</Button>
+                                                            {r.adjustedUnitCost && (
+                                                                <small className="text-muted ms-2">
+                                                                    PO {Number(r.unitPrice || 0).toFixed(2)} → adjusted {r.adjustedUnitCost}
+                                                                </small>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </td>

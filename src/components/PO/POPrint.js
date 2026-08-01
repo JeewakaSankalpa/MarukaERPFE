@@ -230,8 +230,9 @@ const POPrint = () => {
                         {(() => {
                             const subTotalCalculated = (po.items || []).reduce((sum, item) => sum + ((item?.orderedQty || 0) * (item?.unitPrice || 0)), 0);
                             const computedSubTotal = (po.subTotal && po.subTotal > 0) ? po.subTotal : subTotalCalculated;
+                            const discount = po.discountAmount || 0;
                             const taxTotalCalculated = po.taxTotal || (po.items || []).reduce((sum, item) => sum + (((item?.orderedQty || 0) * (item?.unitPrice || 0)) * ((item?.taxPercent || 0) / 100)), 0);
-                            const computedGrandTotal = po.grandTotal || (computedSubTotal + (po.deliveryCharge || 0) + (po.vatAmount || 0) + (po.otherTaxAmount || 0) + taxTotalCalculated);
+                            const computedGrandTotal = po.grandTotal || (Math.max(0, computedSubTotal - discount) + (po.deliveryCharge || 0) + (po.vatAmount || 0) + (po.otherTaxAmount || 0) + taxTotalCalculated);
                             
                             return (
                                 <>
@@ -239,6 +240,13 @@ const POPrint = () => {
                                         <span>SUBTOTAL</span>
                                         <span>{computedSubTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
+
+                                    {(discount > 0) && (
+                                        <div className="d-flex justify-content-between mb-2">
+                                            <span>DISCOUNT</span>
+                                            <span>-{discount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
 
                                     {(po.deliveryCharge > 0) && (
                                         <div className="d-flex justify-content-between mb-2">

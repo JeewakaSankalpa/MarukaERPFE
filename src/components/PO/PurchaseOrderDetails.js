@@ -71,7 +71,7 @@ export default function PurchaseOrderDetails() {
 
     // Financials Modal
     const [showFinancialsModal, setShowFinancialsModal] = useState(false);
-    const [financialsForm, setFinancialsForm] = useState({ deliveryCharge: '', vatRate: '', otherTaxRate: '' });
+    const [financialsForm, setFinancialsForm] = useState({ discountAmount: '', deliveryCharge: '', vatRate: '', otherTaxRate: '' });
 
     const loadData = async () => {
         try {
@@ -178,12 +178,18 @@ export default function PurchaseOrderDetails() {
 
     const handleUpdateFinancials = async () => {
         try {
+            const discountAmount = financialsForm.discountAmount !== '' ? parseFloat(financialsForm.discountAmount) : 0;
             const deliveryCharge = financialsForm.deliveryCharge !== '' ? parseFloat(financialsForm.deliveryCharge) : 0;
-            const taxableBase = (po.subTotal || 0) + deliveryCharge;
+            if (discountAmount > (po.subTotal || 0)) {
+                toast.warn("Seller discount cannot exceed subtotal");
+                return;
+            }
+            const taxableBase = Math.max(0, (po.subTotal || 0) - discountAmount) + deliveryCharge;
             const vatAmount = financialsForm.vatRate !== '' ? taxableBase * (parseFloat(financialsForm.vatRate) / 100) : 0;
             const otherTaxAmount = financialsForm.otherTaxRate !== '' ? taxableBase * (parseFloat(financialsForm.otherTaxRate) / 100) : 0;
             
             const payload = {
+                discountAmount: discountAmount > 0 ? discountAmount : null,
                 deliveryCharge: deliveryCharge > 0 ? deliveryCharge : null,
                 vatAmount: vatAmount > 0 ? vatAmount : null,
                 otherTaxAmount: otherTaxAmount > 0 ? otherTaxAmount : null,
@@ -350,6 +356,7 @@ export default function PurchaseOrderDetails() {
                 <tr><td className="text-muted">ETA</td><td>{snapshot?.etaDate || "-"}</td></tr>
                 <tr><td className="text-muted">PO Note</td><td style={{ whiteSpace: "pre-wrap" }}>{snapshot?.note || "-"}</td></tr>
                 <tr><td className="text-muted">Subtotal</td><td>{money(snapshot?.subTotal)}</td></tr>
+                <tr><td className="text-muted">Discount</td><td>{money(snapshot?.discountAmount)}</td></tr>
                 <tr><td className="text-muted">Delivery</td><td>{money(snapshot?.deliveryCharge)}</td></tr>
                 <tr><td className="text-muted">VAT</td><td>{money(snapshot?.vatAmount)}</td></tr>
                 <tr><td className="text-muted">Other Tax</td><td>{money(snapshot?.otherTaxAmount)}</td></tr>
@@ -380,10 +387,11 @@ export default function PurchaseOrderDetails() {
                                 Edit PO
                             </Button>
                             <Button variant="outline-secondary" onClick={() => {
-                                const taxableBase = (po.subTotal || 0) + (po.deliveryCharge || 0);
+                                const taxableBase = Math.max(0, (po.subTotal || 0) - (po.discountAmount || 0)) + (po.deliveryCharge || 0);
                                 const currentVatRate = taxableBase > 0 && po.vatAmount > 0 ? (po.vatAmount / taxableBase * 100).toFixed(2) : '';
                                 const currentOtherTaxRate = taxableBase > 0 && po.otherTaxAmount > 0 ? (po.otherTaxAmount / taxableBase * 100).toFixed(2) : '';
                                 setFinancialsForm({
+                                    discountAmount: po.discountAmount ?? '',
                                     deliveryCharge: po.deliveryCharge ?? '',
                                     vatRate: currentVatRate,
                                     otherTaxRate: currentOtherTaxRate
@@ -538,7 +546,9 @@ export default function PurchaseOrderDetails() {
                                     <tbody>
                                         {(() => {
                                             const computedSubTotal = (po.subTotal && po.subTotal > 0) ? po.subTotal : (po.items || []).reduce((sum, item) => sum + ((item.orderedQty || 0) * (item.unitPrice || 0)), 0);
-                                            const computedGrandTotal = po.grandTotal || (computedSubTotal + (po.deliveryCharge || 0) + (po.vatAmount || 0) + (po.otherTaxAmount || 0) + (po.taxTotal || 0));
+                                            const discount = po.discountAmount || 0;
+                                            const taxableBase = Math.max(0, computedSubTotal - discount) + (po.deliveryCharge || 0);
+                                            const computedGrandTotal = po.grandTotal || (taxableBase + (po.vatAmount || 0) + (po.otherTaxAmount || 0) + (po.taxTotal || 0));
                                             
                                             return (
                                                 <>
@@ -546,6 +556,12 @@ export default function PurchaseOrderDetails() {
                                                         <td className="text-end"><strong>Subtotal:</strong></td>
                                                         <td className="text-end">{computedSubTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                     </tr>
+                                                    {(discount > 0) && (
+                                                        <tr>
+                                                            <td className="text-end text-muted">Seller Discount:</td>
+                                                            <td className="text-end text-muted">-{discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                        </tr>
+                                                    )}
                                                     {(po.deliveryCharge > 0) && (
                                                         <tr>
                                                             <td className="text-end text-muted">Delivery:</td>
@@ -556,8 +572,8 @@ export default function PurchaseOrderDetails() {
                                                         <tr>
                                                             <td className="text-end text-muted">
                                                                 VAT
-                                                                {(computedSubTotal + (po.deliveryCharge || 0)) > 0
-                                                                    ? ` (${((po.vatAmount / (computedSubTotal + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
+                                                                {taxableBase > 0
+                                                                    ? ` (${((po.vatAmount / taxableBase) * 100).toFixed(2)}%)`
                                                                     : ''}:
                                                             </td>
                                                             <td className="text-end text-muted">{po.vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -567,8 +583,8 @@ export default function PurchaseOrderDetails() {
                                                         <tr>
                                                             <td className="text-end text-muted">
                                                                 Other Tax
-                                                                {(computedSubTotal + (po.deliveryCharge || 0)) > 0
-                                                                    ? ` (${((po.otherTaxAmount / (computedSubTotal + (po.deliveryCharge || 0))) * 100).toFixed(2)}%)`
+                                                                {taxableBase > 0
+                                                                    ? ` (${((po.otherTaxAmount / taxableBase) * 100).toFixed(2)}%)`
                                                                     : ''}:
                                                             </td>
                                                             <td className="text-end text-muted">{po.otherTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -852,6 +868,16 @@ export default function PurchaseOrderDetails() {
                     </div>
 
                     <Form.Group className="mb-3">
+                        <Form.Label>Seller Discount</Form.Label>
+                        <Form.Control
+                            type="number" min="0" step="0.01"
+                            value={financialsForm.discountAmount}
+                            onChange={e => setFinancialsForm(f => ({ ...f, discountAmount: e.target.value }))}
+                            placeholder="0.00"
+                        />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
                         <Form.Label>Delivery Charge</Form.Label>
                         <Form.Control
                             type="number" min="0" step="0.01"
@@ -863,12 +889,23 @@ export default function PurchaseOrderDetails() {
 
                     {/* Taxable base used for % calculations */}
                     {(() => {
-                        const taxableBase = (po.subTotal || 0) + (Number(financialsForm.deliveryCharge) || 0);
+                        const discount = Math.min(Math.max(Number(financialsForm.discountAmount) || 0, 0), po.subTotal || 0);
+                        const taxableBase = Math.max(0, (po.subTotal || 0) - discount) + (Number(financialsForm.deliveryCharge) || 0);
                         const vatAmt = (taxableBase * ((Number(financialsForm.vatRate) || 0) / 100));
                         const otherTaxAmt = (taxableBase * ((Number(financialsForm.otherTaxRate) || 0) / 100));
                         const grandTotal = taxableBase + vatAmt + otherTaxAmt;
                         return (
                             <>
+                                {Number(financialsForm.discountAmount || 0) > (po.subTotal || 0) && (
+                                    <div className="alert alert-danger py-1 px-2 mb-3 small">
+                                        Seller discount cannot exceed subtotal.
+                                    </div>
+                                )}
+                                {discount > 0 && (
+                                    <div className="alert alert-secondary py-1 px-2 mb-3 small">
+                                        Taxable base after discount and delivery: <strong>{taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                                    </div>
+                                )}
                                 <Form.Group className="mb-1">
                                     <Form.Label>VAT (%)</Form.Label>
                                     <Form.Control

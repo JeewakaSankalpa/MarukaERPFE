@@ -81,6 +81,7 @@ export default function POCreateManual({ poId, onCreated }) {
     const [enableVat, setEnableVat] = useState(false);
     const [enableOtherTax, setEnableOtherTax] = useState(false);
 
+    const [discountAmount, setDiscountAmount] = useState("");
     const [deliveryCharge, setDeliveryCharge] = useState(""); // User input
     const [poApprovalStatus, setPoApprovalStatus] = useState("");
     const [adminEditReason, setAdminEditReason] = useState("");
@@ -98,6 +99,7 @@ export default function POCreateManual({ poId, onCreated }) {
                 setQuotationRef(po.quotationRef || "");
                 setEtaDate(po.etaDate || "");
                 setNote(po.note || "");
+                setDiscountAmount(po.discountAmount ?? "");
                 setDeliveryCharge(po.deliveryCharge ?? "");
                 setEnableVat(Number(po.vatAmount || 0) > 0);
                 setEnableOtherTax(Number(po.otherTaxAmount || 0) > 0);
@@ -225,6 +227,7 @@ export default function POCreateManual({ poId, onCreated }) {
         setRows([]);
         setEnableVat(false);
         setEnableOtherTax(false);
+        setDiscountAmount("");
         setDeliveryCharge("");
         setActiveDraftId(null);
     };
@@ -237,6 +240,7 @@ export default function POCreateManual({ poId, onCreated }) {
         rows,
         enableVat,
         enableOtherTax,
+        discountAmount,
         deliveryCharge
     });
 
@@ -278,6 +282,7 @@ export default function POCreateManual({ poId, onCreated }) {
         setRows(Array.isArray(data.rows) ? data.rows : []);
         setEnableVat(Boolean(data.enableVat));
         setEnableOtherTax(Boolean(data.enableOtherTax));
+        setDiscountAmount(data.discountAmount || "");
         setDeliveryCharge(data.deliveryCharge || "");
         setActiveDraftId(draft.id);
         toast.info("Draft loaded");
@@ -300,13 +305,16 @@ export default function POCreateManual({ poId, onCreated }) {
             sub += (qty * price);
         });
 
-        // 1. Delivery Charge
+        // 1. Seller Discount
+        const discount = Math.min(Math.max(Number(discountAmount || 0), 0), sub);
+
+        // 2. Delivery Charge
         const del = Number(deliveryCharge || 0);
 
-        // 2. Base for Tax
-        const taxableBase = sub + del;
+        // 3. Base for Tax
+        const taxableBase = sub - discount + del;
 
-        // 3. VAT
+        // 4. VAT
         let vatAmt = 0;
         let vatRate = 0;
         if (enableVat) {
@@ -314,7 +322,7 @@ export default function POCreateManual({ poId, onCreated }) {
             vatAmt = taxableBase * (vatRate / 100);
         }
 
-        // 4. Other Tax
+        // 5. Other Tax
         let otherAmt = 0;
         let otherRate = 0;
         if (enableOtherTax) {
@@ -324,14 +332,16 @@ export default function POCreateManual({ poId, onCreated }) {
 
         return {
             sub,
+            discount,
             delivery: del,
+            taxableBase,
             vatRate,
             vat: vatAmt,
             otherRate,
             other: otherAmt,
-            grand: sub + del + vatAmt + otherAmt
+            grand: taxableBase + vatAmt + otherAmt
         };
-    }, [rows, deliveryCharge, enableVat, enableOtherTax, globalSettings]);
+    }, [rows, discountAmount, deliveryCharge, enableVat, enableOtherTax, globalSettings]);
 
     const openCompletenessModal = (issues, proceed = null) => {
         setCompletenessIssues(issues);
@@ -484,6 +494,10 @@ export default function POCreateManual({ poId, onCreated }) {
             }));
 
             if (items.length === 0) { toast.warn("Add at least one product line"); return; }
+            if (Number(discountAmount || 0) > totals.sub) {
+                toast.warn("Seller discount cannot exceed subtotal");
+                return;
+            }
             if (isAdminPartialEdit && !adminEditReason.trim()) {
                 toast.warn("Enter an admin edit note before updating this PO");
                 return;
@@ -496,6 +510,7 @@ export default function POCreateManual({ poId, onCreated }) {
                 note: note || null,
                 items,
                 subTotal: totals.sub,
+                discountAmount: totals.discount,
                 deliveryCharge: totals.delivery,
                 vatAmount: totals.vat,
                 otherTaxAmount: totals.other,
@@ -796,6 +811,24 @@ export default function POCreateManual({ poId, onCreated }) {
                                         <td className="text-end fw-bold">{totals.sub.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                     </tr>
                                     <tr>
+                                        <td className="align-middle">Seller Discount</td>
+                                        <td className="text-end">
+                                            <Form.Control
+                                                size="sm"
+                                                type="number"
+                                                min="0"
+                                                max={totals.sub}
+                                                className="text-end d-inline-block"
+                                                style={{ width: '120px' }}
+                                                value={discountAmount}
+                                                onChange={e => setDiscountAmount(e.target.value)}
+                                            />
+                                            {Number(discountAmount || 0) > totals.sub && (
+                                                <div className="text-danger small">Cannot exceed subtotal</div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                    <tr>
                                         <td className="align-middle">Delivery Charge</td>
                                         <td className="text-end">
                                             <Form.Control
@@ -808,6 +841,12 @@ export default function POCreateManual({ poId, onCreated }) {
                                             />
                                         </td>
                                     </tr>
+                                    {Number(discountAmount || 0) > 0 && (
+                                        <tr>
+                                            <td className="text-muted">Taxable Base</td>
+                                            <td className="text-end text-muted">{totals.taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        </tr>
+                                    )}
 
                                     {enableVat && (
                                         <tr>

@@ -305,9 +305,15 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                         <Table borderless size="sm" style={{ width: 340 }}>
                             <tbody>
                                 <tr>
-                                    <td className="text-end">Invoice Amount</td>
+                                    <td className="text-end">Goods Amount After Discount</td>
                                     <td className="text-end">{money(grn.invoiceAmount)}</td>
                                 </tr>
+                                {(Number(grn.discountAmount || 0) > 0) && (
+                                    <tr>
+                                        <td className="text-end">PO Seller Discount</td>
+                                        <td className="text-end">-{money(grn.discountAmount)}</td>
+                                    </tr>
+                                )}
                                 <tr>
                                     <td className="text-end">VAT</td>
                                     <td className="text-end">{money(grn.vatAmount)}</td>

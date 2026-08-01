@@ -39,7 +39,7 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
     const history = grn.paymentHistory || [];
     // Max payable for a new record reserves pending payments too.
     const totalPaid = grn.totalPaid || 0;
-    const invoiceAmount = grn.invoiceAmount || 0;
+    const invoiceAmount = Number(grn.invoiceAmount || 0) + Number(grn.vatAmount || 0) + Number(grn.deliveryCharge || 0);
     const totalRecorded = history.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     const pendingTotal = Math.max(0, totalRecorded - totalPaid);
     const maxPayable = Math.max(0, invoiceAmount - totalRecorded);
@@ -196,7 +196,7 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
                         <div className="d-flex justify-content-end gap-3 mt-2 fw-bold">
                             <span>Total Paid: {totalPaid?.toFixed(2)}</span>
                             <span>Pending Verification: {pendingTotal.toFixed(2)}</span>
-                            <span>Invoice: {invoiceAmount?.toFixed(2)}</span>
+                            <span>Payable: {invoiceAmount?.toFixed(2)}</span>
                             <span className={maxPayable > 0 ? "text-danger" : "text-success"}>
                                 Remaining: {maxPayable.toFixed(2)}
                             </span>
