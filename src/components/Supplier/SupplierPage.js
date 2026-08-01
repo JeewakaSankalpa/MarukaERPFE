@@ -18,6 +18,8 @@ const listSuppliers = async (opts = {}) =>
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 const createSupplier = async (payload) => (await api.post("/suppliers", payload)).data;
 const updateSupplier = async (id, payload) => (await api.put(`/suppliers/${id}`, payload)).data;
+const createSupplierPortalAccount = async (supplierId, payload) =>
+    (await api.post(`/portal/accounts/supplier/${supplierId}`, payload)).data;
 const patchSupplierStatus = async (id, status) =>
     (await api.patch(`/suppliers/${id}/status`, { status })).data;
 
@@ -116,6 +118,8 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
     const [validated, setValidated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(!id || startEditing);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [createPortalLogin, setCreatePortalLogin] = useState(!id);
+    const [portalPassword, setPortalPassword] = useState("");
 
     useEffect(() => {
         (async () => {
@@ -154,15 +158,23 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
         const emailRegex = /[^@\s]+@[^@\s]+\.[^@\s]+/;
         if (!form.email || !emailRegex.test(form.email)) {
             toast.error("Invalid Email");
+            setIsSubmitting(false);
             return;
         }
         if (!form.phone || form.phone.length < 10) {
             toast.error("Phone must be at least 10 digits");
+            setIsSubmitting(false);
             return;
         }
         const addr = form.address || {};
         if (!addr.city || !addr.country) {
             toast.error("City and Country are required");
+            setIsSubmitting(false);
+            return;
+        }
+        if (createPortalLogin && !portalPassword.trim()) {
+            toast.error("Portal password is required");
+            setIsSubmitting(false);
             return;
         }
 
@@ -178,6 +190,12 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
                 ...(isEdit ? {} : { supplierCode: form.supplierCode || undefined }),
             };
             const saved = isEdit ? await updateSupplier(id, payload) : await createSupplier(payload);
+            if (createPortalLogin && portalPassword.trim()) {
+                await createSupplierPortalAccount(saved.id || id, {
+                    username: form.email,
+                    password: portalPassword,
+                });
+            }
             toast.success(isEdit ? "Supplier updated" : "Supplier created");
             onSaved?.(saved);
             onClose?.();
@@ -301,6 +319,38 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
                             </Col>
                         ))}
                     </Row>
+
+                    {isEditMode && (
+                        <div className="border rounded p-3 bg-light mt-3">
+                            <Form.Check
+                                type="checkbox"
+                                id="supplierPortalLogin"
+                                label={id ? "Create or reset supplier portal login" : "Create supplier portal login"}
+                                checked={createPortalLogin}
+                                onChange={(e) => setCreatePortalLogin(e.target.checked)}
+                            />
+                            {createPortalLogin && (
+                                <Row className="g-3 mt-1">
+                                    <Col md={6}>
+                                        <Form.Group>
+                                            <Form.Label>Portal Username</Form.Label>
+                                            <Form.Control value={form.email} disabled />
+                                        </Form.Group>
+                                    </Col>
+                                    <Col md={6}>
+                                        <Form.Group>
+                                            <Form.Label>Portal Password <span className="text-danger">*</span></Form.Label>
+                                            <Form.Control
+                                                type="password"
+                                                value={portalPassword}
+                                                onChange={(e) => setPortalPassword(e.target.value)}
+                                            />
+                                        </Form.Group>
+                                    </Col>
+                                </Row>
+                            )}
+                        </div>
+                    )}
 
                     {(isEditMode || !id) && (
                         <Button type="submit" className="w-100 mt-3" disabled={isSubmitting}>

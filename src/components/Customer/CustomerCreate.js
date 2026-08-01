@@ -21,6 +21,8 @@ export function CustomerForm({ id, onClose, onSaved, startEditing = false, compa
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [validated, setValidated] = useState(false);
     const [errors, setErrors] = useState({});
+    const [createPortalLogin, setCreatePortalLogin] = useState(!id);
+    const [portalPassword, setPortalPassword] = useState("");
 
     const [form, setForm] = useState({
         comName: "",
@@ -86,6 +88,7 @@ export function CustomerForm({ id, onClose, onSaved, startEditing = false, compa
         else if (!mobileRegex.test(form.contactPersonData.contactNumber)) e.contactPersonData_contactNumber = "Invalid phone number";
         if (!form.contactPersonData.email) e.contactPersonData_email = "Contact email is required";
         else if (!emailRegex.test(form.contactPersonData.email)) e.contactPersonData_email = "Invalid email format";
+        if (createPortalLogin && !portalPassword.trim()) e.portalPassword = "Portal password is required";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -104,8 +107,14 @@ export function CustomerForm({ id, onClose, onSaved, startEditing = false, compa
             let saved;
             if (isEdit) {
                 saved = (await api.put(`/customer/update/${id}`, fd, config)).data;
+                if (createPortalLogin && portalPassword.trim()) {
+                    await api.post(`/portal/accounts/customer/${id}`, {
+                        username: form.comEmail,
+                        password: portalPassword,
+                    });
+                }
             } else {
-                fd.append("password", "TestP");
+                if (createPortalLogin) fd.append("password", portalPassword);
                 saved = (await api.post("/customer/add", fd, config)).data;
             }
             toast.success(isEdit ? "Customer updated!" : "Customer saved!");
@@ -227,6 +236,44 @@ export function CustomerForm({ id, onClose, onSaved, startEditing = false, compa
                             </Form.Group>
                         </Col>
                     )}
+                    {isEditMode && (
+                        <Col md={12}>
+                            <div className="border rounded p-3 bg-light">
+                                <Form.Check
+                                    type="checkbox"
+                                    id="customerPortalLogin"
+                                    label={isEdit ? "Create or reset customer portal login" : "Create customer portal login"}
+                                    checked={createPortalLogin}
+                                    onChange={(e) => setCreatePortalLogin(e.target.checked)}
+                                />
+                                {createPortalLogin && (
+                                    <Row className="g-3 mt-1">
+                                        <Col md={6}>
+                                            <Form.Group>
+                                                <Form.Label>Portal Username</Form.Label>
+                                                <Form.Control value={form.comEmail} disabled />
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={6}>
+                                            <Form.Group>
+                                                <Form.Label>Portal Password <span className="text-danger">*</span></Form.Label>
+                                                <Form.Control
+                                                    type="password"
+                                                    value={portalPassword}
+                                                    onChange={(e) => {
+                                                        setPortalPassword(e.target.value);
+                                                        setErrors(prev => ({ ...prev, portalPassword: null }));
+                                                    }}
+                                                    isInvalid={!!errors.portalPassword}
+                                                />
+                                                <Form.Control.Feedback type="invalid">{errors.portalPassword}</Form.Control.Feedback>
+                                            </Form.Group>
+                                        </Col>
+                                    </Row>
+                                )}
+                            </div>
+                        </Col>
+                    )}
                 </Row>
 
                 {isEditMode && (
@@ -246,6 +293,8 @@ function CustomerCreate() {
   const isEditMode = Boolean(id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(true);
+  const [createPortalLogin, setCreatePortalLogin] = useState(!isEditMode);
+  const [portalPassword, setPortalPassword] = useState("");
 
   const [companyData, setCompanyData] = useState({
     comName: "",
@@ -347,6 +396,9 @@ function CustomerCreate() {
     } else if (!emailRegex.test(companyData.contactPersonData.email)) {
       newErrors.contactPersonData_email = "Invalid email format";
     }
+    if (createPortalLogin && !portalPassword.trim()) {
+      newErrors.portalPassword = "Portal password is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -379,7 +431,16 @@ function CustomerCreate() {
       const config = { headers: { "Content-Type": "multipart/form-data" } };
       if (isEditMode) {
         await api.put(`/customer/update/${id}`, formData, config);
+        if (createPortalLogin && portalPassword.trim()) {
+          await api.post(`/portal/accounts/customer/${id}`, {
+            username: companyData.comEmail,
+            password: portalPassword,
+          });
+        }
       } else {
+        if (createPortalLogin) {
+          formData.append("password", portalPassword);
+        }
         await api.post("/customer/add", formData, config);
       }
 
@@ -607,6 +668,41 @@ function CustomerCreate() {
                   }
                 />
               </Form.Group>
+
+              <div className="border rounded p-3 bg-light mb-3">
+                <Form.Check
+                  type="checkbox"
+                  id="customerPortalLoginPage"
+                  label={isEditMode ? "Create or reset customer portal login" : "Create customer portal login"}
+                  checked={createPortalLogin}
+                  onChange={(e) => setCreatePortalLogin(e.target.checked)}
+                />
+                {createPortalLogin && (
+                  <Row className="g-3 mt-1">
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>Portal Username</Form.Label>
+                        <Form.Control value={companyData.comEmail} disabled />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>Portal Password <span className="text-danger">*</span></Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={portalPassword}
+                          onChange={(e) => {
+                            setPortalPassword(e.target.value);
+                            setErrors(prev => ({ ...prev, portalPassword: null }));
+                          }}
+                          isInvalid={!!errors.portalPassword}
+                        />
+                        <Form.Control.Feedback type="invalid">{errors.portalPassword}</Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                )}
+              </div>
 
               <Button variant="primary" type="submit" className="me-2" disabled={isSubmitting}>
                 {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : null}

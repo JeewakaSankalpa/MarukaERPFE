@@ -160,14 +160,16 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const { role, userType } = await login(username, password);
+      const { userType } = await login(username, password);
 
       toast.success("Welcome back! 🎉", { autoClose: 1200 });
 
       // Navigate after a delay to ensure context updates
       setTimeout(() => {
         if (userType === "CUSTOMER") {
-          navigate("/customer/home");
+          navigate("/portal/customer");
+        } else if (userType === "SUPPLIER") {
+          navigate("/portal/supplier");
         } else {
           navigate("/dashboard");
         }

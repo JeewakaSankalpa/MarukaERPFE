@@ -103,6 +103,7 @@ import NotificationRulesPage from "./components/settings/NotificationRulesPage";
 import RoleManagement from "./components/settings/RoleManagement";
 import StockVerificationPage from "./components/settings/StockVerificationPage";
 import SuperAdminPage from "./components/admin/SuperAdminPage";
+import PortalDashboard from "./components/Portal/PortalDashboard";
 
 
 
@@ -111,9 +112,10 @@ import SuperAdminPage from "./components/admin/SuperAdminPage";
 function Layout({ children }) {
     const location = useLocation();
     const isLoginRoute = location.pathname === "/login";
+    const isPortalRoute = location.pathname.startsWith("/portal");
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
 
-    if (isLoginRoute) return <>{children}</>;
+    if (isLoginRoute || isPortalRoute) return <>{children}</>;
 
     return (
         <div className="app-container">
@@ -203,6 +205,13 @@ function App() {
                     <Route path="/" element={<Navigate to="/login" replace />} />
 
                     {/* Protected */}
+                    <Route element={<PrivateRoute roles={["CUSTOMER", "CUSTOMER_PORTAL"]} />}>
+                        <Route path="/portal/customer" element={<PortalDashboard type="customer" />} />
+                    </Route>
+                    <Route element={<PrivateRoute roles={["SUPPLIER", "SUPPLIER_PORTAL"]} />}>
+                        <Route path="/portal/supplier" element={<PortalDashboard type="supplier" />} />
+                    </Route>
+
                     <Route element={<PrivateRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/dashboard/interactive" element={<InteractiveDashboard />} />

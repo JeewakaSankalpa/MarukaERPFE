@@ -23,6 +23,8 @@ export const AuthProvider = ({ children }) => {
                 userType: payload.userType,
                 userId: localStorage.getItem("userId"),
                 employeeId: localStorage.getItem("employeeId"),
+                linkedCustomerId: localStorage.getItem("linkedCustomerId"),
+                linkedSupplierId: localStorage.getItem("linkedSupplierId"),
                 projectRoles,
                 moduleAccess
             };
@@ -46,14 +48,16 @@ export const AuthProvider = ({ children }) => {
         // Otherwise use "/api/auth/login"
         const { data } = await api.post("/auth/login", { username, password });
 
-        const { token, role, userType, moduleAccess, userId, employeeId, projectRoles } = data;
+        const { token, role, userType, moduleAccess, userId, employeeId, projectRoles, linkedCustomerId, linkedSupplierId } = data;
         localStorage.setItem("token", token);
         localStorage.setItem("role", role);
         localStorage.setItem("username", username);
         localStorage.setItem("moduleAccess", JSON.stringify(moduleAccess || []));
         localStorage.setItem("projectRoles", JSON.stringify(projectRoles || []));
-        if (userId) localStorage.setItem("userId", userId);
-        if (employeeId) localStorage.setItem("employeeId", employeeId);
+        if (userId) localStorage.setItem("userId", userId); else localStorage.removeItem("userId");
+        if (employeeId) localStorage.setItem("employeeId", employeeId); else localStorage.removeItem("employeeId");
+        if (linkedCustomerId) localStorage.setItem("linkedCustomerId", linkedCustomerId); else localStorage.removeItem("linkedCustomerId");
+        if (linkedSupplierId) localStorage.setItem("linkedSupplierId", linkedSupplierId); else localStorage.removeItem("linkedSupplierId");
 
         let decoded = {};
         try { decoded = jwtDecode(token); } catch { }
@@ -69,7 +73,9 @@ export const AuthProvider = ({ children }) => {
             moduleAccess: moduleAccess || [],
             projectRoles: projectRoles || [],
             userId,
-            employeeId
+            employeeId,
+            linkedCustomerId,
+            linkedSupplierId
         });
 
         // IMPORTANT: return so callers can route immediately
@@ -84,6 +90,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("projectRoles");
         localStorage.removeItem("userId");
         localStorage.removeItem("employeeId");
+        localStorage.removeItem("linkedCustomerId");
+        localStorage.removeItem("linkedSupplierId");
         setAuth({
             token: null,
             username: null,
