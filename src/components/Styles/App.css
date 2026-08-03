@@ -907,6 +907,7 @@ body,
 .portal-shell {
     min-height: 100dvh;
     height: 100dvh;
+    padding-top: 34px;
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
@@ -1465,7 +1466,7 @@ body,
 
 @media (max-width: 760px) {
     .portal-shell {
-        padding: 14px 14px 36px;
+        padding: 22px 14px 36px;
     }
 
     .portal-card-topline,

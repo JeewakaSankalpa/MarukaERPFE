@@ -439,6 +439,7 @@ function CustomerProjectCard({ project }) {
   const stageLabel = displayLabel(project.currentStage || project.status, "Stage not set");
   const progressValue = percent(project.totalReceived, project.totalProjectValue);
   const deadline = project.deliveryDate || project.dueDate || project.estimatedEnd;
+  const dateNeedsAttention = action.tone === "danger" || action.tone === "warning";
 
   return (
     <article className="portal-project-card">
@@ -456,7 +457,7 @@ function CustomerProjectCard({ project }) {
 
       <div className="portal-project-core">
         <ProgressSummary label="Payment progress" value={progressValue} fallback={`Current stage: ${stageLabel}`} />
-        <DateSignal icon={<Truck size={17} aria-hidden="true" />} label="Delivery" date={project.deliveryDate} fallbackDate={deadline} />
+        <DateSignal icon={<Truck size={17} aria-hidden="true" />} label="Delivery" date={project.deliveryDate} fallbackDate={deadline} warning={dateNeedsAttention && isPastDate(deadline)} />
         <ActionSignal action={action} />
       </div>
 
@@ -505,7 +506,7 @@ function SupplierOrderCard({ po }) {
   const action = supplierNextAction(po);
   const mainStatus = po.status || po.approvalStatus;
   const progressValue = percent(po.receivedQty, po.orderedQty);
-  const isOverdue = isPastDate(po.etaDate) && numberValue(po.receivedQty) < numberValue(po.orderedQty);
+  const isOverdue = (action.tone === "danger" || action.tone === "warning") && isPastDate(po.etaDate) && numberValue(po.receivedQty) < numberValue(po.orderedQty);
 
   return (
     <article className="portal-project-card">
@@ -669,13 +670,14 @@ function ProgressSummary({ label, value, fallback }) {
 
 function DateSignal({ icon, label, date, fallbackDate, warning }) {
   const actualDate = date || fallbackDate;
+  const helperText = warning ? dueLabel(actualDate) : actualDate ? "Recorded date" : "No date set";
   return (
-    <div className={warning || isPastDate(actualDate) ? "portal-date-signal portal-date-warning" : "portal-date-signal"}>
+    <div className={warning ? "portal-date-signal portal-date-warning" : "portal-date-signal"}>
       <span>{icon}</span>
       <div>
         <p>{label}</p>
         <strong>{dateText(actualDate)}</strong>
-        <small>{dueLabel(actualDate)}</small>
+        <small>{helperText}</small>
       </div>
     </div>
   );
