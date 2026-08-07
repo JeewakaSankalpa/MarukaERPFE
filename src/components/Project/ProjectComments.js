@@ -171,7 +171,7 @@ export default function ProjectComments({ projectId }) {
                             targetType="CUSTOMER_PROJECT"
                             targetId={projectId}
                             title="Communicate with customer"
-                            subtitle="Send encrypted progress updates and pictures for this project."
+                            subtitle="Send customer-only progress updates and pictures for this project."
                             listPath={`/projects/${projectId}/partner-communications`}
                             postPath={`/projects/${projectId}/partner-communications`}
                             onUnreadChanged={refreshPartnerCounts}
@@ -201,7 +201,7 @@ export default function ProjectComments({ projectId }) {
                                         targetType="SUPPLIER_PO"
                                         targetId={selectedSupplierThread.id}
                                         title={`Communicate with supplier: ${selectedSupplierThread.poNumber}`}
-                                        subtitle="Send encrypted purchase order updates, delivery photos, and questions."
+                                        subtitle="Send supplier-only purchase order updates, delivery photos, and questions."
                                         listPath={`/portal/supplier/pos/${selectedSupplierThread.id}/communications`}
                                         postPath={`/portal/supplier/pos/${selectedSupplierThread.id}/communications`}
                                         onUnreadChanged={refreshPartnerCounts}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from 'react-bootstrap';
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 export default function ProjectLifecycle({ stages = [], currentStage, status }) {
     // stages: Array of strings (e.g. ["INQUIRY", "ESTIMATION", ...]) defining the workflow
@@ -22,6 +22,11 @@ export default function ProjectLifecycle({ stages = [], currentStage, status }) 
         currentIndex = activeStages.length; // Treat as past the last stage
     }
 
+    const progressIndex = Math.max(0, Math.min(currentIndex, activeStages.length - 1));
+    const progressWidth = activeStages.length > 1
+        ? (progressIndex / (activeStages.length - 1)) * 100
+        : 0;
+
     return (
         <Card className="mb-3 border-0 shadow-sm" style={{ background: 'linear-gradient(to right, #f8f9fa, #ffffff)' }}>
             <Card.Body className="py-4">
@@ -36,7 +41,7 @@ export default function ProjectLifecycle({ stages = [], currentStage, status }) 
                         <div
                             style={{
                                 height: '100%',
-                                width: `${(currentIndex / (activeStages.length - 1)) * 100}%`,
+                                width: `${progressWidth}%`,
                                 backgroundColor: '#0d6efd',
                                 transition: 'width 0.5s ease-in-out'
                             }}
@@ -46,7 +51,7 @@ export default function ProjectLifecycle({ stages = [], currentStage, status }) 
                     {activeStages.map((step, idx) => {
                         const isCompleted = currentIndex !== -1 && idx < currentIndex;
                         const isCurrent = step === currentName;
-                        const isFuture = idx > currentIndex;
+                        const isFuture = currentIndex === -1 || idx > currentIndex;
 
                         return (
                             <div key={step} className="d-flex flex-column align-items-center" style={{ zIndex: 1, position: 'relative' }}>

@@ -9,11 +9,11 @@ import { toast } from 'react-toastify';
 import { getWorkflow } from '../../services/workflowApi';
 import { useAuth } from '../../context/AuthContext';
 import { COMPONENT_IDS, ProjectComponentRegistry } from './ComponentRegistry'; // Registry Import
+import ProjectLifecycle from './ProjectLifecycle';
 
 // Lazy load sub-components (Some might be unused if registry handles them, 
 // but we keep imports if they are used elsewhere or in registry definition to be safe if moved)
 // const ProjectFiles = React.lazy(() => import('./ProjectFiles'));
-const ProjectLifecycle = React.lazy(() => import('./ProjectLifecycle'));
 // Most others are now rendered via Registry logic, but we might need them if we reference them directly? 
 // Actually, Registry imports them. We can remove them here to clean up, 
 // BUT for safety (if I missed one in registry) I will comment them out or leave them unused.
@@ -461,14 +461,12 @@ export default function ProjectDetails() {
             )}
 
             {/* Lifecycle Widget */}
-            <Suspense fallback={<div>Loading...</div>}>
-                <ProjectLifecycle
-                    key={refreshKey}
-                    stages={project?.workflowSnapshot?.stages || workflowDef?.stages || []}
-                    currentStage={project?.currentStage}
-                    status={project?.status}
-                />
-            </Suspense>
+            <ProjectLifecycle
+                key={refreshKey}
+                stages={project?.workflowSnapshot?.stages || workflowDef?.stages || []}
+                currentStage={project?.currentStage}
+                status={project?.status}
+            />
 
             {/* Smart Action Bar */}
             {effectiveActions && (effectiveActions.canApprove || effectiveActions.canReject || (effectiveActions.canMove && effectiveActions.canMove.length > 0)) && (

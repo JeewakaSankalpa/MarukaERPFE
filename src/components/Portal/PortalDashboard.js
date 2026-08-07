@@ -412,7 +412,7 @@ function PortalCommunicationHub({ data, isSupplier, onUnreadChanged }) {
         targetType={targetType}
         targetId={selected.id}
         title={isSupplier ? `Chat for ${selected.poNumber || selected.id}` : `Chat for ${selected.projectName || selected.id}`}
-        subtitle={isSupplier ? "Send encrypted delivery updates, photos, and order questions." : "Send encrypted progress updates, photos, reactions, and questions."}
+        subtitle={isSupplier ? "Send order-only delivery updates, photos, and questions." : "Send project-only progress updates, photos, reactions, and questions."}
         listPath={listPath}
         postPath={listPath}
         onUnreadChanged={onUnreadChanged}
