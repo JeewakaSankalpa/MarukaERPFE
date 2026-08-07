@@ -194,6 +194,13 @@ function ProjectEstimationRouteWrapper() {
     return <ProjectEstimationPage projectId={id} />;
 }
 
+function PortalPreviewRouteWrapper({ type }) {
+    const { id } = useParams();
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    return <PortalDashboard type={type} previewId={id} previewLabel={params.get("name")} />;
+}
+
 /* ------------------- App ------------------- */
 function App() {
     return (
@@ -227,6 +234,8 @@ function App() {
                     <Route element={<PrivateRoute roles={["ADMIN", "SUPER_ADMIN"]} />}>
                         <Route path="/executive-dashboard" element={<ExecutiveDashboard />} />
                         <Route path="/project-summary-dashboard" element={<ProjectSummaryDashboard />} />
+                        <Route path="/admin/portal-preview/customer/:id" element={<PortalPreviewRouteWrapper type="customer" />} />
+                        <Route path="/admin/portal-preview/supplier/:id" element={<PortalPreviewRouteWrapper type="supplier" />} />
                     </Route>
 
                     {/* Admin */}

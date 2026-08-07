@@ -128,7 +128,7 @@ const supplierNextAction = (po) => {
   return { tone: "info", label: "Review order", detail: "Confirm dates, documents, and receiving details." };
 };
 
-export default function PortalDashboard({ type }) {
+export default function PortalDashboard({ type, previewId, previewLabel }) {
   const { logout, username } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -145,6 +145,7 @@ export default function PortalDashboard({ type }) {
 
   const isSupplier = type === "supplier";
   const title = isSupplier ? "Supplier Portal" : "Customer Portal";
+  const isPreview = !!previewId;
   const accountName = isSupplier ? data?.supplierName : data?.customerName;
   const primaryRows = isSupplier ? data?.purchaseOrders : data?.projects;
   const secondaryRows = isSupplier ? data?.grns : data?.invoices;
@@ -152,21 +153,27 @@ export default function PortalDashboard({ type }) {
   const isVisible = useCallback((key) => visibility[key] !== false, [visibility]);
 
   const loadCommunicationCounts = useCallback(() => {
-    return api.get(`/portal/${type}/communications/counts`)
+    const path = isPreview
+      ? `/admin/portal-preview/${type}/${previewId}/communications/counts`
+      : `/portal/${type}/communications/counts`;
+    return api.get(path)
       .then((res) => {
         if (mountedRef.current) setCommunicationUnread(Number(res.data?.unread || 0));
       })
       .catch(() => {
         if (mountedRef.current) setCommunicationUnread(0);
       });
-  }, [type]);
+  }, [isPreview, previewId, type]);
 
   const loadDashboard = useCallback(() => {
     const requestSeq = requestSeqRef.current + 1;
     requestSeqRef.current = requestSeq;
     setLoading(true);
     setError("");
-    return api.get(`/portal/${type}/dashboard`)
+    const path = isPreview
+      ? `/admin/portal-preview/${type}/${previewId}/dashboard`
+      : `/portal/${type}/dashboard`;
+    return api.get(path)
       .then((res) => {
         if (mountedRef.current && requestSeqRef.current === requestSeq) {
           setData(res.data);
@@ -183,7 +190,7 @@ export default function PortalDashboard({ type }) {
       .finally(() => {
         if (mountedRef.current && requestSeqRef.current === requestSeq) setLoading(false);
       });
-  }, [loadCommunicationCounts, type]);
+  }, [isPreview, loadCommunicationCounts, previewId, type]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -220,7 +227,7 @@ export default function PortalDashboard({ type }) {
           <div>
             <div className="portal-eyebrow">Maruka Technologies</div>
             <h1>{title}</h1>
-            <p>{accountName || username}</p>
+            <p>{isPreview ? `Admin preview: ${previewLabel || accountName || username}` : accountName || username}</p>
           </div>
         </div>
         <div className="portal-actions">
@@ -244,7 +251,7 @@ export default function PortalDashboard({ type }) {
           <div>
             <span className="portal-security-pill">
               <LockKeyhole size={15} aria-hidden="true" />
-              Partner access only
+              {isPreview ? "Admin preview" : "Partner access only"}
             </span>
             <h2>{isSupplier ? "Orders, delivery status, and documents assigned to you" : "Projects, invoices, and delivery status for your account"}</h2>
             <p>
@@ -324,6 +331,7 @@ export default function PortalDashboard({ type }) {
               <PortalCommunicationHub
                 data={data}
                 isSupplier={isSupplier}
+                isPreview={isPreview}
                 onUnreadChanged={loadCommunicationCounts}
               />
             )}
@@ -362,7 +370,7 @@ function PortalTabs({ activePortalTab, setActivePortalTab, communicationUnread }
   );
 }
 
-function PortalCommunicationHub({ data, isSupplier, onUnreadChanged }) {
+function PortalCommunicationHub({ data, isSupplier, isPreview, onUnreadChanged }) {
   const rows = useMemo(
     () => (isSupplier ? (data.purchaseOrders || []) : (data.projects || [])),
     [data, isSupplier]
@@ -390,8 +398,8 @@ function PortalCommunicationHub({ data, isSupplier, onUnreadChanged }) {
 
   const targetType = isSupplier ? "SUPPLIER_PO" : "CUSTOMER_PROJECT";
   const listPath = isSupplier
-    ? `/portal/supplier/pos/${selected.id}/communications`
-    : `/portal/customer/projects/${selected.id}/communications`;
+    ? `${isPreview ? "/admin/portal-preview" : "/portal"}/supplier/pos/${selected.id}/communications`
+    : `${isPreview ? "/admin/portal-preview" : "/portal"}/customer/projects/${selected.id}/communications`;
 
   return (
     <section className="portal-communication-layout">

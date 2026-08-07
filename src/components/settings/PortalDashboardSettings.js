@@ -129,13 +129,26 @@ export default function PortalDashboardSettings() {
   const [activeTab, setActiveTab] = useState("customer");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [previewOptions, setPreviewOptions] = useState({ customers: [], suppliers: [] });
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
 
   useEffect(() => {
     let mounted = true;
-    api.get("/admin/portal-dashboard-config")
-      .then((res) => {
+    Promise.all([
+      api.get("/admin/portal-dashboard-config"),
+      api.get("/admin/portal-preview/options"),
+    ])
+      .then(([configRes, optionsRes]) => {
         if (!mounted) return;
-        setConfig(mergeConfig(res.data));
+        setConfig(mergeConfig(configRes.data));
+        const options = optionsRes.data || {};
+        setPreviewOptions({
+          customers: options.customers || [],
+          suppliers: options.suppliers || [],
+        });
+        setSelectedCustomerId(options.customers?.[0]?.id || "");
+        setSelectedSupplierId(options.suppliers?.[0]?.id || "");
       })
       .catch((err) => {
         toast.error(err?.response?.data?.message || "Could not load portal dashboard settings.");
@@ -184,6 +197,13 @@ export default function PortalDashboardSettings() {
 
   const activeValues = config.visible?.[activeTab] || {};
   const hiddenCount = Object.values(activeValues).filter((value) => value === false).length;
+  const selectedCustomer = previewOptions.customers.find((item) => item.id === selectedCustomerId);
+  const selectedSupplier = previewOptions.suppliers.find((item) => item.id === selectedSupplierId);
+  const openPreview = (type) => {
+    const selected = type === "customer" ? selectedCustomer : selectedSupplier;
+    if (!selected?.id) return;
+    navigate(`/admin/portal-preview/${type}/${selected.id}?name=${encodeURIComponent(selected.label || "")}`);
+  };
 
   if (loading) {
     return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -211,6 +231,49 @@ export default function PortalDashboardSettings() {
           {hiddenCount} hidden in this tab
         </Badge>
       </Alert>
+
+      <Card className="shadow-sm mb-3">
+        <Card.Body>
+          <div className="d-flex justify-content-between flex-wrap gap-3 mb-3">
+            <div>
+              <h5 className="mb-1">Admin portal preview</h5>
+              <p className="text-muted mb-0">Open a customer or supplier portal using your admin account. No portal password is needed.</p>
+            </div>
+          </div>
+          <Row className="g-3">
+            <Col md={6}>
+              <Form.Label>Customer account</Form.Label>
+              <div className="d-flex gap-2">
+                <Form.Select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
+                  {previewOptions.customers.length === 0 ? (
+                    <option value="">No customers found</option>
+                  ) : previewOptions.customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>{customer.label}</option>
+                  ))}
+                </Form.Select>
+                <Button variant="outline-primary" onClick={() => openPreview("customer")} disabled={!selectedCustomerId}>
+                  Preview
+                </Button>
+              </div>
+            </Col>
+            <Col md={6}>
+              <Form.Label>Supplier account</Form.Label>
+              <div className="d-flex gap-2">
+                <Form.Select value={selectedSupplierId} onChange={(event) => setSelectedSupplierId(event.target.value)}>
+                  {previewOptions.suppliers.length === 0 ? (
+                    <option value="">No suppliers found</option>
+                  ) : previewOptions.suppliers.map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>{supplier.label}</option>
+                  ))}
+                </Form.Select>
+                <Button variant="outline-primary" onClick={() => openPreview("supplier")} disabled={!selectedSupplierId}>
+                  Preview
+                </Button>
+              </div>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
       <Tabs activeKey={activeTab} onSelect={(key) => setActiveTab(key || "customer")} className="mb-3">
         <Tab eventKey="customer" title="Customer dashboard">
