@@ -34,7 +34,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
 
     // Consume state
     const [showConsume, setShowConsume] = useState(false);
-    const [consumeData, setConsumeData] = useState({ productId: '', quantity: '', note: '' });
+    const [consumeData, setConsumeData] = useState({ quantities: {}, serials: {}, note: '' });
 
     // Return state
     const [showReturn, setShowReturn] = useState(false);
@@ -128,24 +128,35 @@ export default function ProjectInventoryCard({ projectId, project }) {
     };
 
     const handleConsume = async () => {
-        if (!consumeData.productId || !consumeData.quantity) {
-            toast.warn('Product and Quantity are required');
+        const items = activeInventory
+            .map(item => {
+                const quantity = Number(consumeData.quantities?.[item.productId] || 0);
+                const serials = String(consumeData.serials?.[item.productId] || '')
+                    .split(',')
+                    .map(serial => serial.trim())
+                    .filter(Boolean);
+                return {
+                    productId: item.productId,
+                    quantity,
+                    serials,
+                    note: consumeData.note
+                };
+            })
+            .filter(item => item.quantity > 0);
+
+        if (items.length === 0) {
+            toast.warn('Enter a quantity greater than zero for at least one product');
             return;
         }
         try {
             setSubmitting(true);
             await api.post('/consumptions', {
                 projectId,
-                items: [{
-                    productId: consumeData.productId,
-                    quantity: Number(consumeData.quantity),
-                    serials: consumeData.serials ? consumeData.serials.split(',').map(s => s.trim()).filter(s => s) : [],
-                    note: consumeData.note
-                }]
+                items
             });
             toast.success('Items consumed');
             setShowConsume(false);
-            setConsumeData({ productId: '', quantity: '', note: '' });
+            setConsumeData({ quantities: {}, serials: {}, note: '' });
             load();
         } catch (e) {
             toast.error(e?.response?.data?.message || 'Failed to consume items');
@@ -305,40 +316,31 @@ export default function ProjectInventoryCard({ projectId, project }) {
             return;
         }
 
-        const [_, grnId, productId, batchId, batchNo, serialNo, expiryDate] = parts;
+        const productId = parts[2];
+        const batchId = parts[3];
+        const serialNo = parts[5];
 
         if (mode === 'CONSUME') {
             setConsumeData(prev => {
-                // If product matches or is empty
-                if (prev.productId && prev.productId !== productId) {
-                    toast.warn("Scanned product does not match selected product. Resetting selection.");
-                    return {
-                        productId,
-                        quantity: 1,
-                        serials: serialNo ? serialNo : '',
-                        note: prev.note
-                    };
-                }
-
-                // If same product, append logic
-                let newSerials = prev.serials ? prev.serials.split(',').map(s => s.trim()).filter(s => s) : [];
+                const currentSerialText = prev.serials?.[productId] || '';
+                const newSerials = currentSerialText.split(',').map(s => s.trim()).filter(s => s);
                 if (serialNo && !newSerials.includes(serialNo)) {
                     newSerials.push(serialNo);
                 }
 
-                // If serialized, qty = count of serials. Else increment.
-                let newQty = Number(prev.quantity || 0);
-                if (serialNo) {
-                    newQty = newSerials.length;
-                } else {
-                    newQty += 1;
-                }
+                const currentQty = Number(prev.quantities?.[productId] || 0);
+                const nextQty = serialNo ? newSerials.length : currentQty + 1;
 
                 return {
                     ...prev,
-                    productId,
-                    quantity: newQty,
-                    serials: newSerials.join(', ')
+                    quantities: {
+                        ...(prev.quantities || {}),
+                        [productId]: nextQty
+                    },
+                    serials: {
+                        ...(prev.serials || {}),
+                        [productId]: newSerials.join(', ')
+                    }
                 };
             });
             toast.success(`Scanned: ${serialNo || productId}`);
@@ -1162,7 +1164,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
             {/* Consume Modal */}
             {showConsume && (
                 <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
-                    <div className="modal-dialog">
+                    <div className="modal-dialog modal-lg">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h5 className="modal-title">Consume Items</h5>
@@ -1184,44 +1186,75 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                             }
                                         }}
                                     />
-                                    <div className="form-text small">Scan item to auto-select and increment qty.</div>
+                                    <div className="form-text small">Scan item to add it to the consume quantity.</div>
                                 </div>
                                 <form>
-                                    <div className="mb-3">
-                                        <label className="form-label">Product</label>
-                                        <SafeSelect
-                                            value={consumeData.productId}
-                                            onChange={(e) => {
-                                                setConsumeData({ ...consumeData, productId: e.target.value });
-                                            }}
-                                        >
-                                            <option value="">Select Product</option>
-                                            {inventory.map(i => (
-                                                <option key={i.productId} value={i.productId}>{i.productName} (Avail: {i.onHandQty})</option>
-                                            ))}
-                                        </SafeSelect>
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label">Quantity</label>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            value={consumeData.quantity}
-                                            onChange={(e) => setConsumeData({ ...consumeData, quantity: e.target.value })}
-                                            min="1"
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label">Serial Numbers (Optional)</label>
-                                        <textarea
-                                            className="form-control"
-                                            placeholder="Enter serial numbers separated by comma"
-                                            value={consumeData.serials || ''}
-                                            onChange={(e) => setConsumeData({ ...consumeData, serials: e.target.value })}
-                                            rows={2}
-                                        />
-                                        <small className="text-muted">For serial-tracked items, enter serials here.</small>
-                                    </div>
+                                    <Table bordered hover responsive size="sm" className="project-inventory__consume-table mb-3">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th>Product Name</th>
+                                                <th className="text-end" style={{ width: '15%' }}>Remaining</th>
+                                                <th className="text-end" style={{ width: '15%' }}>Received</th>
+                                                <th className="text-end" style={{ width: '18%' }}>Want to Consume</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {activeInventory.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="text-center text-muted py-3">
+                                                        No project inventory lines are available.
+                                                    </td>
+                                                </tr>
+                                            ) : activeInventory.map(item => {
+                                                const consumeQty = consumeData.quantities?.[item.productId] ?? '';
+                                                return (
+                                                    <tr key={`consume-${item.productId}`}>
+                                                        <td>
+                                                            <div className="fw-semibold">{item.productName || item.productId}</div>
+                                                            <div className="project-inventory__sku">{item.sku || item.productId} · {item.unit || 'unit'}</div>
+                                                            {consumeData.serials?.[item.productId] && (
+                                                                <Form.Control
+                                                                    as="textarea"
+                                                                    rows={1}
+                                                                    className="mt-2"
+                                                                    size="sm"
+                                                                    value={consumeData.serials[item.productId]}
+                                                                    onChange={(event) => setConsumeData(prev => ({
+                                                                        ...prev,
+                                                                        serials: {
+                                                                            ...(prev.serials || {}),
+                                                                            [item.productId]: event.target.value
+                                                                        }
+                                                                    }))}
+                                                                    placeholder="Serial numbers"
+                                                                />
+                                                            )}
+                                                        </td>
+                                                        <td className="text-end fw-semibold">{Number(item.onHandQty || 0)}</td>
+                                                        <td className="text-end">{Number(item.receivedQty || 0)}</td>
+                                                        <td>
+                                                            <Form.Control
+                                                                type="number"
+                                                                size="sm"
+                                                                min="0"
+                                                                max={Number(item.onHandQty || 0)}
+                                                                className="text-end"
+                                                                placeholder="0"
+                                                                value={consumeQty}
+                                                                onChange={(event) => setConsumeData(prev => ({
+                                                                    ...prev,
+                                                                    quantities: {
+                                                                        ...(prev.quantities || {}),
+                                                                        [item.productId]: event.target.value
+                                                                    }
+                                                                }))}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </Table>
                                     <div className="mb-3">
                                         <label className="form-label">Note</label>
                                         <textarea
