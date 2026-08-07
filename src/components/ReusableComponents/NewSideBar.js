@@ -41,6 +41,10 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
       return isAdminRole && userModules.includes("settings.super_admin");
     }
 
+    if (item.id === "settings.portal_dashboard") {
+      return isAdminRole;
+    }
+
     // Admin dashboards are role-protected and should appear for all admins,
     // including existing installations that predate these menu permissions.
     if (isAdminDashboard) return true;

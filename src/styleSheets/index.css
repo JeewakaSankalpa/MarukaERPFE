@@ -469,3 +469,279 @@ textarea.form-control {
     float: none;
     margin-left: 0;
 }
+
+.portal-tabs {
+    display: inline-flex;
+    gap: 0.35rem;
+    padding: 0.3rem;
+    margin-bottom: 1rem;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.portal-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 38px;
+    padding: 0.45rem 0.75rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #475569;
+    font-weight: 600;
+}
+
+.portal-tab-active {
+    background: #0f172a;
+    color: #ffffff;
+}
+
+.portal-communication-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.portal-thread-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: 680px;
+    overflow: auto;
+    padding: 0.75rem;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.portal-thread-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: #f8fafc;
+    color: #172033;
+    text-align: left;
+}
+
+.portal-thread-item span {
+    font-weight: 700;
+}
+
+.portal-thread-item small {
+    color: #64748b;
+}
+
+.portal-thread-active {
+    border-color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.portal-chat-empty,
+.partner-chat-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    min-height: 180px;
+    color: #64748b;
+    text-align: center;
+}
+
+.partner-chat {
+    display: flex;
+    flex-direction: column;
+    min-height: 560px;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.partner-chat-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.partner-chat-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.partner-chat-header p {
+    margin: 0.2rem 0 0;
+    color: #64748b;
+}
+
+.partner-chat-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.25rem;
+    color: #166534;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.partner-chat-security {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0.75rem 1rem 0;
+}
+
+.partner-key-form {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    align-items: center;
+    margin: 0.75rem 1rem 0;
+}
+
+.partner-message-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    min-height: 240px;
+    max-height: 520px;
+    overflow: auto;
+    padding: 1rem;
+    background: #f8fafc;
+}
+
+.partner-message-row {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.partner-message-own {
+    justify-content: flex-end;
+}
+
+.partner-message-bubble {
+    width: min(82%, 620px);
+    padding: 0.75rem;
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.partner-message-own .partner-message-bubble {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.partner-message-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+.partner-message-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: #172033;
+}
+
+.partner-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+}
+
+.partner-image-link img {
+    width: 150px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 7px;
+    border: 1px solid #dbe3ef;
+    background: #ffffff;
+}
+
+.partner-attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.82rem;
+}
+
+.partner-compose {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.partner-compose-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.partner-file-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #334155;
+    cursor: pointer;
+}
+
+.partner-file-button input {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .portal-tabs {
+        display: grid;
+        width: 100%;
+    }
+
+    .portal-communication-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .portal-thread-list {
+        max-height: 220px;
+    }
+
+    .partner-key-form {
+        grid-template-columns: 1fr;
+    }
+
+    .partner-message-bubble {
+        width: 94%;
+    }
+
+    .partner-compose-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, Table } from "react-bootstrap";
+import { Alert, Badge, Button, Table } from "react-bootstrap";
 import {
   AlertTriangle,
   ArrowDownUp,
@@ -14,6 +14,7 @@ import {
   FileText,
   LockKeyhole,
   LogOut,
+  MessageSquare,
   PackageCheck,
   ReceiptText,
   RefreshCw,
@@ -23,6 +24,7 @@ import {
 import api from "../../api/api";
 import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/logo.jpeg";
+import PartnerConversation from "./PartnerConversation";
 
 const currency = (value) =>
   new Intl.NumberFormat("en-US", {
@@ -136,6 +138,8 @@ export default function PortalDashboard({ type }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [actionFilter, setActionFilter] = useState("all");
   const [sortMode, setSortMode] = useState("deadline");
+  const [activePortalTab, setActivePortalTab] = useState("overview");
+  const [communicationUnread, setCommunicationUnread] = useState(0);
   const mountedRef = useRef(false);
   const requestSeqRef = useRef(0);
 
@@ -144,6 +148,18 @@ export default function PortalDashboard({ type }) {
   const accountName = isSupplier ? data?.supplierName : data?.customerName;
   const primaryRows = isSupplier ? data?.purchaseOrders : data?.projects;
   const secondaryRows = isSupplier ? data?.grns : data?.invoices;
+  const visibility = useMemo(() => data?.config?.visible?.[isSupplier ? "supplier" : "customer"] || {}, [data, isSupplier]);
+  const isVisible = useCallback((key) => visibility[key] !== false, [visibility]);
+
+  const loadCommunicationCounts = useCallback(() => {
+    return api.get(`/portal/${type}/communications/counts`)
+      .then((res) => {
+        if (mountedRef.current) setCommunicationUnread(Number(res.data?.unread || 0));
+      })
+      .catch(() => {
+        if (mountedRef.current) setCommunicationUnread(0);
+      });
+  }, [type]);
 
   const loadDashboard = useCallback(() => {
     const requestSeq = requestSeqRef.current + 1;
@@ -155,6 +171,7 @@ export default function PortalDashboard({ type }) {
         if (mountedRef.current && requestSeqRef.current === requestSeq) {
           setData(res.data);
           setLastUpdated(new Date());
+          loadCommunicationCounts();
         }
       })
       .catch((err) => {
@@ -166,33 +183,34 @@ export default function PortalDashboard({ type }) {
       .finally(() => {
         if (mountedRef.current && requestSeqRef.current === requestSeq) setLoading(false);
       });
-  }, [type]);
+  }, [loadCommunicationCounts, type]);
 
   useEffect(() => {
     mountedRef.current = true;
     loadDashboard();
+    loadCommunicationCounts();
     return () => {
       mountedRef.current = false;
     };
-  }, [loadDashboard]);
+  }, [loadCommunicationCounts, loadDashboard]);
 
   const metrics = useMemo(() => {
     if (!data) return [];
     if (isSupplier) {
       return [
-        { label: "Purchase Orders", value: data.purchaseOrderCount || 0, icon: <FileText size={20} aria-hidden="true" /> },
-        { label: "GRNs", value: data.grnCount || 0, icon: <PackageCheck size={20} aria-hidden="true" /> },
-        { label: "PO Balance", value: currency(data.purchaseOrderBalance), icon: <CreditCard size={20} aria-hidden="true" /> },
-        { label: "GRN Balance", value: currency(data.grnBalance), icon: <ReceiptText size={20} aria-hidden="true" /> },
-      ];
+        { key: "summary.purchaseOrderCount", label: "Purchase Orders", value: data.purchaseOrderCount || 0, icon: <FileText size={20} aria-hidden="true" /> },
+        { key: "summary.grnCount", label: "GRNs", value: data.grnCount || 0, icon: <PackageCheck size={20} aria-hidden="true" /> },
+        { key: "summary.purchaseOrderBalance", label: "PO Balance", value: currency(data.purchaseOrderBalance), icon: <CreditCard size={20} aria-hidden="true" /> },
+        { key: "summary.grnBalance", label: "GRN Balance", value: currency(data.grnBalance), icon: <ReceiptText size={20} aria-hidden="true" /> },
+      ].filter((metric) => isVisible(metric.key));
     }
     return [
-      { label: "Projects", value: data.projectCount || 0, icon: <Briefcase size={20} aria-hidden="true" /> },
-      { label: "Invoices", value: data.invoiceCount || 0, icon: <FileText size={20} aria-hidden="true" /> },
-      { label: "Project Balance", value: currency(data.projectBalance), icon: <CreditCard size={20} aria-hidden="true" /> },
-      { label: "Invoice Balance", value: currency(data.invoiceBalance), icon: <ReceiptText size={20} aria-hidden="true" /> },
-    ];
-  }, [data, isSupplier]);
+      { key: "summary.projectCount", label: "Projects", value: data.projectCount || 0, icon: <Briefcase size={20} aria-hidden="true" /> },
+      { key: "summary.invoiceCount", label: "Invoices", value: data.invoiceCount || 0, icon: <FileText size={20} aria-hidden="true" /> },
+      { key: "summary.projectBalance", label: "Project Balance", value: currency(data.projectBalance), icon: <CreditCard size={20} aria-hidden="true" /> },
+      { key: "summary.invoiceBalance", label: "Invoice Balance", value: currency(data.invoiceBalance), icon: <ReceiptText size={20} aria-hidden="true" /> },
+    ].filter((metric) => isVisible(metric.key));
+  }, [data, isSupplier, isVisible]);
 
   return (
     <div className="portal-shell" aria-busy={loading ? "true" : "false"}>
@@ -252,43 +270,61 @@ export default function PortalDashboard({ type }) {
 
         {!loading && !error && data && (
           <>
-            <section className="portal-metrics" aria-label="Portal summary">
-              {metrics.map((metric) => (
-                <div className="portal-metric" key={metric.label}>
-                  <span>{metric.icon}</span>
-                  <div>
-                    <p>{metric.label}</p>
-                    <strong>{metric.value}</strong>
-                  </div>
-                </div>
-              ))}
-            </section>
+            <PortalTabs
+              activePortalTab={activePortalTab}
+              setActivePortalTab={setActivePortalTab}
+              communicationUnread={communicationUnread}
+            />
 
-            {(!primaryRows?.length && !secondaryRows?.length) && <PortalEmptyState isSupplier={isSupplier} />}
+            {activePortalTab === "overview" ? (
+              <>
+                {metrics.length > 0 && <section className="portal-metrics" aria-label="Portal summary">
+                  {metrics.map((metric) => (
+                    <div className="portal-metric" key={metric.label}>
+                      <span>{metric.icon}</span>
+                      <div>
+                        <p>{metric.label}</p>
+                        <strong>{metric.value}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </section>}
 
-            {isSupplier ? (
-              <SupplierPortalProjects
-                data={data}
-                query={query}
-                setQuery={setQuery}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                actionFilter={actionFilter}
-                setActionFilter={setActionFilter}
-                sortMode={sortMode}
-                setSortMode={setSortMode}
-              />
+                {(!primaryRows?.length && !secondaryRows?.length) && <PortalEmptyState isSupplier={isSupplier} />}
+
+                {isSupplier ? (
+                  <SupplierPortalProjects
+                    data={data}
+                    query={query}
+                    setQuery={setQuery}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    actionFilter={actionFilter}
+                    setActionFilter={setActionFilter}
+                    sortMode={sortMode}
+                    setSortMode={setSortMode}
+                    isVisible={isVisible}
+                  />
+                ) : (
+                  <CustomerPortalProjects
+                    data={data}
+                    query={query}
+                    setQuery={setQuery}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    actionFilter={actionFilter}
+                    setActionFilter={setActionFilter}
+                    sortMode={sortMode}
+                    setSortMode={setSortMode}
+                    isVisible={isVisible}
+                  />
+                )}
+              </>
             ) : (
-              <CustomerPortalProjects
+              <PortalCommunicationHub
                 data={data}
-                query={query}
-                setQuery={setQuery}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                actionFilter={actionFilter}
-                setActionFilter={setActionFilter}
-                sortMode={sortMode}
-                setSortMode={setSortMode}
+                isSupplier={isSupplier}
+                onUnreadChanged={loadCommunicationCounts}
               />
             )}
           </>
@@ -298,7 +334,95 @@ export default function PortalDashboard({ type }) {
   );
 }
 
-function CustomerPortalProjects({ data, query, setQuery, statusFilter, setStatusFilter, actionFilter, setActionFilter, sortMode, setSortMode }) {
+function PortalTabs({ activePortalTab, setActivePortalTab, communicationUnread }) {
+  return (
+    <div className="portal-tabs" role="tablist" aria-label="Portal sections">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activePortalTab === "overview"}
+        className={activePortalTab === "overview" ? "portal-tab portal-tab-active" : "portal-tab"}
+        onClick={() => setActivePortalTab("overview")}
+      >
+        <Briefcase size={16} aria-hidden="true" />
+        Overview
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activePortalTab === "communications"}
+        className={activePortalTab === "communications" ? "portal-tab portal-tab-active" : "portal-tab"}
+        onClick={() => setActivePortalTab("communications")}
+      >
+        <MessageSquare size={16} aria-hidden="true" />
+        Chat and notifications
+        {communicationUnread > 0 && <Badge bg="danger" pill>{communicationUnread > 99 ? "99+" : communicationUnread}</Badge>}
+      </button>
+    </div>
+  );
+}
+
+function PortalCommunicationHub({ data, isSupplier, onUnreadChanged }) {
+  const rows = useMemo(
+    () => (isSupplier ? (data.purchaseOrders || []) : (data.projects || [])),
+    [data, isSupplier]
+  );
+  const [selectedId, setSelectedId] = useState(rows[0]?.id || "");
+
+  useEffect(() => {
+    if (!selectedId && rows[0]?.id) setSelectedId(rows[0].id);
+  }, [rows, selectedId]);
+
+  const selected = rows.find((row) => row.id === selectedId) || rows[0];
+  if (!rows.length) {
+    return (
+      <section className="portal-panel">
+        <div className="portal-chat-empty">
+          <MessageSquare size={22} aria-hidden="true" />
+          <div>
+            <h2>No conversations yet</h2>
+            <p>{isSupplier ? "Purchase orders will appear here once they are assigned to this supplier account." : "Projects will appear here once they are linked to this customer account."}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const targetType = isSupplier ? "SUPPLIER_PO" : "CUSTOMER_PROJECT";
+  const listPath = isSupplier
+    ? `/portal/supplier/pos/${selected.id}/communications`
+    : `/portal/customer/projects/${selected.id}/communications`;
+
+  return (
+    <section className="portal-communication-layout">
+      <aside className="portal-thread-list" aria-label="Conversation list">
+        {rows.map((row) => (
+          <button
+            key={row.id}
+            type="button"
+            className={row.id === selected.id ? "portal-thread-item portal-thread-active" : "portal-thread-item"}
+            onClick={() => setSelectedId(row.id)}
+          >
+            <span>{isSupplier ? row.poNumber || row.id : row.projectName || row.jobNumber || row.id}</span>
+            <small>{isSupplier ? row.status || row.approvalStatus || "Order" : row.currentStage || row.status || "Project"}</small>
+          </button>
+        ))}
+      </aside>
+      <PartnerConversation
+        targetType={targetType}
+        targetId={selected.id}
+        title={isSupplier ? `Chat for ${selected.poNumber || selected.id}` : `Chat for ${selected.projectName || selected.id}`}
+        subtitle={isSupplier ? "Send encrypted delivery updates, photos, and order questions." : "Send encrypted progress updates, photos, reactions, and questions."}
+        listPath={listPath}
+        postPath={listPath}
+        onUnreadChanged={onUnreadChanged}
+      />
+    </section>
+  );
+}
+
+function CustomerPortalProjects({ data, query, setQuery, statusFilter, setStatusFilter, actionFilter, setActionFilter, sortMode, setSortMode, isVisible }) {
+  if (!isVisible("sections.projects")) return null;
   const projects = data.projects || [];
   const invoices = data.invoices || [];
   const projectIds = new Set(projects.map((project) => project.id));
@@ -334,12 +458,13 @@ function CustomerPortalProjects({ data, query, setQuery, statusFilter, setStatus
           statusOptions={statusOptions}
           searchLabel="Search projects"
           searchPlaceholder="Project name, inquiry no, or job no"
+          isVisible={isVisible}
         />
 
         {filteredProjects.length ? (
           <div className="portal-record-list">
             {filteredProjects.map((project) => (
-              <CustomerProjectCard key={project.id} project={project} />
+              <CustomerProjectCard key={project.id} project={project} isVisible={isVisible} />
             ))}
           </div>
         ) : (
@@ -351,13 +476,13 @@ function CustomerPortalProjects({ data, query, setQuery, statusFilter, setStatus
           }} />
         )}
 
-        {unlinkedInvoices.length > 0 && (
+        {isVisible("sections.unlinkedInvoices") && unlinkedInvoices.length > 0 && (
           <section className="portal-linked-panel">
             <div className="portal-linked-heading">
               <h3>Invoices not linked to a visible project</h3>
               <p>These invoices are available to this account, but the matching project was not included in this dashboard response.</p>
             </div>
-            <InvoiceTable invoices={unlinkedInvoices} emptyText="There are no unlinked invoices." />
+            <InvoiceTable invoices={unlinkedInvoices} emptyText="There are no unlinked invoices." isVisible={isVisible} />
           </section>
         )}
       </PortalPanel>
@@ -365,7 +490,8 @@ function CustomerPortalProjects({ data, query, setQuery, statusFilter, setStatus
   );
 }
 
-function SupplierPortalProjects({ data, query, setQuery, statusFilter, setStatusFilter, actionFilter, setActionFilter, sortMode, setSortMode }) {
+function SupplierPortalProjects({ data, query, setQuery, statusFilter, setStatusFilter, actionFilter, setActionFilter, sortMode, setSortMode, isVisible }) {
+  if (!isVisible("sections.purchaseOrders")) return null;
   const purchaseOrders = data.purchaseOrders || [];
   const grns = data.grns || [];
   const purchaseOrderKeys = new Set(purchaseOrders.flatMap((po) => [po.id, po.poNumber].filter(Boolean)));
@@ -401,12 +527,13 @@ function SupplierPortalProjects({ data, query, setQuery, statusFilter, setStatus
           statusOptions={statusOptions}
           searchLabel="Search orders"
           searchPlaceholder="PO number or quotation reference"
+          isVisible={isVisible}
         />
 
         {filteredPurchaseOrders.length ? (
           <div className="portal-record-list">
             {filteredPurchaseOrders.map((po) => (
-              <SupplierOrderCard key={po.id} po={po} />
+              <SupplierOrderCard key={po.id} po={po} isVisible={isVisible} />
             ))}
           </div>
         ) : (
@@ -418,13 +545,13 @@ function SupplierPortalProjects({ data, query, setQuery, statusFilter, setStatus
           }} />
         )}
 
-        {unlinkedGrns.length > 0 && (
+        {isVisible("sections.unlinkedGrns") && unlinkedGrns.length > 0 && (
           <section className="portal-linked-panel">
             <div className="portal-linked-heading">
               <h3>GRNs not linked to a visible PO</h3>
               <p>These receiving records are visible to this account, but the matching purchase order was not included in this dashboard response.</p>
             </div>
-            <GrnTable grns={unlinkedGrns} emptyText="There are no unlinked GRNs." />
+            <GrnTable grns={unlinkedGrns} emptyText="There are no unlinked GRNs." isVisible={isVisible} />
           </section>
         )}
       </PortalPanel>
@@ -432,7 +559,7 @@ function SupplierPortalProjects({ data, query, setQuery, statusFilter, setStatus
   );
 }
 
-function CustomerProjectCard({ project }) {
+function CustomerProjectCard({ project, isVisible }) {
   const [expanded, setExpanded] = useState(false);
   const action = customerNextAction(project);
   const mainStatus = project.status || project.currentStage;
@@ -445,45 +572,45 @@ function CustomerProjectCard({ project }) {
     <article className="portal-project-card">
       <div className="portal-card-topline">
         <div className="portal-project-title-block">
-          <span className="portal-kind-label">Customer project</span>
-          <h3>{project.projectName || project.referenceNumber || project.jobNumber || project.id}</h3>
+          {isVisible("project.kindLabel") && <span className="portal-kind-label">Customer project</span>}
+          {isVisible("project.title") && <h3>{project.projectName || project.referenceNumber || project.jobNumber || project.id}</h3>}
           <div className="portal-id-row">
-            <span>Inquiry {project.referenceNumber || "Not set"}</span>
-            <span>Job {project.jobNumber || "Not set"}</span>
+            {isVisible("project.referenceNumber") && <span>Inquiry {project.referenceNumber || "Not set"}</span>}
+            {isVisible("project.jobNumber") && <span>Job {project.jobNumber || "Not set"}</span>}
           </div>
         </div>
-        <StatusBadge value={mainStatus} />
+        {isVisible("project.status") && <StatusBadge value={mainStatus} />}
       </div>
 
       <div className="portal-project-core">
-        <ProgressSummary label="Payment progress" value={progressValue} fallback={`Current stage: ${stageLabel}`} />
-        <DateSignal icon={<Truck size={17} aria-hidden="true" />} label="Delivery" date={project.deliveryDate} fallbackDate={deadline} warning={dateNeedsAttention && isPastDate(deadline)} />
-        <ActionSignal action={action} />
+        {isVisible("project.paymentProgress") && <ProgressSummary label="Payment progress" value={progressValue} fallback={`Current stage: ${stageLabel}`} />}
+        {isVisible("project.deliverySignal") && <DateSignal icon={<Truck size={17} aria-hidden="true" />} label="Delivery" date={project.deliveryDate} fallbackDate={deadline} warning={dateNeedsAttention && isPastDate(deadline)} />}
+        {isVisible("project.nextAction") && <ActionSignal action={action} />}
       </div>
 
       <div className="portal-quick-grid">
-        <DetailItem label="Current stage" value={stageLabel} />
-        <DetailItem label="Start date" value={dateText(project.estimatedStart)} />
-        <DetailItem label="Expected completion" value={dateText(project.estimatedEnd)} />
-        <DetailItem label="Due date" value={dateText(project.dueDate)} warning={isPastDate(project.dueDate)} />
-        <DetailItem label="Invoices" value={project.invoices.length} />
-        <DetailItem label="Outstanding balance" value={currency(project.balance)} strong />
+        {isVisible("project.currentStage") && <DetailItem label="Current stage" value={stageLabel} />}
+        {isVisible("project.estimatedStart") && <DetailItem label="Start date" value={dateText(project.estimatedStart)} />}
+        {isVisible("project.estimatedEnd") && <DetailItem label="Expected completion" value={dateText(project.estimatedEnd)} />}
+        {isVisible("project.dueDate") && <DetailItem label="Due date" value={dateText(project.dueDate)} warning={isPastDate(project.dueDate)} />}
+        {isVisible("project.invoiceCount") && <DetailItem label="Invoices" value={project.invoices.length} />}
+        {isVisible("project.balance") && <DetailItem label="Outstanding balance" value={currency(project.balance)} strong />}
       </div>
 
       <div className="portal-card-footer">
-        <div className="portal-document-summary">
+        {isVisible("project.documentSummary") && <div className="portal-document-summary">
           <FileText size={16} aria-hidden="true" />
           <span>{project.invoices.length ? `${project.invoices.length} invoice${project.invoices.length === 1 ? "" : "s"} available` : "No invoices available yet"}</span>
-        </div>
-        <Button type="button" variant="link" className="portal-text-action" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
+        </div>}
+        {isVisible("project.detailsToggle") && <Button type="button" variant="link" className="portal-text-action" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
           {expanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
           {expanded ? "Hide details" : "View details"}
-        </Button>
+        </Button>}
       </div>
 
-      {expanded && (
+      {expanded && isVisible("project.detailsToggle") && (
         <div className="portal-detail-sections">
-          <PortalSection title="Dates and delivery">
+          {isVisible("project.detailDates") && <PortalSection title="Dates and delivery">
             <div className="portal-detail-grid">
               <DetailItem label="Start date" value={dateText(project.estimatedStart)} />
               <DetailItem label="Due date" value={dateText(project.dueDate)} warning={isPastDate(project.dueDate)} />
@@ -491,17 +618,17 @@ function CustomerProjectCard({ project }) {
               <DetailItem label="Delivery date" value={dateText(project.deliveryDate)} />
               <DetailItem label="Delivery status" value={<StatusBadge value={project.deliveryStatus} fallback="Not scheduled" />} />
             </div>
-          </PortalSection>
-          <PortalSection title="Invoices">
-            <InvoiceTable invoices={project.invoices} emptyText="No invoices are linked to this project yet." />
-          </PortalSection>
+          </PortalSection>}
+          {isVisible("project.detailInvoices") && <PortalSection title="Invoices">
+            <InvoiceTable invoices={project.invoices} emptyText="No invoices are linked to this project yet." isVisible={isVisible} />
+          </PortalSection>}
         </div>
       )}
     </article>
   );
 }
 
-function SupplierOrderCard({ po }) {
+function SupplierOrderCard({ po, isVisible }) {
   const [expanded, setExpanded] = useState(false);
   const action = supplierNextAction(po);
   const mainStatus = po.status || po.approvalStatus;
@@ -512,87 +639,92 @@ function SupplierOrderCard({ po }) {
     <article className="portal-project-card">
       <div className="portal-card-topline">
         <div className="portal-project-title-block">
-          <span className="portal-kind-label">Supplier order</span>
-          <h3>{po.poNumber || po.id}</h3>
+          {isVisible("po.kindLabel") && <span className="portal-kind-label">Supplier order</span>}
+          {isVisible("po.title") && <h3>{po.poNumber || po.id}</h3>}
           <div className="portal-id-row">
-            <span>Quotation {po.quotationRef || "Not set"}</span>
-            <span>Currency {po.currency || "LKR"}</span>
+            {isVisible("po.quotationRef") && <span>Quotation {po.quotationRef || "Not set"}</span>}
+            {isVisible("po.currency") && <span>Currency {po.currency || "LKR"}</span>}
           </div>
         </div>
-        <StatusBadge value={mainStatus} />
+        {isVisible("po.status") && <StatusBadge value={mainStatus} />}
       </div>
 
       <div className="portal-project-core">
-        <ProgressSummary label="Receiving progress" value={progressValue} fallback={`${po.receivedQty || 0} of ${po.orderedQty || 0} received`} />
-        <DateSignal icon={<CalendarClock size={17} aria-hidden="true" />} label="ETA" date={po.etaDate} warning={isOverdue} />
-        <ActionSignal action={action} />
+        {isVisible("po.receivingProgress") && <ProgressSummary label="Receiving progress" value={progressValue} fallback={`${po.receivedQty || 0} of ${po.orderedQty || 0} received`} />}
+        {isVisible("po.etaSignal") && <DateSignal icon={<CalendarClock size={17} aria-hidden="true" />} label="ETA" date={po.etaDate} warning={isOverdue} />}
+        {isVisible("po.nextAction") && <ActionSignal action={action} />}
       </div>
 
       <div className="portal-quick-grid">
-        <DetailItem label="Approval" value={<StatusBadge value={po.approvalStatus} fallback="Not set" />} />
-        <DetailItem label="Ordered qty" value={po.orderedQty || 0} />
-        <DetailItem label="Received qty" value={po.receivedQty || 0} />
-        <DetailItem label="GRNs" value={po.grns.length} />
-        <DetailItem label="Paid" value={currency(po.paidAmount)} />
-        <DetailItem label="Outstanding balance" value={currency(po.balance)} strong />
+        {isVisible("po.approvalStatus") && <DetailItem label="Approval" value={<StatusBadge value={po.approvalStatus} fallback="Not set" />} />}
+        {isVisible("po.orderedQty") && <DetailItem label="Ordered qty" value={po.orderedQty || 0} />}
+        {isVisible("po.receivedQty") && <DetailItem label="Received qty" value={po.receivedQty || 0} />}
+        {isVisible("po.grnCount") && <DetailItem label="GRNs" value={po.grns.length} />}
+        {isVisible("po.paidAmount") && <DetailItem label="Paid" value={currency(po.paidAmount)} />}
+        {isVisible("po.balance") && <DetailItem label="Outstanding balance" value={currency(po.balance)} strong />}
       </div>
 
       <div className="portal-card-footer">
-        <div className="portal-document-summary">
+        {isVisible("po.documentSummary") && <div className="portal-document-summary">
           <PackageCheck size={16} aria-hidden="true" />
           <span>{po.grns.length ? `${po.grns.length} GRN${po.grns.length === 1 ? "" : "s"} posted` : "No GRNs posted yet"}</span>
-        </div>
-        <Button type="button" variant="link" className="portal-text-action" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
+        </div>}
+        {isVisible("po.detailsToggle") && <Button type="button" variant="link" className="portal-text-action" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
           {expanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
           {expanded ? "Hide details" : "View details"}
-        </Button>
+        </Button>}
       </div>
 
-      {expanded && (
+      {expanded && isVisible("po.detailsToggle") && (
         <div className="portal-detail-sections">
-          <PortalSection title="Delivery and order status">
+          {isVisible("po.detailStatus") && <PortalSection title="Delivery and order status">
             <div className="portal-detail-grid">
               <DetailItem label="ETA" value={dateText(po.etaDate)} warning={isOverdue} />
               <DetailItem label="PO status" value={<StatusBadge value={po.status} fallback="Not set" />} />
               <DetailItem label="Approval status" value={<StatusBadge value={po.approvalStatus} fallback="Not set" />} />
               <DetailItem label="Order total" value={currency(po.grandTotal)} />
             </div>
-          </PortalSection>
-          <PortalSection title="GRNs and supplier invoices">
-            <GrnTable grns={po.grns} emptyText="No GRNs are posted against this purchase order yet." />
-          </PortalSection>
+          </PortalSection>}
+          {isVisible("po.detailGrns") && <PortalSection title="GRNs and supplier invoices">
+            <GrnTable grns={po.grns} emptyText="No GRNs are posted against this purchase order yet." isVisible={isVisible} />
+          </PortalSection>}
         </div>
       )}
     </article>
   );
 }
 
-function PortalFilters({ query, setQuery, statusFilter, setStatusFilter, actionFilter, setActionFilter, sortMode, setSortMode, statusOptions, searchLabel, searchPlaceholder }) {
+function PortalFilters({ query, setQuery, statusFilter, setStatusFilter, actionFilter, setActionFilter, sortMode, setSortMode, statusOptions, searchLabel, searchPlaceholder, isVisible }) {
   const hasFilters = query || statusFilter !== "all" || actionFilter !== "all" || sortMode !== "deadline";
+  const showSearch = isVisible("filters.search");
+  const showStatus = isVisible("filters.status");
+  const showAction = isVisible("filters.action");
+  const showSort = isVisible("filters.sort");
+  if (!showSearch && !showStatus && !showAction && !showSort) return null;
 
   return (
     <div className="portal-filter-bar" aria-label="Project filters">
-      <label className="portal-search-field">
+      {showSearch && <label className="portal-search-field">
         <span>{searchLabel}</span>
         <Search size={17} aria-hidden="true" />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={searchPlaceholder} />
-      </label>
-      <label className="portal-select-field">
+      </label>}
+      {showStatus && <label className="portal-select-field">
         <span>Status</span>
         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="all">All statuses</option>
           {statusOptions.map((status) => <option key={status} value={status}>{displayLabel(status)}</option>)}
         </select>
-      </label>
-      <label className="portal-select-field">
+      </label>}
+      {showAction && <label className="portal-select-field">
         <span>Action</span>
         <select value={actionFilter} onChange={(event) => setActionFilter(event.target.value)}>
           <option value="all">All projects</option>
           <option value="attention">Needs attention</option>
           <option value="clear">No action needed</option>
         </select>
-      </label>
-      <label className="portal-select-field">
+      </label>}
+      {showSort && <label className="portal-select-field">
         <span>Sort</span>
         <ArrowDownUp size={16} aria-hidden="true" />
         <select value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
@@ -601,7 +733,7 @@ function PortalFilters({ query, setQuery, statusFilter, setStatusFilter, actionF
           <option value="progress">Progress</option>
           <option value="name">Name / number</option>
         </select>
-      </label>
+      </label>}
       {hasFilters && (
         <Button type="button" variant="outline-secondary" className="portal-reset-button" onClick={() => {
           setQuery("");
@@ -695,35 +827,38 @@ function ActionSignal({ action }) {
   );
 }
 
-function InvoiceTable({ invoices, emptyText }) {
+function InvoiceTable({ invoices, emptyText, isVisible }) {
+  const columns = [
+    { key: "invoice.documentNumber", label: "Invoice", render: (invoice) => invoice.documentNumber || invoice.id },
+    { key: "invoice.issuedDate", label: "Issued", render: (invoice) => dateText(invoice.issuedDate) },
+    { key: "invoice.dueDate", label: "Due", render: (invoice) => dateText(invoice.dueDate) },
+    { key: "invoice.status", label: "Status", render: (invoice) => <StatusBadge value={invoice.status} /> },
+    { key: "invoice.totalAmount", label: "Total", alignEnd: true, render: (invoice) => currency(invoice.totalAmount) },
+    { key: "invoice.paidAmount", label: "Paid", alignEnd: true, render: (invoice) => currency(invoice.paidAmount) },
+    { key: "invoice.balance", label: "Balance", alignEnd: true, strong: true, render: (invoice) => currency(invoice.balance) },
+  ].filter((column) => isVisible(column.key));
+  if (!columns.length) return null;
+
   return (
     <div className="portal-subtable-wrap">
       <Table responsive hover size="sm" className="portal-table portal-subtable">
         <thead>
           <tr>
-            <th>Invoice</th>
-            <th>Issued</th>
-            <th>Due</th>
-            <th>Status</th>
-            <th className="text-end">Total</th>
-            <th className="text-end">Paid</th>
-            <th className="text-end">Balance</th>
+            {columns.map((column) => <th key={column.key} className={column.alignEnd ? "text-end" : undefined}>{column.label}</th>)}
           </tr>
         </thead>
         <tbody>
           {invoices.length ? invoices.map((invoice) => (
             <tr key={invoice.id}>
-              <td data-label="Invoice">{invoice.documentNumber || invoice.id}</td>
-              <td data-label="Issued">{dateText(invoice.issuedDate)}</td>
-              <td data-label="Due">{dateText(invoice.dueDate)}</td>
-              <td data-label="Status"><StatusBadge value={invoice.status} /></td>
-              <td data-label="Total" className="text-end">{currency(invoice.totalAmount)}</td>
-              <td data-label="Paid" className="text-end">{currency(invoice.paidAmount)}</td>
-              <td data-label="Balance" className="text-end portal-amount-strong">{currency(invoice.balance)}</td>
+              {columns.map((column) => (
+                <td key={column.key} data-label={column.label} className={`${column.alignEnd ? "text-end" : ""}${column.strong ? " portal-amount-strong" : ""}`.trim() || undefined}>
+                  {column.render(invoice)}
+                </td>
+              ))}
             </tr>
           )) : (
             <tr>
-              <td colSpan={7} className="portal-muted-row">{emptyText}</td>
+              <td colSpan={columns.length} className="portal-muted-row">{emptyText}</td>
             </tr>
           )}
         </tbody>
@@ -732,37 +867,39 @@ function InvoiceTable({ invoices, emptyText }) {
   );
 }
 
-function GrnTable({ grns, emptyText }) {
+function GrnTable({ grns, emptyText, isVisible }) {
+  const columns = [
+    { key: "grn.grnNumber", label: "GRN", render: (grn) => grn.grnNumber || grn.id },
+    { key: "grn.paymentStatus", label: "Payment", render: (grn) => <StatusBadge value={grn.paymentStatus || grn.status} /> },
+    { key: "grn.supplierInvoiceNo", label: "Supplier invoice", render: (grn) => grn.supplierInvoiceNo || "Not set" },
+    { key: "grn.supplierInvoiceDate", label: "Invoice date", render: (grn) => dateText(grn.supplierInvoiceDate) },
+    { key: "grn.dueDate", label: "Due", render: (grn) => dateText(grn.dueDate) },
+    { key: "grn.invoiceAmount", label: "Invoice amount", alignEnd: true, render: (grn) => currency(grn.invoiceAmount) },
+    { key: "grn.totalPaid", label: "Paid", alignEnd: true, render: (grn) => currency(grn.totalPaid) },
+    { key: "grn.balance", label: "Balance", alignEnd: true, strong: true, render: (grn) => currency(grn.balance) },
+  ].filter((column) => isVisible(column.key));
+  if (!columns.length) return null;
+
   return (
     <div className="portal-subtable-wrap">
       <Table responsive hover size="sm" className="portal-table portal-subtable">
         <thead>
           <tr>
-            <th>GRN</th>
-            <th>Payment</th>
-            <th>Supplier invoice</th>
-            <th>Invoice date</th>
-            <th>Due</th>
-            <th className="text-end">Invoice amount</th>
-            <th className="text-end">Paid</th>
-            <th className="text-end">Balance</th>
+            {columns.map((column) => <th key={column.key} className={column.alignEnd ? "text-end" : undefined}>{column.label}</th>)}
           </tr>
         </thead>
         <tbody>
           {grns.length ? grns.map((grn) => (
             <tr key={grn.id}>
-              <td data-label="GRN">{grn.grnNumber || grn.id}</td>
-              <td data-label="Payment"><StatusBadge value={grn.paymentStatus || grn.status} /></td>
-              <td data-label="Supplier invoice">{grn.supplierInvoiceNo || "Not set"}</td>
-              <td data-label="Invoice date">{dateText(grn.supplierInvoiceDate)}</td>
-              <td data-label="Due">{dateText(grn.dueDate)}</td>
-              <td data-label="Invoice amount" className="text-end">{currency(grn.invoiceAmount)}</td>
-              <td data-label="Paid" className="text-end">{currency(grn.totalPaid)}</td>
-              <td data-label="Balance" className="text-end portal-amount-strong">{currency(grn.balance)}</td>
+              {columns.map((column) => (
+                <td key={column.key} data-label={column.label} className={`${column.alignEnd ? "text-end" : ""}${column.strong ? " portal-amount-strong" : ""}`.trim() || undefined}>
+                  {column.render(grn)}
+                </td>
+              ))}
             </tr>
           )) : (
             <tr>
-              <td colSpan={8} className="portal-muted-row">{emptyText}</td>
+              <td colSpan={columns.length} className="portal-muted-row">{emptyText}</td>
             </tr>
           )}
         </tbody>

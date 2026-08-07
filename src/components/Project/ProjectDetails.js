@@ -74,6 +74,7 @@ export default function ProjectDetails() {
     const [projectFiles, setProjectFiles] = useState([]);
     const [selectedAttachments, setSelectedAttachments] = useState(new Set());
     const [sendingEmail, setSendingEmail] = useState(false);
+    const [partnerUnread, setPartnerUnread] = useState(0);
 
     const openEmailModal = async () => {
         if (!id) return;
@@ -162,6 +163,19 @@ export default function ProjectDetails() {
         })();
         return () => { alive = false; };
     }, [id, rolesHeader]);
+
+    useEffect(() => {
+        let alive = true;
+        if (!id) return () => { alive = false; };
+        api.get(`/projects/${id}/partner-communications/counts`)
+            .then((res) => {
+                if (alive) setPartnerUnread(Number(res.data?.unread || 0));
+            })
+            .catch(() => {
+                if (alive) setPartnerUnread(0);
+            });
+        return () => { alive = false; };
+    }, [id, refreshKey]);
 
     const openDatesModal = () => {
         if (!project || !!viewVersion) return;
@@ -542,6 +556,9 @@ export default function ProjectDetails() {
                                     onClick={() => handleTabChange(comp.id)}
                                 >
                                     {comp.label}
+                                    {comp.id === 'COMMUNICATION' && partnerUnread > 0 && (
+                                        <Badge bg="danger" pill className="ms-1">{partnerUnread > 99 ? '99+' : partnerUnread}</Badge>
+                                    )}
                                     {comp.id === 'REVISIONS' && project?.revisionCount > 0 && (
                                         <Badge bg="secondary" pill className="ms-1">{project.revisionCount}</Badge>
                                     )}

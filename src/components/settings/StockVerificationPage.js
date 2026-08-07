@@ -14,7 +14,7 @@ import {
     Table,
     Tabs
 } from "react-bootstrap";
-import { ArrowLeft, CheckCircle2, Printer, RefreshCw, Send, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, Printer, RefreshCw, Send, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
@@ -144,6 +144,60 @@ const getErrorMessage = (err, fallback) => {
     if (typeof data === "string") return data;
     if (data?.message) return data.message;
     return fallback;
+};
+
+const sanitizeDownloadName = (name, fallback) => {
+    const value = String(name || fallback || "uploaded-stock-file.txt")
+        .trim()
+        .split("")
+        .map(char => (char.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(char)) ? "-" : char)
+        .join("")
+        .replace(/\s+/g, " ");
+    return value || fallback || "uploaded-stock-file.txt";
+};
+
+const hasFileExtension = (name) => /\.[A-Za-z0-9]+$/.test(String(name || ""));
+
+const sourceDownloadName = (run, fallbackBase, fallbackExt) => {
+    const fileName = run?.uploadedSourceFileName;
+    if (fileName) return sanitizeDownloadName(fileName, `${fallbackBase}.${fallbackExt}`);
+    const title = sanitizeDownloadName(run?.title || fallbackBase, fallbackBase);
+    return hasFileExtension(title) ? title : `${title}.${fallbackExt}`;
+};
+
+const downloadBlob = (blob, fileName) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+};
+
+const downloadUploadedSource = async (run, fallbackBase, fallbackExt = "txt", endpoint) => {
+    if (endpoint) {
+        try {
+            const res = await api.get(endpoint, { responseType: "blob", timeout: RECONCILIATION_TIMEOUT_MS });
+            downloadBlob(res.data, sourceDownloadName(run, fallbackBase, fallbackExt));
+            return;
+        } catch (err) {
+            if (err?.response?.status !== 404) {
+                toast.error(getErrorMessage(err, "Failed to download uploaded file"));
+                return;
+            }
+        }
+    }
+    const source = run?.uploadedSourceText;
+    if (!source) {
+        toast.warn("This saved run does not have the original upload text attached");
+        return;
+    }
+    const fileName = sourceDownloadName(run, fallbackBase, fallbackExt);
+    const contentType = run.uploadedSourceContentType || (fallbackExt === "csv" ? "text/csv" : "text/plain");
+    const blob = new Blob([source], { type: `${contentType};charset=utf-8` });
+    downloadBlob(blob, fileName);
 };
 
 const statusBadge = (status) => {
@@ -447,6 +501,8 @@ function PrintableReport({ title, selectedRun, uploadReport, reportRows, duplica
 function SkuVerificationTab() {
     const [title, setTitle] = useState("");
     const [skuText, setSkuText] = useState("");
+    const [sourceFileName, setSourceFileName] = useState("");
+    const [sourceContentType, setSourceContentType] = useState("");
     const [creating, setCreating] = useState(false);
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -501,8 +557,16 @@ function SkuVerificationTab() {
         if (!file) return;
         const text = await file.text();
         setSkuText(text);
+        setSourceFileName(file.name);
+        setSourceContentType(file.type || (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "text/plain"));
         if (!title) setTitle(file.name.replace(/\.[^.]+$/, ""));
         event.target.value = "";
+    };
+
+    const updateSkuText = (value) => {
+        setSkuText(value);
+        setSourceFileName("");
+        setSourceContentType("text/plain");
     };
 
     const createRun = async () => {
@@ -512,9 +576,17 @@ function SkuVerificationTab() {
         }
         setCreating(true);
         try {
-            const res = await api.post("/stock-verifications", { title: title || undefined, skus: parsedSkus });
+            const res = await api.post("/stock-verifications", {
+                title: title || undefined,
+                skus: parsedSkus,
+                uploadedSourceText: skuText,
+                uploadedSourceFileName: sourceFileName || undefined,
+                uploadedSourceContentType: sourceContentType || "text/plain",
+            });
             setSelectedRun(res.data);
             setSkuText("");
+            setSourceFileName("");
+            setSourceContentType("");
             setTitle("");
             toast.success("Stock verification completed");
             await loadHistory();
@@ -562,7 +634,7 @@ function SkuVerificationTab() {
                         <Form.Control type="file" accept=".csv,.txt" onChange={handleFile} />
                     </Form.Group>
                     <div className="text-center text-muted small mb-2">or paste SKUs</div>
-                    <Form.Control as="textarea" rows={9} value={skuText} onChange={e => setSkuText(e.target.value)} placeholder={"SKU001\nSKU002\nSKU003"} />
+                    <Form.Control as="textarea" rows={9} value={skuText} onChange={e => updateSkuText(e.target.value)} placeholder={"SKU001\nSKU002\nSKU003"} />
                     <div className="d-flex justify-content-between text-muted small my-3">
                         <span>{parsedSkus.length} uploaded rows</span>
                         <span>{uniqueSkuCount} unique SKUs</span>
@@ -600,9 +672,16 @@ function SkuVerificationTab() {
                                     <h4 className="mb-1">{selectedRun.title || "Stock verification report"}</h4>
                                     <div className="text-muted small">Completed {formatDate(selectedRun.createdAt)} by {selectedRun.createdBy || "system"}</div>
                                 </div>
-                                <Button variant="outline-primary" className="print-hidden" onClick={() => window.print()}>
-                                    <Printer size={16} className="me-1" /> Print
-                                </Button>
+                                <div className="d-flex gap-2 print-hidden">
+                                    {(selectedRun.uploadedSourceText || selectedRun.uploadedSourceAvailable) && (
+                                        <Button variant="outline-secondary" onClick={() => downloadUploadedSource(selectedRun, "stock-verification-upload", "txt", `/stock-verifications/${selectedRun.id}/source`)}>
+                                            <Download size={16} className="me-1" /> Uploaded File
+                                        </Button>
+                                    )}
+                                    <Button variant="outline-primary" onClick={() => window.print()}>
+                                        <Printer size={16} className="me-1" /> Print
+                                    </Button>
+                                </div>
                             </div>
                             <Row className="g-2 mb-3">
                                 <Col sm={6} xl={3}><SummaryBox label="System products" value={selectedRun.systemProductCount || 0} /></Col>
@@ -638,6 +717,8 @@ function ReconciliationTab() {
     const navigate = useNavigate();
     const [title, setTitle] = useState("");
     const [uploadText, setUploadText] = useState("");
+    const [sourceFileName, setSourceFileName] = useState("");
+    const [sourceContentType, setSourceContentType] = useState("");
     const [creating, setCreating] = useState(false);
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -749,8 +830,16 @@ function ReconciliationTab() {
         if (!file) return;
         const text = await file.text();
         setUploadText(text);
+        setSourceFileName(file.name);
+        setSourceContentType(file.type || (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "text/plain"));
         if (!title) setTitle(file.name.replace(/\.[^.]+$/, ""));
         event.target.value = "";
+    };
+
+    const updateUploadText = (value) => {
+        setUploadText(value);
+        setSourceFileName("");
+        setSourceContentType("text/csv");
     };
 
     const createRun = async () => {
@@ -764,10 +853,15 @@ function ReconciliationTab() {
                 title: title || undefined,
                 rows: parsedRows,
                 uploadReport,
+                uploadedSourceText: uploadText,
+                uploadedSourceFileName: sourceFileName || undefined,
+                uploadedSourceContentType: sourceContentType || "text/csv",
             }, { timeout: RECONCILIATION_TIMEOUT_MS });
             setSelectedRun(res.data);
             setUploadReportsByRun(current => ({ ...current, [res.data.id]: uploadReport }));
             setUploadText("");
+            setSourceFileName("");
+            setSourceContentType("");
             setTitle("");
             setFilter("UNRESOLVED");
             setPage(0);
@@ -901,7 +995,7 @@ function ReconciliationTab() {
                         as="textarea"
                         rows={8}
                         value={uploadText}
-                        onChange={e => setUploadText(e.target.value)}
+                        onChange={e => updateUploadText(e.target.value)}
                         placeholder={"sku,quantity,unitCost,productName,reorderLevel,supplier\nABC001,10,2500,Product A,5,Main Supplier"}
                     />
                     <div className="d-flex justify-content-between text-muted small my-3">
@@ -963,6 +1057,11 @@ function ReconciliationTab() {
                                     </div>
                                 </div>
                                 <div className="d-flex gap-2">
+                                    {(selectedRun.uploadedSourceText || selectedRun.uploadedSourceAvailable) && (
+                                        <Button variant="outline-secondary" onClick={() => downloadUploadedSource(selectedRun, "physical-stock-upload", "csv", `/stock-reconciliations/${selectedRun.id}/source`)}>
+                                            <Download size={16} className="me-1" /> Uploaded File
+                                        </Button>
+                                    )}
                                     <Button variant="outline-secondary" onClick={openFullReport} disabled={reportLoading}>
                                         {reportLoading ? <Spinner size="sm" className="me-1" /> : null}
                                         Full Report
@@ -1207,7 +1306,12 @@ function ReconciliationTab() {
                 <Modal.Title>Physical Count Full Report</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <div className="print-hidden d-flex justify-content-end mb-3">
+                <div className="print-hidden d-flex justify-content-end gap-2 mb-3">
+                    {selectedRun && (selectedRun.uploadedSourceText || selectedRun.uploadedSourceAvailable) && (
+                        <Button variant="outline-secondary" onClick={() => downloadUploadedSource(selectedRun, "physical-stock-upload", "csv", `/stock-reconciliations/${selectedRun.id}/source`)}>
+                            <Download size={16} className="me-1" /> Uploaded File
+                        </Button>
+                    )}
                     <Button variant="outline-primary" onClick={() => window.print()} disabled={reportLoading}>
                         <Printer size={16} className="me-1" /> Print Report
                     </Button>

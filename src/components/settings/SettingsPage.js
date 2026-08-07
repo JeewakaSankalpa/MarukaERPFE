@@ -204,6 +204,19 @@ export default function SettingsPage() {
                         </Card.Body>
                     </Card>
                 </Col>
+                <Col md={4} sm={6}>
+                    <Card className="h-100 shadow-sm border-0 bg-light" onClick={() => navigate('/admin/portal-dashboard')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
+                        <Card.Body className="d-flex align-items-center p-4">
+                            <div className="bg-success bg-opacity-10 p-3 rounded-3 me-3">
+                                <i className="fa fa-eye text-success" style={{ fontSize: '1.5rem' }}></i>
+                            </div>
+                            <div>
+                                <h6 className="mb-1">Portal Dashboard</h6>
+                                <p className="text-muted small mb-0">Control customer and supplier dashboard visibility.</p>
+                            </div>
+                        </Card.Body>
+                    </Card>
+                </Col>
             </Row>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />

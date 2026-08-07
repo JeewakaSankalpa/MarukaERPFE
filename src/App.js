@@ -102,6 +102,7 @@ import MyNotificationsPage from "./components/settings/MyNotificationsPage";
 import NotificationRulesPage from "./components/settings/NotificationRulesPage";
 import RoleManagement from "./components/settings/RoleManagement";
 import StockVerificationPage from "./components/settings/StockVerificationPage";
+import PortalDashboardSettings from "./components/settings/PortalDashboardSettings";
 import SuperAdminPage from "./components/admin/SuperAdminPage";
 import PortalDashboard from "./components/Portal/PortalDashboard";
 
@@ -353,6 +354,7 @@ function App() {
                         <Route path="/admin/workflows" element={<WorkflowList />} />
                         <Route path="/admin/notification-rules" element={<NotificationRulesPage />} />
                         <Route path="/admin/roles" element={<RoleManagement />} />
+                        <Route path="/admin/portal-dashboard" element={<PortalDashboardSettings />} />
                         <Route path="/admin/stock-verification" element={<StockVerificationPage />} />
                         <Route path="/admin/workflow" element={<WorkflowBuilder />} />
                         <Route path="/admin/workflow/:id" element={<WorkflowBuilder />} />

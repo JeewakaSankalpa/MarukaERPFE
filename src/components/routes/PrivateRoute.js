@@ -21,6 +21,11 @@ export default function PrivateRoute({ children, module, roles }) {
     // Check Module Access if 'module' prop is passed
     if (module) {
         try {
+            const currentRole = (role || "").toUpperCase();
+            if (currentRole === "SUPER_ADMIN") {
+                return children ? children : <Outlet />;
+            }
+
             const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
 
             // Strict check: User must have the module in their access list
