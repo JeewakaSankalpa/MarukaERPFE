@@ -8,6 +8,13 @@ import api from "../../api/api";
 const GROUPS = {
   customer: [
     {
+      title: "Portal tabs",
+      items: [
+        ["tabs.overview", "Overview tab"],
+        ["tabs.communications", "Chat and notifications tab"],
+      ],
+    },
+    {
       title: "Summary cards",
       items: [
         ["summary.projectCount", "Project count"],
@@ -59,6 +66,13 @@ const GROUPS = {
     },
   ],
   supplier: [
+    {
+      title: "Portal tabs",
+      items: [
+        ["tabs.overview", "Overview tab"],
+        ["tabs.communications", "Chat and notifications tab"],
+      ],
+    },
     {
       title: "Summary cards",
       items: [

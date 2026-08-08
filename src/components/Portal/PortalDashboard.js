@@ -151,6 +151,14 @@ export default function PortalDashboard({ type, previewId, previewLabel }) {
   const secondaryRows = isSupplier ? data?.grns : data?.invoices;
   const visibility = useMemo(() => data?.config?.visible?.[isSupplier ? "supplier" : "customer"] || {}, [data, isSupplier]);
   const isVisible = useCallback((key) => visibility[key] !== false, [visibility]);
+  const visibleTabs = useMemo(() => {
+    const tabs = [];
+    if (isVisible("tabs.overview")) tabs.push("overview");
+    if (isVisible("tabs.communications")) tabs.push("communications");
+    return tabs;
+  }, [isVisible]);
+  const canShowOverview = visibleTabs.includes("overview");
+  const canShowCommunications = visibleTabs.includes("communications");
 
   const loadCommunicationCounts = useCallback(() => {
     const path = isPreview
@@ -178,7 +186,6 @@ export default function PortalDashboard({ type, previewId, previewLabel }) {
         if (mountedRef.current && requestSeqRef.current === requestSeq) {
           setData(res.data);
           setLastUpdated(new Date());
-          loadCommunicationCounts();
         }
       })
       .catch((err) => {
@@ -190,16 +197,32 @@ export default function PortalDashboard({ type, previewId, previewLabel }) {
       .finally(() => {
         if (mountedRef.current && requestSeqRef.current === requestSeq) setLoading(false);
       });
-  }, [isPreview, loadCommunicationCounts, previewId, type]);
+  }, [isPreview, previewId, type]);
 
   useEffect(() => {
     mountedRef.current = true;
     loadDashboard();
-    loadCommunicationCounts();
     return () => {
       mountedRef.current = false;
     };
-  }, [loadCommunicationCounts, loadDashboard]);
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    if (!data) return;
+    if (!visibleTabs.length) {
+      setActivePortalTab("");
+      setCommunicationUnread(0);
+      return;
+    }
+    if (!visibleTabs.includes(activePortalTab)) {
+      setActivePortalTab(visibleTabs[0]);
+    }
+    if (visibleTabs.includes("communications")) {
+      loadCommunicationCounts();
+    } else {
+      setCommunicationUnread(0);
+    }
+  }, [activePortalTab, data, loadCommunicationCounts, visibleTabs]);
 
   const metrics = useMemo(() => {
     if (!data) return [];
@@ -281,9 +304,13 @@ export default function PortalDashboard({ type, previewId, previewLabel }) {
               activePortalTab={activePortalTab}
               setActivePortalTab={setActivePortalTab}
               communicationUnread={communicationUnread}
+              showOverview={canShowOverview}
+              showCommunications={canShowCommunications}
             />
 
-            {activePortalTab === "overview" ? (
+            {!visibleTabs.length ? (
+              <PortalNoVisibleTabs />
+            ) : activePortalTab === "overview" && canShowOverview ? (
               <>
                 {metrics.length > 0 && <section className="portal-metrics" aria-label="Portal summary">
                   {metrics.map((metric) => (
@@ -327,13 +354,15 @@ export default function PortalDashboard({ type, previewId, previewLabel }) {
                   />
                 )}
               </>
-            ) : (
+            ) : activePortalTab === "communications" && canShowCommunications ? (
               <PortalCommunicationHub
                 data={data}
                 isSupplier={isSupplier}
                 isPreview={isPreview}
                 onUnreadChanged={loadCommunicationCounts}
               />
+            ) : (
+              <PortalNoVisibleTabs />
             )}
           </>
         )}
@@ -342,10 +371,11 @@ export default function PortalDashboard({ type, previewId, previewLabel }) {
   );
 }
 
-function PortalTabs({ activePortalTab, setActivePortalTab, communicationUnread }) {
+function PortalTabs({ activePortalTab, setActivePortalTab, communicationUnread, showOverview, showCommunications }) {
+  if (!showOverview && !showCommunications) return null;
   return (
     <div className="portal-tabs" role="tablist" aria-label="Portal sections">
-      <button
+      {showOverview && <button
         type="button"
         role="tab"
         aria-selected={activePortalTab === "overview"}
@@ -354,8 +384,8 @@ function PortalTabs({ activePortalTab, setActivePortalTab, communicationUnread }
       >
         <Briefcase size={16} aria-hidden="true" />
         Overview
-      </button>
-      <button
+      </button>}
+      {showCommunications && <button
         type="button"
         role="tab"
         aria-selected={activePortalTab === "communications"}
@@ -365,7 +395,7 @@ function PortalTabs({ activePortalTab, setActivePortalTab, communicationUnread }
         <MessageSquare size={16} aria-hidden="true" />
         Chat and notifications
         {communicationUnread > 0 && <Badge bg="danger" pill>{communicationUnread > 99 ? "99+" : communicationUnread}</Badge>}
-      </button>
+      </button>}
     </div>
   );
 }
@@ -987,6 +1017,18 @@ function PortalEmptyState({ isSupplier }) {
             ? "Purchase orders and receiving records will appear here after Maruka links them to this supplier account."
             : "Projects, invoices, and delivery updates will appear here after Maruka links them to this customer account."}
         </p>
+      </div>
+    </section>
+  );
+}
+
+function PortalNoVisibleTabs() {
+  return (
+    <section className="portal-empty">
+      <LockKeyhole size={22} aria-hidden="true" />
+      <div>
+        <h2>Portal sections are hidden</h2>
+        <p>This account has no visible portal tabs enabled right now.</p>
       </div>
     </section>
   );
