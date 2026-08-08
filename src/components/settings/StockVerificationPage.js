@@ -176,6 +176,15 @@ const downloadBlob = (blob, fileName) => {
     URL.revokeObjectURL(url);
 };
 
+const arrayBufferToBase64 = (buffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return window.btoa(binary);
+};
+
 const downloadUploadedSource = async (run, fallbackBase, fallbackExt = "txt", endpoint) => {
     if (endpoint) {
         try {
@@ -717,6 +726,7 @@ function ReconciliationTab() {
     const navigate = useNavigate();
     const [title, setTitle] = useState("");
     const [uploadText, setUploadText] = useState("");
+    const [uploadBase64, setUploadBase64] = useState("");
     const [sourceFileName, setSourceFileName] = useState("");
     const [sourceContentType, setSourceContentType] = useState("");
     const [creating, setCreating] = useState(false);
@@ -828,23 +838,22 @@ function ReconciliationTab() {
     const handleFile = async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
-        const text = await file.text();
+        const [text, buffer] = await Promise.all([file.text(), file.arrayBuffer()]);
         setUploadText(text);
+        setUploadBase64(arrayBufferToBase64(buffer));
         setSourceFileName(file.name);
         setSourceContentType(file.type || (file.name.toLowerCase().endsWith(".csv") ? "text/csv" : "text/plain"));
         if (!title) setTitle(file.name.replace(/\.[^.]+$/, ""));
         event.target.value = "";
     };
 
-    const updateUploadText = (value) => {
-        setUploadText(value);
-        setSourceFileName("");
-        setSourceContentType("text/csv");
-    };
-
     const createRun = async () => {
+        if (!sourceFileName) {
+            toast.warn("Upload a CSV file before comparing physical stock");
+            return;
+        }
         if (!parsedRows.length) {
-            toast.warn("Upload or paste rows with at least SKU and quantity");
+            toast.warn("Upload a CSV file with at least SKU and quantity");
             return;
         }
         setCreating(true);
@@ -854,12 +863,14 @@ function ReconciliationTab() {
                 rows: parsedRows,
                 uploadReport,
                 uploadedSourceText: uploadText,
+                uploadedSourceBase64: uploadBase64,
                 uploadedSourceFileName: sourceFileName || undefined,
                 uploadedSourceContentType: sourceContentType || "text/csv",
             }, { timeout: RECONCILIATION_TIMEOUT_MS });
             setSelectedRun(res.data);
             setUploadReportsByRun(current => ({ ...current, [res.data.id]: uploadReport }));
             setUploadText("");
+            setUploadBase64("");
             setSourceFileName("");
             setSourceContentType("");
             setTitle("");
@@ -988,16 +999,19 @@ function ReconciliationTab() {
                     </Form.Group>
                     <Form.Group className="mb-3">
                         <Form.Label>Upload CSV</Form.Label>
-                        <Form.Control type="file" accept=".csv,.txt" onChange={handleFile} />
+                        <Form.Control type="file" accept=".csv,text/csv" onChange={handleFile} />
                         <Form.Text>Columns: sku, quantity, unitCost/rate, productName, reorderLevel, supplier</Form.Text>
                     </Form.Group>
-                    <Form.Control
-                        as="textarea"
-                        rows={8}
-                        value={uploadText}
-                        onChange={e => updateUploadText(e.target.value)}
-                        placeholder={"sku,quantity,unitCost,productName,reorderLevel,supplier\nABC001,10,2500,Product A,5,Main Supplier"}
-                    />
+                    <div className="border rounded p-3 bg-light mb-3">
+                        {sourceFileName ? (
+                            <>
+                                <div className="fw-semibold text-truncate">{sourceFileName}</div>
+                                <div className="text-muted small">Uploaded file is saved with this reconciliation run.</div>
+                            </>
+                        ) : (
+                            <div className="text-muted small">Choose a CSV file to parse and save with the physical count.</div>
+                        )}
+                    </div>
                     <div className="d-flex justify-content-between text-muted small my-3">
                         <span>{parsedRows.length} parsed rows</span>
                         <span>{new Set(parsedRows.map(row => String(row.sku).toUpperCase())).size} unique SKUs</span>
@@ -1018,7 +1032,7 @@ function ReconciliationTab() {
                             </Button>
                         </div>
                     )}
-                    <Button className="w-100" onClick={createRun} disabled={creating || !parsedRows.length}>
+                    <Button className="w-100" onClick={createRun} disabled={creating || !sourceFileName || !parsedRows.length}>
                         {creating ? <Spinner size="sm" className="me-1" /> : <Upload size={16} className="me-1" />}
                         Compare Physical Stock
                     </Button>
@@ -1031,14 +1045,30 @@ function ReconciliationTab() {
                     </div>
                     {historyLoading ? <div className="text-center py-4"><Spinner /></div> : (
                         <div className="d-grid gap-2">
-                            {history.map(item => (
-                                <Button key={item.id} variant={selectedRun?.id === item.id ? "primary" : "outline-secondary"} className="text-start" onClick={() => chooseRun(item)}>
-                                    <div className="fw-semibold text-truncate">{item.title || item.id}</div>
-                                    <div className={selectedRun?.id === item.id ? "small text-white-50" : "small text-muted"}>
-                                        {formatDate(item.createdAt)} | {item.mismatchCount || 0} differences
+                            {history.map(item => {
+                                const isSelected = selectedRun?.id === item.id;
+                                const hasUpload = item.uploadedSourceText || item.uploadedSourceAvailable;
+                                return (
+                                    <div key={item.id} className={`border rounded p-2 ${isSelected ? "bg-primary text-white" : "bg-white"}`}>
+                                        <Button variant="link" className={`w-100 text-start p-0 text-decoration-none ${isSelected ? "text-white" : "text-dark"}`} onClick={() => chooseRun(item)}>
+                                            <div className="fw-semibold text-truncate">{item.title || item.id}</div>
+                                            <div className={isSelected ? "small text-white-50" : "small text-muted"}>
+                                                {formatDate(item.createdAt)} | {item.mismatchCount || 0} differences
+                                            </div>
+                                        </Button>
+                                        {hasUpload && (
+                                            <Button
+                                                size="sm"
+                                                variant={isSelected ? "light" : "outline-secondary"}
+                                                className="w-100 mt-2"
+                                                onClick={() => downloadUploadedSource(item, "physical-stock-upload", "csv", `/stock-reconciliations/${item.id}/source`)}
+                                            >
+                                                <Download size={14} className="me-1" /> Download Worker CSV
+                                            </Button>
+                                        )}
                                     </div>
-                                </Button>
-                            ))}
+                                );
+                            })}
                             {!history.length && <div className="text-muted small">No reconciliation runs yet.</div>}
                         </div>
                     )}
@@ -1059,7 +1089,7 @@ function ReconciliationTab() {
                                 <div className="d-flex gap-2">
                                     {(selectedRun.uploadedSourceText || selectedRun.uploadedSourceAvailable) && (
                                         <Button variant="outline-secondary" onClick={() => downloadUploadedSource(selectedRun, "physical-stock-upload", "csv", `/stock-reconciliations/${selectedRun.id}/source`)}>
-                                            <Download size={16} className="me-1" /> Uploaded File
+                                            <Download size={16} className="me-1" /> Download Worker CSV
                                         </Button>
                                     )}
                                     <Button variant="outline-secondary" onClick={openFullReport} disabled={reportLoading}>
@@ -1309,7 +1339,7 @@ function ReconciliationTab() {
                 <div className="print-hidden d-flex justify-content-end gap-2 mb-3">
                     {selectedRun && (selectedRun.uploadedSourceText || selectedRun.uploadedSourceAvailable) && (
                         <Button variant="outline-secondary" onClick={() => downloadUploadedSource(selectedRun, "physical-stock-upload", "csv", `/stock-reconciliations/${selectedRun.id}/source`)}>
-                            <Download size={16} className="me-1" /> Uploaded File
+                            <Download size={16} className="me-1" /> Download Worker CSV
                         </Button>
                     )}
                     <Button variant="outline-primary" onClick={() => window.print()} disabled={reportLoading}>
