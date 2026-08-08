@@ -50,3 +50,35 @@ webpack compiled [1m[32msuccessfully[39m[22m
 Compiling...
 Compiled successfully!
 webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Failed to compile.
+
+[eslint] 
+src\components\Portal\PortalDashboard.js
+  Line 312:16:  'PortalNoVisibleTabs' is not defined  react/jsx-no-undef
+  Line 365:16:  'PortalNoVisibleTabs' is not defined  react/jsx-no-undef
+
+Search for the keywords to learn more about each error.
+[1m[31mERROR[39m[22m in [1m[eslint] 
+src\components\Portal\PortalDashboard.js
+  Line 312:16:  'PortalNoVisibleTabs' is not defined  react/jsx-no-undef
+  Line 365:16:  'PortalNoVisibleTabs' is not defined  react/jsx-no-undef
+
+Search for the keywords to learn more about each [1m[31merror[39m[22m[1m.[39m[22m
+
+webpack compiled with [1m[31m1 error[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m
+Compiling...
+Compiled successfully!
+webpack compiled [1m[32msuccessfully[39m[22m

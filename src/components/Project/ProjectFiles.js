@@ -209,13 +209,17 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
             let generatedFiles = [];
             try {
                 const estRes = await api.get(`/estimations/by-project/${id}`);
-                if (estRes.data) {
+                const est = estRes.data;
+                const quotationApproved = ["APPROVED", "FINALIZED"].includes(
+                    String(est?.approvalStatus || est?.status || "").toUpperCase()
+                );
+                if (est && quotationApproved) {
                     generatedFiles.push({
-                        displayName: `Quotation${estRes.data.version ? ` v${estRes.data.version}` : ''}`,
+                        displayName: `Quotation${est.version ? ` v${est.version}` : ''}`,
                         url: appRoute(`/projects/${id}/quotation`),
                         docType: 'Quotation',
                         _kind: 'quotation',
-                        uploadedAt: estRes.data.updatedAt || estRes.data.createdAt
+                        uploadedAt: est.updatedAt || est.createdAt
                     });
                 }
             } catch {

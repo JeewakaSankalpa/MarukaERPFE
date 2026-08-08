@@ -349,6 +349,7 @@ const QuotationPrint = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
     const [estimation, setEstimation] = useState(null);
     const [project, setProject] = useState(null);
     const [customer, setCustomer] = useState(null);
@@ -361,7 +362,8 @@ const QuotationPrint = () => {
 
     const fetchData = async () => {
         try {
-            const estRes = await api.get(`/estimations/by-project/${projectId}`);
+            setLoadError("");
+            const estRes = await api.get(`/estimations/by-project/${projectId}/quotation`);
             setEstimation(estRes.data);
 
             const projRes = await api.get(`/projects/${projectId}`);
@@ -380,6 +382,7 @@ const QuotationPrint = () => {
             }
         } catch (error) {
             console.error("Failed to load data", error);
+            setLoadError(getApiErrorMessage(error, "Quotation cannot be opened until the estimation is fully approved."));
         } finally {
             setLoading(false);
         }
@@ -465,6 +468,16 @@ const QuotationPrint = () => {
     };
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
+    if (loadError) {
+        return (
+            <div className="container py-5">
+                <Alert variant="warning">
+                    {loadError}
+                </Alert>
+                <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+            </div>
+        );
+    }
     if (!estimation) return <div className="text-center p-5">No estimation found for this project.</div>;
 
     const isFinalized = estimation.status === "FINALIZED";

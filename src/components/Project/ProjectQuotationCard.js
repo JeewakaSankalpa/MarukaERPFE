@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, Button, Badge, Modal, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { Printer, CheckCircle } from "lucide-react";
@@ -11,13 +11,48 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
     const [showModal, setShowModal] = useState(false);
     const [file, setFile] = useState(null);
     const [isAccepting, setIsAccepting] = useState(false);
+    const [quotationApprovalStatus, setQuotationApprovalStatus] = useState("");
+    const [quotationStatusLoading, setQuotationStatusLoading] = useState(false);
+
+    const targetId = projectId || project?.id;
+    const canOpenQuotation = ["APPROVED", "FINALIZED"].includes(String(quotationApprovalStatus || "").toUpperCase());
+
+    useEffect(() => {
+        let active = true;
+        if (!isVisible || !targetId) {
+            setQuotationApprovalStatus("");
+            return () => {
+                active = false;
+            };
+        }
+
+        setQuotationStatusLoading(true);
+        api.get(`/estimations/by-project/${targetId}`)
+            .then((res) => {
+                if (!active) return;
+                const est = res.data || {};
+                setQuotationApprovalStatus(est.approvalStatus || est.status || "");
+            })
+            .catch(() => {
+                if (active) setQuotationApprovalStatus("");
+            })
+            .finally(() => {
+                if (active) setQuotationStatusLoading(false);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [isVisible, targetId, reloadKey]);
 
     if (!isVisible) return null;
 
-    const targetId = projectId || project?.id;
-
     const handleViewQuotation = () => {
         if (!targetId) return;
+        if (!canOpenQuotation) {
+            toast.warn("Estimation must be fully approved before opening the quotation.");
+            return;
+        }
         // Navigate to the Printable View (QuotationPrint.js)
         navigate(`/projects/${targetId}/quotation`);
     };
@@ -74,15 +109,31 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                     View the customer-facing quotation and record the customer's Purchase Order when the quotation is accepted.
                 </p>
                 <div className="d-flex gap-2">
-                    <Button variant="primary" onClick={handleViewQuotation} disabled={!targetId}>
+                    <Button
+                        variant="primary"
+                        onClick={handleViewQuotation}
+                        disabled={!targetId || quotationStatusLoading || !canOpenQuotation}
+                        title={!canOpenQuotation ? "Approve the estimation before opening the quotation" : ""}
+                    >
+                        {quotationStatusLoading ? <Spinner size="sm" className="me-1" /> : null}
                         Open Quotation
                     </Button>
                     {(!project?.jobNumber) && actions?.canAcceptQuotation && (
-                        <Button variant="success" onClick={() => setShowModal(true)} disabled={!targetId}>
+                        <Button
+                            variant="success"
+                            onClick={() => setShowModal(true)}
+                            disabled={!targetId || quotationStatusLoading || !canOpenQuotation}
+                            title={!canOpenQuotation ? "Approve the estimation before recording the customer PO" : ""}
+                        >
                             <CheckCircle size={16} className="me-1" /> Record Customer PO
                         </Button>
                     )}
                 </div>
+                {!quotationStatusLoading && !canOpenQuotation && (
+                    <div className="small text-muted mt-2">
+                        Estimation approval is required before the quotation can be opened or printed.
+                    </div>
+                )}
             </Card.Body>
 
             {/* Customer PO Modal */}
