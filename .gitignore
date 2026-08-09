@@ -42,3 +42,10 @@ debug_log*.txt
 all_tests.txt
 test_logs.txt
 
+# Local audit/decompile artifacts
+*-javap.txt
+*-verbose.txt
+com_maruka_*.txt
+maruka-audit-app.jar
+maruka-audit-jar/
+
