@@ -244,15 +244,15 @@ function InventoryView() {
         const tableHead = [['Product Name', 'Total Qty', 'Qty in Selected Stores', 'Available Stores']];
         const tableRows = (filteredItems || []).map((item) => [
             item.productName,
-            item.totalQuantity,
-            item.availableQuantity,
+            formatQuantity(item.totalQuantity),
+            selectedLocations.length > 0 ? formatQuantity(getFilteredQty(item)) : '-',
             (item.availableStores || [])
                 .map((store) => {
                     const label =
                         locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
                         store.locationId ||
                         'Main Store';
-                    return `${label}: ${store.quantity}`;
+                    return `${label}: ${formatQuantity(store.quantity)}`;
                 })
                 .join('\n'),
         ]);
@@ -284,7 +284,7 @@ function InventoryView() {
         selectedLocations.forEach(sel => {
             const lookingFor = (sel.value === 'MAIN_STORE') ? 'LOC_STORES_MAIN' : sel.value;
             const sq = (item.availableStores || []).find(s => s.locationId === lookingFor);
-            if (sq) sum += sq.quantity;
+            if (sq) sum += Number(sq.quantity || 0);
         });
         return sum;
     };
@@ -369,10 +369,10 @@ function InventoryView() {
                             style={{ cursor: 'pointer' }}
                         >
                             <td>{item.productName}</td>
-                            <td>{item.totalQuantity}</td>
-                            <td>{item.mainStoreQuantity}</td>
+                            <td>{formatQuantity(item.totalQuantity)}</td>
+                            <td>{formatQuantity(item.mainStoreQuantity)}</td>
                             {selectedLocations.length > 0 && (
-                                <td className="fw-bold text-success">{getFilteredQty(item)}</td>
+                                <td className="fw-bold text-success">{formatQuantity(getFilteredQty(item))}</td>
                             )}
                             <td>
                                 <Button size="sm" variant="info" onClick={(e) => { e.stopPropagation(); handleProductClick(item); }}>
@@ -397,7 +397,7 @@ function InventoryView() {
                     <Modal.Title>Details: {selectedProduct?.productName}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <p><strong>Total (All):</strong> {selectedProduct?.totalQuantity} | <strong>Main Store:</strong> {selectedProduct?.mainStoreQuantity}</p>
+                    <p><strong>Total (All):</strong> {formatQuantity(selectedProduct?.totalQuantity)} | <strong>Main Store:</strong> {formatQuantity(selectedProduct?.mainStoreQuantity)}</p>
                     <hr />
                     <h5>Batch Breakdown</h5>
                     {/* ... Existing Batch Table ... */}
@@ -418,7 +418,7 @@ function InventoryView() {
                                         <div>{batch.batchNumber || batch.batchNo || '-'}</div>
                                         <small className="text-muted">{batch.id}</small>
                                     </td>
-                                    <td>{batch.quantity}</td>
+                                    <td>{formatQuantity(batch.quantity)}</td>
                                     <td>{batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : '-'}</td>
                                     <td>
                                         {batch.ownerType === 'PROJECT' ? `Proj: ${batch.ownerId}` :
@@ -429,7 +429,7 @@ function InventoryView() {
                                         <div className="d-flex gap-2 justify-content-center align-items-center">
                                             <div style={{ background: 'white', padding: '2px' }}>
                                                 <QRCode
-                                                    value={`V1|${batch.id}|${selectedProduct?.productName}|${batch.quantity}`}
+                                                    value={`V1|${batch.id}|${selectedProduct?.productName}|${formatQuantity(batch.quantity)}`}
                                                     size={48}
                                                 />
                                             </div>
@@ -452,7 +452,7 @@ function InventoryView() {
                 <Modal.Body>
                     <div className="mb-3">
                         <strong>Batch:</strong> {returnBatch?.batchNumber || returnBatch?.batchNo}<br />
-                        <strong>Qty Avail:</strong> {returnBatch?.quantity}
+                        <strong>Qty Avail:</strong> {formatQuantity(returnBatch?.quantity)}
                     </div>
                     <Form.Group className="mb-2">
                         <Form.Label>Return Qty</Form.Label>
@@ -484,3 +484,17 @@ function InventoryView() {
 
 
 export default InventoryView;
+
+const formatQuantity = (value) => {
+    if (value == null || value === '') return '0';
+    const raw = String(value);
+    if (!/^-?\d+(\.\d+)?$/.test(raw)) {
+        const num = Number(value);
+        return Number.isFinite(num) ? String(num) : '0';
+    }
+    const [whole, decimal] = raw.split('.');
+    const sign = whole.startsWith('-') ? '-' : '';
+    const digits = sign ? whole.slice(1) : whole;
+    const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return decimal == null ? `${sign}${grouped}` : `${sign}${grouped}.${decimal}`;
+};

@@ -128,8 +128,17 @@ const formatDate = (value) => {
 };
 
 const formatNumber = (value) => {
-    const num = Number(value || 0);
-    return Number.isFinite(num) ? num.toLocaleString() : "0";
+    if (value == null || value === "") return "0";
+    const raw = String(value);
+    if (!/^-?\d+(\.\d+)?$/.test(raw)) {
+        const num = Number(value);
+        return Number.isFinite(num) ? String(num) : "0";
+    }
+    const [whole, decimal] = raw.split(".");
+    const sign = whole.startsWith("-") ? "-" : "";
+    const digits = sign ? whole.slice(1) : whole;
+    const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return decimal == null ? `${sign}${grouped}` : `${sign}${grouped}.${decimal}`;
 };
 
 const formatMoney = (value) => {
