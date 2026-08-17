@@ -141,8 +141,9 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
         };
     })();
 
-    // If computed fields are present (new format), use them. Otherwise fallback to simple calc.
+    // If computed fields are present (new format), use the authoritative saved total.
     const hasComputed = est?.computedGrandTotal != null;
+    const grandTotal = hasComputed ? val(est.computedGrandTotal) : displayTotals.grandTotal;
 
     const renderRows = () => {
         if (!hasComputed) {
@@ -216,7 +217,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
                 <tr>
                     <td><strong>Grand Total</strong></td>
                     <td className="text-end">
-                        <strong>{currency} {money(displayTotals.grandTotal)}</strong>
+                        <strong>{currency} {money(grandTotal)}</strong>
                     </td>
                 </tr>
             </>
