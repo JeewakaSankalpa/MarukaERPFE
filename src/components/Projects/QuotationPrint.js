@@ -192,11 +192,11 @@ const statusVariant = (status) => {
 };
 
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
-const roundUpToPlace = (value, place) => {
+const roundDownToPlace = (value, place) => {
     const amount = Number(value || 0);
     const step = Math.max(1, Number(place || 1));
     if (!Number.isFinite(amount) || amount === 0) return 0;
-    return Math.ceil(amount / step) * step;
+    return Math.floor(amount / step) * step;
 };
 
 const componentAmount = (component, includeDelivery = true, includeFreight = true) => {
@@ -225,7 +225,7 @@ const computeQuotationTotals = (estimation) => {
     const includeFreight = estimation?.includeFreight !== false;
     const includeVat = estimation?.includeVat !== false;
     const includeTax = estimation?.includeTax === true;
-    const roundTotals = estimation?.roundingEnabled === true;
+    const roundSubtotal = estimation?.roundingEnabled === true;
     const roundingPlace = estimation?.roundingPlace || 1;
     let taxableBaseRaw = 0;
     let nonTaxableRaw = 0;
@@ -255,7 +255,7 @@ const computeQuotationTotals = (estimation) => {
         const lineTotalRaw = decimalTotal([taxableRaw, nonTaxableRawPart]);
         const lineTotal = component?.lineTotalBeforeTax != null
             ? Number(component.lineTotalBeforeTax || 0)
-            : (roundTotals ? roundUpToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw);
+            : (roundSubtotal ? roundDownToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw);
         const roundingDelta = lineTotal - lineTotalRaw;
 
         taxableBaseRaw = decimalTotal([taxableBaseRaw, taxableRaw > 0 ? taxableRaw + roundingDelta : taxableRaw]);
@@ -280,7 +280,7 @@ const computeQuotationTotals = (estimation) => {
     const taxAmount = roundMoney(taxableBase * (Number.isFinite(taxPct) ? taxPct / 100 : 0));
     const grandTotal = estimation?.computedGrandTotal != null
         ? roundMoney(estimation.computedGrandTotal)
-        : (roundTotals ? roundUpToPlace(decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]), roundingPlace) : decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]));
+        : decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]);
 
     return {
         subtotal: totalBeforeDiscount || roundMoney(estimation?.computedSubtotal || 0),
