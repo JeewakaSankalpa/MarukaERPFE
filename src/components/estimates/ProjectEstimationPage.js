@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Maximize2, Minimize2, Rows3, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card, Spinner } from "react-bootstrap";
@@ -57,9 +57,18 @@ const getErrorMessage = (error, fallback) => {
 };
 
 const createManualRowId = () => `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const ESTIMATION_ROW_HEIGHT = 118;
+const ESTIMATION_ROW_HEIGHT = 74;
 const ESTIMATION_TABLE_HEIGHT = 620;
+const ESTIMATION_FULLSCREEN_TABLE_HEIGHT = 960;
 const ESTIMATION_ROW_OVERSCAN = 8;
+const ESTIMATION_MATRIX_ZOOM_MIN = 0.1;
+const ESTIMATION_MATRIX_ZOOM_MAX = 1.5;
+const ESTIMATION_MATRIX_ZOOM_STEP = 0.1;
+const ESTIMATION_MATRIX_ZOOM_PRESETS = [
+    0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+    0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8,
+    1, 1.25, 1.5,
+];
 const ESTIMATION_SAVE_TIMEOUT_MS = 5 * 60 * 1000;
 const ESTIMATION_BATCH_ITEM_LIMIT = 40;
 const ESTIMATION_BATCH_SAVE_THRESHOLD = 60;
@@ -82,11 +91,11 @@ const duplicateRowKey = (row) => {
 
 const getRowRenderKey = (row, index) => row?.rowKey || row?.productId || `row-${index}`;
 
-const roundUpToPlace = (value, place) => {
+const roundDownToPlace = (value, place) => {
     const amount = Number(value || 0);
     const step = Math.max(1, Number(place || 1));
     if (!Number.isFinite(amount) || amount === 0) return 0;
-    return Math.ceil(amount / step) * step;
+    return Math.floor(amount / step) * step;
 };
 
 const roundMoney = (value) => {
@@ -188,6 +197,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [rows, setRows] = useState([]);
     const estimationRowsScrollRef = useRef(null);
     const [estimationRowsScrollTop, setEstimationRowsScrollTop] = useState(0);
+    const [estimationMatrixZoom, setEstimationMatrixZoom] = useState(1);
+    const [showEstimationMatrixPopup, setShowEstimationMatrixPopup] = useState(false);
     const [highlightedRowKey, setHighlightedRowKey] = useState(null);
     const highlightTimeoutRef = useRef(null);
 
@@ -274,6 +285,34 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const [revisionReason, setRevisionReason] = useState("");
     // const [rejectComment, setRejectComment] = useState("");
+
+    const clampEstimationMatrixZoom = (value) => {
+        const next = Math.round(Number(value || 1) * 100) / 100;
+        return Math.min(ESTIMATION_MATRIX_ZOOM_MAX, Math.max(ESTIMATION_MATRIX_ZOOM_MIN, next));
+    };
+
+    const changeEstimationMatrixZoom = (delta) => {
+        setEstimationMatrixZoom(current => clampEstimationMatrixZoom(current + delta));
+    };
+
+    const resetEstimationMatrixZoom = () => {
+        setEstimationMatrixZoom(1);
+    };
+
+    const fitEstimationRowsToViewport = () => {
+        if (rows.length <= 0) {
+            resetEstimationMatrixZoom();
+            return;
+        }
+
+        const viewportHeight = showEstimationMatrixPopup
+            ? ESTIMATION_FULLSCREEN_TABLE_HEIGHT
+            : ESTIMATION_TABLE_HEIGHT;
+        const controlsAndHeaderAllowance = showEstimationMatrixPopup ? 58 : 74;
+        const availableRowsHeight = Math.max(80, viewportHeight - controlsAndHeaderAllowance);
+        const nextZoom = availableRowsHeight / (rows.length * ESTIMATION_ROW_HEIGHT);
+        setEstimationMatrixZoom(clampEstimationMatrixZoom(nextZoom));
+    };
 
     useEffect(() => {
         setEditingComponentNames({});
@@ -814,7 +853,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const focusEstimationRow = (rowIndex, rowKey) => {
         if (rowIndex < 0 || !rowKey) return;
-        const nextScrollTop = Math.max(0, rowIndex * ESTIMATION_ROW_HEIGHT);
+        const nextScrollTop = Math.max(0, rowIndex * ESTIMATION_ROW_HEIGHT * estimationMatrixZoom);
 
         if (estimationRowsScrollRef.current) {
             estimationRowsScrollRef.current.scrollTo({ top: nextScrollTop, behavior: "smooth" });
@@ -1030,7 +1069,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const taxablePortionRaw = afterMargin + taxableAdd + taxableFreightAdd;
             const nonTaxablePortionRaw = nonTaxableAdd + nonTaxableFreightAdd;
             const lineTotalRaw = decimalTotal([taxablePortionRaw, nonTaxablePortionRaw]);
-            const lineTotalBeforeTax = roundingEnabled ? roundUpToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw;
+            const lineTotalBeforeTax = roundingEnabled ? roundDownToPlace(lineTotalRaw, roundingPlace) : lineTotalRaw;
             const roundingDelta = lineTotalBeforeTax - lineTotalRaw;
             const taxablePortion = taxablePortionRaw > 0 ? taxablePortionRaw + roundingDelta : taxablePortionRaw;
             const nonTaxablePortion = taxablePortionRaw > 0 ? nonTaxablePortionRaw : nonTaxablePortionRaw + roundingDelta;
@@ -1089,8 +1128,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const vatAmount = roundMoney(taxableBase * (isNaN(vatPctNum) ? 0 : vatPctNum / 100));
         const taxAmount = roundMoney(taxableBase * (isNaN(taxPctNum) ? 0 : taxPctNum / 100));
 
-        const grandRaw = decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]);
-        const grand = roundingEnabled ? roundUpToPlace(grandRaw, roundingPlace) : grandRaw;
+        const grand = decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]);
 
         const rawSubtotal = decimalTotal(compCalcs.map(c => c.subtotal));
         const withMargin = decimalTotal(compCalcs.map(c => c.afterMargin));
@@ -1103,12 +1141,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             nonTaxable,
             vatAmount,
             taxAmount,
-            grandRaw,
+            grandRaw: grand,
             grand,
             vatUsed: vatPctNum,
             taxUsed: taxPctNum
         };
-    }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent, discountPercent, globalSettings, roundingEnabled, roundingPlace]);
+    }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent, discountPercent, globalSettings]);
 
     /* ------------ save ------------ */
     const toBigDec = (val) => {
@@ -1489,25 +1527,30 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return m;
     }, [rows]);
 
+    const estimationMatrixViewportHeight = showEstimationMatrixPopup
+        ? ESTIMATION_FULLSCREEN_TABLE_HEIGHT
+        : ESTIMATION_TABLE_HEIGHT;
+    const estimationMatrixRowHeight = Math.max(10, Math.round(ESTIMATION_ROW_HEIGHT * estimationMatrixZoom));
+
     const virtualRowWindow = useMemo(() => {
         const totalRows = rows.length;
-        const visibleCount = Math.ceil(ESTIMATION_TABLE_HEIGHT / ESTIMATION_ROW_HEIGHT);
-        const start = Math.max(0, Math.floor(estimationRowsScrollTop / ESTIMATION_ROW_HEIGHT) - ESTIMATION_ROW_OVERSCAN);
+        const visibleCount = Math.ceil(estimationMatrixViewportHeight / estimationMatrixRowHeight);
+        const start = Math.max(0, Math.floor(estimationRowsScrollTop / estimationMatrixRowHeight) - ESTIMATION_ROW_OVERSCAN);
         const end = Math.min(totalRows, start + visibleCount + (ESTIMATION_ROW_OVERSCAN * 2));
         return {
             rows: rows.slice(start, end).map((row, offset) => ({ row, index: start + offset })),
-            topPadding: start * ESTIMATION_ROW_HEIGHT,
-            bottomPadding: Math.max(0, (totalRows - end) * ESTIMATION_ROW_HEIGHT),
+            topPadding: start * estimationMatrixRowHeight,
+            bottomPadding: Math.max(0, (totalRows - end) * estimationMatrixRowHeight),
             totalRows,
         };
-    }, [rows, estimationRowsScrollTop]);
+    }, [rows, estimationRowsScrollTop, estimationMatrixRowHeight, estimationMatrixViewportHeight]);
 
     useEffect(() => {
         if (!estimationRowsScrollRef.current) return;
-        if (estimationRowsScrollTop <= rows.length * ESTIMATION_ROW_HEIGHT) return;
+        if (estimationRowsScrollTop <= rows.length * estimationMatrixRowHeight) return;
         estimationRowsScrollRef.current.scrollTop = 0;
         setEstimationRowsScrollTop(0);
-    }, [rows.length, estimationRowsScrollTop]);
+    }, [rows.length, estimationRowsScrollTop, estimationMatrixRowHeight]);
 
     // Status Badge Color
     const statusColor = {
@@ -1520,6 +1563,279 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     // Can current user approve?
     const canApprove = approvalStatus === "PENDING_APPROVAL" && (approverIds || []).includes(employeeId);
+
+    const renderEstimationMatrixEditor = ({ fullscreen = false } = {}) => (
+        <div
+            className={`estimation-matrix-shell${fullscreen ? " estimation-matrix-shell-fullscreen" : ""}`}
+            style={{
+                "--estimation-matrix-zoom": estimationMatrixZoom,
+                "--estimation-row-height": `${estimationMatrixRowHeight}px`,
+                "--estimation-viewport-height": `${fullscreen ? ESTIMATION_FULLSCREEN_TABLE_HEIGHT : ESTIMATION_TABLE_HEIGHT}px`,
+            }}
+        >
+            <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div className="small text-muted">
+                    {rows.length > 0 ? `Showing ${rows.length} estimation line${rows.length === 1 ? "" : "s"}` : "No estimation lines"}
+                    {rows.length > 30 && (
+                        <Badge bg="light" text="dark" className="border ms-2">
+                            Virtual scrolling enabled
+                        </Badge>
+                    )}
+                </div>
+                <div className="d-flex gap-2 align-items-center flex-wrap">
+                    <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => changeEstimationMatrixZoom(-ESTIMATION_MATRIX_ZOOM_STEP)}
+                        disabled={estimationMatrixZoom <= ESTIMATION_MATRIX_ZOOM_MIN}
+                        title="Zoom out"
+                        aria-label="Zoom out estimation matrix"
+                    >
+                        <ZoomOut size={16} />
+                    </Button>
+                    <Form.Select
+                        size="sm"
+                        className="estimation-matrix-zoom-select"
+                        value={String(estimationMatrixZoom)}
+                        onChange={(event) => setEstimationMatrixZoom(clampEstimationMatrixZoom(event.target.value))}
+                        title="Zoom level"
+                        aria-label="Estimation matrix zoom level"
+                    >
+                        {!ESTIMATION_MATRIX_ZOOM_PRESETS.includes(estimationMatrixZoom) && (
+                            <option value={String(estimationMatrixZoom)}>
+                                {Math.round(estimationMatrixZoom * 100)}%
+                            </option>
+                        )}
+                        {ESTIMATION_MATRIX_ZOOM_PRESETS.map((zoom) => (
+                            <option key={zoom} value={String(zoom)}>
+                                {Math.round(zoom * 100)}%
+                            </option>
+                        ))}
+                    </Form.Select>
+                    <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => changeEstimationMatrixZoom(ESTIMATION_MATRIX_ZOOM_STEP)}
+                        disabled={estimationMatrixZoom >= ESTIMATION_MATRIX_ZOOM_MAX}
+                        title="Zoom in"
+                        aria-label="Zoom in estimation matrix"
+                    >
+                        <ZoomIn size={16} />
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={resetEstimationMatrixZoom}
+                        title="Reset zoom"
+                        aria-label="Reset estimation matrix zoom"
+                    >
+                        <RotateCcw size={16} />
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={fitEstimationRowsToViewport}
+                        disabled={rows.length <= 0}
+                        title="Fit all rows"
+                        aria-label="Fit all estimation rows"
+                    >
+                        <Rows3 size={16} />
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant={fullscreen ? "secondary" : "outline-primary"}
+                        onClick={() => setShowEstimationMatrixPopup(!fullscreen)}
+                        title={fullscreen ? "Close full screen" : "Open full screen"}
+                        aria-label={fullscreen ? "Close full screen estimation matrix" : "Open full screen estimation matrix"}
+                    >
+                        {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    </Button>
+                </div>
+            </div>
+
+            <div
+                ref={estimationRowsScrollRef}
+                className="estimation-lines-virtual-scroll"
+                onScroll={(e) => setEstimationRowsScrollTop(e.currentTarget.scrollTop)}
+            >
+                <Table hover className="estimation-lines-table mb-0">
+                    <thead>
+                        <tr>
+                            <th className="estimation-product-col">Product / Description</th>
+                            <th className="estimation-unit-col">Unit</th>
+                            <th className="text-end estimation-rate-col">Rate</th>
+                            {components.map((c, idx) => (
+                                <th key={idx} className="estimation-component-col">
+                                    <div className="estimation-component-header">
+                                        <Form.Control
+                                            className="estimation-component-name-input"
+                                            value={Object.prototype.hasOwnProperty.call(editingComponentNames, idx) ? editingComponentNames[idx] : c}
+                                            onChange={(e) => renameComponentLive(idx, e.target.value)}
+                                            onBlur={(e) => renameComponentCommit(idx, e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    e.currentTarget.blur();
+                                                }
+                                            }}
+                                            disabled={isLocked}
+                                            title={c}
+                                        />
+                                        {!isLocked && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>x</Button>}
+                                    </div>
+                                </th>
+                            ))}
+                            <th className="text-end estimation-total-qty-col">Total Qty</th>
+                            <th className="text-end estimation-avail-col">Avail</th>
+                            <th className="text-end estimation-amount-col">Amount</th>
+                            <th className="estimation-action-col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.length === 0 ? (
+                            <tr><td colSpan={components.length + 8} className="text-center text-muted">No rows</td></tr>
+                        ) : (
+                            <>
+                                {virtualRowWindow.topPadding > 0 && (
+                                    <tr aria-hidden="true">
+                                        <td colSpan={components.length + 8} style={{ height: virtualRowWindow.topPadding, padding: 0, border: 0 }} />
+                                    </tr>
+                                )}
+                                {virtualRowWindow.rows.map(({ row: r, index: i }) => {
+                                    const rowMapKey = getRowRenderKey(r, i);
+                                    const need = neededMap.get(rowMapKey) || 0;
+                                    const isManualLine = r.lineType === LINE_TYPES.MANUAL;
+                                    const avail = typeof r.storeAvail === "number" ? r.storeAvail : (r.productId ? (availMap[r.productId] ?? 0) : 0);
+                                    const low = !isManualLine && need > avail;
+                                    const unit = Number(r.estUnitCost || 0);
+                                    const rowTotal = unit * need;
+
+                                    return (
+                                        <tr key={rowMapKey} className={highlightedRowKey === rowMapKey ? "estimation-row-highlight" : undefined}>
+                                            <td className="estimation-product-col">
+                                                {isManualLine ? (
+                                                    <>
+                                                        <Form.Control
+                                                            value={r.description || ""}
+                                                            onChange={(e) => setRowField(i, "description", e.target.value)}
+                                                            disabled={isLocked}
+                                                            placeholder="Enter expense or note description"
+                                                        />
+                                                        <div className="small text-muted mt-1">Manual line</div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <AsyncSelect
+                                                            defaultOptions={productOptions}
+                                                            cacheOptions
+                                                            loadOptions={loadProductOptions}
+                                                            value={r.productOption || null}
+                                                            isDisabled={isLocked}
+                                                            onChange={(opt) => onPickProduct(i, opt)}
+                                                            placeholder="Search product by name..."
+                                                            isClearable
+                                                            menuPosition="fixed"
+                                                            menuPortalTarget={document.body}
+                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                            noOptionsMessage={({ inputValue }) => inputValue ? "No products found" : "Type a product name or SKU"}
+                                                            className="modern-select-container"
+                                                            classNamePrefix="modern-select"
+                                                        />
+                                                        <div className="small text-muted mt-1">
+                                                            {r.productId ? <>ID: {r.productId}</> : <>Not selected</>}
+                                                            {productById[r.productId]?.sku ? <> &nbsp;-&nbsp; SKU: {productById[r.productId].sku}</> : null}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </td>
+
+                                            <td className="estimation-unit-col">
+                                                <Form.Control
+                                                    value={r.unit || ""}
+                                                    onChange={(e) => setRowField(i, "unit", e.target.value)}
+                                                    disabled={isLocked}
+                                                    placeholder={isManualLine ? "Nr" : "-"}
+                                                />
+                                            </td>
+
+                                            <td className="estimation-rate-col">
+                                                <Form.Control
+                                                    className="text-end"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={r.estUnitCost ?? ""}
+                                                    onChange={(e) => setRowField(i, "estUnitCost", e.target.value)}
+                                                    disabled={isLocked}
+                                                />
+                                                {typeof r.suggestedCost === "number" && (
+                                                    <div className="small text-muted d-flex justify-content-between">
+                                                        <span>Suggested: {r.suggestedCost.toLocaleString()}</span>
+                                                        <Button
+                                                            variant="link"
+                                                            size="sm"
+                                                            className="p-0"
+                                                            onClick={() => !isReadOnly && setRowField(i, "estUnitCost", String(r.suggestedCost))}
+                                                            disabled={isReadOnly}
+                                                        >
+                                                            Use
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            {components.map((c) => (
+                                                <td key={`${i}-${c}`} className="estimation-component-col" title={`${c} quantity`}>
+                                                    <Form.Control
+                                                        className="text-end"
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={(r.quantities || {})[c] ?? 0}
+                                                        onChange={(e) => setQty(i, c, e.target.value)}
+                                                        disabled={isReadOnly}
+                                                    />
+                                                </td>
+                                            ))}
+
+                                            <td className="text-end estimation-total-qty-col">{need}</td>
+                                            <td className="text-end estimation-avail-col">
+                                                {isManualLine ? <span className="text-muted">-</span> : (low ? <Badge bg="danger">{avail}</Badge> : <span>{avail}</span>)}
+                                            </td>
+                                            <td className="text-end estimation-amount-col">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</td>
+                                            <td className="text-end estimation-action-col">
+                                                {!isReadOnly && (
+                                                    <Button size="sm" variant="outline-danger" onClick={() => removeRow(i)}>x</Button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {virtualRowWindow.bottomPadding > 0 && (
+                                    <tr aria-hidden="true">
+                                        <td colSpan={components.length + 8} style={{ height: virtualRowWindow.bottomPadding, padding: 0, border: 0 }} />
+                                    </tr>
+                                )}
+                            </>
+                        )}
+                    </tbody>
+
+                    <tfoot>
+                        <tr>
+                            <td colSpan={components.length + 8}>
+                                {!isReadOnly && (
+                                    <div className="d-flex gap-2">
+                                        <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>
+                                        <Button variant="outline-primary" onClick={addManualRow}>+ Add Expense / Description Row</Button>
+                                    </div>
+                                )}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </Table>
+            </div>
+        </div>
+    );
 
     /* ------------ render ------------ */
     // Render Loading Overlay
@@ -1636,198 +1952,17 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             </div>
                         </div>
 
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                            <div className="small text-muted">
-                                {rows.length > 0 ? `Showing ${rows.length} estimation line${rows.length === 1 ? "" : "s"}` : "No estimation lines"}
+                        {showEstimationMatrixPopup ? (
+                            <div className="estimation-matrix-inline-placeholder">
+                                <div>
+                                    <div className="fw-semibold">Matrix is open full screen</div>
+                                    <div className="small text-muted">Use the pop-up to keep adding products, rows, and component quantities.</div>
+                                </div>
+                                <Button variant="outline-primary" onClick={() => setShowEstimationMatrixPopup(false)}>
+                                    Return to page view
+                                </Button>
                             </div>
-                            {rows.length > 30 && (
-                                <Badge bg="light" text="dark" className="border">
-                                    Virtual scrolling enabled
-                                </Badge>
-                            )}
-                        </div>
-
-                        <div
-                            ref={estimationRowsScrollRef}
-                            className="estimation-lines-virtual-scroll"
-                            onScroll={(e) => setEstimationRowsScrollTop(e.currentTarget.scrollTop)}
-                        >
-                        <Table hover className="estimation-lines-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th className="estimation-product-col" style={{ minWidth: 360 }}>Product / Description</th>
-                                    <th className="estimation-unit-col" style={{ width: 110 }}>Unit</th>
-                                    <th className="text-end estimation-rate-col" style={{ width: 160 }}>Rate</th>
-                                    {components.map((c, idx) => (
-                                        <th key={idx} className="estimation-component-col">
-                                            <div className="estimation-component-header">
-                                                <Form.Control
-                                                    className="estimation-component-name-input"
-                                                    value={Object.prototype.hasOwnProperty.call(editingComponentNames, idx) ? editingComponentNames[idx] : c}
-                                                    onChange={(e) => renameComponentLive(idx, e.target.value)}
-                                                    onBlur={(e) => renameComponentCommit(idx, e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter") {
-                                                            e.preventDefault();
-                                                            e.currentTarget.blur();
-                                                        }
-                                                    }}
-                                                    disabled={isLocked}
-                                                    title={c}
-                                                />
-                                                {!isLocked && <Button size="sm" variant="outline-danger" onClick={() => removeComponent(idx)}>✕</Button>}
-                                            </div>
-                                        </th>
-                                    ))}
-                                    <th className="text-end" style={{ width: 120 }}>Total Qty</th>
-                                    <th className="text-end" style={{ width: 120 }}>Avail</th>
-                                    <th className="text-end" style={{ width: 140 }}>Amount</th>
-                                    <th style={{ width: 60 }}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows.length === 0 ? (
-                                    <tr><td colSpan={components.length + 8} className="text-center text-muted">No rows</td></tr>
-                                ) : (
-                                    <>
-                                        {virtualRowWindow.topPadding > 0 && (
-                                            <tr aria-hidden="true">
-                                                <td colSpan={components.length + 8} style={{ height: virtualRowWindow.topPadding, padding: 0, border: 0 }} />
-                                            </tr>
-                                        )}
-                                        {virtualRowWindow.rows.map(({ row: r, index: i }) => {
-                                    const rowMapKey = getRowRenderKey(r, i);
-                                    const need = neededMap.get(rowMapKey) || 0;
-                                    const isManualLine = r.lineType === LINE_TYPES.MANUAL;
-                                    const avail = typeof r.storeAvail === "number" ? r.storeAvail : (r.productId ? (availMap[r.productId] ?? 0) : 0);
-                                    const low = !isManualLine && need > avail;
-                                    const unit = Number(r.estUnitCost || 0);
-                                    const rowTotal = unit * need;
-
-                                    return (
-                                        <tr key={rowMapKey} className={highlightedRowKey === rowMapKey ? "estimation-row-highlight" : undefined}>
-                                            <td className="estimation-product-col">
-                                                {isManualLine ? (
-                                                    <>
-                                                        <Form.Control
-                                                            value={r.description || ""}
-                                                            onChange={(e) => setRowField(i, "description", e.target.value)}
-                                                            disabled={isLocked}
-                                                            placeholder="Enter expense or note description"
-                                                        />
-                                                        <div className="small text-muted mt-1">Manual line</div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <AsyncSelect
-                                                            defaultOptions={productOptions}
-                                                            cacheOptions
-                                                            loadOptions={loadProductOptions}
-                                                            value={r.productOption || null}
-                                                            isDisabled={isLocked}
-                                                            onChange={(opt) => onPickProduct(i, opt)}
-                                                            placeholder="Search product by name..."
-                                                            isClearable
-                                                            menuPosition="fixed"
-                                                            menuPortalTarget={document.body}
-                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                                            noOptionsMessage={({ inputValue }) => inputValue ? "No products found" : "Type a product name or SKU"}
-                                                            className="modern-select-container"
-                                                            classNamePrefix="modern-select"
-                                                        />
-                                                        <div className="small text-muted mt-1">
-                                                            {r.productId ? <>ID: {r.productId}</> : <>Not selected</>}
-                                                            {productById[r.productId]?.sku ? <> &nbsp;-&nbsp; SKU: {productById[r.productId].sku}</> : null}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </td>
-
-                                            <td className="estimation-unit-col">
-                                                <Form.Control
-                                                    value={r.unit || ""}
-                                                    onChange={(e) => setRowField(i, "unit", e.target.value)}
-                                                    disabled={isLocked}
-                                                    placeholder={isManualLine ? "Nr" : "-"}
-                                                />
-                                            </td>
-
-                                            <td className="estimation-rate-col">
-                                                <Form.Control
-                                                    className="text-end"
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    value={r.estUnitCost ?? ""}
-                                                    onChange={(e) => setRowField(i, "estUnitCost", e.target.value)}
-                                                    disabled={isLocked}
-                                                />
-                                                {typeof r.suggestedCost === "number" && (
-                                                    <div className="small text-muted d-flex justify-content-between">
-                                                        <span>Suggested: {r.suggestedCost.toLocaleString()}</span>
-                                                        <Button
-                                                            variant="link"
-                                                            size="sm"
-                                                            className="p-0"
-                                                            onClick={() => !isReadOnly && setRowField(i, "estUnitCost", String(r.suggestedCost))}
-                                                            disabled={isReadOnly}
-                                                        >
-                                                            Use
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            {components.map((c) => (
-                                                <td key={`${i}-${c}`} className="estimation-component-col" title={`${c} quantity`}>
-                                                    <Form.Control
-                                                        className="text-end"
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={(r.quantities || {})[c] ?? 0}
-                                                        onChange={(e) => setQty(i, c, e.target.value)}
-                                                        disabled={isReadOnly}
-                                                    />
-                                                </td>
-                                            ))}
-
-                                            <td className="text-end">{need}</td>
-                                            <td className="text-end">
-                                                {isManualLine ? <span className="text-muted">-</span> : (low ? <Badge bg="danger">{avail}</Badge> : <span>{avail}</span>)}
-                                            </td>
-                                            <td className="text-end">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</td>
-                                            <td className="text-end">
-                                                {!isReadOnly && (
-                                                    <Button size="sm" variant="outline-danger" onClick={() => removeRow(i)}>✕</Button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                        })}
-                                        {virtualRowWindow.bottomPadding > 0 && (
-                                            <tr aria-hidden="true">
-                                                <td colSpan={components.length + 8} style={{ height: virtualRowWindow.bottomPadding, padding: 0, border: 0 }} />
-                                            </tr>
-                                        )}
-                                    </>
-                                )}
-                            </tbody>
-
-                            <tfoot>
-                                <tr>
-                                    <td colSpan={components.length + 8}>
-                                        {!isReadOnly && (
-                                            <div className="d-flex gap-2">
-                                                <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>
-                                                <Button variant="outline-primary" onClick={addManualRow}>+ Add Expense / Description Row</Button>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </Table>
-                        </div>
+                        ) : renderEstimationMatrixEditor()}
 
                         {/* Per-component options & totals */}
                         <div className="bg-light rounded p-3 mt-3">
@@ -2015,7 +2150,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     <Col md={3}>
                                         <Form.Check
                                             type="switch"
-                                            label="Round up totals"
+                                            label="Round down subtotal"
                                             checked={roundingEnabled}
                                             disabled={isLocked}
                                             onChange={e => setRoundingEnabled(e.target.checked)}
@@ -2023,7 +2158,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                     </Col>
                                     <Col md={3}>
                                         <Form.Group>
-                                            <Form.Label className="small mb-1">Round up to</Form.Label>
+                                            <Form.Label className="small mb-1">Round down to</Form.Label>
                                             <Form.Select
                                                 size="sm"
                                                 value={roundingPlace}
@@ -2280,6 +2415,20 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     </div>
                 </Col>
             </Row>
+
+            <Modal
+                show={showEstimationMatrixPopup}
+                onHide={() => setShowEstimationMatrixPopup(false)}
+                fullscreen
+                dialogClassName="estimation-matrix-fullscreen-modal"
+            >
+                <Modal.Header closeButton className="estimation-matrix-modal-header">
+                    <Modal.Title>Project Estimation Matrix</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {renderEstimationMatrixEditor({ fullscreen: true })}
+                </Modal.Body>
+            </Modal>
 
             {/* Clear Estimation Modal */}
             <Modal

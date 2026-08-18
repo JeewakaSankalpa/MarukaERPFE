@@ -137,18 +137,63 @@ body {
     background-color: #f2f2f2;
 }
 
+.estimation-matrix-shell {
+    --estimation-matrix-zoom: 1;
+    --estimation-row-height: 74px;
+    --estimation-viewport-height: 620px;
+}
+
+.estimation-matrix-shell-fullscreen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.estimation-matrix-zoom-label {
+    min-width: 48px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.estimation-matrix-zoom-select {
+    width: 76px !important;
+    min-height: 31px !important;
+    padding: 0.25rem 1.75rem 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.estimation-matrix-inline-placeholder {
+    min-height: 220px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+}
+
 .estimation-lines-virtual-scroll {
-    max-height: 620px;
+    height: min(var(--estimation-viewport-height), 72vh);
+    max-height: var(--estimation-viewport-height);
     overflow: auto;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: #ffffff;
+    flex: 1 1 auto;
+    min-height: 260px;
 }
 
 .estimation-lines-table {
     min-width: 100%;
     width: max-content;
     table-layout: auto;
+    font-size: calc(1rem * var(--estimation-matrix-zoom));
 }
 
 .estimation-lines-table thead th {
@@ -161,8 +206,8 @@ body {
 
 .estimation-lines-table .estimation-product-col {
     left: 0;
-    min-width: 360px;
-    max-width: 420px;
+    min-width: max(72px, calc(360px * var(--estimation-matrix-zoom)));
+    max-width: max(84px, calc(420px * var(--estimation-matrix-zoom)));
     position: sticky;
     z-index: 1;
     background: #ffffff;
@@ -175,24 +220,37 @@ body {
 }
 
 .estimation-lines-table .estimation-unit-col {
-    min-width: 110px;
+    min-width: max(28px, calc(110px * var(--estimation-matrix-zoom)));
 }
 
 .estimation-lines-table .estimation-rate-col {
-    min-width: 150px;
+    min-width: max(42px, calc(150px * var(--estimation-matrix-zoom)));
 }
 
 .estimation-lines-table .estimation-component-col {
-    min-width: 128px;
-    width: 128px;
+    min-width: max(28px, calc(128px * var(--estimation-matrix-zoom)));
+    width: max(28px, calc(128px * var(--estimation-matrix-zoom)));
     transition: min-width 160ms ease, width 160ms ease, background-color 160ms ease;
 }
 
 .estimation-lines-table .estimation-component-col:hover,
 .estimation-lines-table .estimation-component-col:focus-within {
-    min-width: 220px;
-    width: 220px;
+    min-width: max(52px, calc(220px * var(--estimation-matrix-zoom)));
+    width: max(52px, calc(220px * var(--estimation-matrix-zoom)));
     background: #f8fafc;
+}
+
+.estimation-lines-table .estimation-total-qty-col,
+.estimation-lines-table .estimation-avail-col {
+    min-width: max(32px, calc(120px * var(--estimation-matrix-zoom)));
+}
+
+.estimation-lines-table .estimation-amount-col {
+    min-width: max(42px, calc(140px * var(--estimation-matrix-zoom)));
+}
+
+.estimation-lines-table .estimation-action-col {
+    min-width: max(24px, calc(60px * var(--estimation-matrix-zoom)));
 }
 
 .estimation-component-header {
@@ -204,7 +262,7 @@ body {
 .estimation-component-name-input {
     min-width: 0;
     height: auto;
-    min-height: 38px;
+    min-height: max(8px, calc(38px * var(--estimation-matrix-zoom)));
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -215,12 +273,59 @@ body {
 }
 
 .estimation-lines-table tbody td {
-    height: 118px;
+    height: var(--estimation-row-height);
 }
 
 .estimation-lines-table td,
 .estimation-lines-table th {
     vertical-align: top;
+    padding: max(0.04rem, calc(0.5rem * var(--estimation-matrix-zoom)));
+}
+
+.estimation-lines-table .form-control,
+.estimation-lines-table .btn,
+.estimation-lines-table .modern-select__control {
+    font-size: max(0.25rem, calc(0.875rem * var(--estimation-matrix-zoom)));
+}
+
+.estimation-lines-table .form-control {
+    min-height: max(8px, calc(38px * var(--estimation-matrix-zoom)));
+    padding: max(0.02rem, calc(0.375rem * var(--estimation-matrix-zoom))) max(0.04rem, calc(0.75rem * var(--estimation-matrix-zoom)));
+}
+
+.estimation-lines-table .modern-select__control {
+    min-height: max(8px, calc(38px * var(--estimation-matrix-zoom)));
+}
+
+.estimation-matrix-fullscreen-modal .modal-content {
+    height: 100dvh;
+}
+
+.estimation-matrix-fullscreen-modal .modal-header.estimation-matrix-modal-header {
+    min-height: 42px;
+    padding: 0.35rem 0.75rem;
+}
+
+.estimation-matrix-fullscreen-modal .estimation-matrix-modal-header .modal-title {
+    font-size: 1rem;
+    line-height: 1.1;
+}
+
+.estimation-matrix-fullscreen-modal .estimation-matrix-modal-header .btn-close {
+    padding: 0.5rem;
+    margin: -0.25rem -0.25rem -0.25rem auto;
+}
+
+.estimation-matrix-fullscreen-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0.4rem 0.5rem 0.5rem;
+}
+
+.estimation-matrix-shell-fullscreen .estimation-lines-virtual-scroll {
+    height: calc(100dvh - 92px);
+    max-height: none;
 }
 
 .estimation-lines-table tbody tr.estimation-row-highlight > td {
@@ -374,6 +479,78 @@ textarea.form-control {
 .modern-select__option--is-selected {
     background-color: #4f46e5 !important;
     color: #ffffff !important;
+}
+
+/* Estimation matrix zoom must beat the global form defaults above. */
+.estimation-lines-table .form-control {
+    min-height: max(8px, calc(38px * var(--estimation-matrix-zoom))) !important;
+    height: max(8px, calc(38px * var(--estimation-matrix-zoom))) !important;
+    padding: max(0.02rem, calc(0.375rem * var(--estimation-matrix-zoom))) max(0.04rem, calc(0.75rem * var(--estimation-matrix-zoom))) !important;
+    font-size: max(0.25rem, calc(0.95rem * var(--estimation-matrix-zoom))) !important;
+    line-height: 1.1 !important;
+    border-radius: max(1px, calc(8px * var(--estimation-matrix-zoom))) !important;
+}
+
+.estimation-lines-table .modern-select-container {
+    font-size: max(0.25rem, calc(0.95rem * var(--estimation-matrix-zoom))) !important;
+}
+
+.estimation-lines-table .modern-select__control {
+    min-height: max(8px, calc(42px * var(--estimation-matrix-zoom))) !important;
+    height: max(8px, calc(42px * var(--estimation-matrix-zoom))) !important;
+    padding: max(0.02rem, calc(0.2rem * var(--estimation-matrix-zoom))) max(0.04rem, calc(0.5rem * var(--estimation-matrix-zoom))) !important;
+    border-radius: max(1px, calc(8px * var(--estimation-matrix-zoom))) !important;
+}
+
+.estimation-lines-table .modern-select__value-container {
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 0 !important;
+}
+
+.estimation-lines-table .modern-select__single-value,
+.estimation-lines-table .modern-select__placeholder,
+.estimation-lines-table .modern-select__input-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.1 !important;
+}
+
+.estimation-lines-table .modern-select__indicators {
+    height: 100% !important;
+}
+
+.estimation-lines-table .modern-select__indicator,
+.estimation-lines-table .modern-select__clear-indicator,
+.estimation-lines-table .modern-select__dropdown-indicator {
+    padding: max(0px, calc(0.35rem * var(--estimation-matrix-zoom))) !important;
+}
+
+.estimation-lines-table .modern-select__indicator svg,
+.estimation-lines-table .btn svg {
+    width: max(6px, calc(16px * var(--estimation-matrix-zoom))) !important;
+    height: max(6px, calc(16px * var(--estimation-matrix-zoom))) !important;
+}
+
+.estimation-lines-table .btn {
+    min-height: max(8px, calc(31px * var(--estimation-matrix-zoom))) !important;
+    padding: max(0.02rem, calc(0.25rem * var(--estimation-matrix-zoom))) max(0.04rem, calc(0.5rem * var(--estimation-matrix-zoom))) !important;
+    font-size: max(0.25rem, calc(0.875rem * var(--estimation-matrix-zoom))) !important;
+    line-height: 1 !important;
+    border-radius: max(1px, calc(6px * var(--estimation-matrix-zoom))) !important;
+}
+
+.estimation-lines-table .small {
+    font-size: max(0.2rem, calc(0.875em * var(--estimation-matrix-zoom))) !important;
+    line-height: 1 !important;
+}
+
+.estimation-lines-table .mt-1 {
+    margin-top: max(1px, calc(0.25rem * var(--estimation-matrix-zoom))) !important;
+}
+
+.estimation-lines-table tbody td {
+    overflow: hidden;
 }
 
 /* AntD Date Picker Overrides */
