@@ -213,6 +213,9 @@ const bankDetails = [
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
 
 const componentAmount = (component, includeDelivery = true, includeFreight = true) => {
+    if (component?.lineTotalBeforeTax != null) {
+        return Number(component.lineTotalBeforeTax || 0);
+    }
     const qty = componentQuantity(component);
     const itemsSubtotal = (component?.items || []).reduce(
         (sum, item) => sum + Number(item?.estUnitCost || 0) * Number(item?.quantity || 0) * qty,
@@ -950,16 +953,17 @@ const InvoiceView = () => {
         })),
     ];
     const pricedTaxLineRows = taxLineRows.filter((row) => !row.isSubItem);
-    const printedSubtotal = isTaxInvoice && pricedTaxLineRows.length
+    const hasSourceDocumentTotal = sourceDocumentTotal > 0;
+    const printedSubtotal = isTaxInvoice && pricedTaxLineRows.length && !hasSourceDocumentTotal
         ? decimalTotal(pricedTaxLineRows.map((row) => row.total))
         : storedSubtotal;
     const vatPercent = Number(estimation?.vatPercent ?? quotation?.vatPercent ?? 18);
-    const printedVatTotal = isTaxInvoice && pricedTaxLineRows.length && storedVatTotal > 0
+    const printedVatTotal = isTaxInvoice && pricedTaxLineRows.length && storedVatTotal > 0 && !hasSourceDocumentTotal
         ? decimalTotal([(printedSubtotal * vatPercent) / 100])
         : storedVatTotal;
     const printedOtherTaxTotal = storedOtherTaxTotal;
     const printedTaxTotal = decimalTotal([printedVatTotal, printedOtherTaxTotal]);
-    const printedDocumentTotal = isTaxInvoice && pricedTaxLineRows.length
+    const printedDocumentTotal = isTaxInvoice && pricedTaxLineRows.length && !hasSourceDocumentTotal
         ? decimalTotal([printedSubtotal, printedVatTotal, printedOtherTaxTotal])
         : storedDocumentTotal;
     const balanceDue = Math.max(printedDocumentTotal - totalReceived, 0);

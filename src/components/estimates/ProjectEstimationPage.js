@@ -250,6 +250,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [versions, setVersions] = useState([]); // History snapshots
     const [estimationStatus, setEstimationStatus] = useState("DRAFT");
     const [approvalStatus, setApprovalStatus] = useState("DRAFT"); // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED
+    const [savedTotals, setSavedTotals] = useState({});
     const [approverIds, setApproverIds] = useState([]);
     const [approvalHistory, setApprovalHistory] = useState([]); // Current approval cycle records
     const [approvalPolicy, setApprovalPolicy] = useState("ALL");
@@ -413,6 +414,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setVersions([]);
             setEstimationStatus("DRAFT");
             setApprovalStatus("DRAFT");
+            setSavedTotals({});
             setApproverIds([]);
             setApprovalPolicy("ALL");
             setLoading(false);
@@ -454,6 +456,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setVersions([]);
                     setEstimationStatus("DRAFT");
                     setApprovalStatus("DRAFT");
+                    setSavedTotals({});
                     setApproverIds([]);
                     setApprovalPolicy("ALL");
                     return;
@@ -503,6 +506,15 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setVersion(est.version || 1);
                 setEstimationStatus(est.status || "DRAFT");
                 setApprovalStatus(est.approvalStatus || "DRAFT");
+                setSavedTotals({
+                    rawSubtotal: est.computedSubtotal,
+                    withMargin: est.computedWithMargin,
+                    discountAmount: est.computedDiscountAmount,
+                    taxableBase: est.computedTaxableBase,
+                    vatAmount: est.computedVatAmount,
+                    taxAmount: est.computedTaxAmount,
+                    grand: est.computedGrandTotal,
+                });
                 setApproverIds(est.approverIds || []);
                 setApprovalPolicy(est.approvalPolicy || "ALL");
                 setApprovalStatus(est.approvalStatus || "DRAFT");
@@ -1147,6 +1159,22 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             taxUsed: taxPctNum
         };
     }, [compCalcs, includeVat, includeTax, vatPercent, taxPercent, discountPercent, globalSettings]);
+
+    const estimatedTotals = useMemo(() => {
+        if (!isLocked || savedTotals.grand == null) {
+            return totals;
+        }
+        return {
+            ...totals,
+            rawSubtotal: savedTotals.rawSubtotal ?? totals.rawSubtotal,
+            withMargin: savedTotals.withMargin ?? totals.withMargin,
+            discountAmount: savedTotals.discountAmount ?? totals.discountAmount,
+            taxableBase: savedTotals.taxableBase ?? totals.taxableBase,
+            vatAmount: savedTotals.vatAmount ?? totals.vatAmount,
+            taxAmount: savedTotals.taxAmount ?? totals.taxAmount,
+            grand: savedTotals.grand,
+        };
+    }, [isLocked, savedTotals, totals]);
 
     /* ------------ save ------------ */
     const toBigDec = (val) => {
@@ -2002,8 +2030,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     placeholder="1"
                                                 />
                                             </td>
-                                            <td className="text-end align-middle">{cc.unitSubtotal.toLocaleString()}</td>
-                                            <td className="text-end align-middle">{cc.subtotal.toLocaleString()}</td>
+                                            <td className="text-end align-middle">{formatMoney(cc.unitSubtotal)}</td>
+                                            <td className="text-end align-middle">{formatMoney(cc.subtotal)}</td>
                                             <td>
                                                 <Form.Control
                                                     className="text-end"
@@ -2032,7 +2060,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     placeholder="0"
                                                 />
                                             </td>
-                                            <td className="text-end align-middle">{cc.afterMargin.toLocaleString()}</td>
+                                            <td className="text-end align-middle">{formatMoney(cc.afterMargin)}</td>
                                             <td>
                                                 <Form.Control
                                                     className="text-end"
@@ -2085,7 +2113,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                     label=""
                                                 />
                                             </td>
-                                            <td className="text-end align-middle">{cc.lineTotalBeforeTax.toLocaleString()}</td>
+                                            <td className="text-end align-middle">{formatMoney(cc.lineTotalBeforeTax)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -2265,37 +2293,37 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <h6 className="card-title">Estimated Totals</h6>
                                                 <div className="d-flex justify-content-between mb-1">
                                                     <span>Subtotal (Comp):</span>
-                                                    <span>{formatMoney(totals.rawSubtotal)}</span>
+                                                    <span>{formatMoney(estimatedTotals.rawSubtotal)}</span>
                                                 </div>
                                                 <div className="d-flex justify-content-between mb-1 text-muted small">
                                                     <span>With Margin & Overhead:</span>
-                                                    <span>{formatMoney(totals.withMargin)}</span>
+                                                    <span>{formatMoney(estimatedTotals.withMargin)}</span>
                                                 </div>
                                                 <div className="d-flex justify-content-between mb-1 text-danger">
                                                     <span>Discount ({discountPercent || 0}%):</span>
-                                                    <span>-{formatMoney(totals.discountAmount)}</span>
+                                                    <span>-{formatMoney(estimatedTotals.discountAmount)}</span>
                                                 </div>
                                                 <hr />
                                                 <div className="d-flex justify-content-between mb-1">
                                                     <span>Taxable Base:</span>
-                                                    <span>{formatMoney(totals.taxableBase)}</span>
+                                                    <span>{formatMoney(estimatedTotals.taxableBase)}</span>
                                                 </div>
                                                 {includeVat && (
                                                     <div className="d-flex justify-content-between mb-1">
-                                                        <span>VAT ({totals.vatUsed}%):</span>
-                                                        <span>{formatMoney(totals.vatAmount)}</span>
+                                                        <span>VAT ({estimatedTotals.vatUsed}%):</span>
+                                                        <span>{formatMoney(estimatedTotals.vatAmount)}</span>
                                                     </div>
                                                 )}
                                                 {includeTax && (
                                                     <div className="d-flex justify-content-between mb-1">
-                                                        <span>Tax ({totals.taxUsed}%):</span>
-                                                        <span>{formatMoney(totals.taxAmount)}</span>
+                                                        <span>Tax ({estimatedTotals.taxUsed}%):</span>
+                                                        <span>{formatMoney(estimatedTotals.taxAmount)}</span>
                                                     </div>
                                                 )}
                                                 <hr />
                                                 <div className="d-flex justify-content-between fw-bold">
                                                     <span>Grand Total:</span>
-                                                    <span>{formatMoney(totals.grand)}</span>
+                                                    <span>{formatMoney(estimatedTotals.grand)}</span>
                                                 </div>
                                             </Card.Body>
                                         </Card>

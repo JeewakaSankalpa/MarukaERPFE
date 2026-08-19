@@ -276,15 +276,26 @@ const computeQuotationTotals = (estimation) => {
 
     const vatPct = includeVat ? Number(estimation?.vatPercent || 0) : 0;
     const taxPct = includeTax ? Number(estimation?.taxPercent || 0) : 0;
-    const vatAmount = roundMoney(taxableBase * (Number.isFinite(vatPct) ? vatPct / 100 : 0));
-    const taxAmount = roundMoney(taxableBase * (Number.isFinite(taxPct) ? taxPct / 100 : 0));
+    const computedDiscountAmount = estimation?.computedDiscountAmount != null
+        ? roundMoney(estimation.computedDiscountAmount)
+        : null;
+    const discountTotal = computedDiscountAmount ?? discountAmount;
+    const vatAmount = estimation?.computedVatAmount != null
+        ? roundMoney(estimation.computedVatAmount)
+        : roundMoney(taxableBase * (Number.isFinite(vatPct) ? vatPct / 100 : 0));
+    const taxAmount = estimation?.computedTaxAmount != null
+        ? roundMoney(estimation.computedTaxAmount)
+        : roundMoney(taxableBase * (Number.isFinite(taxPct) ? taxPct / 100 : 0));
     const grandTotal = estimation?.computedGrandTotal != null
         ? roundMoney(estimation.computedGrandTotal)
         : decimalTotal([taxableBase, nonTaxable, vatAmount, taxAmount]);
+    const subtotal = estimation?.computedGrandTotal != null
+        ? decimalTotal([grandTotal, -vatAmount, -taxAmount, discountTotal])
+        : totalBeforeDiscount;
 
     return {
-        subtotal: totalBeforeDiscount || roundMoney(estimation?.computedSubtotal || 0),
-        discountAmount,
+        subtotal: subtotal || roundMoney(estimation?.computedSubtotal || 0),
+        discountAmount: discountTotal,
         vatAmount,
         taxAmount,
         taxTotal: vatAmount + taxAmount,
