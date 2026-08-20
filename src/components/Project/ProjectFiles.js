@@ -381,7 +381,10 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
 
             const url = `/projects/${id}/files/upload?stage=${encodeURIComponent(stage)}&docType=${encodeURIComponent(docType)}`;
             await api.post(url, form, {
-                headers: roleHeader,
+                headers: {
+                    ...roleHeader,
+                    'Content-Type': 'multipart/form-data',
+                },
                 transformRequest: v => v,
                 onUploadProgress: (evt) => {
                     if (!evt || !evt.total) return;

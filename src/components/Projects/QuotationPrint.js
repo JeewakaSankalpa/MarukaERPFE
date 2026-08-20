@@ -191,6 +191,8 @@ const statusVariant = (status) => {
     }
 };
 
+const normalizeRole = (role) => String(role || "").trim().toUpperCase();
+
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
 const roundDownToPlace = (value, place) => {
     const amount = Number(value || 0);
@@ -370,12 +372,22 @@ const QuotationPrint = () => {
     const [printOptions, setPrintOptions] = useState(PRINT_PRESETS[PRINT_FORMATS.ALL]);
     const [invoiceType, setInvoiceType] = useState(INVOICE_TYPES.PROFORMA);
     const [activeTab, setActiveTab] = useState("quotation");
+    const [workflow, setWorkflow] = useState({});
+    const [approvingPrint, setApprovingPrint] = useState(false);
 
     const fetchData = async () => {
         try {
             setLoadError("");
             const estRes = await api.get(`/estimations/by-project/${projectId}/quotation`);
             setEstimation(estRes.data);
+
+            try {
+                const workflowRes = await api.get("/workflow");
+                setWorkflow(workflowRes.data || {});
+            } catch (workflowErr) {
+                console.warn("Could not fetch workflow", workflowErr);
+                setWorkflow({});
+            }
 
             const projRes = await api.get(`/projects/${projectId}`);
             setProject(projRes.data);
@@ -461,7 +473,43 @@ const QuotationPrint = () => {
         }
     };
 
-    const handlePrint = () => window.print();
+    const quotationPrintApproverRoles = workflow?.quotationPrintApproverRoles || [];
+    const quotationPrintApprovalRequired = quotationPrintApproverRoles.length > 0;
+    const quotationPrintApproved = !quotationPrintApprovalRequired || Boolean(estimation?.quotationPrintApprovedAt);
+    const userRole = normalizeRole(localStorage.getItem("role"));
+    const projectRoles = JSON.parse(localStorage.getItem("projectRoles") || "[]");
+    const isPrintApprover = ["ADMIN", "SUPER_ADMIN"].includes(userRole)
+        || projectRoles.some((role) => quotationPrintApproverRoles.map(normalizeRole).includes(normalizeRole(role)));
+
+    const handlePrint = () => {
+        if (!quotationPrintApproved) {
+            toast.warn("Quotation print/PDF approval is required before printing or saving this quotation.");
+            return;
+        }
+        window.print();
+    };
+
+    const handleApprovePrint = async () => {
+        if (!estimation?.id) {
+            toast.error("Estimation not loaded");
+            return;
+        }
+        const comment = window.prompt("Print/PDF approval note (optional)", "") || "";
+        setApprovingPrint(true);
+        try {
+            const res = await api.post(`/estimations/${estimation.id}/approve-quotation-print`, { comment });
+            setEstimation(res.data);
+            if (res.data?.quotationPrintApprovedAt) {
+                toast.success("Quotation print/PDF approved");
+            } else {
+                toast.success("Print/PDF approval recorded. Waiting for the remaining required approval(s).");
+            }
+        } catch (error) {
+            toast.error(getApiErrorMessage(error, "Failed to approve quotation print/PDF"));
+        } finally {
+            setApprovingPrint(false);
+        }
+    };
 
     const handlePrintFormatChange = (value) => {
         setPrintFormat(value);
@@ -575,7 +623,19 @@ const QuotationPrint = () => {
                             {!isFinalized && (
                                 <Button variant="success" onClick={handleFinalize}>Finalize Quote</Button>
                             )}
-                            <Button variant="primary" onClick={handlePrint}>Print / Save PDF</Button>
+                            {quotationPrintApprovalRequired && !quotationPrintApproved && isPrintApprover && (
+                                <Button variant="outline-success" onClick={handleApprovePrint} disabled={approvingPrint}>
+                                    {approvingPrint ? "Approving..." : "Approve Print/PDF"}
+                                </Button>
+                            )}
+                            <Button
+                                variant="primary"
+                                onClick={handlePrint}
+                                disabled={!quotationPrintApproved}
+                                title={!quotationPrintApproved ? "Selected quotation print/PDF approvers must approve first" : ""}
+                            >
+                                Print / Save PDF
+                            </Button>
                         </>
                     )}
                 </div>
@@ -680,6 +740,16 @@ const QuotationPrint = () => {
             ) : (
                 <>
                     {isFinalized && <Alert variant="success" className="no-print">This quotation is finalized and locked.</Alert>}
+                    {quotationPrintApprovalRequired && !quotationPrintApproved && (
+                        <Alert variant="warning" className="no-print">
+                            Quotation print/PDF approval is pending. The quotation can be reviewed here, but printing and saving as PDF are locked until the selected approver rule is satisfied.
+                        </Alert>
+                    )}
+                    {quotationPrintApprovalRequired && quotationPrintApproved && (
+                        <Alert variant="success" className="no-print">
+                            Print/PDF approved by {estimation.quotationPrintApprovedBy || "-"}.
+                        </Alert>
+                    )}
 
                     <ReportLayout
                         title="Quotation"

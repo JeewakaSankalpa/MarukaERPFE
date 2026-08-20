@@ -51,6 +51,7 @@ const emptyFlow = {
     grnAcceptanceRoles: [],
     grnPaymentVerifierRoles: [],
     grnPrintApproverRoles: [],
+    quotationPrintApproverRoles: [],
     visualLayout: {} // { "STAGE": { x: 0, y: 0 } }
 };
 
@@ -80,6 +81,7 @@ const collectFlowRoles = (flow) => {
         "grnAcceptanceRoles",
         "grnPaymentVerifierRoles",
         "grnPrintApproverRoles",
+        "quotationPrintApproverRoles",
     ].forEach((field) => addRoles(flow[field]));
 
     Object.values(flow.visibility || {}).forEach((rule) => {
@@ -209,6 +211,7 @@ export default function WorkflowBuilder() {
                     grnAcceptanceRoles: wf?.grnAcceptanceRoles || [],
                     grnPaymentVerifierRoles: wf?.grnPaymentVerifierRoles || [],
                     grnPrintApproverRoles: wf?.grnPrintApproverRoles || [],
+                    quotationPrintApproverRoles: wf?.quotationPrintApproverRoles || [],
                     visualLayout: wf?.visualLayout || {}
                 };
 
@@ -694,6 +697,7 @@ export default function WorkflowBuilder() {
                         { label: 'GRN Acceptance Approvers', field: 'grnAcceptanceRoles', quorum: true, note: 'Users in these workflow roles can accept posted GRNs so supplier payments can be added.' },
                         { label: 'GRN Payment Verifiers', field: 'grnPaymentVerifierRoles', quorum: true, note: 'Users in these workflow roles can verify each added supplier payment before it counts as paid.' },
                         { label: 'GRN Print Approvers', field: 'grnPrintApproverRoles', quorum: true, note: 'Users in these workflow roles can approve GRN report printing.' },
+                        { label: 'Quotation Print/PDF Approvers', field: 'quotationPrintApproverRoles', quorum: true, note: 'Users in these workflow roles must approve before a quotation can be printed or saved as PDF.' },
                     ].map(({ label, field, note, quorum }) => {
                         const selectedRoles = flow[field] || [];
                         const selectedCount = selectedRoles.length;

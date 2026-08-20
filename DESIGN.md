@@ -95,3 +95,4 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 ## Last updated
 
 2026-08-01 by Codex: added Customer Portal and Supplier Portal project interface guidance.
+2026-08-20 by Codex: refined Project Estimation component totals into compact per-component operational blocks with a summary strip and grouped pricing/logistics controls; avoid returning this section to a wide scroll table.

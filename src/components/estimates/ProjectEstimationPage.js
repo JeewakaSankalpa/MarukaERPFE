@@ -1879,7 +1879,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     }
 
     return (
-        <Container fluid className="p-3" style={{ maxWidth: 1600 }}>
+        <Container fluid className="p-3 project-estimation-container">
             <Row className="g-3">
                 <Col>
                     {/* Header with Version/Status */}
@@ -1931,7 +1931,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         </div>
                     </div>
 
-                    <div className="bg-white shadow rounded p-3">
+                    <div className="bg-white shadow rounded p-3 project-estimation-card">
                         <div className="d-flex align-items-center justify-content-between mb-3">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
                                 <h5 className="mb-0">Project Estimation (Matrix)</h5>
@@ -1993,131 +1993,165 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         ) : renderEstimationMatrixEditor()}
 
                         {/* Per-component options & totals */}
-                        <div className="bg-light rounded p-3 mt-3">
-                            <h6 className="mb-3">Component Options & Totals</h6>
-                            <Table size="sm" responsive bordered>
-                                <thead>
-                                    <tr>
-                                        <th>Component</th>
-                                        <th style={{ width: 100 }}>Sets</th>
-                                        <th className="text-end" style={{ width: 130 }}>Per Set</th>
-                                        <th className="text-end" style={{ width: 120 }}>Subtotal</th>
-                                        <th style={{ width: 120 }}>Overhead %</th>
-                                        <th style={{ width: 120 }}>Margin %</th>
-                                        <th className="text-end" style={{ width: 140 }}>After Margin</th>
-                                        <th style={{ width: 180 }}>Delivery / Set</th>
-                                        <th style={{ width: 150 }}>Delivery Taxable?</th>
-                                        <th style={{ width: 180 }}>Freight / Set</th>
-                                        <th style={{ width: 150 }}>Freight Taxable?</th>
-                                        <th className="text-end" style={{ width: 160 }}>Line Total (pre-tax)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {compCalcs.map(cc => (
-                                        <tr key={cc.name}>
-                                            <td className="align-middle">{cc.name}</td>
-                                            <td>
-                                                <Form.Control
-                                                    className="text-end"
-                                                    type="number"
-                                                    min="0.01" step="0.01"
-                                                    value={compQty[cc.name] ?? "1"}
-                                                    disabled={isLocked}
-                                                    onChange={(e) => {
-                                                        requireFullSave();
-                                                        setCompQty(s => ({ ...s, [cc.name]: e.target.value }));
-                                                    }}
-                                                    placeholder="1"
-                                                />
-                                            </td>
-                                            <td className="text-end align-middle">{formatMoney(cc.unitSubtotal)}</td>
-                                            <td className="text-end align-middle">{formatMoney(cc.subtotal)}</td>
-                                            <td>
-                                                <Form.Control
-                                                    className="text-end"
-                                                    type="number"
-                                                    min="0" step="0.01"
-                                                    value={compOverhead[cc.name] ?? ""}
-                                                    disabled={isLocked}
-                                                    onChange={(e) => {
-                                                        markComponentsDirty(cc.name);
-                                                        setCompOverhead(s => ({ ...s, [cc.name]: e.target.value }));
-                                                    }}
-                                                    placeholder="0"
-                                                />
-                                            </td>
-                                            <td>
-                                                <Form.Control
-                                                    className="text-end"
-                                                    type="number"
-                                                    min="0" step="0.01"
-                                                    value={compMargin[cc.name] ?? ""}
-                                                    disabled={isLocked}
-                                                    onChange={(e) => {
-                                                        markComponentsDirty(cc.name);
-                                                        setCompMargin(s => ({ ...s, [cc.name]: e.target.value }));
-                                                    }}
-                                                    placeholder="0"
-                                                />
-                                            </td>
-                                            <td className="text-end align-middle">{formatMoney(cc.afterMargin)}</td>
-                                            <td>
-                                                <Form.Control
-                                                    className="text-end"
-                                                    type="number"
-                                                    min="0" step="0.01"
-                                                    value={compDelivery[cc.name] ?? ""}
-                                                    disabled={isLocked}
-                                                    onChange={(e) => {
-                                                        markComponentsDirty(cc.name);
-                                                        setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }));
-                                                    }}
-                                                    placeholder="0"
-                                                />
-                                            </td>
-                                            <td className="text-center">
-                                                <Form.Check
-                                                    type="switch"
-                                                    checked={!!compDeliveryTaxable[cc.name]}
-                                                    onChange={(e) => {
-                                                        markComponentsDirty(cc.name);
-                                                        setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }));
-                                                    }}
-                                                    disabled={!includeDelivery || isLocked}
-                                                    label=""
-                                                />
-                                            </td>
-                                            <td>
-                                                <Form.Control
-                                                    className="text-end"
-                                                    type="number"
-                                                    min="0" step="0.01"
-                                                    value={compFreight[cc.name] ?? ""}
-                                                    disabled={isLocked}
-                                                    onChange={(e) => {
-                                                        markComponentsDirty(cc.name);
-                                                        setCompFreight(s => ({ ...s, [cc.name]: e.target.value }));
-                                                    }}
-                                                    placeholder="0"
-                                                />
-                                            </td>
-                                            <td className="text-center">
-                                                <Form.Check
-                                                    type="switch"
-                                                    checked={!!compFreightTaxable[cc.name]}
-                                                    onChange={(e) => {
-                                                        markComponentsDirty(cc.name);
-                                                        setCompFreightTaxable(s => ({ ...s, [cc.name]: e.target.checked }));
-                                                    }}
-                                                    disabled={!includeFreight || isLocked}
-                                                    label=""
-                                                />
-                                            </td>
-                                            <td className="text-end align-middle">{formatMoney(cc.lineTotalBeforeTax)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
+                        <div className="bg-light rounded p-3 mt-3 estimation-component-totals-panel">
+                            <div className="estimation-component-totals-panel-header">
+                                <h6 className="mb-0">Component Options & Totals</h6>
+                                <Badge bg="light" text="dark" className="border">
+                                    {compCalcs.length} component{compCalcs.length === 1 ? "" : "s"}
+                                </Badge>
+                            </div>
+                            <div className="estimation-component-totals-list">
+                                {compCalcs.map(cc => (
+                                    <section className="estimation-component-total-block" key={cc.name}>
+                                        <div className="estimation-component-total-header">
+                                            <div className="estimation-component-total-name">{cc.name}</div>
+                                            <div className="estimation-component-total-summary">
+                                                <div className="estimation-component-total-summary-item">
+                                                    <span>Per Set</span>
+                                                    <strong>{formatMoney(cc.unitSubtotal)}</strong>
+                                                </div>
+                                                <div className="estimation-component-total-summary-item">
+                                                    <span>Subtotal</span>
+                                                    <strong>{formatMoney(cc.subtotal)}</strong>
+                                                </div>
+                                                <div className="estimation-component-total-summary-item">
+                                                    <span>After Margin</span>
+                                                    <strong>{formatMoney(cc.afterMargin)}</strong>
+                                                </div>
+                                                <div className="estimation-component-total-summary-item estimation-component-total-summary-item-primary">
+                                                    <span>Line Total</span>
+                                                    <strong>{formatMoney(cc.lineTotalBeforeTax)}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="estimation-component-total-field-groups">
+                                            <div className="estimation-component-total-field-group">
+                                                <div className="estimation-component-total-field-group-title">Pricing</div>
+                                                <div className="estimation-component-total-fields estimation-component-total-fields-pricing">
+                                                    <Form.Group>
+                                                        <Form.Label>Sets</Form.Label>
+                                                        <Form.Control
+                                                            className="text-end"
+                                                            type="number"
+                                                            min="0.01" step="0.01"
+                                                            value={compQty[cc.name] ?? "1"}
+                                                            disabled={isLocked}
+                                                            onChange={(e) => {
+                                                                requireFullSave();
+                                                                setCompQty(s => ({ ...s, [cc.name]: e.target.value }));
+                                                            }}
+                                                            placeholder="1"
+                                                        />
+                                                    </Form.Group>
+
+                                                    <Form.Group>
+                                                        <Form.Label>Overhead %</Form.Label>
+                                                        <Form.Control
+                                                            className="text-end"
+                                                            type="number"
+                                                            min="0" step="0.01"
+                                                            value={compOverhead[cc.name] ?? ""}
+                                                            disabled={isLocked}
+                                                            onChange={(e) => {
+                                                                markComponentsDirty(cc.name);
+                                                                setCompOverhead(s => ({ ...s, [cc.name]: e.target.value }));
+                                                            }}
+                                                            placeholder="0"
+                                                        />
+                                                    </Form.Group>
+
+                                                    <div className="estimation-component-total-readonly">
+                                                        <span>Overhead Price</span>
+                                                        <strong>{formatMoney(cc.overheadAmt)}</strong>
+                                                    </div>
+
+                                                    <Form.Group>
+                                                        <Form.Label>Margin %</Form.Label>
+                                                        <Form.Control
+                                                            className="text-end"
+                                                            type="number"
+                                                            min="0" step="0.01"
+                                                            value={compMargin[cc.name] ?? ""}
+                                                            disabled={isLocked}
+                                                            onChange={(e) => {
+                                                                markComponentsDirty(cc.name);
+                                                                setCompMargin(s => ({ ...s, [cc.name]: e.target.value }));
+                                                            }}
+                                                            placeholder="0"
+                                                        />
+                                                    </Form.Group>
+                                                </div>
+                                            </div>
+
+                                            <div className="estimation-component-total-field-group">
+                                                <div className="estimation-component-total-field-group-title">Delivery & Freight</div>
+                                                <div className="estimation-component-total-fields estimation-component-total-fields-logistics">
+                                                    <Form.Group>
+                                                        <Form.Label>Delivery / Set</Form.Label>
+                                                        <Form.Control
+                                                            className="text-end"
+                                                            type="number"
+                                                            min="0" step="0.01"
+                                                            value={compDelivery[cc.name] ?? ""}
+                                                            disabled={isLocked}
+                                                            onChange={(e) => {
+                                                                markComponentsDirty(cc.name);
+                                                                setCompDelivery(s => ({ ...s, [cc.name]: e.target.value }));
+                                                            }}
+                                                            placeholder="0"
+                                                        />
+                                                    </Form.Group>
+
+                                                    <div className="estimation-component-total-switch">
+                                                        <span>Delivery Taxable?</span>
+                                                        <Form.Check
+                                                            type="switch"
+                                                            checked={!!compDeliveryTaxable[cc.name]}
+                                                            onChange={(e) => {
+                                                                markComponentsDirty(cc.name);
+                                                                setCompDeliveryTaxable(s => ({ ...s, [cc.name]: e.target.checked }));
+                                                            }}
+                                                            disabled={!includeDelivery || isLocked}
+                                                            label=""
+                                                        />
+                                                    </div>
+
+                                                    <Form.Group>
+                                                        <Form.Label>Freight / Set</Form.Label>
+                                                        <Form.Control
+                                                            className="text-end"
+                                                            type="number"
+                                                            min="0" step="0.01"
+                                                            value={compFreight[cc.name] ?? ""}
+                                                            disabled={isLocked}
+                                                            onChange={(e) => {
+                                                                markComponentsDirty(cc.name);
+                                                                setCompFreight(s => ({ ...s, [cc.name]: e.target.value }));
+                                                            }}
+                                                            placeholder="0"
+                                                        />
+                                                    </Form.Group>
+
+                                                    <div className="estimation-component-total-switch">
+                                                        <span>Freight Taxable?</span>
+                                                        <Form.Check
+                                                            type="switch"
+                                                            checked={!!compFreightTaxable[cc.name]}
+                                                            onChange={(e) => {
+                                                                markComponentsDirty(cc.name);
+                                                                setCompFreightTaxable(s => ({ ...s, [cc.name]: e.target.checked }));
+                                                            }}
+                                                            disabled={!includeFreight || isLocked}
+                                                            label=""
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                ))}
+                            </div>
 
                             {/* Global toggles/rates */}
                             <div className="bg-light rounded p-3 mt-3">
