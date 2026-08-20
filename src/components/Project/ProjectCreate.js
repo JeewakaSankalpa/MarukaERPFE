@@ -26,6 +26,11 @@ const inquiryTypeOptions = [
   { value: "RETAIL_SALE", label: "Retail Sale" },
 ];
 
+const inquiryDocumentAccept = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png";
+const inquiryDocumentExtensions = inquiryDocumentAccept
+  .split(",")
+  .map((ext) => ext.replace(".", "").toLowerCase());
+
 const extractFileName = (urlOrName) => {
   if (!urlOrName) return "";
   try {
@@ -216,11 +221,22 @@ const ProjectForm = () => {
 
   const handleFileChange = (e) => {
     const picked = Array.from(e.target.files || []);
+    const unsupported = picked.filter((file) => {
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+      return !inquiryDocumentExtensions.includes(ext);
+    });
+    if (unsupported.length > 0) {
+      toast.warn("Upload PDF, Word, Excel, JPG, JPEG, or PNG documents only.");
+    }
+    const valid = picked.filter((file) => {
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+      return inquiryDocumentExtensions.includes(ext);
+    });
     // Merge with existing selections; avoid duplicates by name+size
     const existingKeys = new Set(files.map((f) => `${f.name}-${f.size}`));
     const merged = [
       ...files,
-      ...picked.filter((f) => !existingKeys.has(`${f.name}-${f.size}`)),
+      ...valid.filter((f) => !existingKeys.has(`${f.name}-${f.size}`)),
     ];
     setFiles(merged);
   };
@@ -593,7 +609,7 @@ const ProjectForm = () => {
                     <Form.Label>Upload Documents (optional)</Form.Label>
                     <Form.Control
                       type="file"
-                      accept=".pdf,.doc,.docx"
+                      accept={inquiryDocumentAccept}
                       onChange={handleFileChange}
                       multiple
                     />

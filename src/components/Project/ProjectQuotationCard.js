@@ -150,7 +150,7 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                             <Form.Label>Upload Customer Purchase Order <span className="text-danger">*</span></Form.Label>
                             <Form.Control
                                 type="file"
-                                accept=".pdf,.doc,.docx,.jpg,.png"
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                                 onChange={(e) => setFile(e.target.files[0])}
                                 required
                             />

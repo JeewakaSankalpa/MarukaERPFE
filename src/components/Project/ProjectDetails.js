@@ -697,7 +697,7 @@ export default function ProjectDetails() {
                         <Form.Label>Customer Purchase Order</Form.Label>
                         <Form.Control
                             type="file"
-                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
                             onChange={(e) => setAcceptFile(e.target.files[0])}
                             disabled={accepting}
                         />

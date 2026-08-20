@@ -518,6 +518,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
                 <input
                     ref={fileInputRef}
                     type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                     multiple
                     style={{ display: 'none' }}
                     onChange={onFilesChosen}
