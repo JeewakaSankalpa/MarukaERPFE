@@ -4,6 +4,7 @@ import { Table, Container, Button, Badge } from "react-bootstrap";
 import api from "../../api/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { confirmAction } from "../../utils/brandedDialogs";
 
 function EmployeeList() {
     const navigate = useNavigate();
@@ -36,7 +37,12 @@ function EmployeeList() {
     };
 
     const handleDisable = async (id) => {
-        if (!window.confirm("Are you sure you want to disable this employee?")) return;
+        if (!await confirmAction({
+            title: "Disable employee",
+            message: "Disable this employee account?",
+            confirmLabel: "Disable employee",
+            tone: "danger",
+        })) return;
         try {
             await api.delete(`/employee/${id}`); // Assumes endpoint is DELETE /employee/{id} for disable
             toast.success("Employee disabled");
@@ -47,7 +53,12 @@ function EmployeeList() {
     };
 
     const handleEnable = async (id) => {
-        if (!window.confirm("Are you sure you want to enable this employee?")) return;
+        if (!await confirmAction({
+            title: "Enable employee",
+            message: "Enable this employee account?",
+            confirmLabel: "Enable employee",
+            tone: "success",
+        })) return;
         try {
             await api.put(`/employee/${id}/enable`); 
             toast.success("Employee enabled");

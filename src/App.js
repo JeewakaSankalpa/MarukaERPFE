@@ -63,6 +63,7 @@ import PurchaseOrderDetails from "./components/PO/PurchaseOrderDetails";
 import POPrint from "./components/PO/POPrint";
 import POCreateManual from "./components/PO/POCreateManual";
 import NotificationsPage from "./components/ReusableComponents/NotificationsPage";
+import BrandedDialogHost from "./components/ReusableComponents/BrandedDialogHost";
 import ReportsPage from "./components/Reports/ReportsPage";
 import EmployeeCreate from "./components/Employee/EmployeeCreate";
 import EmployeeList from "./components/Employee/EmployeeList";
@@ -205,7 +206,17 @@ function PortalPreviewRouteWrapper({ type }) {
 function App() {
     return (
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <ToastContainer position="top-right" autoClose={3000} style={{ zIndex: 99999 }} />
+            <BrandedDialogHost />
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                newestOnTop
+                hideProgressBar
+                closeButton={false}
+                toastClassName="maruka-toast"
+                bodyClassName="maruka-toast-body"
+                style={{ zIndex: 99999 }}
+            />
             <Layout>
                 <Routes>
                     {/* Public */}

@@ -5,6 +5,7 @@ import { Container, Card, Form, Button, Table, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { confirmAction } from "../../utils/brandedDialogs";
 
 export default function RoleManagement() {
     const navigate = useNavigate();
@@ -49,7 +50,12 @@ export default function RoleManagement() {
     };
 
     const handleDeleteRole = async (roleName) => {
-        if (!window.confirm(`Are you sure you want to delete the role: ${roleName}?`)) return;
+        if (!await confirmAction({
+            title: "Delete role",
+            message: `Delete the role "${roleName}"?`,
+            confirmLabel: "Delete role",
+            tone: "danger",
+        })) return;
         
         try {
             await api.delete(`/roles/${roleName}`);

@@ -16,6 +16,7 @@ import { Undo2, Redo2 } from 'lucide-react';
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { createWorkflow, getWorkflow, saveWorkflow } from "../../services/workflowApi";
+import { confirmAction, promptAction } from "../../utils/brandedDialogs";
 
 // Custom Components
 import StageNode from "./StageNode";
@@ -248,7 +249,12 @@ export default function WorkflowBuilder() {
     // who can approve is controlled by projectRevisionApproverRoles in the workflow.
 
     const removeGlobalRole = async (val) => {
-        if (!window.confirm(`Delete global role "${val}"? This will remove it from the list for all workflows.`)) return;
+        if (!await confirmAction({
+            title: "Delete global workflow role",
+            message: `Delete global role "${val}"? This will remove it from the list for all workflows.`,
+            confirmLabel: "Delete role",
+            tone: "danger",
+        })) return;
         try {
             await api.delete(`/workflow/roles/${encodeURIComponent(val)}`);
             setRoles(prev => prev.filter(r => r !== val));
@@ -472,7 +478,13 @@ export default function WorkflowBuilder() {
     const save = async (saveAsNew = false) => {
         let targetId = workflowIdInput.trim();
         if (saveAsNew) {
-            targetId = window.prompt("Enter an ID for the new workflow:", `${id}_copy`)?.trim() || "";
+            targetId = (await promptAction({
+                title: "Save workflow as new",
+                label: "Workflow ID",
+                defaultValue: `${id}_copy`,
+                message: "Enter an ID for the new workflow.",
+                confirmLabel: "Create workflow",
+            }))?.trim() || "";
         }
 
         if (!targetId) {

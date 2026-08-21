@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Tabs, Tab, Form, Button, Table, Row, Col, Spinner, Badge } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
+import { confirmAction } from '../../utils/brandedDialogs';
 
 export default function HRConfiguration() {
     const navigate = useNavigate();
@@ -124,7 +125,12 @@ function ScheduleSettings() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure?")) return;
+        if (!await confirmAction({
+            title: "Delete schedule policy",
+            message: "Delete this HR schedule policy?",
+            confirmLabel: "Delete policy",
+            tone: "danger",
+        })) return;
         try {
             await api.delete(`/hr/schedule/policies/${id}`);
             toast.success("Policy deleted");
@@ -246,7 +252,12 @@ function GlobalLeaveQuota() {
     const [loading, setLoading] = useState(false);
 
     const handleRun = async () => {
-        if (!window.confirm("This will update quotas for ALL employees. Continue?")) return;
+        if (!await confirmAction({
+            title: "Update all leave quotas",
+            message: "This will update quotas for all employees. Continue?",
+            confirmLabel: "Update quotas",
+            tone: "warning",
+        })) return;
         try {
             setLoading(true);
             const res = await api.post('/leave/quota/global', form);

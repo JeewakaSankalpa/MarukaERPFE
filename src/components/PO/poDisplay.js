@@ -60,3 +60,14 @@ export const formatPurchaseForText = (po = {}) => {
 
     return sources.map(formatSourceRef).filter(Boolean).join(", ") || "Main Store";
 };
+
+export const projectCategoryKey = (po = {}) => {
+    const sources = getPurchaseForSources(po);
+    if (sources.length === 0) return "Main Store";
+
+    const refs = sources
+        .map(source => clean(source.jobNumber) || clean(source.inquiryNumber) || clean(source.projectId))
+        .filter(Boolean);
+
+    return refs.length > 0 ? refs.join(", ") : "Main Store";
+};

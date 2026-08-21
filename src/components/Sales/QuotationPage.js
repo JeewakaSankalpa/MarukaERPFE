@@ -7,6 +7,7 @@ import api from "../../api/api";
 import BoqEditor from "../ReusableComponents/BoqEditor";
 import TermsSelector from "./TermsSelector"; // New
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import { confirmAction } from "../../utils/brandedDialogs";
 
 
 export default function QuotationPage() {
@@ -178,7 +179,12 @@ export default function QuotationPage() {
             toast.info("Save the quotation before finalizing");
             return;
         }
-        if (!window.confirm("Finalize this quotation? It will be locked for invoicing.")) return;
+        if (!await confirmAction({
+            title: "Finalize quotation",
+            message: "Finalize this quotation? It will be locked for invoicing.",
+            confirmLabel: "Finalize quotation",
+            tone: "warning",
+        })) return;
         try {
             await handleSave(true);
             const res = await api.post(`/quotations/${quoteId}/finalize`);
@@ -190,7 +196,12 @@ export default function QuotationPage() {
     };
 
     const handleConvert = async () => {
-        if (!window.confirm("Convert this Quote to a new Project? This will create a project and estimation.")) return;
+        if (!await confirmAction({
+            title: "Convert quote",
+            message: "Convert this quote to a new project? This will create a project and estimation.",
+            confirmLabel: "Convert quote",
+            tone: "warning",
+        })) return;
         try {
             await handleSave(true); // Ensure saved first
             const res = await api.post(`/quotations/${quote.id || id}/convert`);

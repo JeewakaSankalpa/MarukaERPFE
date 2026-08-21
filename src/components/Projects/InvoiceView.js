@@ -6,6 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
 import { useAuth } from "../../context/AuthContext";
+import { confirmAction } from "../../utils/brandedDialogs";
 
 const money = (value) => Number(value || 0).toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -692,7 +693,12 @@ const InvoiceView = () => {
     };
 
     const handleRefreshInvoice = async () => {
-        if (!window.confirm("Refresh this invoice from the current project, quotation, estimation, and payment records?")) return;
+        if (!await confirmAction({
+            title: "Refresh invoice",
+            message: "Refresh this invoice from the current project, quotation, estimation, and payment records?",
+            confirmLabel: "Refresh invoice",
+            tone: "warning",
+        })) return;
         setRefreshingInvoice(true);
         try {
             const refreshConfig = { headers: { "X-Roles": rolesHeader } };

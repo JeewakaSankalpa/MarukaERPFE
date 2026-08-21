@@ -164,7 +164,6 @@ function InventoryView() {
     //            locationOptions.find((loc) => loc.value === (store.locationId || 'MAIN_STORE'))?.label ||
     //            store.locationId ||
     //            'Main Store';
-    //    alert(`Product: ${product.productName}\nLocation: ${label}\nQuantity: ${store.quantity}`);
     // };
 
     const handleReturnClick = (batch) => {

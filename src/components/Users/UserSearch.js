@@ -52,7 +52,6 @@ function UserSearch() {
                         className="me-2"
                     />
                     <Button variant="primary" onClick={handleSearchClick} className="me-2">Search</Button>
-                    {/*<Button variant="success" onClick={() => alert('Filter options would go here')}>Filter</Button>*/}
                 </Form>
                 <Table hover responsive bordered className="text-center">
                     <thead className="table-primary">

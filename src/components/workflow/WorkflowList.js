@@ -10,6 +10,7 @@ import {
 } from "../../services/workflowApi";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { confirmAction, promptAction } from "../../utils/brandedDialogs";
 
 export default function WorkflowList() {
     const [workflows, setWorkflows] = useState([]);
@@ -19,7 +20,13 @@ export default function WorkflowList() {
     const navigate = useNavigate();
 
     const handleDuplicate = async (wf) => {
-        const newId = prompt("Enter ID for the new duplicated workflow:", wf.id + "_copy")?.trim();
+        const newId = (await promptAction({
+            title: "Duplicate workflow",
+            label: "New workflow ID",
+            defaultValue: `${wf.id}_copy`,
+            message: "Enter an ID for the duplicated workflow.",
+            confirmLabel: "Duplicate workflow",
+        }))?.trim();
         if (!newId || newId === wf.id) return;
 
         try {
@@ -42,7 +49,12 @@ export default function WorkflowList() {
     }, []);
 
     const handleSetActive = async (id) => {
-        if (!window.confirm(`Are you sure you want to set "${id}" as the ACTIVE workflow? This will affect all new projects.`)) {
+        if (!await confirmAction({
+            title: "Set active workflow",
+            message: `Set "${id}" as the active workflow? This will affect all new projects.`,
+            confirmLabel: "Set active",
+            tone: "warning",
+        })) {
             return;
         }
         try {
@@ -59,7 +71,12 @@ export default function WorkflowList() {
 
     const handleSetEnabled = async (wf, enabled) => {
         const action = enabled ? "enable" : "disable";
-        if (!window.confirm(`${action[0].toUpperCase() + action.slice(1)} workflow "${wf.id}"?`)) {
+        if (!await confirmAction({
+            title: `${action[0].toUpperCase() + action.slice(1)} workflow`,
+            message: `${action[0].toUpperCase() + action.slice(1)} workflow "${wf.id}"?`,
+            confirmLabel: `${action[0].toUpperCase() + action.slice(1)} workflow`,
+            tone: enabled ? "success" : "warning",
+        })) {
             return;
         }
 

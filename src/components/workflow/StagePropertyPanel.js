@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, Form, Accordion, Badge, Button, Modal, Table } from 'react-bootstrap';
 import { Trash2 } from 'lucide-react';
 import { PROJECT_COMPONENTS } from '../Project/ComponentRegistry';
+import { confirmAction } from '../../utils/brandedDialogs';
 
 const ALWAYS_VISIBLE_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -88,7 +89,12 @@ export default function StagePropertyPanel({
         setCheckingUsage(false);
         let msg = `Are you sure you want to delete stage "${stage}"?`;
         if (count > 0) msg = `WARNING: This stage is used by ${count} projects!\n\n${msg}`;
-        if (window.confirm(msg)) onRemoveStage(stage);
+        if (await confirmAction({
+            title: "Delete workflow stage",
+            message: msg,
+            confirmLabel: "Delete stage",
+            tone: count > 0 ? "danger" : "warning",
+        })) onRemoveStage(stage);
     };
 
     return (

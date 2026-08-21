@@ -8,6 +8,7 @@ import SafeSelect from '../ReusableComponents/SafeSelect';
 import GRNPaymentModal from "./GRNPaymentModal";
 import GRNReturnModal from "./GRNReturnModal";
 import { QRCodeSVG as QRCode } from 'qrcode.react';
+import { confirmAction, promptAction } from "../../utils/brandedDialogs";
 
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 const listGRNs = async ({ q, page = 0, size = 10, paymentStatus }) => (await api.get(`/grns?${qp({ q, page, size, sort: "createdAt,desc", paymentStatus: paymentStatus || undefined })}`)).data;
@@ -49,8 +50,19 @@ export default function GRNListView() {
     }, []);
 
     const handleAccept = async (grn) => {
-        if (!window.confirm(`Accept ${grn.grnNumber} for supplier payment?`)) return;
-        const notes = window.prompt("Approval notes (optional)", "") || "";
+        if (!await confirmAction({
+            title: "Accept GRN",
+            message: `Accept ${grn.grnNumber} for supplier payment?`,
+            confirmLabel: "Accept GRN",
+            tone: "warning",
+        })) return;
+        const notes = await promptAction({
+            title: "Approval notes",
+            label: "Notes",
+            message: "Add optional notes for this GRN approval.",
+            confirmLabel: "Save notes",
+            multiline: true,
+        }) || "";
         setAcceptingId(grn.id);
         try {
             await acceptGRN(grn.id, notes);
@@ -204,7 +216,13 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
     };
 
     const handleApprovePrint = async () => {
-        const notes = window.prompt("Print approval notes (optional)", "") || "";
+        const notes = await promptAction({
+            title: "Print approval notes",
+            label: "Notes",
+            message: "Add optional notes before approving this GRN report for printing.",
+            confirmLabel: "Approve print",
+            multiline: true,
+        }) || "";
         setApprovingPrint(true);
         try {
             const updated = await approveGRNPrint(grn.id, notes);

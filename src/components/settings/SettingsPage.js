@@ -6,6 +6,7 @@ import { Container, Card, Form, Button, Row, Col, Table, Tabs, Tab } from 'react
 import api from '../../api/api';
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { confirmAction } from "../../utils/brandedDialogs";
 
 
 export default function SettingsPage() {
@@ -65,7 +66,12 @@ export default function SettingsPage() {
     };
 
     const deleteLibraryItem = async (id) => {
-        if (!window.confirm("Are you sure?")) return;
+        if (!await confirmAction({
+            title: "Delete library item",
+            message: "Delete this quote library item?",
+            confirmLabel: "Delete item",
+            tone: "danger",
+        })) return;
         try {
             await api.delete(`/quote-library/${id}`);
             setLibraryItems(libraryItems.filter(i => i.id !== id));

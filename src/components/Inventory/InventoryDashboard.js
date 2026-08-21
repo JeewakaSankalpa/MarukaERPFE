@@ -5,6 +5,7 @@ import { FaBoxes, FaExclamationTriangle, FaBoxOpen, FaClipboardList, FaArrowRigh
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import api from "../../api/api";
 import MenuCard from "../ReusableComponents/MenuCard";
+import { toast } from "react-toastify";
 
 const StatCard = ({ title, value, icon, color, subtext }) => (
   <Card className="h-100 shadow-sm border-0">
@@ -203,7 +204,7 @@ const InventoryDashboard = () => {
       navigate('/stores/pending-to-po');
     } catch (err) {
       console.error("Failed to push to pending purchases", err);
-      alert("Failed to process items. Please try again.");
+      toast.error("Failed to process items. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

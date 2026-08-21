@@ -8,6 +8,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import ReportLayout from '../ReusableComponents/ReportLayout';
 import './ProjectInventoryCard.css';
+import { confirmAction } from '../../utils/brandedDialogs';
 
 /**
  * Component to display project inventory, consumption, and transfers.
@@ -115,7 +116,12 @@ export default function ProjectInventoryCard({ projectId, project }) {
     };
 
     const handleRejectTransfer = async (id) => {
-        if (!window.confirm("Reject this transfer?")) return;
+        if (!await confirmAction({
+            title: "Reject transfer",
+            message: "Reject this inventory transfer?",
+            confirmLabel: "Reject transfer",
+            tone: "danger",
+        })) return;
         try {
             await api.patch(`/transfers/${id}/reject`);
             toast.info("Transfer rejected");

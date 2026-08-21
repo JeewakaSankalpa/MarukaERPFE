@@ -5,6 +5,7 @@ import { Button, Spinner, Table, Alert, Modal, Form, Tabs, Tab, Badge, Dropdown 
 import ReportLayout from "../ReusableComponents/ReportLayout";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { confirmAction, promptAction } from "../../utils/brandedDialogs";
 
 const money = (value) => Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -446,7 +447,12 @@ const QuotationPrint = () => {
             toast.warn("Record the customer Purchase Order before finalizing the quotation.");
             return;
         }
-        if (!window.confirm("Are you sure you want to finalize this quotation? It will be locked.")) return;
+        if (!await confirmAction({
+            title: "Finalize quotation",
+            message: "Finalize this quotation? It will be locked.",
+            confirmLabel: "Finalize quotation",
+            tone: "warning",
+        })) return;
         try {
             await api.post(`/estimations/${estimation.id}/finalize`);
             toast.success("Quotation finalized");
@@ -458,7 +464,12 @@ const QuotationPrint = () => {
 
     const handleGenerateInvoice = async () => {
         const label = invoiceTypeLabels[invoiceType] || "invoice";
-        if (!window.confirm(`Generate ${label} from this quotation?`)) return;
+        if (!await confirmAction({
+            title: `Generate ${label}`,
+            message: `Generate ${label} from this quotation?`,
+            confirmLabel: `Generate ${label}`,
+            tone: "warning",
+        })) return;
         setIsGenerating(true);
         try {
             await api.post(`/invoices/generate-from-estimation/${estimation.id}?type=${invoiceType}`);
@@ -494,7 +505,13 @@ const QuotationPrint = () => {
             toast.error("Estimation not loaded");
             return;
         }
-        const comment = window.prompt("Print/PDF approval note (optional)", "") || "";
+        const comment = await promptAction({
+            title: "Print/PDF approval note",
+            label: "Approval note",
+            message: "Add an optional note before approving quotation print/PDF access.",
+            confirmLabel: "Approve print/PDF",
+            multiline: true,
+        }) || "";
         setApprovingPrint(true);
         try {
             const res = await api.post(`/estimations/${estimation.id}/approve-quotation-print`, { comment });

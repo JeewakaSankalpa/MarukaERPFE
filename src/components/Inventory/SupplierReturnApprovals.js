@@ -6,6 +6,7 @@ import { Container, Card, Table, Button, Spinner, Badge, Nav, Modal, Form, Row, 
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
+import { confirmAction } from '../../utils/brandedDialogs';
 
 const SupplierReturnApprovals = () => {
     const navigate = useNavigate();
@@ -44,7 +45,12 @@ const SupplierReturnApprovals = () => {
     };
 
     const handleApprove = async (ret) => {
-        if (!window.confirm(`Are you sure you want to approve this return?\nThis will deduct ${ret.quantity} units from Batch ${ret.batchNo}.`)) return;
+        if (!await confirmAction({
+            title: "Approve supplier return",
+            message: `Approve this return?\nThis will deduct ${ret.quantity} units from batch ${ret.batchNo}.`,
+            confirmLabel: "Approve return",
+            tone: "warning",
+        })) return;
         setProcessingId(ret.id);
         try {
             await api.post(`/inventory/returns/supplier/${ret.id}/approve`);

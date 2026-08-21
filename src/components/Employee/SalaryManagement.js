@@ -8,6 +8,7 @@ import { formatAttendanceTime, toDateTimeLocalValue } from "../../utils/attendan
 import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 import CompletenessModal from "../ReusableComponents/CompletenessModal";
 import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
+import { confirmAction } from "../../utils/brandedDialogs";
 
 function SalaryManagement() {
     const [key, setKey] = useState("processing");
@@ -267,7 +268,12 @@ function SalaryManagement() {
                                         </Button>
                                         <Button variant="info" onClick={async () => {
                                             if (salaries.length === 0) return toast.warn("Generate salaries first");
-                                            if (window.confirm("Submit for Approval? This will lock re-generation.")) {
+                                            if (await confirmAction({
+                                                title: "Submit payroll",
+                                                message: "Submit this salary run for approval? This will lock re-generation.",
+                                                confirmLabel: "Submit payroll",
+                                                tone: "warning",
+                                            })) {
                                                 await api.post(`/salary/run/${selectedMonth}/submit`);
                                                 toast.success("Submitted");
                                                 fetchRunStatus();
@@ -278,7 +284,12 @@ function SalaryManagement() {
 
                                 {processedRun?.status === 'PENDING_APPROVAL' && (
                                     <Button variant="warning" className="me-2" onClick={async () => {
-                                        if (window.confirm("Approve Payroll? This will finalize the records.")) {
+                                        if (await confirmAction({
+                                            title: "Approve payroll",
+                                            message: "Approve this payroll run? This will finalize the records.",
+                                            confirmLabel: "Approve payroll",
+                                            tone: "warning",
+                                        })) {
                                             await api.post(`/salary/run/${selectedMonth}/approve`);
                                             toast.success("Approved");
                                             fetchRunStatus();

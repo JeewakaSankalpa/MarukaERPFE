@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css";
 import CompletenessModal from "../ReusableComponents/CompletenessModal";
 import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
 import { CustomerForm } from "../Customer/CustomerCreate";
+import { confirmAction } from "../../utils/brandedDialogs";
 
 /* ------------ API helpers ------------ */
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
@@ -1442,7 +1443,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const deleteTemplate = async (template) => {
         if (!template?.id) return;
-        const confirmed = window.confirm(`Delete template "${template.name}"? Existing estimations will not change.`);
+        const confirmed = await confirmAction({
+            title: "Delete component template",
+            message: `Delete template "${template.name}"? Existing estimations will not change.`,
+            confirmLabel: "Delete template",
+            tone: "danger",
+        });
         if (!confirmed) return;
 
         setDeletingTemplateId(template.id);

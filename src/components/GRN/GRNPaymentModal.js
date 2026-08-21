@@ -5,6 +5,7 @@ import api from "../../api/api";
 import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 import OverdraftConfirmModal from "../ReusableComponents/OverdraftConfirmModal";
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import { confirmAction, promptAction } from "../../utils/brandedDialogs";
 
 const addPayment = async (id, formData) => (await api.post(`/grns/${id}/payments`, formData, {
     headers: { "Content-Type": "multipart/form-data" }
@@ -105,8 +106,19 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
 
     const handleVerifyPayment = async (payment, index) => {
         const paymentId = payment.id || String(index);
-        if (!window.confirm("Verify this GRN payment as correct? This will count it as paid and post the finance entry.")) return;
-        const notes = window.prompt("Verification notes (optional)", "") || "";
+        if (!await confirmAction({
+            title: "Verify GRN payment",
+            message: "Verify this GRN payment as correct? This will count it as paid and post the finance entry.",
+            confirmLabel: "Verify payment",
+            tone: "warning",
+        })) return;
+        const notes = await promptAction({
+            title: "Verification notes",
+            label: "Notes",
+            message: "Add optional notes for this GRN payment verification.",
+            confirmLabel: "Save notes",
+            multiline: true,
+        }) || "";
         setVerifyingId(paymentId);
         try {
             await verifyPayment(grn.id, paymentId, notes);

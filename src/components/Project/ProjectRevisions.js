@@ -3,6 +3,7 @@ import { Table, Button, Badge, Modal, Form, Spinner } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import { promptAction } from '../../utils/brandedDialogs';
 
 export default function ProjectRevisions({ projectId, versions, stages, workflowStages, currentStageType, roleHeader, onRevise, onViewSnapshot }) {
     const [showReviseModal, setShowReviseModal] = useState(false);
@@ -76,7 +77,16 @@ export default function ProjectRevisions({ projectId, versions, stages, workflow
     };
 
     const handleRevisionDecision = async (revisionId, status) => {
-        const comment = window.prompt(status === "APPROVED" ? "Approval comment" : "Rejection reason") || "";
+        const comment = await promptAction({
+            title: status === "APPROVED" ? "Approval comment" : "Rejection reason",
+            label: "Comment",
+            message: status === "APPROVED"
+                ? "Add an optional approval comment for this revision."
+                : "Add a rejection reason for this revision.",
+            confirmLabel: status === "APPROVED" ? "Approve revision" : "Reject revision",
+            multiline: true,
+            tone: status === "APPROVED" ? "success" : "danger",
+        }) || "";
         setSubmitting(true);
         try {
             await api.post(

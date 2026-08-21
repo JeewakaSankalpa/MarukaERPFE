@@ -6,12 +6,12 @@ import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
-import { getPurchaseForSources, formatSourceRef } from "./poDisplay";
+import { getPurchaseForSources, formatSourceRef, projectCategoryKey } from "./poDisplay";
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
-const listPOs = async ({ q, status, page = 0, size = 10 }) =>
-    (await api.get(`/pos?${qp({ q, status, page, size, sort: "createdAt,desc" })}`)).data;
+const listPOs = async ({ q, status, projectNumber, page = 0, size = 10 }) =>
+    (await api.get(`/pos?${qp({ q, status, projectNumber, page, size, sort: "createdAt,desc" })}`)).data;
 const markSent = async (id, email) => (await api.patch(`/pos/${id}/send?email=${encodeURIComponent(email || "")}`)).data;
 const setEta = async (id, etaDate) => (await api.patch(`/pos/${id}/eta`, { etaDate })).data;
 const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
@@ -19,6 +19,7 @@ const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 export default function POListView({ onOpenGRN }) {
     const navigate = useNavigate();
     const [q, setQ] = useState(""); const [status, setStatus] = useState("");
+    const [projectNumber, setProjectNumber] = useState("");
     const [page, setPage] = useState(0); const [size] = useState(10);
     const [data, setData] = useState({ content: [], totalPages: 0 });
 
@@ -31,11 +32,18 @@ export default function POListView({ onOpenGRN }) {
     const [sending, setSending] = useState(false);
 
     const load = async () => {
-        try { setData(await listPOs({ q, status, page, size })); }
+        try { setData(await listPOs({ q, status, projectNumber, page, size })); }
         catch { toast.error("Failed to load POs"); }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { load(); }, [page, status, q]);
+    useEffect(() => { load(); }, [page, status, q, projectNumber]);
+
+    const groupedPOs = (data.content || []).reduce((groups, po) => {
+        const category = projectCategoryKey(po);
+        if (!groups.has(category)) groups.set(category, []);
+        groups.get(category).push(po);
+        return groups;
+    }, new Map());
 
     const openSendModal = async (po) => {
         setSendFor(po.id);
@@ -97,6 +105,12 @@ export default function POListView({ onOpenGRN }) {
                             <option value="CONFIRMED">CONFIRMED</option>
                             <option value="CANCELLED">CANCELLED</option>
                         </SafeSelect>
+                        <Form.Control
+                            placeholder="Project number / MJN"
+                            value={projectNumber}
+                            onChange={e => { setProjectNumber(e.target.value); setPage(0); }}
+                            style={{ maxWidth: 210 }}
+                        />
                         <Form.Control placeholder="Search PO# / Supplier" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>
@@ -117,73 +131,82 @@ export default function POListView({ onOpenGRN }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {(data.content || []).map(po => {
-                            const purchaseForSources = getPurchaseForSources(po);
-                            return (
-                                <tr key={po.id}>
-                                    <td>{po.poNumber}</td>
-                                    <td>{po.supplierNameSnapshot || po.supplierName}</td>
-                                    <td>
-                                        {purchaseForSources.length > 0 ? (
-                                            <>
-                                                {purchaseForSources.map((source, index) => (
-                                                    <Badge bg="success" className="me-1 mb-1" key={`${formatSourceRef(source)}-${index}`}>
-                                                        {source.jobNumber ? source.jobNumber : formatSourceRef(source)}
-                                                    </Badge>
-                                                ))}
-                                            </>
-                                        ) : (
-                                            <Badge bg="secondary">Main Store</Badge>
-                                        )}
-                                    </td>
-                                    <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
-                                    </td>
-                                    <td>
-                                        <Badge bg={
-                                            po.status === "FULLY_RECEIVED" ? "success" :
-                                                po.status === "PARTIALLY_RECEIVED" ? "info" :
-                                                    po.status === "SENT_TO_SUPPLIER" ? "primary" :
-                                                        po.status === "CANCELLED" ? "danger" : "secondary"
-                                        }>{po.status}</Badge>
-                                    </td>
-                                    <td>{approvalBadge(po.approvalStatus)}</td>
-                                    <td className="text-end">
-                                        {po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                                    </td>
-                                    <td>{po.etaDate || "-"}</td>
-                                    <td className="d-flex gap-1 flex-wrap">
-                                        <Button size="sm" variant="info" onClick={() => navigate(`/pos/${po.id}`)}>View</Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline-primary"
-                                            onClick={() => openSendModal(po)}
-                                            disabled={po.approvalStatus !== 'APPROVED'}
-                                            title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
-                                        >
-                                            Mark Sent
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline-secondary"
-                                            onClick={() => openEta(po.id)}
-                                            disabled={po.approvalStatus !== 'APPROVED'}
-                                            title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
-                                        >
-                                            Set ETA
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            onClick={() => onOpenGRN?.(po.id)}
-                                            disabled={po.approvalStatus !== 'APPROVED' || po.status === 'FULLY_RECEIVED'}
-                                            title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : po.status === 'FULLY_RECEIVED' ? "Already fully received" : ""}
-                                        >
-                                            Receive (GRN)
-                                        </Button>
+                        {[...groupedPOs.entries()].map(([category, pos]) => (
+                            <React.Fragment key={category}>
+                                <tr className="table-light">
+                                    <td colSpan={9} className="fw-semibold">
+                                        Project: {category} <Badge bg="secondary" className="ms-2">{pos.length}</Badge>
                                     </td>
                                 </tr>
-                            );
-                        })}
+                                {pos.map(po => {
+                                    const purchaseForSources = getPurchaseForSources(po);
+                                    return (
+                                        <tr key={po.id}>
+                                            <td>{po.poNumber}</td>
+                                            <td>{po.supplierNameSnapshot || po.supplierName}</td>
+                                            <td>
+                                                {purchaseForSources.length > 0 ? (
+                                                    <>
+                                                        {purchaseForSources.map((source, index) => (
+                                                            <Badge bg="success" className="me-1 mb-1" key={`${formatSourceRef(source)}-${index}`}>
+                                                                {source.jobNumber ? source.jobNumber : formatSourceRef(source)}
+                                                            </Badge>
+                                                        ))}
+                                                    </>
+                                                ) : (
+                                                    <Badge bg="secondary">Main Store</Badge>
+                                                )}
+                                            </td>
+                                            <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
+                                            </td>
+                                            <td>
+                                                <Badge bg={
+                                                    po.status === "FULLY_RECEIVED" ? "success" :
+                                                        po.status === "PARTIALLY_RECEIVED" ? "info" :
+                                                            po.status === "SENT_TO_SUPPLIER" ? "primary" :
+                                                                po.status === "CANCELLED" ? "danger" : "secondary"
+                                                }>{po.status}</Badge>
+                                            </td>
+                                            <td>{approvalBadge(po.approvalStatus)}</td>
+                                            <td className="text-end">
+                                                {po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                            </td>
+                                            <td>{po.etaDate || "-"}</td>
+                                            <td className="d-flex gap-1 flex-wrap">
+                                                <Button size="sm" variant="info" onClick={() => navigate(`/pos/${po.id}`)}>View</Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline-primary"
+                                                    onClick={() => openSendModal(po)}
+                                                    disabled={po.approvalStatus !== 'APPROVED'}
+                                                    title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                                >
+                                                    Mark Sent
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline-secondary"
+                                                    onClick={() => openEta(po.id)}
+                                                    disabled={po.approvalStatus !== 'APPROVED'}
+                                                    title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : ""}
+                                                >
+                                                    Set ETA
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => onOpenGRN?.(po.id)}
+                                                    disabled={po.approvalStatus !== 'APPROVED' || po.status === 'FULLY_RECEIVED'}
+                                                    title={po.approvalStatus !== 'APPROVED' ? "Approve PO first" : po.status === 'FULLY_RECEIVED' ? "Already fully received" : ""}
+                                                >
+                                                    Receive (GRN)
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </React.Fragment>
+                        ))}
                     </tbody>
                 </Table>
 
