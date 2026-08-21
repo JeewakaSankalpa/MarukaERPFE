@@ -41,7 +41,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
 
     const createNew = () => {
         if (readOnly) return; // Should be hidden anyway
-        navigate(`/projects/estimation/${projectId}?new=1`);
+        navigate(`/projects/estimation/${projectId}`);
         onOpen?.();
     };
 

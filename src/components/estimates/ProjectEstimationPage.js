@@ -35,6 +35,9 @@ const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/rej
 const createRevisionAPI = async (id, payload, headers = {}) => (await api.post(`/estimations/${id}/revision`, payload, { headers })).data;
 const batchSaveEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}/batch`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 const patchEstimationComponentsAPI = async (projectId, payload) => (await api.patch(`/estimations/by-project/${projectId}/components`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const saveDraftEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}/draft`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const promoteDraftEstimationAPI = async (projectId) => (await api.post(`/estimations/by-project/${projectId}/draft/promote`, null, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const discardDraftEstimationAPI = async (projectId) => (await api.delete(`/estimations/by-project/${projectId}/draft`, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 
 const LINE_TYPES = {
     PRODUCT: "PRODUCT",
@@ -72,6 +75,7 @@ const ESTIMATION_MATRIX_ZOOM_PRESETS = [
 const ESTIMATION_SAVE_TIMEOUT_MS = 5 * 60 * 1000;
 const ESTIMATION_BATCH_ITEM_LIMIT = 40;
 const ESTIMATION_BATCH_SAVE_THRESHOLD = 60;
+const ESTIMATION_AUTOSAVE_DELAY_MS = 1200;
 const ROUNDING_OPTIONS = [
     { value: "1", label: "Remove cents" },
     { value: "10", label: "Nearest 10" },
@@ -278,6 +282,15 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const forceFullSaveRef = useRef(false);
     const suppressDirtyRef = useRef(false);
+    const autosaveTimerRef = useRef(null);
+    const autosavePromiseRef = useRef(null);
+    const lastDraftSignatureRef = useRef("");
+    const pendingNavigationRef = useRef(null);
+    const [latestDraft, setLatestDraft] = useState(null);
+    const [saveHistory, setSaveHistory] = useState([]);
+    const [autosaveStatus, setAutosaveStatus] = useState("idle");
+    const [autosaveError, setAutosaveError] = useState("");
+    const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [completenessIssues, setCompletenessIssues] = useState([]);
     const [showCompletenessModal, setShowCompletenessModal] = useState(false);
@@ -318,6 +331,17 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     useEffect(() => {
         setEditingComponentNames({});
     }, [projectOpt?.value, propProjectId]);
+
+    useEffect(() => {
+        if (searchParams.get("new") !== "1") return;
+        const cleaned = new URLSearchParams(location.search);
+        cleaned.delete("new");
+        navigate({
+            pathname: location.pathname,
+            search: cleaned.toString() ? `?${cleaned.toString()}` : "",
+        }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname, location.search, navigate]);
 
     useEffect(() => () => {
         if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
@@ -417,6 +441,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setSavedTotals({});
             setApproverIds([]);
             setApprovalPolicy("ALL");
+            setLatestDraft(null);
+            setSaveHistory([]);
+            lastDraftSignatureRef.current = "";
+            setAutosaveStatus("idle");
             setLoading(false);
             return;
         }
@@ -459,6 +487,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setSavedTotals({});
                     setApproverIds([]);
                     setApprovalPolicy("ALL");
+                    setLatestDraft(null);
+                    setSaveHistory([]);
+                    lastDraftSignatureRef.current = "";
+                    setAutosaveStatus("idle");
+                    setTimeout(() => setIsInitialLoad(false), 300);
                     return;
                 }
 
@@ -522,6 +555,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setApprovalHistory(est.approvals || []);
                 setApprovalPolicy(est.approvalPolicy || "ALL");
                 setVersions(est.history || []); // If we stored history in `history` field
+                setLatestDraft(est.latestDraft || null);
+                setSaveHistory(est.saveHistory || []);
 
                 // rows
                 const rowMap = new Map();
@@ -575,6 +610,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     setForceFullSave(false);
                     forceFullSaveRef.current = false;
                     setIsInitialLoad(false);
+                    lastDraftSignatureRef.current = "";
+                    setAutosaveStatus(est.latestDraft ? "saved" : "idle");
                 }, 300);
             } catch (e) {
                 toast.error(getErrorMessage(e, "Failed to load estimation. Please try again."));
@@ -1189,13 +1226,11 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             const items = [];
             rowsForPayload.forEach(r => {
                 const qtyVal = (r.quantities || {})[cname];
-                const qty = Number(qtyVal || 0);
                 const quantity = toBigDec(qtyVal);
                 const isManual = r.lineType === LINE_TYPES.MANUAL;
                 const hasManualDescription = String(r.description || "").trim().length > 0;
-                const hasRate = r.estUnitCost !== "" && r.estUnitCost != null;
 
-                if (r.productId && qty > 0) {
+                if (r.productId) {
                     items.push({
                         lineType: LINE_TYPES.PRODUCT,
                         productId: r.productId,
@@ -1205,7 +1240,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         quantity,
                         estUnitCost: toBigDec(r.estUnitCost),
                     });
-                } else if (isManual && hasManualDescription && (qty > 0 || hasRate)) {
+                } else if (isManual && hasManualDescription) {
                     items.push({
                         lineType: LINE_TYPES.MANUAL,
                         productId: null,
@@ -1263,6 +1298,193 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const countPayloadItems = (payload) =>
         (payload.components || []).reduce((sum, component) => sum + ((component.items || []).length), 0);
+
+    const payloadSignature = (payload) => JSON.stringify(payload);
+
+    const hasOfficialSavedContent = Boolean(estimationId) && (
+        (savedTotals?.grand != null)
+        || components.some(componentName => rows.some(row => Number((row.quantities || {})[componentName] || 0) > 0))
+        || Boolean(existingFileUrl)
+    );
+
+    const hasUnpromotedDraft = Boolean(latestDraft?.estimation);
+
+    const hydratePayloadIntoEditor = (payload) => {
+        if (!payload) return;
+        suppressDirtyRef.current = true;
+        const incomingComponents = payload.components || [];
+        const cols = incomingComponents.length
+            ? incomingComponents.map(component => component?.name?.trim() || "Component")
+            : ["Component A"];
+        setComponents(cols);
+
+        const initialMargin = {};
+        const initialQty = {};
+        const initialDelivery = {};
+        const initialDelTax = {};
+        const initialFreight = {};
+        const initialFreightTax = {};
+        const initialOverhead = {};
+        incomingComponents.forEach(component => {
+            const name = component?.name?.trim() || "Component";
+            initialQty[name] = String(component?.quantity == null || Number(component.quantity) <= 0 ? 1 : component.quantity);
+            if (component?.marginPercent != null) initialMargin[name] = String(component.marginPercent);
+            if (component?.overheadPercent != null) initialOverhead[name] = String(component.overheadPercent);
+            if (component?.deliveryCost != null) initialDelivery[name] = String(component.deliveryCost);
+            if (typeof component?.deliveryTaxable === "boolean") initialDelTax[name] = !!component.deliveryTaxable;
+            if (component?.freightCost != null) initialFreight[name] = String(component.freightCost);
+            if (typeof component?.freightTaxable === "boolean") initialFreightTax[name] = !!component.freightTaxable;
+        });
+        setCompMargin(initialMargin);
+        setCompQty(initialQty);
+        setCompOverhead(initialOverhead);
+        setCompDelivery(initialDelivery);
+        setCompDeliveryTaxable(initialDelTax);
+        setCompFreight(initialFreight);
+        setCompFreightTaxable(initialFreightTax);
+        setDiscountPercent(payload.discountPercent != null ? String(payload.discountPercent) : "");
+        setCustomNote(payload.customNote || "");
+        setTerms(payload.terms || []);
+        setIncludeDelivery(payload.includeDelivery !== false);
+        setIncludeFreight(payload.includeFreight !== false);
+        setIncludeVat(payload.includeVat !== false);
+        setIncludeTax(payload.includeTax === true);
+        setRoundingEnabled(payload.roundingEnabled === true);
+        setRoundingPlace(String(payload.roundingPlace || 1));
+        if (payload.vatPercent != null) setVatPercent(String(payload.vatPercent));
+        if (payload.taxPercent != null) setTaxPercent(String(payload.taxPercent));
+
+        const rowMap = new Map();
+        incomingComponents.forEach(component => {
+            const cname = component?.name?.trim() || "Component";
+            (component?.items || []).forEach((item, itemIndex) => {
+                const isProductLine = !!item.productId;
+                const rowKey = isProductLine
+                    ? `product:${item.productId}`
+                    : `manual:${item.description || item.productNameSnapshot || ""}:${item.unit || ""}:${item.estUnitCost ?? ""}:${itemIndex}`;
+                if (!rowMap.has(rowKey)) {
+                    const product = productById[item.productId];
+                    rowMap.set(rowKey, {
+                        rowKey,
+                        lineType: isProductLine ? LINE_TYPES.PRODUCT : LINE_TYPES.MANUAL,
+                        productId: item.productId || "",
+                        productOption: product
+                            ? { value: product.id, label: buildProductLabel(product) }
+                            : (isProductLine ? { value: item.productId, label: item.productNameSnapshot || item.productId } : null),
+                        description: item.description || item.productNameSnapshot || "",
+                        unit: item.unit || "",
+                        estUnitCost: item.estUnitCost ?? "",
+                        suggestedCost: product ? deriveSuggestedCost(product) : undefined,
+                        storeAvail: isProductLine ? availMap[item.productId] : undefined,
+                        quantities: Object.fromEntries(cols.map(col => [col, 0])),
+                    });
+                }
+                const row = rowMap.get(rowKey);
+                row.quantities[cname] = Number(row.quantities[cname] || 0) + Number(item.quantity || 0);
+                if (row.estUnitCost === "" && item.estUnitCost != null) row.estUnitCost = item.estUnitCost;
+            });
+        });
+        setRows(Array.from(rowMap.values()));
+        setTimeout(() => {
+            suppressDirtyRef.current = false;
+            setIsDirty(true);
+            forceFullSaveRef.current = true;
+            setForceFullSave(true);
+        }, 0);
+    };
+
+    const handleRestoreLatestDraft = () => {
+        if (!latestDraft?.estimation) return;
+        hydratePayloadIntoEditor(latestDraft.estimation);
+        toast.info("Autosaved draft restored. Click Save to make it official.");
+    };
+
+    const handleDiscardLatestDraft = async () => {
+        const pid = projectOpt?.value;
+        if (!pid) return;
+        try {
+            const res = await discardDraftEstimationAPI(pid);
+            setLatestDraft(res.latestDraft || null);
+            setSaveHistory(res.saveHistory || []);
+            setAutosaveStatus("idle");
+            toast.info("Autosaved draft discarded.");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Failed to discard draft"));
+        }
+    };
+
+    const formatSaveEventType = (type) => ({
+        DRAFT_AUTOSAVE: "Draft autosave",
+        OFFICIAL_SAVE: "Official save",
+        DRAFT_PROMOTED: "Draft promoted",
+        DRAFT_DISCARDED: "Draft discarded",
+    }[type] || type || "Save");
+
+    const saveEventVariant = (type) => ({
+        DRAFT_AUTOSAVE: "secondary",
+        OFFICIAL_SAVE: "success",
+        DRAFT_PROMOTED: "success",
+        DRAFT_DISCARDED: "danger",
+    }[type] || "secondary");
+
+    const performAutosaveDraft = async () => {
+        const pid = projectOpt?.value;
+        if (!pid || isLocked || isInitialLoad || suppressDirtyRef.current) return null;
+        const payload = buildPayload();
+        const signature = payloadSignature(payload);
+        if (signature === lastDraftSignatureRef.current) return null;
+
+        setAutosaveStatus("saving");
+        setAutosaveError("");
+        const request = saveDraftEstimationAPI(pid, payload)
+            .then(res => {
+                lastDraftSignatureRef.current = signature;
+                setLatestDraft(res.latestDraft || null);
+                setSaveHistory(res.saveHistory || []);
+                if (!estimationId && res.id) setEstimationId(res.id);
+                setAutosaveStatus("saved");
+                return res;
+            })
+            .catch(error => {
+                setAutosaveStatus("error");
+                setAutosaveError(getErrorMessage(error, "Autosave failed"));
+                throw error;
+            })
+            .finally(() => {
+                autosavePromiseRef.current = null;
+            });
+        autosavePromiseRef.current = request;
+        return request;
+    };
+
+    useEffect(() => {
+        if (!isDirty || isLocked || isInitialLoad || suppressDirtyRef.current || !projectOpt?.value) return undefined;
+        if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = setTimeout(() => {
+            performAutosaveDraft().catch(() => {});
+        }, ESTIMATION_AUTOSAVE_DELAY_MS);
+        return () => {
+            if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isDirty, rows, components, compQty, compMargin, compOverhead, compDelivery, compDeliveryTaxable,
+        compFreight, compFreightTaxable, includeDelivery, includeFreight, includeVat, includeTax,
+        roundingEnabled, roundingPlace, discountPercent, customNote, terms, projectOpt?.value, isLocked, isInitialLoad]);
+
+    useEffect(() => () => {
+        if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    }, []);
+
+    useEffect(() => {
+        const hasUnsavedWork = isDirty || hasUnpromotedDraft || autosaveStatus === "saving";
+        const handleBeforeUnload = (event) => {
+            if (!hasUnsavedWork) return;
+            event.preventDefault();
+            event.returnValue = "";
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [isDirty, hasUnpromotedDraft, autosaveStatus]);
 
     const createBatchPayloads = (payload) => {
         const batches = [];
@@ -1348,13 +1570,39 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         setSaveProgressText("");
         try {
             const payload = buildPayload();
+            let draftResponse = null;
+            if (autosaveTimerRef.current) {
+                clearTimeout(autosaveTimerRef.current);
+                autosaveTimerRef.current = null;
+            }
+            if (!quotationFile) {
+                try {
+                    if (autosavePromiseRef.current) {
+                        setSaveProgressText("Finishing autosave draft");
+                        draftResponse = await autosavePromiseRef.current;
+                    } else {
+                        setSaveProgressText("Saving latest draft");
+                        draftResponse = await performAutosaveDraft();
+                    }
+                } catch {
+                    draftResponse = null;
+                }
+            }
             const itemCount = countPayloadItems(payload);
             const shouldBatchSave = itemCount >= ESTIMATION_BATCH_SAVE_THRESHOLD;
             let res;
             let saveMode = "single";
             let batchCount = 0;
+            const currentSignature = payloadSignature(payload);
+            const promotableDraft = !quotationFile
+                && (draftResponse?.latestDraft || latestDraft)?.estimation
+                && currentSignature === lastDraftSignatureRef.current;
 
-            if (canPatchExistingEstimation(payload)) {
+            if (promotableDraft) {
+                saveMode = "promote";
+                setSaveProgressText("Promoting autosaved draft");
+                res = { data: await promoteDraftEstimationAPI(pid) };
+            } else if (canPatchExistingEstimation(payload)) {
                 saveMode = "patch";
                 res = await performPatchSaveEstimation(pid, payload);
             } else if (shouldBatchSave) {
@@ -1391,6 +1639,21 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             if (res.data?.quotationFileUrl) {
                 setExistingFileUrl(res.data.quotationFileUrl);
             }
+            setLatestDraft(res.data?.latestDraft || null);
+            setSaveHistory(res.data?.saveHistory || []);
+            setSavedTotals({
+                rawSubtotal: res.data?.computedSubtotal,
+                withMargin: res.data?.computedWithMargin,
+                discountAmount: res.data?.computedDiscountAmount,
+                taxableBase: res.data?.computedTaxableBase,
+                vatAmount: res.data?.computedVatAmount,
+                taxAmount: res.data?.computedTaxAmount,
+                grand: res.data?.computedGrandTotal,
+            });
+            setApprovalStatus(res.data?.approvalStatus || "DRAFT");
+            setEstimationStatus(res.data?.status || "DRAFT");
+            setVersion(res.data?.version || version);
+            setVersions(res.data?.history || []);
             if (Array.isArray(res.data?.components)) {
                 suppressDirtyRef.current = true;
                 const savedComponentQty = {};
@@ -1418,6 +1681,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             if (!silent) {
                 const message = saveMode === "batch"
                     ? `Estimation saved in ${batchCount} batches`
+                    : saveMode === "promote"
+                        ? "Autosaved draft saved officially"
                     : saveMode === "patch"
                         ? "Changed parts saved"
                         : "Estimation saved";
@@ -1427,6 +1692,8 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             setDirtyComponents(new Set());
             setForceFullSave(false);
             forceFullSaveRef.current = false;
+            lastDraftSignatureRef.current = "";
+            setAutosaveStatus("idle");
             return true;
         } catch (e) {
             toast.error(getErrorMessage(e, "Failed to save estimation"));
@@ -1461,6 +1728,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const handleSubmitForApproval = async () => {
         if (!projectOpt?.value || !estimationId) { toast.warn("Save estimation first."); return; }
+        if (isDirty || hasUnpromotedDraft || autosaveStatus === "saving") {
+            toast.warn("Save the latest estimation changes before submitting for approval.");
+            return;
+        }
         setSubmittingApproval(true);
         try {
             const res = await submitApprovalAPI(estimationId, {
@@ -1477,6 +1748,31 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         } finally {
             setSubmittingApproval(false);
         }
+    };
+
+    const requestLeavePage = (leaveAction) => {
+        if (isDirty || hasUnpromotedDraft || autosaveStatus === "saving") {
+            pendingNavigationRef.current = leaveAction;
+            setShowLeaveConfirmModal(true);
+            return;
+        }
+        leaveAction();
+    };
+
+    const confirmLeaveWithoutSaving = () => {
+        const action = pendingNavigationRef.current;
+        pendingNavigationRef.current = null;
+        setShowLeaveConfirmModal(false);
+        if (action) action();
+    };
+
+    const saveThenLeave = async () => {
+        const action = pendingNavigationRef.current;
+        const saved = await saveEstimation(false);
+        if (!saved) return;
+        pendingNavigationRef.current = null;
+        setShowLeaveConfirmModal(false);
+        if (action) action();
     };
 
     const handleApprove = async () => {
@@ -1886,7 +2182,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     <div className="bg-white shadow rounded p-3 mb-3 d-flex justify-content-between align-items-center">
                         <div className="d-flex align-items-center gap-3">
                             <div className="d-flex align-items-center mb-0">
-                                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                                <button type="button" className="btn btn-light me-3" onClick={() => requestLeavePage(() => navigate(-1))}><ArrowLeft size={18} /></button>
                                 <h4 className="mb-0">Project Estimation</h4>
                             </div>
                             <Badge bg={statusColor} className="fs-6">{approvalStatus}</Badge>
@@ -1895,18 +2191,28 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         <div className="d-flex gap-2">
                             {/* Action Buttons */}
                             {approvalStatus === "DRAFT" && !isLocked && (
-                                <Button
-                                    variant={isDirty ? "warning" : "outline-primary"}
-                                    onClick={() => {
-                                        if (isDirty) {
-                                            setShowSaveConfirmModal(true);
-                                        } else {
-                                            setShowApprovalModal(true);
-                                        }
-                                    }}
-                                >
-                                    {isDirty ? "⚠ Unsaved Changes – Submit for Approval" : "Submit for Approval"}
-                                </Button>
+                                <>
+                                    <Button
+                                        variant={(isDirty || hasUnpromotedDraft) ? "primary" : "outline-primary"}
+                                        onClick={() => saveEstimation(false)}
+                                        disabled={isSavingEstimation}
+                                    >
+                                        {isSavingEstimation ? (
+                                            <>
+                                                <Spinner as="span" animation="border" size="sm" className="me-2" />
+                                                Saving...
+                                            </>
+                                        ) : "Save"}
+                                    </Button>
+                                    {hasOfficialSavedContent && !isDirty && !hasUnpromotedDraft && autosaveStatus !== "saving" && (
+                                        <Button
+                                            variant="outline-primary"
+                                            onClick={() => setShowApprovalModal(true)}
+                                        >
+                                            Submit for Approval
+                                        </Button>
+                                    )}
+                                </>
                             )}
                             {canApprove && (
                                 <>
@@ -1930,6 +2236,45 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             )}
                         </div>
                     </div>
+
+                    {!isLocked && (
+                        <div className="bg-white shadow rounded p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <div className="fw-semibold">
+                                    {autosaveStatus === "saving"
+                                        ? "Autosaving latest draft..."
+                                        : autosaveStatus === "error"
+                                            ? "Autosave needs attention"
+                                            : hasUnpromotedDraft
+                                                ? "Autosaved draft available"
+                                                : isDirty
+                                                    ? "Unsaved changes"
+                                                    : "All official changes saved"}
+                                </div>
+                                <div className="small text-muted">
+                                    {autosaveStatus === "error"
+                                        ? autosaveError || "The latest draft could not be saved automatically."
+                                        : hasUnpromotedDraft
+                                            ? `Draft saved ${latestDraft?.savedAt ? new Date(latestDraft.savedAt).toLocaleString() : "recently"} by ${latestDraft?.savedBy || "system"}. Click Save to make it official.`
+                                            : isDirty
+                                                ? "Your latest edits will be autosaved as a recoverable draft."
+                                                : "Submit for approval is available after the current official save."}
+                                </div>
+                            </div>
+                            <div className="d-flex gap-2 align-items-center flex-wrap">
+                                {hasUnpromotedDraft && (
+                                    <>
+                                        <Button size="sm" variant="outline-secondary" onClick={handleRestoreLatestDraft}>
+                                            Restore Draft
+                                        </Button>
+                                        <Button size="sm" variant="outline-danger" onClick={handleDiscardLatestDraft}>
+                                            Discard Draft
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-white shadow rounded p-3 project-estimation-card">
                         <div className="d-flex align-items-center justify-content-between mb-3">
@@ -1958,7 +2303,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         size="sm"
                                         style={{ width: 250 }}
                                         disabled={isLocked}
-                                        onChange={(e) => setQuotationFile(e.target.files[0] || null)}
+                                        onChange={(e) => {
+                                            setQuotationFile(e.target.files[0] || null);
+                                            setIsDirty(true);
+                                        }}
                                     />
                                     {existingFileUrl && (
                                         <a href={existingFileUrl} target="_blank" rel="noopener noreferrer" className="small">
@@ -2370,20 +2718,6 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             <div className="small text-muted">Tip: Columns are components; rename or add more as needed.</div>
                             <div className="d-flex gap-2">
                                 {!isLocked && <span className="text-muted small me-2">Editing enabled</span>}
-                                {!isLocked && (
-                                    <Button
-                                        variant="primary"
-                                        onClick={() => saveEstimation(false)}
-                                        disabled={isSavingEstimation}
-                                    >
-                                        {isSavingEstimation ? (
-                                            <>
-                                                <Spinner as="span" animation="border" size="sm" className="me-2" />
-                                                Saving...
-                                            </>
-                                        ) : "Save"}
-                                    </Button>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -2449,6 +2783,52 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                 <td>{v.createdAt ? new Date(v.createdAt).toLocaleDateString() : '-'}</td>
                                             </tr>
                                         ))}
+                                    </tbody>
+                                </Table>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="bg-white shadow rounded p-3 mt-3">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <h6 className="mb-0">Save History</h6>
+                            <Badge bg="light" text="dark" className="border">
+                                {(saveHistory || []).length} event{(saveHistory || []).length === 1 ? "" : "s"}
+                            </Badge>
+                        </div>
+                        {(saveHistory || []).length === 0 ? (
+                            <div className="text-muted small">No save activity yet.</div>
+                        ) : (
+                            <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                                <Table size="sm" hover responsive className="mb-0 small align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Saved By</th>
+                                            <th>Date</th>
+                                            <th className="text-end">Columns</th>
+                                            <th className="text-end">Rows</th>
+                                            <th className="text-end">Products</th>
+                                            <th className="text-end">Manual</th>
+                                            <th className="text-end">Grand Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[...(saveHistory || [])].reverse().map((event, index) => {
+                                            const summary = event.summary || {};
+                                            return (
+                                                <tr key={`${event.timestamp || index}-${event.type || "save"}`}>
+                                                    <td><Badge bg={saveEventVariant(event.type)}>{formatSaveEventType(event.type)}</Badge></td>
+                                                    <td>{event.actor || "-"}</td>
+                                                    <td>{event.timestamp ? new Date(event.timestamp).toLocaleString() : "-"}</td>
+                                                    <td className="text-end">{summary.componentCount ?? "-"}</td>
+                                                    <td className="text-end">{summary.estimationLineCount ?? "-"}</td>
+                                                    <td className="text-end">{summary.productLineCount ?? "-"}</td>
+                                                    <td className="text-end">{summary.manualLineCount ?? "-"}</td>
+                                                    <td className="text-end">{summary.grandTotal != null ? formatMoney(summary.grandTotal) : "-"}</td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </Table>
                             </div>
@@ -2588,7 +2968,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                             width: 36, height: 36, borderRadius: '50%',
                             background: '#fef9c3', color: '#ca8a04', fontSize: 18
-                        }}>⚠</span>
+                        }}>!</span>
                         Unsaved Changes
                     </Modal.Title>
                 </Modal.Header>
@@ -2597,34 +2977,49 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         You have <strong>unsaved changes</strong> in this estimation.
                     </p>
                     <p className="text-muted small mb-0">
-                        Would you like to <strong>save your changes first</strong> before submitting for approval,
-                        or submit using the <strong>last saved version</strong>?
+                        Save the latest estimation first. Submit for approval will be available after the official save completes.
                     </p>
                 </Modal.Body>
-                <Modal.Footer className="border-0 pt-0 d-flex justify-content-between">
+                <Modal.Footer className="border-0 pt-0">
                     <Button variant="outline-secondary" onClick={() => setShowSaveConfirmModal(false)}>
                         Cancel
                     </Button>
+                    <Button
+                        variant="primary"
+                        onClick={async () => {
+                            setShowSaveConfirmModal(false);
+                            await saveEstimation(false);
+                        }}
+                        disabled={isSavingEstimation}
+                    >
+                        {isSavingEstimation ? "Saving..." : "Save"}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Leave Page Modal */}
+            <Modal show={showLeaveConfirmModal} onHide={() => setShowLeaveConfirmModal(false)} centered>
+                <Modal.Header closeButton className="border-0 pb-0">
+                    <Modal.Title>Unsaved Estimation Changes</Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="pt-2">
+                    <p className="mb-2">
+                        The latest estimation changes are not officially saved yet.
+                    </p>
+                    <p className="text-muted small mb-0">
+                        Draft autosave protects recovery, but approval and official history use the Save action.
+                    </p>
+                </Modal.Body>
+                <Modal.Footer className="border-0 pt-0 d-flex justify-content-between">
+                    <Button variant="outline-danger" onClick={confirmLeaveWithoutSaving}>
+                        Leave Without Saving
+                    </Button>
                     <div className="d-flex gap-2">
-                        <Button
-                            variant="outline-dark"
-                            onClick={() => {
-                                setShowSaveConfirmModal(false);
-                                setShowApprovalModal(true);
-                            }}
-                        >
-                            Submit Without Saving
+                        <Button variant="outline-secondary" onClick={() => setShowLeaveConfirmModal(false)}>
+                            Stay
                         </Button>
-                        <Button
-                            variant="primary"
-                            onClick={async () => {
-                                setShowSaveConfirmModal(false);
-                                const saved = await saveEstimation(false);
-                                if (saved) setShowApprovalModal(true);
-                            }}
-                            disabled={isSavingEstimation}
-                        >
-                            {isSavingEstimation ? "Saving..." : "Save & Submit"}
+                        <Button variant="primary" onClick={saveThenLeave} disabled={isSavingEstimation}>
+                            {isSavingEstimation ? "Saving..." : "Save and Leave"}
                         </Button>
                     </div>
                 </Modal.Footer>

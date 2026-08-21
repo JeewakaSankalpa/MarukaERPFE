@@ -96,3 +96,4 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 2026-08-01 by Codex: added Customer Portal and Supplier Portal project interface guidance.
 2026-08-20 by Codex: refined Project Estimation component totals into compact per-component operational blocks with a summary strip and grouped pricing/logistics controls; avoid returning this section to a wide scroll table.
+2026-08-21 by Codex: added Project Estimation autosave/status guidance; keep draft recovery, official save, submit gating, and save history visible near the top and summarized again near workflow history.
