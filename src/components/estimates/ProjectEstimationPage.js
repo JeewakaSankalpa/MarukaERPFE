@@ -1,4 +1,4 @@
-import { ArrowLeft, Maximize2, Minimize2, Rows3, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Eye, Maximize2, Minimize2, Plus, RefreshCw, Rows3, RotateCcw, Save, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 // src/components/Projects/ProjectEstimationPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container, Row, Col, Button, Form, Table, Badge, Modal, Card, Spinner } from "react-bootstrap";
@@ -16,6 +16,8 @@ import { CustomerForm } from "../Customer/CustomerCreate";
 /* ------------ API helpers ------------ */
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
 const listTemplates = async () => (await api.get(`/component-templates`)).data;
+const createTemplateAPI = async (payload) => (await api.post(`/component-templates`, payload)).data;
+const deleteTemplateAPI = async (id) => (await api.delete(`/component-templates/${id}`)).data;
 const listProductsAPI = async () => (await api.get(`/products`, { params: { page: 0, size: 1000, sort: "name,asc" } })).data?.content ?? [];
 const searchProductsAPI = async (q) => (await api.get(`/products`, { params: { q, page: 0, size: 50, sort: "name,asc" } })).data?.content ?? [];
 const listAvailableAPI = async () => (await api.get(`/inventory/available-quantities`)).data;
@@ -193,6 +195,18 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     /* ------------ page/model state ------------ */
     const [projectOpt, setProjectOpt] = useState(null); // {value:id,label:name}
     const [templates, setTemplates] = useState([]);
+    const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+    const [templatesError, setTemplatesError] = useState("");
+    const [showTemplateSaveModal, setShowTemplateSaveModal] = useState(false);
+    const [templateSaveForm, setTemplateSaveForm] = useState({
+        componentName: "",
+        name: "",
+        description: "",
+    });
+    const [savingTemplate, setSavingTemplate] = useState(false);
+    const [applyingTemplateId, setApplyingTemplateId] = useState("");
+    const [deletingTemplateId, setDeletingTemplateId] = useState("");
+    const [previewTemplate, setPreviewTemplate] = useState(null);
 
     const [estimationId, setEstimationId] = useState(null); // NEW: to store actual DB ID
     const [components, setComponents] = useState(["Component A"]);
@@ -355,7 +369,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     listProjectsAPI().catch(() => []),
                     listProductsAPI().catch(() => []),
                     listAvailableAPI().catch(() => []),
-                    listTemplates().catch(() => []),
+                    listTemplates().catch((error) => {
+                        setTemplatesError(getErrorMessage(error, "Saved templates could not be loaded."));
+                        return [];
+                    }),
                     // Fetch configured settings / libraries
                     api.get('/settings').then(r => r.data).catch(() => []), // settings
                     api.get('/quote-library').then(r => r.data).catch(() => []), // libs
@@ -366,6 +383,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setProducts(prods || []);
                 setAvailable(avails || []);
                 setTemplates(tpls || []);
+                if ((tpls || []).length > 0) setTemplatesError("");
                 setEmployees(emps || []); // Restored
                 setEmployees(emps || []); // Restored
 
@@ -1218,6 +1236,226 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         if (val === "" || val == null) return null;
         const n = Number(val);
         return isNaN(n) ? null : String(val);
+    };
+
+    const getUniqueComponentName = (preferredName, existingNames = components) => {
+        const base = String(preferredName || "").trim() || "Component";
+        const used = new Set(existingNames);
+        if (!used.has(base)) return base;
+        let index = 2;
+        let candidate = `${base} ${index}`;
+        while (used.has(candidate)) {
+            index += 1;
+            candidate = `${base} ${index}`;
+        }
+        return candidate;
+    };
+
+    const getTemplateLineCount = (componentName) => {
+        if (!componentName) return 0;
+        return mergeRowsByItem(rows, components).filter((row) => {
+            const quantity = Number((row.quantities || {})[componentName] || 0);
+            const hasProduct = !!row.productId;
+            const hasManualDescription = row.lineType === LINE_TYPES.MANUAL && String(row.description || "").trim().length > 0;
+            return quantity > 0 && (hasProduct || hasManualDescription);
+        }).length;
+    };
+
+    const buildTemplatePayload = ({ componentName, name, description }) => {
+        const rowsForTemplate = mergeRowsByItem(rows, components);
+        const items = rowsForTemplate.flatMap((row) => {
+            const quantity = Number((row.quantities || {})[componentName] || 0);
+            const isManual = row.lineType === LINE_TYPES.MANUAL;
+            const hasManualDescription = String(row.description || "").trim().length > 0;
+            if (quantity <= 0 || (!row.productId && !(isManual && hasManualDescription))) return [];
+
+            return [{
+                lineType: row.productId ? LINE_TYPES.PRODUCT : LINE_TYPES.MANUAL,
+                productId: row.productId || null,
+                productNameSnapshot: row.productId
+                    ? (productById[row.productId]?.name || row.productOption?.label || row.description || row.productId)
+                    : null,
+                description: row.productId
+                    ? (productById[row.productId]?.name || row.productOption?.label || row.description || row.productId)
+                    : row.description.trim(),
+                unit: row.unit || "",
+                quantity: toBigDec(quantity),
+                estUnitCost: toBigDec(row.estUnitCost),
+            }];
+        });
+
+        return {
+            name: String(name || "").trim(),
+            description: String(description || "").trim(),
+            componentQuantity: toBigDec(compQty[componentName] ?? "1"),
+            marginPercent: toBigDec(compMargin[componentName]),
+            overheadPercent: toBigDec(compOverhead[componentName]),
+            deliveryCost: toBigDec(compDelivery[componentName]),
+            deliveryTaxable: !!compDeliveryTaxable[componentName],
+            freightCost: toBigDec(compFreight[componentName]),
+            freightTaxable: !!compFreightTaxable[componentName],
+            items,
+        };
+    };
+
+    const openTemplateSaveModal = (componentName = components[0]) => {
+        const selectedName = componentName || components[0] || "";
+        setTemplateSaveForm({
+            componentName: selectedName,
+            name: selectedName ? `${selectedName} template` : "",
+            description: "",
+        });
+        setShowTemplateSaveModal(true);
+    };
+
+    const refreshTemplates = async ({ silent = false } = {}) => {
+        setIsLoadingTemplates(true);
+        setTemplatesError("");
+        try {
+            const nextTemplates = await listTemplates();
+            setTemplates(nextTemplates || []);
+            if (!silent) toast.success("Templates refreshed");
+        } catch (error) {
+            const message = getErrorMessage(error, "Saved templates could not be loaded.");
+            setTemplatesError(message);
+            if (!silent) toast.error(message);
+        } finally {
+            setIsLoadingTemplates(false);
+        }
+    };
+
+    const saveComponentTemplate = async () => {
+        if (isLocked) {
+            toast.warn("Locked estimations cannot create templates.");
+            return;
+        }
+        const payload = buildTemplatePayload(templateSaveForm);
+        if (!payload.name) {
+            toast.warn("Template name is required.");
+            return;
+        }
+        if (!payload.items.length) {
+            toast.warn("Select a component column with at least one product or expense quantity.");
+            return;
+        }
+
+        setSavingTemplate(true);
+        try {
+            const saved = await createTemplateAPI(payload);
+            setTemplates(current => [saved, ...current.filter(t => t.id !== saved.id)]);
+            setShowTemplateSaveModal(false);
+            toast.success("Template saved");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Template could not be saved."));
+        } finally {
+            setSavingTemplate(false);
+        }
+    };
+
+    const buildRowFromTemplateItem = (item, componentName, quantity) => {
+        const isProductLine = !!item.productId && (item.lineType || LINE_TYPES.PRODUCT) !== LINE_TYPES.MANUAL;
+        const product = item.productId ? productById[item.productId] : null;
+        const description = item.description || item.productNameSnapshot || "";
+        return {
+            rowKey: isProductLine
+                ? `product:${item.productId}`
+                : createManualRowId(),
+            lineType: isProductLine ? LINE_TYPES.PRODUCT : LINE_TYPES.MANUAL,
+            productId: isProductLine ? item.productId : "",
+            productOption: isProductLine
+                ? {
+                    value: item.productId,
+                    label: product ? buildProductLabel(product) : (item.productNameSnapshot || item.productId),
+                    product,
+                }
+                : null,
+            description,
+            unit: item.unit || "",
+            estUnitCost: item.estUnitCost ?? "",
+            suggestedCost: product ? deriveSuggestedCost(product) : undefined,
+            storeAvail: isProductLine ? availMap[item.productId] : undefined,
+            quantities: Object.fromEntries([...components, componentName].map(name => [name, name === componentName ? quantity : 0])),
+        };
+    };
+
+    const applyTemplateAsColumn = (template) => {
+        if (isLocked) {
+            toast.warn("Locked estimations cannot be changed.");
+            return;
+        }
+        const items = template?.items || [];
+        if (!items.length) {
+            toast.warn("This template has no saved items.");
+            return;
+        }
+
+        const nextComponentName = getUniqueComponentName(template.name || "Template Column");
+        setApplyingTemplateId(template.id || "");
+        requireFullSave();
+
+        setComponents(cols => [...cols, nextComponentName]);
+        setCompQty(current => ({ ...current, [nextComponentName]: String(template.componentQuantity ?? "1") }));
+        setCompMargin(current => ({ ...current, [nextComponentName]: template.marginPercent != null ? String(template.marginPercent) : "" }));
+        setCompOverhead(current => ({ ...current, [nextComponentName]: template.overheadPercent != null ? String(template.overheadPercent) : "" }));
+        setCompDelivery(current => ({ ...current, [nextComponentName]: template.deliveryCost != null ? String(template.deliveryCost) : "" }));
+        setCompDeliveryTaxable(current => ({ ...current, [nextComponentName]: !!template.deliveryTaxable }));
+        setCompFreight(current => ({ ...current, [nextComponentName]: template.freightCost != null ? String(template.freightCost) : "" }));
+        setCompFreightTaxable(current => ({ ...current, [nextComponentName]: !!template.freightTaxable }));
+
+        setRows(currentRows => {
+            const nextRows = currentRows.map(row => ({
+                ...row,
+                quantities: { ...(row.quantities || {}), [nextComponentName]: (row.quantities || {})[nextComponentName] ?? 0 },
+            }));
+
+            items.forEach((item) => {
+                const quantity = Number(item.quantity || 0);
+                if (quantity <= 0) return;
+                const candidateRow = buildRowFromTemplateItem(item, nextComponentName, quantity);
+                const candidateKey = duplicateRowKey(candidateRow);
+                const existingIndex = nextRows.findIndex(row => duplicateRowKey(row) === candidateKey);
+
+                if (existingIndex >= 0) {
+                    const existing = nextRows[existingIndex];
+                    const quantities = { ...(existing.quantities || {}) };
+                    quantities[nextComponentName] = Number(quantities[nextComponentName] || 0) + quantity;
+                    nextRows[existingIndex] = {
+                        ...existing,
+                        unit: existing.unit || candidateRow.unit,
+                        estUnitCost: existing.estUnitCost !== "" && existing.estUnitCost != null
+                            ? existing.estUnitCost
+                            : candidateRow.estUnitCost,
+                        quantities,
+                    };
+                    return;
+                }
+
+                nextRows.push(candidateRow);
+            });
+
+            return nextRows;
+        });
+
+        setApplyingTemplateId("");
+        toast.success(`Inserted "${template.name}" as ${nextComponentName}`);
+    };
+
+    const deleteTemplate = async (template) => {
+        if (!template?.id) return;
+        const confirmed = window.confirm(`Delete template "${template.name}"? Existing estimations will not change.`);
+        if (!confirmed) return;
+
+        setDeletingTemplateId(template.id);
+        try {
+            await deleteTemplateAPI(template.id);
+            setTemplates(current => current.filter(t => t.id !== template.id));
+            if (previewTemplate?.id === template.id) setPreviewTemplate(null);
+            toast.success("Template deleted");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Template could not be deleted."));
+        } finally {
+            setDeletingTemplateId("");
+        }
     };
 
     const buildPayload = () => {
@@ -2324,7 +2562,22 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                         Clear Estimation
                                     </Button>
                                 )}
-                                {!isLocked && <Button variant="outline-success" onClick={addComponent}>+ Column</Button>}
+                                {!isLocked && (
+                                    <>
+                                        <Button variant="outline-success" onClick={addComponent}>
+                                            <Plus size={16} className="me-1" />
+                                            Column
+                                        </Button>
+                                        <Button
+                                            variant="outline-primary"
+                                            onClick={() => openTemplateSaveModal()}
+                                            disabled={components.length === 0 || rows.length === 0}
+                                        >
+                                            <Save size={16} className="me-1" />
+                                            Save Template
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -2352,7 +2605,21 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                 {compCalcs.map(cc => (
                                     <section className="estimation-component-total-block" key={cc.name}>
                                         <div className="estimation-component-total-header">
-                                            <div className="estimation-component-total-name">{cc.name}</div>
+                                            <div className="estimation-component-total-name">
+                                                <span>{cc.name}</span>
+                                                {!isLocked && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline-primary"
+                                                        className="mt-2"
+                                                        onClick={() => openTemplateSaveModal(cc.name)}
+                                                        disabled={getTemplateLineCount(cc.name) === 0}
+                                                    >
+                                                        <Save size={14} className="me-1" />
+                                                        Save as template
+                                                    </Button>
+                                                )}
+                                            </div>
                                             <div className="estimation-component-total-summary">
                                                 <div className="estimation-component-total-summary-item">
                                                     <span>Per Set</span>
@@ -2835,28 +3102,247 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         )}
                     </div>
 
-                    <div className="bg-white shadow rounded p-3 mt-3">
-                        <h6 className="mb-2">Templates</h6>
-                        {templates.length === 0 ? (
-                            <div className="text-muted">No templates yet</div>
-                        ) : (
-                            <Table size="sm" hover responsive>
-                                <tbody>
-                                    {templates.map(t => (
-                                        <tr key={t.id}>
-                                            <td>{t.name}</td>
-                                            <td className="text-end text-muted">{(t.items || []).length} items</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        )}
-                        <div className="small text-muted">
-                            Template “insert as column” can be added later if you want that workflow.
+                    <div className="bg-white shadow rounded p-3 mt-3 estimation-template-panel">
+                        <div className="estimation-template-panel-header">
+                            <div>
+                                <h6 className="mb-0">Templates</h6>
+                                <div className="small text-muted">Save a component column and insert it into another estimation.</div>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="outline-secondary"
+                                onClick={() => refreshTemplates()}
+                                disabled={isLoadingTemplates}
+                                aria-label="Refresh saved templates"
+                                title="Refresh saved templates"
+                            >
+                                <RefreshCw size={15} />
+                            </Button>
                         </div>
+
+                        {templatesError && (
+                            <div className="alert alert-warning py-2 small mb-2" role="alert">
+                                {templatesError}
+                            </div>
+                        )}
+
+                        {isLoadingTemplates ? (
+                            <div className="text-muted small py-2" aria-live="polite">Checking saved templates...</div>
+                        ) : templates.length === 0 ? (
+                            <div className="estimation-template-empty">
+                                <div className="fw-semibold">No templates saved.</div>
+                                <div className="small text-muted">Save a filled component column to reuse it later.</div>
+                                {!isLocked && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline-primary"
+                                        className="mt-2"
+                                        onClick={() => openTemplateSaveModal()}
+                                        disabled={components.length === 0 || rows.length === 0}
+                                    >
+                                        <Save size={14} className="me-1" />
+                                        Save first template
+                                    </Button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="estimation-template-list">
+                                {templates.map(t => (
+                                    <div className="estimation-template-row" key={t.id || t.name}>
+                                        <div className="estimation-template-row-main">
+                                            <div className="fw-semibold">{t.name}</div>
+                                            <div className="small text-muted">
+                                                {(t.items || []).length} item{(t.items || []).length === 1 ? "" : "s"}
+                                                {t.description ? ` - ${t.description}` : ""}
+                                            </div>
+                                        </div>
+                                        <div className="estimation-template-row-actions">
+                                            <Button
+                                                size="sm"
+                                                variant="outline-secondary"
+                                                onClick={() => setPreviewTemplate(t)}
+                                                aria-label={`Preview ${t.name}`}
+                                                title="Preview template"
+                                            >
+                                                <Eye size={14} />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline-primary"
+                                                onClick={() => applyTemplateAsColumn(t)}
+                                                disabled={isLocked || applyingTemplateId === t.id}
+                                            >
+                                                <Plus size={14} className="me-1" />
+                                                Insert
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline-danger"
+                                                onClick={() => deleteTemplate(t)}
+                                                disabled={deletingTemplateId === t.id}
+                                                aria-label={`Delete ${t.name}`}
+                                                title="Delete template"
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </Col>
             </Row>
+
+            <Modal show={showTemplateSaveModal} onHide={() => !savingTemplate && setShowTemplateSaveModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Save Component Template</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Component column</Form.Label>
+                        <Form.Select
+                            value={templateSaveForm.componentName}
+                            onChange={(event) => {
+                                const componentName = event.target.value;
+                                setTemplateSaveForm(current => ({
+                                    ...current,
+                                    componentName,
+                                    name: current.name || `${componentName} template`,
+                                }));
+                            }}
+                            disabled={savingTemplate}
+                        >
+                            {components.map(componentName => (
+                                <option key={componentName} value={componentName}>
+                                    {componentName} - {getTemplateLineCount(componentName)} saved line{getTemplateLineCount(componentName) === 1 ? "" : "s"}
+                                </option>
+                            ))}
+                        </Form.Select>
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
+                        <Form.Label>Template name</Form.Label>
+                        <Form.Control
+                            value={templateSaveForm.name}
+                            onChange={(event) => setTemplateSaveForm(current => ({ ...current, name: event.target.value }))}
+                            disabled={savingTemplate}
+                            placeholder="Control panel starter set"
+                            autoFocus
+                        />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
+                        <Form.Label>Description</Form.Label>
+                        <Form.Control
+                            as="textarea"
+                            rows={2}
+                            value={templateSaveForm.description}
+                            onChange={(event) => setTemplateSaveForm(current => ({ ...current, description: event.target.value }))}
+                            disabled={savingTemplate}
+                            placeholder="When to use this template"
+                        />
+                    </Form.Group>
+
+                    <div className="estimation-template-save-summary">
+                        <div>
+                            <span>Lines saved</span>
+                            <strong>{getTemplateLineCount(templateSaveForm.componentName)}</strong>
+                        </div>
+                        <div>
+                            <span>Sets</span>
+                            <strong>{compQty[templateSaveForm.componentName] || "1"}</strong>
+                        </div>
+                        <div>
+                            <span>Margin</span>
+                            <strong>{compMargin[templateSaveForm.componentName] || "0"}%</strong>
+                        </div>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="outline-secondary" onClick={() => setShowTemplateSaveModal(false)} disabled={savingTemplate}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={saveComponentTemplate}
+                        disabled={savingTemplate || getTemplateLineCount(templateSaveForm.componentName) === 0}
+                    >
+                        {savingTemplate ? (
+                            <>
+                                <Spinner size="sm" className="me-2" />
+                                Saving template
+                            </>
+                        ) : (
+                            <>
+                                <Save size={16} className="me-1" />
+                                Save template
+                            </>
+                        )}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={!!previewTemplate} onHide={() => setPreviewTemplate(null)} centered size="lg">
+                <Modal.Header closeButton>
+                    <Modal.Title>{previewTemplate?.name || "Template Preview"}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {previewTemplate?.description && (
+                        <p className="text-muted mb-3">{previewTemplate.description}</p>
+                    )}
+                    <div className="estimation-template-save-summary mb-3">
+                        <div>
+                            <span>Items</span>
+                            <strong>{(previewTemplate?.items || []).length}</strong>
+                        </div>
+                        <div>
+                            <span>Sets</span>
+                            <strong>{previewTemplate?.componentQuantity ?? "1"}</strong>
+                        </div>
+                        <div>
+                            <span>Margin</span>
+                            <strong>{previewTemplate?.marginPercent ?? "0"}%</strong>
+                        </div>
+                    </div>
+                    <Table size="sm" responsive hover>
+                        <thead>
+                            <tr>
+                                <th>Product / Description</th>
+                                <th>Unit</th>
+                                <th className="text-end">Qty</th>
+                                <th className="text-end">Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(previewTemplate?.items || []).map((item, index) => (
+                                <tr key={`${item.productId || item.description || "line"}-${index}`}>
+                                    <td>{item.productNameSnapshot || item.description || item.productId || "Untitled line"}</td>
+                                    <td>{item.unit || "-"}</td>
+                                    <td className="text-end">{item.quantity ?? 0}</td>
+                                    <td className="text-end">{formatMoney(item.estUnitCost || 0)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="outline-secondary" onClick={() => setPreviewTemplate(null)}>
+                        Close
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            applyTemplateAsColumn(previewTemplate);
+                            setPreviewTemplate(null);
+                        }}
+                        disabled={isLocked || !previewTemplate}
+                    >
+                        <Plus size={16} className="me-1" />
+                        Insert as column
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <Modal
                 show={showEstimationMatrixPopup}
