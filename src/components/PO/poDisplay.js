@@ -61,13 +61,24 @@ export const formatPurchaseForText = (po = {}) => {
     return sources.map(formatSourceRef).filter(Boolean).join(", ") || "Main Store";
 };
 
-export const projectCategoryKey = (po = {}) => {
-    const sources = getPurchaseForSources(po);
-    if (sources.length === 0) return "Main Store";
+export const getGrnProgress = (po = {}) => {
+    if (po.status === "FULLY_RECEIVED") {
+        return { value: "FULLY_RECEIVED", label: "Full GRN", variant: "success" };
+    }
+    if (po.status === "PARTIALLY_RECEIVED") {
+        return { value: "PARTIALLY_RECEIVED", label: "Partial GRN", variant: "info" };
+    }
 
-    const refs = sources
-        .map(source => clean(source.jobNumber) || clean(source.inquiryNumber) || clean(source.projectId))
-        .filter(Boolean);
+    const items = po.items || [];
+    const receivedQty = items.reduce((sum, item) => sum + Number(item.receivedQty || 0), 0);
+    const orderedQty = items.reduce((sum, item) => sum + Number(item.orderedQty || 0), 0);
 
-    return refs.length > 0 ? refs.join(", ") : "Main Store";
+    if (orderedQty > 0 && receivedQty >= orderedQty) {
+        return { value: "FULLY_RECEIVED", label: "Full GRN", variant: "success" };
+    }
+    if (receivedQty > 0) {
+        return { value: "PARTIALLY_RECEIVED", label: "Partial GRN", variant: "info" };
+    }
+
+    return { value: "NOT_RECEIVED", label: "No GRN", variant: "secondary" };
 };
