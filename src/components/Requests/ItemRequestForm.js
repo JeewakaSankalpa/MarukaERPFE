@@ -48,7 +48,7 @@ const listDepartments = async () => {
 
 const listActiveProjects = async () => {
     try {
-        const res = await api.get(`/projects?${qp({ status: "ACTIVE", page: 0, size: 1000, sort: "projectName,asc" })}`);
+        const res = await api.get(`/projects?${qp({ incomplete: true, page: 0, size: 1000, sort: "projectName,asc" })}`);
         return res.data?.content || [];
     } catch {
         const res = await api.get(`/projects?${qp({ page: 0, size: 1000, sort: "projectName,asc" })}`);
@@ -56,6 +56,8 @@ const listActiveProjects = async () => {
         return (res.data?.content || []).filter(project => !closed.has(String(project.status || "").toUpperCase()));
     }
 };
+
+const getProject = async (projectId) => (await api.get(`/projects/${projectId}`)).data;
 
 const emptyProductRow = (product) => ({
     productId: product.id,
@@ -99,6 +101,42 @@ const mapRequestItems = (items = []) => {
         componentNames: componentNames.length ? componentNames : [GENERAL_COMPONENT],
         mappedRows
     };
+};
+
+const mergeComponentNames = (...groups) => {
+    const names = [];
+    groups.flat().filter(Boolean).forEach(name => {
+        if (name !== GENERAL_COMPONENT && !names.includes(name)) names.push(name);
+    });
+    if (groups.flat().includes(GENERAL_COMPONENT) && !names.includes(GENERAL_COMPONENT)) {
+        names.push(GENERAL_COMPONENT);
+    }
+    return names.length ? names : [GENERAL_COMPONENT];
+};
+
+const overlayRequestItemsOnRows = (baseRows = [], mappedRows = []) => {
+    const rowMap = new Map(baseRows.map(row => [row.productId, row]));
+    mappedRows.forEach(draftRow => {
+        const current = rowMap.get(draftRow.productId);
+        rowMap.set(draftRow.productId, {
+            ...(current || {}),
+            ...draftRow,
+            estimatedQuantities: {
+                ...(current?.estimatedQuantities || {}),
+                ...(draftRow.estimatedQuantities || {})
+            },
+            quantities: {
+                ...(current?.quantities || {}),
+                ...(draftRow.quantities || {})
+            },
+            selectedComponents: {
+                ...(current?.selectedComponents || {}),
+                ...(draftRow.selectedComponents || {})
+            },
+            note: draftRow.note || current?.note || ""
+        });
+    });
+    return [...rowMap.values()];
 };
 
 export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProjectId }) {
@@ -147,12 +185,19 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         (async () => {
             try {
                 const [deps, projs] = await Promise.all([listDepartments(), listActiveProjects()]);
+                let nextProjects = projs;
+                if (urlProjectId && !projs.some(project => project.id === urlProjectId)) {
+                    try {
+                        const selectedProject = await getProject(urlProjectId);
+                        nextProjects = selectedProject ? [selectedProject, ...projs] : projs;
+                    } catch {
+                        nextProjects = [{ id: urlProjectId, projectName: urlProjectId }, ...projs];
+                    }
+                }
                 setDepartments(deps);
-                setProjects(projs);
+                setProjects(nextProjects);
                 if (urlProjectId) {
                     setProjectId(urlProjectId);
-                    const engineering = deps.find(dep => dep.name === "Engineering");
-                    if (engineering) setDepartmentId(engineering.id);
                 }
             } catch {
                 toast.error("Failed to load departments or projects");
@@ -174,7 +219,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 setComment(ir.comment || "");
 
                 const mapped = mapRequestItems(ir.items);
-                setComponents(mapped.componentNames);
+                setComponents(mergeComponentNames(mapped.componentNames));
                 setActiveComponent(mapped.componentNames[0]);
                 setRows(mapped.mappedRows);
                 setComponentHistory({});
@@ -231,8 +276,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                     return;
                 }
 
-                const names = estimationComponents.map((component, index) =>
-                    component.name?.trim() || `Component ${index + 1}`);
+                const names = mergeComponentNames(estimationComponents.map((component, index) =>
+                    component.name?.trim() || `Component ${index + 1}`), [GENERAL_COMPONENT]);
                 let history = {};
                 if (estimation.id) {
                     try {
@@ -384,13 +429,13 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         setProjectId(draft.projectId || "");
         setSourceEstimationId(draft.sourceEstimationId || null);
         setComment(draft.comment || "");
-        setComponents(previous => Array.from(new Set([...previous, ...mapped.componentNames])));
-        setRows(mapped.mappedRows.map(row => ({
+        setComponents(previous => mergeComponentNames(previous, mapped.componentNames));
+        setRows(previous => overlayRequestItemsOnRows(previous, mapped.mappedRows.map(row => ({
             ...row,
             estimatedQuantities: estimatesByProduct.get(row.productId) || {}
-        })));
+        }))));
         setActiveComponent(
-            mapped.componentNames.includes(selectedComponent) ? selectedComponent : mapped.componentNames[0]
+            mergeComponentNames(components, mapped.componentNames).includes(selectedComponent) ? selectedComponent : mapped.componentNames[0]
         );
         setValidated(false);
         toast.success(`${draft.irNumber} loaded`);
@@ -504,11 +549,19 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
     const saveDraft = async ({ quiet = false } = {}) => {
         if (!validateTarget()) return null;
+        const componentItems = buildItems([activeComponent]);
+        if (!componentItems.length) {
+            toast.warn(`Select at least one product for ${activeComponent}`);
+            return null;
+        }
         setIsSaving(true);
         try {
             const response = routeId
-                ? await api.put(`/item-requests/${routeId}`, buildPayload())
-                : await api.post("/item-requests", buildPayload());
+                ? await api.put(`/item-requests/${routeId}`, buildPayload({ componentNames: [activeComponent] }))
+                : await api.post("/item-requests", buildPayload({ componentNames: [activeComponent] }));
+            const mapped = mapRequestItems(response.data.items);
+            setComponents(previous => mergeComponentNames(previous, mapped.componentNames));
+            setRows(previous => overlayRequestItemsOnRows(previous, mapped.mappedRows));
             if (inlineDraftId && draftOverviewRef.current) {
                 restoreDraftOverview(response.data);
             } else {
@@ -902,7 +955,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                     {isEditable && (
                         <div className="d-flex justify-content-between align-items-center gap-2 mt-4 flex-wrap">
                             <div className="small text-muted">
-                                Saving keeps the unsubmitted components as a draft. Submission sends only the active component.
+                                Saving or submitting applies only to the active component.
                             </div>
                             <div className="d-flex gap-2">
                                 <Button variant="outline-primary" onClick={() => saveDraft()} disabled={isSaving || isSubmitting}>
