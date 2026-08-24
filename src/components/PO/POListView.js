@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -18,10 +18,12 @@ const getSupplier = async (id) => (await api.get(`/suppliers/${id}`)).data;
 
 export default function POListView({ onOpenGRN }) {
     const navigate = useNavigate();
-    const [q, setQ] = useState(""); const [status, setStatus] = useState("");
-    const [projectNumber, setProjectNumber] = useState("");
-    const [grnStatus, setGrnStatus] = useState("");
-    const [page, setPage] = useState(0); const [size] = useState(10);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const pageFromUrl = Math.max(0, Number.parseInt(searchParams.get("page") || "1", 10) - 1 || 0);
+    const [q, setQ] = useState(searchParams.get("q") || ""); const [status, setStatus] = useState(searchParams.get("status") || "");
+    const [projectNumber, setProjectNumber] = useState(searchParams.get("projectNumber") || "");
+    const [grnStatus, setGrnStatus] = useState(searchParams.get("grnStatus") || "");
+    const [page, setPage] = useState(pageFromUrl); const [size] = useState(10);
     const [data, setData] = useState({ content: [], totalPages: 0 });
 
     // ETA State
@@ -36,8 +38,30 @@ export default function POListView({ onOpenGRN }) {
         try { setData(await listPOs({ q, status, projectNumber, grnStatus, page, size })); }
         catch { toast.error("Failed to load POs"); }
     };
+
+    useEffect(() => {
+        const nextParams = new URLSearchParams();
+        if (page > 0) nextParams.set("page", String(page + 1));
+        if (q.trim()) nextParams.set("q", q.trim());
+        if (status) nextParams.set("status", status);
+        if (projectNumber.trim()) nextParams.set("projectNumber", projectNumber.trim());
+        if (grnStatus) nextParams.set("grnStatus", grnStatus);
+        setSearchParams(nextParams, { replace: true });
+    }, [page, q, status, projectNumber, grnStatus, setSearchParams]);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { load(); }, [page, status, q, projectNumber, grnStatus]);
+
+    const getListReturnPath = () => {
+        const params = new URLSearchParams();
+        if (page > 0) params.set("page", String(page + 1));
+        if (q.trim()) params.set("q", q.trim());
+        if (status) params.set("status", status);
+        if (projectNumber.trim()) params.set("projectNumber", projectNumber.trim());
+        if (grnStatus) params.set("grnStatus", grnStatus);
+        const query = params.toString();
+        return query ? `/pos?${query}` : "/pos";
+    };
 
     const openSendModal = async (po) => {
         setSendFor(po.id);
@@ -111,7 +135,7 @@ export default function POListView({ onOpenGRN }) {
                             onChange={e => { setProjectNumber(e.target.value); setPage(0); }}
                             style={{ maxWidth: 210 }}
                         />
-                        <Form.Control placeholder="Search PO# / Supplier" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 260 }} />
+                        <Form.Control placeholder="Search PO# / Supplier" value={q} onChange={e => { setQ(e.target.value); setPage(0); }} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>
                 </div>
@@ -170,7 +194,13 @@ export default function POListView({ onOpenGRN }) {
                                     </td>
                                     <td>{po.etaDate || "-"}</td>
                                     <td className="d-flex gap-1 flex-wrap">
-                                        <Button size="sm" variant="info" onClick={() => navigate(`/pos/${po.id}`)}>View</Button>
+                                        <Button
+                                            size="sm"
+                                            variant="info"
+                                            onClick={() => navigate(`/pos/${po.id}`, { state: { from: getListReturnPath() } })}
+                                        >
+                                            View
+                                        </Button>
                                         <Button
                                             size="sm"
                                             variant="outline-primary"

@@ -1,7 +1,7 @@
 import { ArrowLeft, Paperclip, RotateCcw, Upload } from 'lucide-react';
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { Container, Row, Col, Button, Table, Badge, Modal, Form } from "react-bootstrap";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
@@ -40,7 +40,9 @@ const uploadQuotationAttachmentsAPI = async (id, files) => {
 export default function PurchaseOrderDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { employeeId, role } = useAuth();
+    const backToListPath = location.state?.from || "/pos";
 
     const [po, setPo] = useState(null);
     const [employees, setEmployees] = useState([]);
@@ -370,7 +372,7 @@ export default function PurchaseOrderDetails() {
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <div className="d-flex gap-2 align-items-center">
                     <button type="button" className="btn btn-light me-1" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                    <Button variant="outline-secondary" onClick={() => navigate("/pos")}>&larr; Back to List</Button>
+                    <Button variant="outline-secondary" onClick={() => navigate(backToListPath)}>&larr; Back to List</Button>
                     <Button
                         variant="info"
                         onClick={() => navigate(`/pos/${id}/print`)}
