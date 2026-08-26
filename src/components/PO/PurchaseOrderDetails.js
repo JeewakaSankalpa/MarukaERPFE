@@ -11,6 +11,16 @@ import { getPurchaseForSources, formatSourceRef } from "./poDisplay";
 
 /* ========== API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
+const listGRNsForPO = async (po) => {
+    if (!po?.id && !po?.poNumber) return [];
+    const q = po.poNumber || po.id;
+    const page = (await api.get(`/grns`, {
+        params: { q, page: 0, size: 1000, sort: "createdAt,desc" }
+    })).data;
+    return (page?.content || []).filter(grn =>
+        (po.id && grn.poId === po.id) || (po.poNumber && grn.poNumber === po.poNumber)
+    );
+};
 const listEmployeesAPI = async () => (await api.get(`/employee/all`)).data ?? [];
 const submitApprovalAPI = async (id, payload) => (await api.post(`/pos/${id}/submit-approval`, payload)).data;
 const approveAPI = async (id, payload) => (await api.post(`/pos/${id}/approve`, payload)).data;
@@ -36,6 +46,37 @@ const uploadQuotationAttachmentsAPI = async (id, files) => {
         headers: { "Content-Type": "multipart/form-data" },
     })).data;
 };
+const numericQty = (value) => Number(value || 0);
+const remainingQty = (item) => Math.max(0, numericQty(item.orderedQty) - numericQty(item.receivedQty));
+const itemGrnStatus = (item) => {
+    const ordered = numericQty(item.orderedQty);
+    const received = numericQty(item.receivedQty);
+    if (ordered > 0 && received >= ordered) return { label: "Full GRN", variant: "success" };
+    if (received > 0) return { label: "Partial GRN", variant: "info" };
+    return { label: "No GRN", variant: "secondary" };
+};
+const sameCleanValue = (left, right) => String(left || "").trim() === String(right || "").trim();
+const poItemMatchesGrnItem = (poItem, grnItem) => {
+    if (!poItem || !grnItem) return false;
+    if (poItem.pendingLineKey && grnItem.pendingLineKey) {
+        return sameCleanValue(poItem.pendingLineKey, grnItem.pendingLineKey);
+    }
+    if (!sameCleanValue(poItem.productId, grnItem.productId)) return false;
+    const traceFields = ["itemRequestId", "projectId", "jobNumber", "inquiryNumber"];
+    const compared = traceFields.filter(field => poItem[field] || grnItem[field]);
+    return compared.length === 0 || compared.every(field => sameCleanValue(poItem[field], grnItem[field]));
+};
+const grnReceiptsForItem = (item, grns) => (grns || [])
+    .flatMap(grn => (grn.items || [])
+        .filter(grnItem => poItemMatchesGrnItem(item, grnItem))
+        .map(grnItem => ({
+            grnNumber: grn.grnNumber || grn.id,
+            receivedQty: numericQty(grnItem.receivedQty),
+            createdAt: grn.createdAt,
+            supplierInvoiceNo: grn.supplierInvoiceNo,
+            status: grn.status
+        })))
+    .filter(receipt => receipt.receivedQty > 0);
 
 export default function PurchaseOrderDetails() {
     const { id } = useParams();
@@ -45,6 +86,7 @@ export default function PurchaseOrderDetails() {
     const backToListPath = location.state?.from || "/pos";
 
     const [po, setPo] = useState(null);
+    const [poGrns, setPoGrns] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const quotationInputRef = useRef(null);
@@ -82,6 +124,13 @@ export default function PurchaseOrderDetails() {
             setPo(poData);
             setEmployees(empData);
             setSavedAddresses(addrData || []);
+            try {
+                setPoGrns(await listGRNsForPO(poData));
+            } catch (grnError) {
+                setPoGrns([]);
+                console.error("Failed to load GRNs for Purchase Order", grnError);
+                toast.warn("Purchase Order loaded, but GRN receipt history could not be loaded");
+            }
         } catch (e) {
             toast.error("Failed to load Purchase Order details");
             console.error(e);
@@ -311,6 +360,9 @@ export default function PurchaseOrderDetails() {
         return dateA - dateB;
     });
     const money = (value) => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const totalOrderedQty = (po.items || []).reduce((sum, item) => sum + numericQty(item.orderedQty), 0);
+    const totalReceivedQty = (po.items || []).reduce((sum, item) => sum + numericQty(item.receivedQty), 0);
+    const totalBalanceQty = Math.max(0, totalOrderedQty - totalReceivedQty);
     const snapshotItemByProduct = (snapshot) => new Map((snapshot?.items || []).map(item => [item.productId, item]));
     const adminEditChanged = (edit, productId, field) => {
         const beforeItem = snapshotItemByProduct(edit?.beforeSnapshot).get(productId);
@@ -504,13 +556,28 @@ export default function PurchaseOrderDetails() {
                             </div>
                         </div>
 
+                        <div className="d-flex flex-wrap gap-2 mb-3">
+                            <Badge bg={totalReceivedQty >= totalOrderedQty && totalOrderedQty > 0 ? "success" : totalReceivedQty > 0 ? "info" : "secondary"}>
+                                Received {totalReceivedQty} / {totalOrderedQty}
+                            </Badge>
+                            <Badge bg={totalBalanceQty > 0 ? "warning" : "success"} text={totalBalanceQty > 0 ? "dark" : "white"}>
+                                Balance {totalBalanceQty}
+                            </Badge>
+                            <Badge bg="light" text="dark">
+                                GRNs {poGrns.length}
+                            </Badge>
+                        </div>
+
                         <Table hover responsive bordered>
                             <thead className="bg-light">
                                 <tr>
                                     <th>Product</th>
                                     <th>SKU</th>
                                     <th>Unit</th>
-                                    <th className="text-end">Qty</th>
+                                    <th className="text-end">Ordered</th>
+                                    <th className="text-end">Received</th>
+                                    <th className="text-end">Balance</th>
+                                    <th>GRN Status</th>
                                     <th className="text-end">Unit Price</th>
                                     <th className="text-end">Total</th>
                                 </tr>
@@ -520,22 +587,57 @@ export default function PurchaseOrderDetails() {
                                     const qty = item.orderedQty;
                                     const price = item.unitPrice || 0;
                                     const total = qty * price;
+                                    const status = itemGrnStatus(item);
+                                    const receipts = grnReceiptsForItem(item, poGrns);
                                     return (
-                                        <tr key={idx}>
-                                            <td>
-                                                <div>{item.productNameSnapshot}</div>
-                                                {(item.projectId || item.jobNumber || item.inquiryNumber) && (
-                                                    <div className="small text-muted">
-                                                        {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                        <React.Fragment key={`${item.pendingLineKey || item.productId || "item"}-${idx}`}>
+                                            <tr>
+                                                <td>
+                                                    <div>{item.productNameSnapshot}</div>
+                                                    {(item.projectId || item.jobNumber || item.inquiryNumber) && (
+                                                        <div className="small text-muted">
+                                                            {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td>{item.sku}</td>
+                                                <td>{item.unit}</td>
+                                                <td className="text-end">{qty}</td>
+                                                <td className="text-end fw-semibold">{numericQty(item.receivedQty)}</td>
+                                                <td className={`text-end ${remainingQty(item) > 0 ? "text-danger fw-semibold" : "text-success fw-semibold"}`}>
+                                                    {remainingQty(item)}
+                                                </td>
+                                                <td>
+                                                    <Badge bg={status.variant}>{status.label}</Badge>
+                                                </td>
+                                                <td className="text-end">{price > 0 ? Number(price).toFixed(2) : "-"}</td>
+                                                <td className="text-end">{total > 0 ? total.toFixed(2) : "-"}</td>
+                                            </tr>
+                                            <tr>
+                                                <td colSpan={9} className="bg-light">
+                                                    <div className="small d-flex flex-wrap gap-2 align-items-center">
+                                                        <span className="text-muted fw-semibold">GRN receipts:</span>
+                                                        {receipts.length > 0 ? receipts.map((receipt, receiptIdx) => (
+                                                            <Badge
+                                                                key={`${receipt.grnNumber}-${receiptIdx}`}
+                                                                bg="white"
+                                                                text="dark"
+                                                                className="border"
+                                                                title={[
+                                                                    receipt.createdAt ? new Date(receipt.createdAt).toLocaleString() : null,
+                                                                    receipt.supplierInvoiceNo ? `Invoice ${receipt.supplierInvoiceNo}` : null,
+                                                                    receipt.status
+                                                                ].filter(Boolean).join(" | ")}
+                                                            >
+                                                                {receipt.grnNumber}: {receipt.receivedQty} {item.unit || ""}
+                                                            </Badge>
+                                                        )) : (
+                                                            <span className="text-muted">No GRN received for this item yet.</span>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td>{item.sku}</td>
-                                            <td>{item.unit}</td>
-                                            <td className="text-end">{qty}</td>
-                                            <td className="text-end">{price > 0 ? Number(price).toFixed(2) : "-"}</td>
-                                            <td className="text-end">{total > 0 ? total.toFixed(2) : "-"}</td>
-                                        </tr>
+                                                </td>
+                                            </tr>
+                                        </React.Fragment>
                                     );
                                 })}
                             </tbody>
