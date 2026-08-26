@@ -223,6 +223,19 @@ export default function SettingsPage() {
                         </Card.Body>
                     </Card>
                 </Col>
+                <Col md={4} sm={6}>
+                    <Card className="h-100 shadow-sm border-0 bg-light" onClick={() => navigate('/admin/item-request-trace')} style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
+                        <Card.Body className="d-flex align-items-center p-4">
+                            <div className="bg-warning bg-opacity-10 p-3 rounded-3 me-3">
+                                <i className="fa fa-link text-warning" style={{ fontSize: '1.5rem' }}></i>
+                            </div>
+                            <div>
+                                <h6 className="mb-1">IR Trace Repair</h6>
+                                <p className="text-muted small mb-0">Track and repair historical item request links.</p>
+                            </div>
+                        </Card.Body>
+                    </Card>
+                </Col>
             </Row>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />

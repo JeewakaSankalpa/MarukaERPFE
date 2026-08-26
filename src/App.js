@@ -105,6 +105,7 @@ import RoleManagement from "./components/settings/RoleManagement";
 import StockVerificationPage from "./components/settings/StockVerificationPage";
 import PortalDashboardSettings from "./components/settings/PortalDashboardSettings";
 import SuperAdminPage from "./components/admin/SuperAdminPage";
+import ItemRequestTraceAdminPage from "./components/admin/ItemRequestTraceAdminPage";
 import PortalDashboard from "./components/Portal/PortalDashboard";
 
 
@@ -247,6 +248,7 @@ function App() {
                         <Route path="/project-summary-dashboard" element={<ProjectSummaryDashboard />} />
                         <Route path="/admin/portal-preview/customer/:id" element={<PortalPreviewRouteWrapper type="customer" />} />
                         <Route path="/admin/portal-preview/supplier/:id" element={<PortalPreviewRouteWrapper type="supplier" />} />
+                        <Route path="/admin/item-request-trace" element={<ItemRequestTraceAdminPage />} />
                     </Route>
 
                     {/* Admin */}

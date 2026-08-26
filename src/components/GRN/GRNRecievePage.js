@@ -67,6 +67,13 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 setPo(d);
                 setRows((d.items || []).map(it => ({
                     productId: it.productId,
+                    pendingLineKey: it.pendingLineKey,
+                    itemRequestId: it.itemRequestId,
+                    itemRequestNumber: it.itemRequestNumber,
+                    originType: it.originType,
+                    projectId: it.projectId,
+                    inquiryNumber: it.inquiryNumber,
+                    jobNumber: it.jobNumber,
                     productName: it.productNameSnapshot || it.productName,
                     sku: it.sku,
                     unit: it.unit || "pcs",
@@ -114,6 +121,13 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 const totalQty = activeBatches.reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
                 return {
                     productId: r.productId,
+                    pendingLineKey: r.pendingLineKey,
+                    itemRequestId: r.itemRequestId,
+                    itemRequestNumber: r.itemRequestNumber,
+                    originType: r.originType,
+                    projectId: r.projectId,
+                    inquiryNumber: r.inquiryNumber,
+                    jobNumber: r.jobNumber,
                     unit: r.unit,
                     receivedQty: totalQty,
                     batches: activeBatches.map(b => ({

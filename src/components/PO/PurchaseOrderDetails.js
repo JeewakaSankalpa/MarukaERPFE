@@ -526,7 +526,7 @@ export default function PurchaseOrderDetails() {
                                                 <div>{item.productNameSnapshot}</div>
                                                 {(item.projectId || item.jobNumber || item.inquiryNumber) && (
                                                     <div className="small text-muted">
-                                                        MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                                        {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
                                                     </div>
                                                 )}
                                             </td>

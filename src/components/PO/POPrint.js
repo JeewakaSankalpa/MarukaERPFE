@@ -207,7 +207,7 @@ const POPrint = () => {
                                         <div>{item.productNameSnapshot || item.productName}</div>
                                         {(item.projectId || item.jobNumber || item.inquiryNumber) && (
                                             <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-                                                MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                                {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
                                             </div>
                                         )}
                                     </td>

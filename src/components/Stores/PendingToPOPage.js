@@ -54,6 +54,14 @@ const getProductSearchText = (line) => [
 ].filter(Boolean).join(" ").toLowerCase();
 
 const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
+const toNonNegativeNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+};
+const capQtyToShortage = (value, shortageQty) => {
+    if (value === "") return "";
+    return Math.min(toNonNegativeNumber(value), toNonNegativeNumber(shortageQty));
+};
 const getInitialChoices = (pendingPlan) => Object.fromEntries(
     (pendingPlan?.lines || []).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])
 );
@@ -64,10 +72,10 @@ const preserveChoicesForPlan = (pendingPlan, previousChoices = {}) => Object.fro
             key,
             {
                 supplierId: "",
-                qty: l.shortageQty,
                 unitPrice: "",
                 taxPercent: "",
-                ...(previousChoices[key] || {})
+                ...(previousChoices[key] || {}),
+                qty: capQtyToShortage((previousChoices[key] || {}).qty ?? l.shortageQty, l.shortageQty)
             }
         ];
     })
@@ -107,7 +115,7 @@ export default function PendingToPOPage() {
         if (line.originType === 'PROJECT' || line.projectId) {
             return {
                 title: line.jobNumber || 'No MJN',
-                subtitle: `MIN: ${line.inquiryNumber || line.projectId || '-'}`
+                subtitle: `${line.itemRequestNumber ? `IR: ${line.itemRequestNumber} | ` : ''}MIN: ${line.inquiryNumber || line.projectId || '-'}`
             };
         }
         return { title: 'From Stores', subtitle: 'Main Store' };
@@ -192,12 +200,16 @@ export default function PendingToPOPage() {
             if (!c?.supplierId || !(c.qty>0)) return;
             const line = filteredLines.find(l => getLineKey(l) === key);
             if (!line) return;
+            const qty = capQtyToShortage(c.qty, line.shortageQty);
+            if (!(qty > 0)) return;
             (map[c.supplierId] ||= []).push({
                 lineKey: key,
+                itemRequestId: line.itemRequestId,
+                itemRequestNumber: line.itemRequestNumber,
                 productId: line.productId,
                 originType: line.originType,
                 projectId: line.projectId,
-                qty: Number(c.qty),
+                qty,
                 ...(quotationRefs[c.supplierId]?.trim() ? { quotationRef: quotationRefs[c.supplierId].trim() } : {}),
                 ...(c.unitPrice? { unitPrice: String(c.unitPrice) } : {}),
                 ...(c.taxPercent? { taxPercent: String(c.taxPercent) } : {})
@@ -253,11 +265,12 @@ export default function PendingToPOPage() {
         Object.entries(draft.allocation || {}).forEach(([supplierId, lines]) => {
             (lines || []).forEach(line => {
                 const key = line.lineKey || getLineKey(line);
+                const planLine = (plan?.lines || []).find(l => getLineKey(l) === key);
                 draftLineKeys.push(key);
                 nextChoices[key] = {
                     ...(nextChoices[key] || {}),
                     supplierId,
-                    qty: line.qty || "",
+                    qty: capQtyToShortage(line.qty || "", planLine?.shortageQty),
                     unitPrice: line.unitPrice || "",
                     taxPercent: line.taxPercent || ""
                 };
@@ -563,8 +576,14 @@ export default function PendingToPOPage() {
                                     />
                                 </td>
                                 <td>
-                                    <Form.Control type="number" min="0" value={c.qty||""}
-                                                  onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, qty: e.target.value } }))} />
+                                    <Form.Control
+                                        type="number"
+                                        min="0"
+                                        max={l.shortageQty}
+                                        value={c.qty||""}
+                                        title={`Maximum ${l.shortageQty}`}
+                                        onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, qty: capQtyToShortage(e.target.value, l.shortageQty) } }))} />
+                                    <div className="text-muted" style={{fontSize:12}}>Max {l.shortageQty}</div>
                                 </td>
                                 <td>
                                     <Form.Control value={c.unitPrice||""}

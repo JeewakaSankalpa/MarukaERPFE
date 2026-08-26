@@ -296,7 +296,14 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                                 <tr><td colSpan="7" className="text-center text-muted">No GRN items found</td></tr>
                             ) : grn.items.map((item, idx) => (
                                 <tr key={idx}>
-                                    <td>{item.productNameSnapshot || "-"}</td>
+                                    <td>
+                                        <div>{item.productNameSnapshot || "-"}</div>
+                                        {(item.itemRequestNumber || item.projectId || item.jobNumber || item.inquiryNumber) && (
+                                            <div className="small text-muted">
+                                                {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                            </div>
+                                        )}
+                                    </td>
                                     <td>{item.sku || "-"}</td>
                                     <td className="text-end">{item.receivedQty || 0}</td>
                                     <td>{item.unit || "-"}</td>
