@@ -76,6 +76,22 @@ export default function ReportsPage() {
                             </Row>
                         </div>
                     </Tab>
+                    <Tab eventKey="revenue" title="Revenue">
+                        <div className="p-3">
+                            <h5 className="mb-3">Available Reports</h5>
+                            <Row>
+                                <Col md={6} className="mb-3">
+                                    <div className="p-3 border rounded shadow-sm">
+                                        <h6>Sales Revenue Report</h6>
+                                        <p className="text-muted small">Review inquiry value, job value, cash received, expenses, and net profit by sales rep.</p>
+                                        <button className="btn btn-outline-primary btn-sm" onClick={() => navigate("/reports/sales-revenue")}>
+                                            View Report
+                                        </button>
+                                    </div>
+                                </Col>
+                            </Row>
+                        </div>
+                    </Tab>
                     <Tab eventKey="stock" title="Current Stock">
                         <div className="text-end mb-2">
                             <button className="btn btn-primary btn-sm" onClick={() => navigate("/reports/stock")}>

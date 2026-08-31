@@ -109,6 +109,7 @@ export const MenuConfig = [
         subItems: [
             { id: "reports.interactive", title: "Interactive Dashboard", path: "/dashboard/interactive" },
             { id: "reports.dashboard", title: "Reports Dashboard", path: "/reports" },
+            { id: "reports.sales_revenue", title: "Sales Revenue", path: "/reports/sales-revenue" },
             { id: "reports.stock", title: "Stock Valuation", path: "/reports/stock" },
             { id: "reports.payables", title: "Payables Report", path: "/reports/payables" },
             { id: "reports.receivables", title: "Receivables Report", path: "/reports/receivables" },

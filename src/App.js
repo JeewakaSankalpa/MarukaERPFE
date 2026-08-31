@@ -65,6 +65,7 @@ import POCreateManual from "./components/PO/POCreateManual";
 import NotificationsPage from "./components/ReusableComponents/NotificationsPage";
 import BrandedDialogHost from "./components/ReusableComponents/BrandedDialogHost";
 import ReportsPage from "./components/Reports/ReportsPage";
+import SalesRevenueReport from "./components/Reports/SalesRevenueReport";
 import EmployeeCreate from "./components/Employee/EmployeeCreate";
 import EmployeeList from "./components/Employee/EmployeeList";
 import EmployeeProfile from "./components/Employee/EmployeeProfile";
@@ -362,6 +363,13 @@ function App() {
                         <Route path="/finance/petty-cash-approvals" element={<PettyCashApprovalPage />} />
                     </Route>
 
+                    {/* Reports */}
+                    <Route element={<PrivateRoute module="reports" />}>
+                        <Route path="/reports" element={<ReportsPage />} />
+                        <Route path="/reports/sales-revenue" element={<SalesRevenueReport />} />
+                        <Route path="/reports/all-tasks" element={<AllTasksReport />} />
+                    </Route>
+
                     {/* Settings / Admin */}
                     <Route element={<PrivateRoute module="settings" />}>
                         <Route path="/admin/config" element={<SystemConfiguration />} />
@@ -384,9 +392,6 @@ function App() {
                         <Route path="/departments/new" element={<DepartmentFormNewRouteWrapper />} />
                         <Route path="/departments/:id" element={<DepartmentFormRouteWrapper />} />
                     </Route>
-
-                    <Route path="/reports" element={<ReportsPage />} />
-                    <Route path="/reports/all-tasks" element={<AllTasksReport />} />
 
                 </Routes>
             </Layout>
