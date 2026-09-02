@@ -137,13 +137,18 @@ export default function ProjectInventoryCard({ projectId, project }) {
         const items = activeInventory
             .map(item => {
                 const quantity = Number(consumeData.quantities?.[item.productId] || 0);
+                const availableQty = Number(item.onHandQty || 0);
                 const serials = String(consumeData.serials?.[item.productId] || '')
                     .split(',')
                     .map(serial => serial.trim())
                     .filter(Boolean);
                 return {
                     productId: item.productId,
+                    productName: item.productName || item.productId,
+                    productNameSnapshot: item.productName || item.productId,
+                    unit: item.unit,
                     quantity,
+                    availableQty,
                     serials,
                     note: consumeData.note
                 };
@@ -154,18 +159,27 @@ export default function ProjectInventoryCard({ projectId, project }) {
             toast.warn('Enter a quantity greater than zero for at least one product');
             return;
         }
+
+        const invalidItem = items.find(item => !item.productId || item.quantity > item.availableQty);
+        if (invalidItem) {
+            toast.warn(`Cannot consume ${invalidItem.productName}: only ${invalidItem.availableQty} remaining`);
+            return;
+        }
+
         try {
             setSubmitting(true);
             await api.post('/consumptions', {
                 projectId,
-                items
+                items: items.map(({ availableQty, productName, ...item }) => item)
             });
             toast.success('Items consumed');
             setShowConsume(false);
             setConsumeData({ quantities: {}, serials: {}, note: '' });
             load();
         } catch (e) {
-            toast.error(e?.response?.data?.message || 'Failed to consume items');
+            const message = e?.response?.data?.message || e?.message || 'Failed to consume items';
+            toast.error(message);
+            console.error('Failed to consume items:', e?.response?.data || e);
         } finally {
             setSubmitting(false);
         }
@@ -328,6 +342,12 @@ export default function ProjectInventoryCard({ projectId, project }) {
 
         if (mode === 'CONSUME') {
             setConsumeData(prev => {
+                const inventoryItem = activeInventory.find(item => item.productId === productId);
+                const availableQty = Number(inventoryItem?.onHandQty || 0);
+                if (!inventoryItem || availableQty <= 0) {
+                    toast.warn("This scanned item is not available for this project");
+                    return prev;
+                }
                 const currentSerialText = prev.serials?.[productId] || '';
                 const newSerials = currentSerialText.split(',').map(s => s.trim()).filter(s => s);
                 if (serialNo && !newSerials.includes(serialNo)) {
@@ -335,7 +355,11 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 }
 
                 const currentQty = Number(prev.quantities?.[productId] || 0);
-                const nextQty = serialNo ? newSerials.length : currentQty + 1;
+                const requestedQty = serialNo ? newSerials.length : currentQty + 1;
+                const nextQty = Math.min(availableQty, requestedQty);
+                if (requestedQty > availableQty) {
+                    toast.warn(`Cannot consume ${inventoryItem.productName || productId}: only ${availableQty} remaining`);
+                }
 
                 return {
                     ...prev,
@@ -1244,6 +1268,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                                                 size="sm"
                                                                 min="0"
                                                                 max={Number(item.onHandQty || 0)}
+                                                                disabled={Number(item.onHandQty || 0) <= 0}
                                                                 className="text-end"
                                                                 placeholder="0"
                                                                 value={consumeQty}
@@ -1251,7 +1276,10 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                                                     ...prev,
                                                                     quantities: {
                                                                         ...(prev.quantities || {}),
-                                                                        [item.productId]: event.target.value
+                                                                        [item.productId]: Math.min(
+                                                                            Number(item.onHandQty || 0),
+                                                                            Math.max(0, Number(event.target.value || 0))
+                                                                        ) || ''
                                                                     }
                                                                 }))}
                                                             />
