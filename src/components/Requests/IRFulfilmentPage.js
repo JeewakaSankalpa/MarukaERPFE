@@ -12,10 +12,15 @@ const fetchMainAvail = async () => {
     const res = await api.get("/inventory/available-quantities");
     return (res.data || []).map((row) => {
         const mainStore = (row.locationQuantities || [])
-            .filter((loc) => loc.locationId === "LOC_STORES_MAIN")
+            .filter((loc) => loc.locationId === "LOC_STORES_MAIN" && isStoreOwnedStock(loc))
             .reduce((sum, loc) => sum + (Number(loc.quantity) || 0), 0);
         return { ...row, availableQty: mainStore };
     });
+};
+
+const isStoreOwnedStock = (stock) => {
+    const ownerType = String(stock?.ownerType || "").trim().toUpperCase();
+    return !ownerType || ownerType === "LOCATION" || ownerType === "STORE";
 };
 
 const fetchMainAvailForProduct = async (productId) => {
@@ -461,7 +466,7 @@ export default function IRFulfilmentPage() {
                 if (b.quantity <= 0) return false;
 
                 // Must match one of the main store identifiers OR be null (legacy default)
-                return !b.locationId || validMainStores.includes(b.locationId);
+                return isStoreOwnedStock(b) && (!b.locationId || validMainStores.includes(b.locationId));
             });
 
             console.log("Batches filtered for Main Store:", filtered);
