@@ -2,7 +2,6 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Table, Container, Form, Button, Row, Col, Modal } from 'react-bootstrap';
-import Select from 'react-select';
 import api from '../../api/api';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -22,6 +21,8 @@ function InventoryView() {
     const [showModal, setShowModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [batchDetails, setBatchDetails] = useState([]);
+    const [productBreakdown, setProductBreakdown] = useState(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
     const [userName, setUserName] = useState('');
     const [loadingInventory, setLoadingInventory] = useState(true);
 
@@ -104,15 +105,21 @@ function InventoryView() {
         }
     };
 
-    const fetchBatchDetails = async (productId) => {
+    const fetchProductBreakdown = async (productId) => {
+        setLoadingDetails(true);
         try {
-            const response = await api.get(`/inventory/available-batches?productId=${productId}`);
-            setBatchDetails(response.data || []);
-            toast.info(`Loaded ${response.data?.length || 0} batch(es)`);
+            const response = await api.get(`/inventory/products/${productId}/breakdown`);
+            const details = response.data || {};
+            setProductBreakdown(details);
+            setBatchDetails(details.batches || []);
+            toast.info(`Loaded ${(details.batches || []).length} batch(es)`);
         } catch (error) {
-            console.error('Failed to fetch batch details:', error);
-            toast.error('Failed to load batch details');
+            console.error('Failed to fetch product breakdown:', error);
+            toast.error('Failed to load product details');
+            setProductBreakdown(null);
             setBatchDetails([]);
+        } finally {
+            setLoadingDetails(false);
         }
     };
 
@@ -154,7 +161,8 @@ function InventoryView() {
 
     const handleProductClick = (product) => {
         setSelectedProduct(product);
-        fetchBatchDetails(product.productId);
+        setProductBreakdown(null);
+        fetchProductBreakdown(product.productId);
         setShowModal(true);
     };
 
@@ -192,7 +200,7 @@ function InventoryView() {
             toast.success('Return request created');
             setShowReturnModal(false);
             // Refresh batches
-            fetchBatchDetails(selectedProduct.productId);
+            fetchProductBreakdown(selectedProduct.productId);
         } catch (e) {
             toast.error(e?.response?.data?.message || 'Failed to create return request');
         } finally {
@@ -390,55 +398,185 @@ function InventoryView() {
                 </tbody>
             </Table>
 
-            {/* Modals remain same ... */}
-            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+            <Modal show={showModal} onHide={() => setShowModal(false)} size="xl">
                 <Modal.Header closeButton>
                     <Modal.Title>Details: {selectedProduct?.productName}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <p><strong>Total (All):</strong> {formatQuantity(selectedProduct?.totalQuantity)} | <strong>Main Store:</strong> {formatQuantity(selectedProduct?.mainStoreQuantity)}</p>
-                    <hr />
-                    <h5>Batch Breakdown</h5>
-                    {/* ... Existing Batch Table ... */}
-                    <Table bordered hover responsive className="text-center">
-                        <thead className="table-primary">
-                            <tr>
-                                <th>Batch / Serial</th>
-                                <th>Qty</th>
-                                <th>Expiry</th>
-                                <th>Location</th>
-                                <th>QR / Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(batchDetails || []).map((batch) => (
-                                <tr key={batch.id}>
-                                    <td>
-                                        <div>{batch.batchNumber || batch.batchNo || '-'}</div>
-                                        <small className="text-muted">{batch.id}</small>
-                                    </td>
-                                    <td>{formatQuantity(batch.quantity)}</td>
-                                    <td>{batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : '-'}</td>
-                                    <td>
-                                        {batch.ownerType === 'PROJECT' ? `Proj: ${batch.ownerId}` :
-                                            batch.ownerType === 'DEPARTMENT' ? `Dept: ${batch.ownerId}` :
-                                                (batch.locationId === 'LOC_STORES_MAIN' ? 'Main Store' : batch.locationId)}
-                                    </td>
-                                    <td>
-                                        <div className="d-flex gap-2 justify-content-center align-items-center">
-                                            <div style={{ background: 'white', padding: '2px' }}>
-                                                <QRCode
-                                                    value={`V1|${batch.id}|${selectedProduct?.productName}|${formatQuantity(batch.quantity)}`}
-                                                    size={48}
-                                                />
-                                            </div>
-                                            <Button size="sm" variant="outline-danger" onClick={() => handleReturnClick(batch)}>Return</Button>
+                    {loadingDetails ? (
+                        <div className="text-center text-muted py-4">Loading product history...</div>
+                    ) : (
+                        <>
+                            <Row className="g-2 text-center mb-3">
+                                {[
+                                    ['Total (All)', productBreakdown?.totals?.totalQuantity ?? selectedProduct?.totalQuantity],
+                                    ['Main Store', productBreakdown?.totals?.mainStoreQuantity ?? selectedProduct?.mainStoreQuantity],
+                                    ['Project Stock', productBreakdown?.totals?.projectQuantity],
+                                    ['Department Stock', productBreakdown?.totals?.departmentQuantity],
+                                    ['Other Stores', productBreakdown?.totals?.otherStoreQuantity],
+                                    ['Open Batches', productBreakdown?.totals?.openBatchCount],
+                                ].map(([label, value]) => (
+                                    <Col key={label} xs={6} md={4} lg={2}>
+                                        <div className="border rounded p-2 h-100">
+                                            <div className="text-muted small">{label}</div>
+                                            <div className="fw-bold">{formatQuantity(value)}</div>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </Table>
+                                    </Col>
+                                ))}
+                            </Row>
+
+                            <h5>Location / Owner Breakdown</h5>
+                            <Table bordered hover responsive className="text-center align-middle">
+                                <thead className="table-primary">
+                                    <tr>
+                                        <th>Location / Owner</th>
+                                        <th>Owner Type</th>
+                                        <th>Qty</th>
+                                        <th>Batches</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(productBreakdown?.locations || []).map((location) => (
+                                        <tr key={`${location.locationId || 'MAIN'}-${location.ownerType || 'STORE'}-${location.ownerId || ''}`}>
+                                            <td>{locationLabel(location)}</td>
+                                            <td>{location.ownerType || 'STORE'}</td>
+                                            <td>{formatQuantity(location.quantity)}</td>
+                                            <td>{formatQuantity(location.batchCount)}</td>
+                                        </tr>
+                                    ))}
+                                    {(productBreakdown?.locations || []).length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="text-muted py-3">No available stock locations.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </Table>
+
+                            <h5>Open Batch Breakdown</h5>
+                            <Table bordered hover responsive className="text-center align-middle">
+                                <thead className="table-primary">
+                                    <tr>
+                                        <th>Batch / Serial</th>
+                                        <th>Qty</th>
+                                        <th>Original</th>
+                                        <th>Reserved</th>
+                                        <th>Cost</th>
+                                        <th>Expiry</th>
+                                        <th>Location</th>
+                                        <th>QR / Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(batchDetails || []).map((batch) => (
+                                        <tr key={batch.id}>
+                                            <td>
+                                                <div>{batch.batchNumber || batch.batchNo || '-'}</div>
+                                                <small className="text-muted">{batch.id}</small>
+                                            </td>
+                                            <td>{formatQuantity(batch.quantity)}</td>
+                                            <td>{formatQuantity(batch.originalQuantity)}</td>
+                                            <td>{formatQuantity(batch.reservedQuantity)}</td>
+                                            <td>{formatMoney(batch.costPrice)}</td>
+                                            <td>{batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : '-'}</td>
+                                            <td>{locationLabel(batch)}</td>
+                                            <td>
+                                                <div className="d-flex gap-2 justify-content-center align-items-center">
+                                                    <div style={{ background: 'white', padding: '2px' }}>
+                                                        <QRCode
+                                                            value={`V1|${batch.id}|${selectedProduct?.productName}|${formatQuantity(batch.quantity)}`}
+                                                            size={48}
+                                                        />
+                                                    </div>
+                                                    <Button size="sm" variant="outline-danger" onClick={() => handleReturnClick(batch)}>Return</Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(batchDetails || []).length === 0 && (
+                                        <tr>
+                                            <td colSpan="8" className="text-muted py-3">No open batches.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </Table>
+
+                            <h5>Movement History</h5>
+                            <Table bordered hover responsive className="text-center align-middle">
+                                <thead className="table-primary">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>In</th>
+                                        <th>Out</th>
+                                        <th>Net</th>
+                                        <th>Location</th>
+                                        <th>Reference</th>
+                                        <th>Batch</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(productBreakdown?.ledgerMovements || []).map((movement) => (
+                                        <tr key={movement.id}>
+                                            <td>{formatDateTime(movement.at)}</td>
+                                            <td>{movement.type || '-'}</td>
+                                            <td>{formatQuantity(movement.qtyIn)}</td>
+                                            <td>{formatQuantity(movement.qtyOut)}</td>
+                                            <td>{formatSignedQuantity(movement.netQty)}</td>
+                                            <td>{movement.locationId || '-'}</td>
+                                            <td>{referenceLabel(movement)}</td>
+                                            <td>{movement.batchId || '-'}</td>
+                                        </tr>
+                                    ))}
+                                    {(productBreakdown?.ledgerMovements || []).length === 0 && (
+                                        <tr>
+                                            <td colSpan="8" className="text-muted py-3">No ledger movement history found.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </Table>
+
+                            <h5>Stock Taking / Adjustment History</h5>
+                            <Table bordered hover responsive className="text-center align-middle">
+                                <thead className="table-primary">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Source</th>
+                                        <th>Batch</th>
+                                        <th>Old</th>
+                                        <th>New</th>
+                                        <th>Diff</th>
+                                        <th>Unit Cost</th>
+                                        <th>Reorder</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(productBreakdown?.stockAdjustments || []).map((adjustment) => (
+                                        <tr key={`${adjustment.auditId}-${adjustment.batchId || adjustment.batchNo || adjustment.adjustedAt}`}>
+                                            <td>{formatDateTime(adjustment.eventAt || adjustment.adjustedAt || adjustment.createdAt)}</td>
+                                            <td>{adjustment.status || '-'}</td>
+                                            <td>{adjustment.sourceType || adjustment.title || '-'}</td>
+                                            <td>{adjustment.batchNo || adjustment.batchId || '-'}</td>
+                                            <td>{formatQuantity(adjustment.oldQuantity)}</td>
+                                            <td>{formatQuantity(adjustment.newQuantity)}</td>
+                                            <td>{formatSignedQuantity(adjustment.adjustmentQuantity)}</td>
+                                            <td>{formatMoney(adjustment.newUnitCost)}</td>
+                                            <td>{adjustment.oldReorderLevel ?? adjustment.newReorderLevel
+                                                ? `${adjustment.oldReorderLevel ?? '-'} -> ${adjustment.newReorderLevel ?? '-'}`
+                                                : '-'}</td>
+                                            <td className="text-start">{adjustment.reason || '-'}</td>
+                                        </tr>
+                                    ))}
+                                    {(productBreakdown?.stockAdjustments || []).length === 0 && (
+                                        <tr>
+                                            <td colSpan="10" className="text-muted py-3">No stock taking or adjustment history found.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </Table>
+                        </>
+                    )}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
@@ -496,4 +634,43 @@ const formatQuantity = (value) => {
     const digits = sign ? whole.slice(1) : whole;
     const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return decimal == null ? `${sign}${grouped}` : `${sign}${grouped}.${decimal}`;
+};
+
+const formatSignedQuantity = (value) => {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num) || num === 0) return formatQuantity(value);
+    return `${num > 0 ? '+' : ''}${formatQuantity(value)}`;
+};
+
+const formatDateTime = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+};
+
+const formatMoney = (value) => {
+    if (value == null || value === '') return '-';
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '-';
+    return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const locationLabel = (row) => {
+    const ownerType = (row?.ownerType || '').toUpperCase();
+    if (ownerType === 'PROJECT') return `Project: ${row.ownerId || row.locationId || '-'}`;
+    if (ownerType === 'DEPARTMENT') return `Department: ${row.ownerId || row.locationId || '-'}`;
+    if (!row?.locationId || row.locationId === 'LOC_STORES_MAIN') return 'Main Store';
+    return row.locationId;
+};
+
+const referenceLabel = (movement) => {
+    if (!movement) return '-';
+    const parts = [];
+    if (movement.refDocType) parts.push(movement.refDocType);
+    if (movement.refDocId) parts.push(movement.refDocId);
+    if (movement.itemRequestNumber) parts.push(`IR ${movement.itemRequestNumber}`);
+    if (movement.projectId) parts.push(`Project ${movement.projectId}`);
+    if (movement.poId) parts.push(`PO ${movement.poId}`);
+    if (movement.grnId) parts.push(`GRN ${movement.grnId}`);
+    return parts.length ? parts.join(' / ') : '-';
 };
