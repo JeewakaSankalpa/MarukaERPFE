@@ -2,11 +2,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Row, Col, Spinner, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
-import { FaDownload, FaFilePdf, FaPrint } from "react-icons/fa";
+import { FaDownload, FaFilePdf, FaPrint, FaSearch, FaTimes } from "react-icons/fa";
 import jsPDF from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import "./IRFulfilmentPage.css";
 
 const fetchMainAvail = async () => {
     const res = await api.get("/inventory/available-quantities");
@@ -31,9 +32,6 @@ const fetchMainAvailForProduct = async (productId) => {
     };
 };
 
-const listProducts = async () =>
-    (await api.get("/products", { params: { status: "ACTIVE", page: 0, size: 1000, sort: "name,asc" } })).data?.content || [];
-
 const listIRs = async (page, size, status, filters = {}) => {
     const params = { page, size, sort: "createdAt,desc" };
     const actionableStatuses = status?.length
@@ -43,7 +41,7 @@ const listIRs = async (page, size, status, filters = {}) => {
     if (filters.projectName?.trim()) params.projectName = filters.projectName.trim();
     if (filters.projectNumber?.trim()) params.projectNumber = filters.projectNumber.trim();
     if (filters.requester?.trim()) params.requester = filters.requester.trim();
-    if (filters.productId?.trim()) params.productId = filters.productId.trim();
+    if (filters.itemSearch?.trim()) params.itemSearch = filters.itemSearch.trim();
     return (await api.get("/item-requests/fulfilment", { params })).data;
 };
 
@@ -56,6 +54,20 @@ const listDepartments = async () =>
     (await api.get(`/departments`, { params: { page: 0, size: 1000 } })).data?.content || [];
 const listProjects = async () =>
     (await api.get(`/projects`, { params: { page: 0, size: 1000 } })).data?.content || [];
+
+const componentAllocationsFor = (item) => {
+    const allocations = Array.isArray(item?.componentAllocations) ? item.componentAllocations : [];
+    const visibleAllocations = allocations
+        .map(allocation => ({
+            componentName: allocation.componentName || "General",
+            quantity: Number(allocation.quantity || 0)
+        }))
+        .filter(allocation => allocation.quantity > 0);
+    if (visibleAllocations.length > 0) {
+        return visibleAllocations;
+    }
+    return [{ componentName: "General", quantity: Number(item?.requestedQty || 0) }];
+};
 
 /* ---------- Page ---------- */
 export default function IRFulfilmentPage() {
@@ -77,12 +89,11 @@ export default function IRFulfilmentPage() {
     const [fProjectName, setFProjectName] = useState("");
     const [fProjectNumber, setFProjectNumber] = useState("");
     const [fRequester, setFRequester] = useState("");
-    const [fProductId, setFProductId] = useState("");
+    const [fItemSearch, setFItemSearch] = useState("");
 
     // Lookups
     const [deptMap, setDeptMap] = useState({});
     const [projMap, setProjMap] = useState({});
-    const [productOptions, setProductOptions] = useState([]);
 
     // Data
     const [onHand, setOnHand] = useState({}); // { productId: availQty }
@@ -103,10 +114,9 @@ export default function IRFulfilmentPage() {
     // Initial Load
     useEffect(() => {
         (async () => {
-            const [d, p, products] = await Promise.all([
+            const [d, p] = await Promise.all([
                 listDepartments().catch(() => []),
-                listProjects().catch(() => []),
-                listProducts().catch(() => [])
+                listProjects().catch(() => [])
             ]);
             setDeptMap(d.reduce((m, x) => ({ ...m, [x.id]: x.name }), {}));
             setProjMap(p.reduce((m, x) => ({
@@ -120,7 +130,6 @@ export default function IRFulfilmentPage() {
                     location: x.location || x.siteAddress || ""
                 }
             }), {}));
-            setProductOptions(products);
         })();
     }, []);
 
@@ -135,8 +144,17 @@ export default function IRFulfilmentPage() {
         projectName: fProjectName,
         projectNumber: fProjectNumber,
         requester: fRequester,
-        productId: fProductId
-    }), [fProjectName, fProjectNumber, fRequester, fProductId]);
+        itemSearch: fItemSearch
+    }), [fProjectName, fProjectNumber, fRequester, fItemSearch]);
+
+    const hasItemSearch = fItemSearch.trim().length > 0;
+    const hasFilters = Boolean(
+        statusFilter !== "SUBMITTED"
+        || fProjectName.trim()
+        || fProjectNumber.trim()
+        || fRequester.trim()
+        || hasItemSearch
+    );
 
     const activeStatuses = useMemo(
         () => statusFilter === "ACTIONABLE" ? null : [statusFilter],
@@ -683,23 +701,59 @@ export default function IRFulfilmentPage() {
         });
     }, [irs, fProjectName, fProjectNumber, fRequester, projMap]);
 
-    const matchedItemLine = (ir) => {
-        if (!fProductId) return null;
-        return (ir.items || []).find(item => item.productId === fProductId) || null;
+    const itemMatchesSearch = (item) => {
+        const search = fItemSearch.trim().toLowerCase();
+        if (!search) return false;
+        return [
+            item.productNameSnapshot,
+            item.sku,
+            item.productId,
+            item.unit
+        ].filter(Boolean).some(value => String(value).toLowerCase().includes(search));
+    };
+
+    const matchedItemLines = (ir) => {
+        if (!hasItemSearch) return [];
+        const directMatches = (ir.items || []).filter(itemMatchesSearch);
+        return directMatches.length > 0 ? directMatches : (ir.items || []);
+    };
+
+    const clearFilters = () => {
+        setStatusFilter("SUBMITTED");
+        setFProjectName("");
+        setFProjectNumber("");
+        setFRequester("");
+        setFItemSearch("");
+        setSelected(null);
+        setPage(0);
     };
 
     return (
-        <Container fluid style={{ maxWidth: 1600, paddingTop: 24, paddingLeft: 24, paddingRight: 24 }}>
+        <Container fluid className="ir-fulfilment-page" style={{ maxWidth: 1600, paddingTop: 24, paddingLeft: 24, paddingRight: 24 }}>
             <Row className="g-3">
                 {/* -------- Left: List & Filters -------- */}
                 <Col md={5}>
-                    <div className="bg-white shadow rounded p-3">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h5 className="mb-0">Item Requests</h5>
-                            {loadingList && <Spinner animation="border" size="sm" />}
+                    <div className="ir-request-panel bg-white shadow-sm rounded p-3">
+                        <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                            <div>
+                                <h5 className="mb-1">Item Requests</h5>
+                                <div className="small text-muted">
+                                    {loadingList
+                                        ? "Finding matching requests..."
+                                        : `${filteredIRs.length} shown${irs.totalElements !== undefined ? ` from ${irs.totalElements}` : ""}`}
+                                </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-2">
+                                {hasFilters && (
+                                    <Button size="sm" variant="outline-secondary" onClick={clearFilters} className="ir-clear-filters">
+                                        <FaTimes className="me-1" />
+                                        Clear
+                                    </Button>
+                                )}
+                                {loadingList && <Spinner animation="border" size="sm" />}
+                            </div>
                         </div>
-                        {/* Filters ... (Keep existing ui) */}
-                        <div className="mb-3">
+                        <div className="ir-filter-section mb-3">
                             <Form.Group>
                                 <Form.Label className="small fw-bold">Filter by Status</Form.Label>
                                 <SafeSelect
@@ -713,9 +767,8 @@ export default function IRFulfilmentPage() {
                                 </SafeSelect>
                             </Form.Group>
                         </div>
-                        {/* Project and requester filters */}
-                        <Row className="g-2 mb-3">
-                            <Col md={3}>
+                        <Row className="g-2 mb-2">
+                            <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small">Project Name</Form.Label>
                                     <Form.Control
@@ -725,7 +778,7 @@ export default function IRFulfilmentPage() {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col md={3}>
+                            <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small">Job / Project No.</Form.Label>
                                     <Form.Control
@@ -735,7 +788,7 @@ export default function IRFulfilmentPage() {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col md={3}>
+                            <Col md={4}>
                                 <Form.Group>
                                     <Form.Label className="small">Requester</Form.Label>
                                     <Form.Control
@@ -745,44 +798,61 @@ export default function IRFulfilmentPage() {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col md={3}>
-                                <Form.Group>
-                                    <Form.Label className="small">Item</Form.Label>
-                                    <SafeSelect
-                                        value={fProductId}
-                                        onChange={(e) => {
-                                            setFProductId(e.target.value);
-                                            setSelected(null);
-                                            setPage(0);
-                                        }}
-                                        isSearchable
-                                    >
-                                        <option value="">All items</option>
-                                        {productOptions.map(product => (
-                                            <option key={product.id} value={product.id}>
-                                                {product.name || product.id}{product.sku ? ` (${product.sku})` : ""}
-                                            </option>
-                                        ))}
-                                    </SafeSelect>
+                        </Row>
+                        <Row className="g-2 mb-3">
+                            <Col md={12}>
+                                <Form.Group className="ir-item-search">
+                                    <Form.Label className="small fw-bold">Search Item Used In Requests</Form.Label>
+                                    <div className="ir-item-search__control">
+                                        <FaSearch className="ir-item-search__icon" aria-hidden="true" />
+                                        <Form.Control
+                                            value={fItemSearch}
+                                            onChange={(e) => {
+                                                setFItemSearch(e.target.value);
+                                                setSelected(null);
+                                                setPage(0);
+                                            }}
+                                            placeholder="Type item name, SKU, barcode, or product ID..."
+                                            aria-label="Search item used in requests"
+                                        />
+                                        {hasItemSearch && (
+                                            <Button
+                                                size="sm"
+                                                variant="link"
+                                                onClick={() => {
+                                                    setFItemSearch("");
+                                                    setSelected(null);
+                                                    setPage(0);
+                                                }}
+                                                aria-label="Clear item search"
+                                                className="ir-item-search__clear"
+                                            >
+                                                <FaTimes />
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="form-text">
+                                        Searches request lines and product master records, then shows the component usage for each matched item.
+                                    </div>
                                 </Form.Group>
                             </Col>
                         </Row>
 
-                        <Table hover size="sm" responsive className="mb-2">
+                        <Table hover size="sm" responsive className="ir-request-table mb-2 align-middle">
                             <thead>
                                 <tr>
                                     <th>IR #</th>
                                     <th>Status</th>
                                     <th>Department</th>
                                     <th>Project</th>
-                                    {fProductId && <th>Matched Item</th>}
+                                    {hasItemSearch && <th>Matched Item / Components</th>}
                                     <th>Requester</th>
                                     <th>Created</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredIRs.map((ir) => {
-                                    const itemLine = matchedItemLine(ir);
+                                    const itemLines = matchedItemLines(ir);
                                     return (
                                         <tr key={ir.id} onClick={() => openIR(ir.id)} style={{ cursor: "pointer" }}>
                                             <td>{ir.irNumber}</td>
@@ -792,12 +862,28 @@ export default function IRFulfilmentPage() {
                                                 <div>{projectLabel(ir.projectId)}</div>
                                                 <small className="text-muted">{projMap[ir.projectId]?.name || ""}</small>
                                             </td>
-                                            {fProductId && (
+                                            {hasItemSearch && (
                                                 <td>
-                                                    <div>{itemLine?.productNameSnapshot || itemLine?.productId || "-"}</div>
-                                                    <small className="text-muted">
-                                                        Req {itemLine?.requestedQty ?? 0} / Done {itemLine?.fulfilledQty ?? 0}
-                                                    </small>
+                                                    {itemLines.length > 0 ? itemLines.map(itemLine => (
+                                                        <div key={itemLine.productId} className="ir-matched-item mb-2">
+                                                            <div className="fw-semibold">{itemLine.productNameSnapshot || itemLine.productId || "-"}</div>
+                                                            <div className="small text-muted">
+                                                                {itemLine.sku || "-"} / Req {itemLine.requestedQty ?? 0} / Done {itemLine.fulfilledQty ?? 0}
+                                                            </div>
+                                                            <div className="ir-component-chips mt-1">
+                                                                {componentAllocationsFor(itemLine).map(allocation => (
+                                                                    <span
+                                                                        key={`${itemLine.productId}-${allocation.componentName}`}
+                                                                        className="ir-component-chip"
+                                                                    >
+                                                                        {allocation.componentName}: {allocation.quantity}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )) : (
+                                                        <span className="text-muted">Matched by product master details</span>
+                                                    )}
                                                 </td>
                                             )}
                                             <td>{ir.createdBy || "-"}</td>
@@ -806,7 +892,12 @@ export default function IRFulfilmentPage() {
                                     );
                                 })}
                                 {filteredIRs.length === 0 && (
-                                    <tr><td colSpan={fProductId ? 7 : 6} className="text-center text-muted">No item requests found.</td></tr>
+                                    <tr>
+                                        <td colSpan={hasItemSearch ? 7 : 6} className="ir-empty-cell text-center">
+                                            <div className="fw-semibold">No matching item requests</div>
+                                            <div className="small text-muted">Check the item text or clear filters to widen the list.</div>
+                                        </td>
+                                    </tr>
                                 )}
                             </tbody>
                         </Table>
@@ -868,6 +959,7 @@ export default function IRFulfilmentPage() {
                                             <th className="text-end">Req</th>
                                             <th className="text-end">Done</th>
                                             <th className="text-end">Avail</th>
+                                            <th>Components</th>
                                             <th>Allocation / Qty</th>
                                             <th>Action</th>
                                         </tr>
@@ -889,6 +981,18 @@ export default function IRFulfilmentPage() {
                                                     <td className="text-end">{it.requestedQty}</td>
                                                     <td className="text-end">{it.fulfilledQty}</td>
                                                     <td className="text-end">{avail}</td>
+                                                    <td>
+                                                        <div className="ir-component-chips">
+                                                            {componentAllocationsFor(it).map(allocation => (
+                                                                <span
+                                                                    key={`${it.productId}-${allocation.componentName}`}
+                                                                    className="ir-component-chip"
+                                                                >
+                                                                    {allocation.componentName}: {allocation.quantity}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </td>
                                                     <td>
                                                         {isAllocated ? (
                                                             <div>

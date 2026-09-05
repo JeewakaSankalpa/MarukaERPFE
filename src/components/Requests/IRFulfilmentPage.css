@@ -1,0 +1,118 @@
+.ir-fulfilment-page {
+    color: #172033;
+}
+
+.ir-request-panel {
+    border: 1px solid rgba(162, 178, 207, 0.34);
+    box-shadow: 0 14px 34px rgba(30, 58, 138, 0.08) !important;
+}
+
+.ir-filter-section {
+    padding: 12px;
+    border: 1px solid rgba(162, 178, 207, 0.28);
+    border-radius: 8px;
+    background: #fbfdff;
+}
+
+.ir-item-search__control {
+    position: relative;
+}
+
+.ir-item-search__icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    z-index: 2;
+    transform: translateY(-50%);
+    color: #526176;
+    pointer-events: none;
+}
+
+.ir-item-search__control .form-control {
+    min-height: 44px;
+    padding-left: 36px;
+    padding-right: 44px;
+    border-color: rgba(82, 97, 118, 0.28);
+    box-shadow: none;
+}
+
+.ir-item-search__control .form-control:focus {
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 0.18rem rgba(30, 58, 138, 0.14);
+}
+
+.ir-item-search__clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    z-index: 3;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    transform: translateY(-50%);
+    color: #526176;
+}
+
+.ir-clear-filters {
+    min-height: 32px;
+}
+
+.ir-request-table thead th {
+    background: #f4f7fb;
+    color: #526176;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.ir-request-table tbody tr {
+    cursor: pointer;
+}
+
+.ir-request-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+.ir-matched-item:not(:last-child) {
+    border-bottom: 1px solid rgba(162, 178, 207, 0.24);
+    padding-bottom: 6px;
+}
+
+.ir-component-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.ir-component-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    max-width: 100%;
+    padding: 2px 8px;
+    border: 1px solid rgba(30, 58, 138, 0.18);
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #1e3a8a;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.ir-empty-cell {
+    padding: 28px 12px !important;
+    background: #fbfdff;
+}
+
+@media (max-width: 767.98px) {
+    .ir-fulfilment-page {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    .ir-clear-filters {
+        min-width: 44px;
+    }
+}
