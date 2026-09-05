@@ -31,6 +31,9 @@ const fetchMainAvailForProduct = async (productId) => {
     };
 };
 
+const listProducts = async () =>
+    (await api.get("/products", { params: { status: "ACTIVE", page: 0, size: 1000, sort: "name,asc" } })).data?.content || [];
+
 const listIRs = async (page, size, status, filters = {}) => {
     const params = { page, size, sort: "createdAt,desc" };
     const actionableStatuses = status?.length
@@ -40,6 +43,7 @@ const listIRs = async (page, size, status, filters = {}) => {
     if (filters.projectName?.trim()) params.projectName = filters.projectName.trim();
     if (filters.projectNumber?.trim()) params.projectNumber = filters.projectNumber.trim();
     if (filters.requester?.trim()) params.requester = filters.requester.trim();
+    if (filters.productId?.trim()) params.productId = filters.productId.trim();
     return (await api.get("/item-requests/fulfilment", { params })).data;
 };
 
@@ -73,10 +77,12 @@ export default function IRFulfilmentPage() {
     const [fProjectName, setFProjectName] = useState("");
     const [fProjectNumber, setFProjectNumber] = useState("");
     const [fRequester, setFRequester] = useState("");
+    const [fProductId, setFProductId] = useState("");
 
     // Lookups
     const [deptMap, setDeptMap] = useState({});
     const [projMap, setProjMap] = useState({});
+    const [productOptions, setProductOptions] = useState([]);
 
     // Data
     const [onHand, setOnHand] = useState({}); // { productId: availQty }
@@ -97,7 +103,11 @@ export default function IRFulfilmentPage() {
     // Initial Load
     useEffect(() => {
         (async () => {
-            const [d, p] = await Promise.all([listDepartments(), listProjects()]);
+            const [d, p, products] = await Promise.all([
+                listDepartments().catch(() => []),
+                listProjects().catch(() => []),
+                listProducts().catch(() => [])
+            ]);
             setDeptMap(d.reduce((m, x) => ({ ...m, [x.id]: x.name }), {}));
             setProjMap(p.reduce((m, x) => ({
                 ...m,
@@ -110,6 +120,7 @@ export default function IRFulfilmentPage() {
                     location: x.location || x.siteAddress || ""
                 }
             }), {}));
+            setProductOptions(products);
         })();
     }, []);
 
@@ -120,21 +131,28 @@ export default function IRFulfilmentPage() {
         return p.jobNumber ? `${p.jobNumber} / ${p.inquiryNumber}` : `MIN: ${p.inquiryNumber}`;
     };
 
+    const requestFilters = useMemo(() => ({
+        projectName: fProjectName,
+        projectNumber: fProjectNumber,
+        requester: fRequester,
+        productId: fProductId
+    }), [fProjectName, fProjectNumber, fRequester, fProductId]);
+
+    const activeStatuses = useMemo(
+        () => statusFilter === "ACTIONABLE" ? null : [statusFilter],
+        [statusFilter]
+    );
+
     // Load List
     useEffect(() => {
         (async () => {
             setLoadingList(true);
             try {
-                const s = statusFilter === "ACTIONABLE" ? null : [statusFilter];
-                setIrs(await listIRs(page, 20, s, {
-                    projectName: fProjectName,
-                    projectNumber: fProjectNumber,
-                    requester: fRequester
-                }));
+                setIrs(await listIRs(page, 20, activeStatuses, requestFilters));
             } catch { toast.error("Failed to load requests"); }
             setLoadingList(false);
         })();
-    }, [page, statusFilter, fProjectName, fProjectNumber, fRequester]);
+    }, [page, activeStatuses, requestFilters]);
 
     const openIR = async (id) => {
         setLoadingDetail(true);
@@ -190,11 +208,7 @@ export default function IRFulfilmentPage() {
             await api.post(`/stores/pending-purchase/item-request/${selected.id}`);
             const updated = await getIR(selected.id);
             setSelected(updated);
-            setIrs(await listIRs(page, 20, statusFilter === "ACTIONABLE" ? null : [statusFilter], {
-                projectName: fProjectName,
-                projectNumber: fProjectNumber,
-                requester: fRequester
-            }));
+            setIrs(await listIRs(page, 20, activeStatuses, requestFilters));
             toast.success("Shortages added to Pending Purchase Plan");
         } catch (e) {
             toast.error("Failed to add shortages");
@@ -642,7 +656,7 @@ export default function IRFulfilmentPage() {
             setAllocations({}); // clear allocations on success
             setIssue({});
             await refreshOnHandForItems(updated.items || []);
-            const p = await listIRs(page, 20);
+            const p = await listIRs(page, 20, activeStatuses, requestFilters);
             setIrs(p);
             toast.success("Issued items successfully");
         } catch (e) {
@@ -668,6 +682,11 @@ export default function IRFulfilmentPage() {
             return projectNameOk && projectNumberOk && reqOk;
         });
     }, [irs, fProjectName, fProjectNumber, fRequester, projMap]);
+
+    const matchedItemLine = (ir) => {
+        if (!fProductId) return null;
+        return (ir.items || []).find(item => item.productId === fProductId) || null;
+    };
 
     return (
         <Container fluid style={{ maxWidth: 1600, paddingTop: 24, paddingLeft: 24, paddingRight: 24 }}>
@@ -696,7 +715,7 @@ export default function IRFulfilmentPage() {
                         </div>
                         {/* Project and requester filters */}
                         <Row className="g-2 mb-3">
-                            <Col md={4}>
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="small">Project Name</Form.Label>
                                     <Form.Control
@@ -706,7 +725,7 @@ export default function IRFulfilmentPage() {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col md={4}>
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="small">Job / Project No.</Form.Label>
                                     <Form.Control
@@ -716,7 +735,7 @@ export default function IRFulfilmentPage() {
                                     />
                                 </Form.Group>
                             </Col>
-                            <Col md={4}>
+                            <Col md={3}>
                                 <Form.Group>
                                     <Form.Label className="small">Requester</Form.Label>
                                     <Form.Control
@@ -724,6 +743,27 @@ export default function IRFulfilmentPage() {
                                         value={fRequester}
                                         onChange={(e) => { setFRequester(e.target.value); setPage(0); }}
                                     />
+                                </Form.Group>
+                            </Col>
+                            <Col md={3}>
+                                <Form.Group>
+                                    <Form.Label className="small">Item</Form.Label>
+                                    <SafeSelect
+                                        value={fProductId}
+                                        onChange={(e) => {
+                                            setFProductId(e.target.value);
+                                            setSelected(null);
+                                            setPage(0);
+                                        }}
+                                        isSearchable
+                                    >
+                                        <option value="">All items</option>
+                                        {productOptions.map(product => (
+                                            <option key={product.id} value={product.id}>
+                                                {product.name || product.id}{product.sku ? ` (${product.sku})` : ""}
+                                            </option>
+                                        ))}
+                                    </SafeSelect>
                                 </Form.Group>
                             </Col>
                         </Row>
@@ -735,23 +775,38 @@ export default function IRFulfilmentPage() {
                                     <th>Status</th>
                                     <th>Department</th>
                                     <th>Project</th>
+                                    {fProductId && <th>Matched Item</th>}
                                     <th>Requester</th>
                                     <th>Created</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredIRs.map((ir) => (
-                                    <tr key={ir.id} onClick={() => openIR(ir.id)} style={{ cursor: "pointer" }}>
-                                        <td>{ir.irNumber}</td>
-                                        <td><Badge bg={ir.status === "SUBMITTED" ? "secondary" : ir.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{ir.status}</Badge></td>
-                                        <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>
-                                        <td>{projectLabel(ir.projectId)}</td>
-                                        <td>{ir.createdBy || "-"}</td>
-                                        <td>{ir.createdAt ? new Date(ir.createdAt).toLocaleString() : "-"}</td>
-                                    </tr>
-                                ))}
+                                {filteredIRs.map((ir) => {
+                                    const itemLine = matchedItemLine(ir);
+                                    return (
+                                        <tr key={ir.id} onClick={() => openIR(ir.id)} style={{ cursor: "pointer" }}>
+                                            <td>{ir.irNumber}</td>
+                                            <td><Badge bg={ir.status === "SUBMITTED" ? "secondary" : ir.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{ir.status}</Badge></td>
+                                            <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>
+                                            <td>
+                                                <div>{projectLabel(ir.projectId)}</div>
+                                                <small className="text-muted">{projMap[ir.projectId]?.name || ""}</small>
+                                            </td>
+                                            {fProductId && (
+                                                <td>
+                                                    <div>{itemLine?.productNameSnapshot || itemLine?.productId || "-"}</div>
+                                                    <small className="text-muted">
+                                                        Req {itemLine?.requestedQty ?? 0} / Done {itemLine?.fulfilledQty ?? 0}
+                                                    </small>
+                                                </td>
+                                            )}
+                                            <td>{ir.createdBy || "-"}</td>
+                                            <td>{ir.createdAt ? new Date(ir.createdAt).toLocaleString() : "-"}</td>
+                                        </tr>
+                                    );
+                                })}
                                 {filteredIRs.length === 0 && (
-                                    <tr><td colSpan={6} className="text-center text-muted">No item requests found.</td></tr>
+                                    <tr><td colSpan={fProductId ? 7 : 6} className="text-center text-muted">No item requests found.</td></tr>
                                 )}
                             </tbody>
                         </Table>
