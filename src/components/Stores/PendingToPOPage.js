@@ -53,6 +53,12 @@ const getProductSearchText = (line) => [
     line.productId
 ].filter(Boolean).join(" ").toLowerCase();
 
+const getItemRequestSearchText = (line) => [
+    line.itemRequestNumber,
+    line.itemRequestId,
+    line.lineKey
+].filter(Boolean).join(" ").toLowerCase();
+
 const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
 const toNonNegativeNumber = (value) => {
     const parsed = Number(value);
@@ -110,6 +116,7 @@ export default function PendingToPOPage() {
     const [editRecord, setEditRecord] = useState(null);
     const [projectFilter, setProjectFilter] = useState("");
     const [productFilter, setProductFilter] = useState("");
+    const [itemRequestFilter, setItemRequestFilter] = useState("");
 
     const getOriginLabel = (line) => {
         if (line.originType === 'PROJECT' || line.projectId) {
@@ -178,10 +185,12 @@ export default function PendingToPOPage() {
         const lines = plan?.lines || [];
         const sourceQuery = projectFilter.trim().toLowerCase();
         const productQuery = productFilter.trim().toLowerCase();
-        const visible = (!sourceQuery && !productQuery) ? lines : lines.filter(line => {
+        const itemRequestQuery = itemRequestFilter.trim().toLowerCase();
+        const visible = (!sourceQuery && !productQuery && !itemRequestQuery) ? lines : lines.filter(line => {
             const matchesSource = !sourceQuery || getSourceSearchText(line).includes(sourceQuery);
             const matchesProduct = !productQuery || getProductSearchText(line).includes(productQuery);
-            return matchesSource && matchesProduct;
+            const matchesItemRequest = !itemRequestQuery || getItemRequestSearchText(line).includes(itemRequestQuery);
+            return matchesSource && matchesProduct && matchesItemRequest;
         });
         if (activeDraftLineKeys.length === 0) return visible;
 
@@ -191,7 +200,7 @@ export default function PendingToPOPage() {
             const bRank = priority.has(getLineKey(b)) ? priority.get(getLineKey(b)) : Number.MAX_SAFE_INTEGER;
             return aRank - bRank;
         });
-    }, [plan?.lines, projectFilter, productFilter, activeDraftLineKeys]);
+    }, [plan?.lines, projectFilter, productFilter, itemRequestFilter, activeDraftLineKeys]);
 
     const groupedAllocation = useMemo(() => {
         // supplierId => [{ productId, qty, unitPrice?, taxPercent? }]
@@ -488,6 +497,14 @@ export default function PendingToPOPage() {
                             onChange={e => setProductFilter(e.target.value)}
                         />
                     </Form.Group>
+                    <Form.Group style={{ minWidth: 220, maxWidth: 300 }}>
+                        <Form.Label className="small fw-bold">Filter by IR No.</Form.Label>
+                        <Form.Control
+                            value={itemRequestFilter}
+                            placeholder="IR number..."
+                            onChange={e => setItemRequestFilter(e.target.value)}
+                        />
+                    </Form.Group>
                     <Form.Group style={{ minWidth: 220 }}>
                         <Form.Label className="small fw-bold">Sort Pending Purchases</Form.Label>
                         <SafeSelect value={pendingSort} onChange={e => setPendingSort(e.target.value)}>
@@ -505,10 +522,11 @@ export default function PendingToPOPage() {
                             ))}
                         </SafeSelect>
                     </Form.Group>
-                    {(projectFilter.trim() || productFilter.trim()) && (
+                    {(projectFilter.trim() || productFilter.trim() || itemRequestFilter.trim()) && (
                         <Button variant="outline-secondary" onClick={() => {
                             setProjectFilter("");
                             setProductFilter("");
+                            setItemRequestFilter("");
                         }}>
                             Clear
                         </Button>
