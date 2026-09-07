@@ -12,10 +12,13 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
     const [file, setFile] = useState(null);
     const [isAccepting, setIsAccepting] = useState(false);
     const [quotationApprovalStatus, setQuotationApprovalStatus] = useState("");
+    const [cargillsStatuses, setCargillsStatuses] = useState({ materials: "", panels: "" });
     const [quotationStatusLoading, setQuotationStatusLoading] = useState(false);
 
     const targetId = projectId || project?.id;
+    const isCargillsInquiry = Boolean(project?.cargillsInquiry);
     const canOpenQuotation = ["APPROVED", "FINALIZED"].includes(String(quotationApprovalStatus || "").toUpperCase());
+    const cargillsReady = Object.values(cargillsStatuses).every(status => ["APPROVED", "FINALIZED"].includes(String(status).toUpperCase()));
 
     useEffect(() => {
         let active = true;
@@ -27,11 +30,24 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
         }
 
         setQuotationStatusLoading(true);
-        api.get(`/estimations/by-project/${targetId}`)
+        const request = isCargillsInquiry
+            ? Promise.all([
+                api.get(`/estimations/by-project/${targetId}`, { params: { estimationType: "CARGILLS_MATERIALS" } }).catch(() => ({ data: null })),
+                api.get(`/estimations/by-project/${targetId}`, { params: { estimationType: "CARGILLS_PANELS" } }).catch(() => ({ data: null })),
+            ])
+            : api.get(`/estimations/by-project/${targetId}`);
+        request
             .then((res) => {
                 if (!active) return;
-                const est = res.data || {};
-                setQuotationApprovalStatus(est.approvalStatus || est.status || "");
+                if (isCargillsInquiry) {
+                    setCargillsStatuses({
+                        materials: res[0].data?.approvalStatus || res[0].data?.status || "",
+                        panels: res[1].data?.approvalStatus || res[1].data?.status || "",
+                    });
+                } else {
+                    const est = res.data || {};
+                    setQuotationApprovalStatus(est.approvalStatus || est.status || "");
+                }
             })
             .catch(() => {
                 if (active) setQuotationApprovalStatus("");
@@ -43,18 +59,20 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
         return () => {
             active = false;
         };
-    }, [isVisible, targetId, reloadKey]);
+    }, [isVisible, targetId, reloadKey, isCargillsInquiry]);
 
     if (!isVisible) return null;
 
-    const handleViewQuotation = () => {
+    const handleViewQuotation = (estimationType = null) => {
         if (!targetId) return;
-        if (!canOpenQuotation) {
+        const trackStatus = estimationType === "CARGILLS_MATERIALS" ? cargillsStatuses.materials
+            : estimationType === "CARGILLS_PANELS" ? cargillsStatuses.panels : quotationApprovalStatus;
+        if (!["APPROVED", "FINALIZED"].includes(String(trackStatus || "").toUpperCase())) {
             toast.warn("Estimation must be fully approved before opening the quotation.");
             return;
         }
         // Navigate to the Printable View (QuotationPrint.js)
-        navigate(`/projects/${targetId}/quotation`);
+        navigate(`/projects/${targetId}/quotation${estimationType ? `?estimationType=${estimationType}` : ""}`);
     };
 
     const handleAcceptQuotation = async (e) => {
@@ -108,7 +126,25 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                 <p className="text-muted small">
                     View the customer-facing quotation and record the customer's Purchase Order when the quotation is accepted.
                 </p>
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 flex-wrap">
+                    {isCargillsInquiry ? (
+                        <>
+                            <Button
+                                variant="primary"
+                                onClick={() => handleViewQuotation("CARGILLS_MATERIALS")}
+                                disabled={quotationStatusLoading || !["APPROVED", "FINALIZED"].includes(String(cargillsStatuses.materials).toUpperCase())}
+                            >
+                                Open Materials Quotation
+                            </Button>
+                            <Button
+                                variant="outline-primary"
+                                onClick={() => handleViewQuotation("CARGILLS_PANELS")}
+                                disabled={quotationStatusLoading || !["APPROVED", "FINALIZED"].includes(String(cargillsStatuses.panels).toUpperCase())}
+                            >
+                                Open Panels Quotation
+                            </Button>
+                        </>
+                    ) : (
                     <Button
                         variant="primary"
                         onClick={handleViewQuotation}
@@ -118,20 +154,23 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                         {quotationStatusLoading ? <Spinner size="sm" className="me-1" /> : null}
                         Open Quotation
                     </Button>
+                    )}
                     {(!project?.jobNumber) && actions?.canAcceptQuotation && (
                         <Button
                             variant="success"
                             onClick={() => setShowModal(true)}
-                            disabled={!targetId || quotationStatusLoading || !canOpenQuotation}
-                            title={!canOpenQuotation ? "Approve the estimation before recording the customer PO" : ""}
+                            disabled={!targetId || quotationStatusLoading || (isCargillsInquiry ? !cargillsReady : !canOpenQuotation)}
+                            title={(isCargillsInquiry ? !cargillsReady : !canOpenQuotation) ? "Approve all required estimations before recording the customer PO" : ""}
                         >
                             <CheckCircle size={16} className="me-1" /> Record Customer PO
                         </Button>
                     )}
                 </div>
-                {!quotationStatusLoading && !canOpenQuotation && (
+                {!quotationStatusLoading && !(isCargillsInquiry ? cargillsReady : canOpenQuotation) && (
                     <div className="small text-muted mt-2">
-                        Estimation approval is required before the quotation can be opened or printed.
+                        {isCargillsInquiry
+                            ? "Both Cargills estimations must be approved. Each approved track then opens as its own quotation."
+                            : "Estimation approval is required before the quotation can be opened or printed."}
                     </div>
                 )}
             </Card.Body>

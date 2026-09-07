@@ -15,7 +15,7 @@ import { CustomerForm } from "../Customer/CustomerCreate";
 import { confirmAction } from "../../utils/brandedDialogs";
 
 /* ------------ API helpers ------------ */
-const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
+const getEstimation = async (projectId, estimationType) => (await api.get(`/estimations/by-project/${projectId}`, { params: { estimationType } })).data;
 const listTemplates = async () => (await api.get(`/component-templates`)).data;
 const createTemplateAPI = async (payload) => (await api.post(`/component-templates`, payload)).data;
 const deleteTemplateAPI = async (id) => (await api.delete(`/component-templates/${id}`)).data;
@@ -36,11 +36,11 @@ const submitApprovalAPI = async (id, payload) => (await api.post(`/estimations/$
 const approveAPI = async (id, payload) => (await api.post(`/estimations/${id}/approve`, payload)).data;
 const rejectAPI = async (id, payload) => (await api.post(`/estimations/${id}/reject`, payload)).data;
 const createRevisionAPI = async (id, payload, headers = {}) => (await api.post(`/estimations/${id}/revision`, payload, { headers })).data;
-const batchSaveEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}/batch`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
-const patchEstimationComponentsAPI = async (projectId, payload) => (await api.patch(`/estimations/by-project/${projectId}/components`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
-const saveDraftEstimationAPI = async (projectId, payload) => (await api.post(`/estimations/by-project/${projectId}/draft`, payload, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
-const promoteDraftEstimationAPI = async (projectId) => (await api.post(`/estimations/by-project/${projectId}/draft/promote`, null, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
-const discardDraftEstimationAPI = async (projectId) => (await api.delete(`/estimations/by-project/${projectId}/draft`, { timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const batchSaveEstimationAPI = async (projectId, estimationType, payload) => (await api.post(`/estimations/by-project/${projectId}/batch`, payload, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const patchEstimationComponentsAPI = async (projectId, estimationType, payload) => (await api.patch(`/estimations/by-project/${projectId}/components`, payload, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const saveDraftEstimationAPI = async (projectId, estimationType, payload) => (await api.post(`/estimations/by-project/${projectId}/draft`, payload, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const promoteDraftEstimationAPI = async (projectId, estimationType) => (await api.post(`/estimations/by-project/${projectId}/draft/promote`, null, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const discardDraftEstimationAPI = async (projectId, estimationType) => (await api.delete(`/estimations/by-project/${projectId}/draft`, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 
 const LINE_TYPES = {
     PRODUCT: "PRODUCT",
@@ -172,6 +172,14 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const location = useLocation(); // Hook for URL query params
     const searchParams = new URLSearchParams(location.search);
     const forceReadOnly = searchParams.get("readOnly") === "true";
+    const requestedEstimationType = searchParams.get("estimationType");
+    const estimationType = ["CARGILLS_MATERIALS", "CARGILLS_PANELS"].includes(requestedEstimationType)
+        ? requestedEstimationType
+        : "STANDARD";
+    const estimationTypeLabel = estimationType === "CARGILLS_MATERIALS"
+        ? "Cargills Materials"
+        : estimationType === "CARGILLS_PANELS" ? "Cargills Panels" : "Project";
+    const isCargillsTrack = estimationType !== "STANDARD";
     const isProjectRoute = Boolean(propProjectId);
 
     /* ------------ reference data ------------ */
@@ -188,6 +196,19 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         return roles.join(",");
     }, [role, projectRoles]);
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
+
+    useEffect(() => {
+        let active = true;
+        if (!propProjectId || estimationType !== "STANDARD") return () => { active = false; };
+        getProjectAPI(propProjectId)
+            .then((project) => {
+                if (active && project?.cargillsInquiry) {
+                    navigate(`/projects/estimation/${propProjectId}?estimationType=CARGILLS_MATERIALS${forceReadOnly ? "&readOnly=true" : ""}`, { replace: true });
+                }
+            })
+            .catch(() => {});
+        return () => { active = false; };
+    }, [estimationType, forceReadOnly, navigate, propProjectId]);
 
     /* ------------ quick indexes ------------ */
     const productById = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
@@ -470,7 +491,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         (async () => {
             setLoading(true);
             try {
-                const est = await getEstimation(pid).catch(() => null);
+                const est = await getEstimation(pid, estimationType).catch(() => null);
 
                 if (!est) {
                     setComponents(["Component A"]);
@@ -638,7 +659,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setLoading(false);
             }
         })();
-    }, [projectOpt?.value, isRefDataLoaded]);
+    }, [projectOpt?.value, isRefDataLoaded, estimationType]);
 
     /* ------------ helpers ------------ */
     const buildProductLabel = (p) => {
@@ -1651,7 +1672,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const pid = projectOpt?.value;
         if (!pid) return;
         try {
-            const res = await discardDraftEstimationAPI(pid);
+            const res = await discardDraftEstimationAPI(pid, estimationType);
             setLatestDraft(res.latestDraft || null);
             setSaveHistory(res.saveHistory || []);
             setAutosaveStatus("idle");
@@ -1684,7 +1705,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
         setAutosaveStatus("saving");
         setAutosaveError("");
-        const request = saveDraftEstimationAPI(pid, payload)
+        const request = saveDraftEstimationAPI(pid, estimationType, payload)
             .then(res => {
                 lastDraftSignatureRef.current = signature;
                 setLatestDraft(res.latestDraft || null);
@@ -1755,6 +1776,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         const formData = new FormData();
         formData.append("file", quotationFile);
         return api.post(`/estimations/by-project/${pid}/quotation-file`, formData, {
+            params: { estimationType },
             timeout: ESTIMATION_SAVE_TIMEOUT_MS,
             onUploadProgress: (event) => {
                 if (!event.total) return;
@@ -1772,7 +1794,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
         for (let index = 0; index < batches.length; index += 1) {
             setSaveProgressText(`Saving batch ${index + 1} of ${batches.length}`);
-            saved = await batchSaveEstimationAPI(pid, {
+            saved = await batchSaveEstimationAPI(pid, estimationType, {
                 sessionId,
                 batchNumber: index + 1,
                 totalBatches: batches.length,
@@ -1802,7 +1824,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         setSaveProgressText(selectedComponents.length
             ? `Updating ${selectedComponents.length} changed component${selectedComponents.length === 1 ? "" : "s"}`
             : "Updating estimation details");
-        const saved = await patchEstimationComponentsAPI(pid, {
+        const saved = await patchEstimationComponentsAPI(pid, estimationType, {
             estimation: { ...payload, components: [] },
             components: selectedComponents,
         });
@@ -1849,7 +1871,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             if (promotableDraft) {
                 saveMode = "promote";
                 setSaveProgressText("Promoting autosaved draft");
-                res = { data: await promoteDraftEstimationAPI(pid) };
+                res = { data: await promoteDraftEstimationAPI(pid, estimationType) };
             } else if (canPatchExistingEstimation(payload)) {
                 saveMode = "patch";
                 res = await performPatchSaveEstimation(pid, payload);
@@ -1873,6 +1895,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 }
 
                 res = await api.post(`/estimations/by-project/${pid}`, formData, {
+                    params: { estimationType },
                     timeout: ESTIMATION_SAVE_TIMEOUT_MS,
                     onUploadProgress: quotationFile
                         ? (event) => {
@@ -2431,8 +2454,9 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                         <div className="d-flex align-items-center gap-3">
                             <div className="d-flex align-items-center mb-0">
                                 <button type="button" className="btn btn-light me-3" onClick={() => requestLeavePage(() => navigate(-1))}><ArrowLeft size={18} /></button>
-                                <h4 className="mb-0">Project Estimation</h4>
+                                <h4 className="mb-0">{estimationTypeLabel} Estimation</h4>
                             </div>
+                            {isCargillsTrack && <Badge bg="info">Cargills method</Badge>}
                             <Badge bg={statusColor} className="fs-6">{approvalStatus}</Badge>
                             <Badge bg="light" text="dark" className="border">V{version}</Badge>
                         </div>
@@ -2484,6 +2508,22 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             )}
                         </div>
                     </div>
+                    {isCargillsTrack && (
+                        <div className="bg-white border rounded p-2 mb-3 d-flex flex-wrap align-items-center gap-2" role="navigation" aria-label="Cargills estimation tracks">
+                            <span className="small fw-semibold text-muted me-1">Cargills quotation track</span>
+                            {[{ type: "CARGILLS_MATERIALS", label: "Materials" }, { type: "CARGILLS_PANELS", label: "Panels" }].map((track) => (
+                                <Button
+                                    key={track.type}
+                                    size="sm"
+                                    variant={estimationType === track.type ? "primary" : "outline-primary"}
+                                    onClick={() => requestLeavePage(() => navigate(`/projects/estimation/${propProjectId || projectOpt?.value}?estimationType=${track.type}${forceReadOnly ? "&readOnly=true" : ""}`))}
+                                >
+                                    {track.label} estimation
+                                </Button>
+                            ))}
+                            <span className="small text-muted ms-auto">Each track is approved and quoted separately. The invoice combines both approved totals.</span>
+                        </div>
+                    )}
 
                     {!isLocked && (
                         <div className="bg-white shadow rounded p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">

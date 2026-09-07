@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/api";
 import { Button, Spinner, Table, Alert, Modal, Form, Tabs, Tab, Badge, Dropdown } from "react-bootstrap";
 import ReportLayout from "../ReusableComponents/ReportLayout";
@@ -366,10 +366,19 @@ const aggregateItems = (items = [], multiplier = 1) => {
 const QuotationPrint = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const requestedEstimationType = new URLSearchParams(location.search).get("estimationType");
+    const estimationType = ["CARGILLS_MATERIALS", "CARGILLS_PANELS"].includes(requestedEstimationType)
+        ? requestedEstimationType
+        : "STANDARD";
+    const quotationTrackLabel = estimationType === "CARGILLS_MATERIALS"
+        ? "Materials"
+        : estimationType === "CARGILLS_PANELS" ? "Panels" : "";
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState("");
     const [estimation, setEstimation] = useState(null);
     const [project, setProject] = useState(null);
+    const [companionEstimation, setCompanionEstimation] = useState(null);
     const [customer, setCustomer] = useState(null);
     const [invoices, setInvoices] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -383,7 +392,7 @@ const QuotationPrint = () => {
     const fetchData = async () => {
         try {
             setLoadError("");
-            const estRes = await api.get(`/estimations/by-project/${projectId}/quotation`);
+            const estRes = await api.get(`/estimations/by-project/${projectId}/quotation`, { params: { estimationType } });
             setEstimation(estRes.data);
 
             try {
@@ -396,6 +405,13 @@ const QuotationPrint = () => {
 
             const projRes = await api.get(`/projects/${projectId}`);
             setProject(projRes.data);
+            if (projRes.data?.cargillsInquiry) {
+                const companionType = estimationType === "CARGILLS_MATERIALS" ? "CARGILLS_PANELS" : "CARGILLS_MATERIALS";
+                const companionRes = await api.get(`/estimations/by-project/${projectId}`, { params: { estimationType: companionType } }).catch(() => ({ data: null }));
+                setCompanionEstimation(companionRes.data || null);
+            } else {
+                setCompanionEstimation(null);
+            }
 
             if (projRes.data.customerId) {
                 const custRes = await api.get(`/customer/${projRes.data.customerId}`);
@@ -419,7 +435,7 @@ const QuotationPrint = () => {
     useEffect(() => {
         fetchData();
         // eslint-disable-next-line
-    }, [projectId]);
+    }, [projectId, estimationType]);
 
     useEffect(() => {
         const hasFinalInvoice = invoices
@@ -562,6 +578,8 @@ const QuotationPrint = () => {
 
     const isFinalized = estimation.status === "FINALIZED";
     const activeInvoices = invoices.filter(inv => inv.status !== "CANCELLED");
+    const companionFinalized = !project?.cargillsInquiry || companionEstimation?.status === "FINALIZED";
+    const canGenerateInvoice = isFinalized && companionFinalized;
     const hasActiveFinalInvoice = activeInvoices.some(inv => {
         const type = getInvoiceDocumentType(inv);
         return type === INVOICE_TYPES.NORMAL || type === INVOICE_TYPES.TAX;
@@ -603,6 +621,18 @@ const QuotationPrint = () => {
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
                 <div className="d-flex gap-2 align-items-center">
+                    {project?.cargillsInquiry && (
+                        <>
+                            <Badge bg="info">Cargills {quotationTrackLabel} quotation</Badge>
+                            <Button
+                                size="sm"
+                                variant="outline-primary"
+                                onClick={() => navigate(`/projects/${projectId}/quotation?estimationType=${estimationType === "CARGILLS_MATERIALS" ? "CARGILLS_PANELS" : "CARGILLS_MATERIALS"}`)}
+                            >
+                                Open {estimationType === "CARGILLS_MATERIALS" ? "Panels" : "Materials"} quotation
+                            </Button>
+                        </>
+                    )}
                     {activeTab === "quotation" && (
                         <>
                             <Form.Select
@@ -683,7 +713,7 @@ const QuotationPrint = () => {
                                     Every generated invoice is recorded here with its number, version, creator, timestamp, and total.
                                 </div>
                             </div>
-                            {isFinalized && (
+                            {canGenerateInvoice && (
                                 <div className="d-flex gap-2 align-items-center">
                                     <Form.Select
                                         size="sm"
@@ -707,6 +737,10 @@ const QuotationPrint = () => {
                             {!isFinalized ? (
                                 <Alert variant="warning" className="mb-0">
                                     Finalize the quotation before generating proforma, cash, or tax invoices.
+                                </Alert>
+                            ) : project?.cargillsInquiry && !companionFinalized ? (
+                                <Alert variant="warning" className="mb-0">
+                                    Finalize both the Materials and Panels quotations before generating an invoice. Every invoice will use their combined total.
                                 </Alert>
                             ) : activeInvoices.length === 0 ? (
                                 <div className="text-center text-muted py-5">
@@ -761,6 +795,11 @@ const QuotationPrint = () => {
             ) : (
                 <>
                     {isFinalized && <Alert variant="success" className="no-print">This quotation is finalized and locked.</Alert>}
+                    {project?.cargillsInquiry && (
+                        <Alert variant="info" className="no-print">
+                            This is the {quotationTrackLabel} quotation in the Cargills method. It is approved and finalized separately; the invoice total combines this quotation with the other track.
+                        </Alert>
+                    )}
                     {quotationPrintApprovalRequired && !quotationPrintApproved && (
                         <Alert variant="warning" className="no-print">
                             Quotation print/PDF approval is pending. The quotation can be reviewed here, but printing and saving as PDF are locked until the selected approver rule is satisfied.
@@ -773,7 +812,7 @@ const QuotationPrint = () => {
                     )}
 
                     <ReportLayout
-                        title="Quotation"
+                        title={project?.cargillsInquiry ? `${quotationTrackLabel} Quotation` : "Quotation"}
                         orientation="portrait"
                         subtitle={`${subtitleParts.join(" | ")} - v${estimation.version || 1}`}
                     >

@@ -71,6 +71,7 @@ export const registerDefaultComponents = () => {
                 <div className="card-body" style={{ overflowY: 'auto' }}>
                     <ProjectFiles
                         id={props.id}
+                        project={props.project}
                         actions={props.effectiveActions}
                         stageObj={props.stageObj}
                         roleHeader={props.roleHeader}
@@ -94,6 +95,7 @@ export const registerDefaultComponents = () => {
             <>
                 <div className="mb-3">
                     <ProjectEstimationCard
+                        project={props.project}
                         projectId={props.id}
                         currency={props.project?.currency}
                         readOnly={!!props.viewVersion}

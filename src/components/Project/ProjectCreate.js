@@ -66,6 +66,7 @@ const ProjectForm = () => {
     customerId: "",
     salesRep: "",
     inquiryType: "JOB",
+    cargillsInquiry: false,
     workflowId: "", // NEW
     comment: "",
     currency: "LKR",
@@ -268,6 +269,7 @@ const ProjectForm = () => {
             customerId,
             salesRep,
             inquiryType,
+            cargillsInquiry: Boolean(projectData.cargillsInquiry),
             comment,
             currency: projectData.currency,
             workflowId: projectData.workflowId // NEW
@@ -297,6 +299,7 @@ const ProjectForm = () => {
             customerId,
             salesRep,
             inquiryType,
+            cargillsInquiry: Boolean(projectData.cargillsInquiry),
             comment,
             currency: projectData.currency,
             status: projectData.status, // keep status if you want to allow change later
@@ -561,6 +564,21 @@ const ProjectForm = () => {
                     <option value="USD">USD (Dollars)</option>
                   </SafeSelect>
                 </Form.Group>
+              </Col>
+              <Col xs={12}>
+                <div className={`border rounded p-3 ${projectData.cargillsInquiry ? "border-primary bg-primary-subtle" : "bg-light"}`}>
+                  <Form.Check
+                    type="switch"
+                    id="cargillsInquiry"
+                    label="Use the Cargills two-quotation method"
+                    checked={Boolean(projectData.cargillsInquiry)}
+                    onChange={(event) => setProjectData((prev) => ({ ...prev, cargillsInquiry: event.target.checked }))}
+                    disabled={!isEditMode || Boolean(routeId)}
+                  />
+                  <div className="small text-muted mt-1 ms-4">
+                    Creates separate Materials and Panels estimation tracks with independent approvals and quotations. Every generated invoice uses the sum of their final totals.
+                  </div>
+                </div>
               </Col>
               <Col xs={12} md={6}>
                 <Form.Group controlId="workflowId">

@@ -110,12 +110,14 @@ export default function PendingApprovalsWidget() {
                         .then((res) => (res.data || []).map((est) => ({
                             id: `estimation-${est.estimationId}`,
                             typeKey: "estimation",
-                            typeLabel: "Estimation Approval",
+                            typeLabel: est.estimationType === "CARGILLS_MATERIALS"
+                                ? "Cargills Materials Approval"
+                                : est.estimationType === "CARGILLS_PANELS" ? "Cargills Panels Approval" : "Estimation Approval",
                             title: est.projectName || est.projectId || "Project estimation",
                             subtitle: est.customerName || `Version ${est.version || 1}`,
                             detail: est.grandTotal ? `LKR ${money(est.grandTotal)}` : "Awaiting approval",
                             date: est.updatedAt || est.createdAt,
-                            route: `/projects/estimation/${est.projectId}?readOnly=true`
+                            route: `/projects/estimation/${est.projectId}?${est.estimationType && est.estimationType !== "STANDARD" ? `estimationType=${est.estimationType}&` : ""}readOnly=true`
                         })))
                 );
 

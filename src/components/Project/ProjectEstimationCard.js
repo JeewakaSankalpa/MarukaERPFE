@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Table, Spinner } from 'react-bootstrap';
+import { Card, Button, Table, Spinner, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 
@@ -12,17 +12,28 @@ import api from '../../api/api';
  * @param {string} props.projectId - Project ID
  * @param {Function} props.onOpen - Callback when opening editor
  */
-export default function ProjectEstimationCard({ projectId, onOpen, readOnly, currency = 'LKR' }) {
+export default function ProjectEstimationCard({ project, projectId, onOpen, readOnly, currency = 'LKR' }) {
     const navigate = useNavigate();
     const [est, setEst] = useState(null);
+    const [cargillsEstimates, setCargillsEstimates] = useState({ materials: null, panels: null });
     const [loading, setLoading] = useState(false);
+    const isCargillsInquiry = Boolean(project?.cargillsInquiry);
 
     const load = async () => {
         if (!projectId) return;
         try {
             setLoading(true);
-            const res = await api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null }));
-            setEst(res?.data || null);
+            if (isCargillsInquiry) {
+                const [materials, panels] = await Promise.all([
+                    api.get(`/estimations/by-project/${projectId}`, { params: { estimationType: "CARGILLS_MATERIALS" } }).catch(() => ({ data: null })),
+                    api.get(`/estimations/by-project/${projectId}`, { params: { estimationType: "CARGILLS_PANELS" } }).catch(() => ({ data: null })),
+                ]);
+                setCargillsEstimates({ materials: materials.data || null, panels: panels.data || null });
+                setEst(null);
+            } else {
+                const res = await api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null }));
+                setEst(res?.data || null);
+            }
         } catch {
             setEst(null);
         } finally {
@@ -30,11 +41,14 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
         }
     };
 
-    useEffect(() => { load(); }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { load(); }, [projectId, isCargillsInquiry]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const openEditor = () => {
+    const openEditor = (estimationType = null) => {
         // If readOnly, append query param
-        const url = `/projects/estimation/${projectId}${readOnly ? '?readOnly=true' : ''}`;
+        const params = new URLSearchParams();
+        if (estimationType) params.set("estimationType", estimationType);
+        if (readOnly) params.set("readOnly", "true");
+        const url = `/projects/estimation/${projectId}${params.toString() ? `?${params}` : ''}`;
         navigate(url);
         onOpen?.();
     };
@@ -44,6 +58,11 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
         navigate(`/projects/estimation/${projectId}`);
         onOpen?.();
     };
+
+    const cargillsTracks = [
+        { key: "materials", type: "CARGILLS_MATERIALS", label: "Materials", estimation: cargillsEstimates.materials },
+        { key: "panels", type: "CARGILLS_PANELS", label: "Panels", estimation: cargillsEstimates.panels },
+    ];
 
     const componentsCount = (est?.components || []).length;
     const totalLines = (est?.components || []).reduce((acc, c) => acc + (c.items?.length || 0), 0);
@@ -229,7 +248,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
             <Card.Header className="d-flex justify-content-between align-items-center">
                 <span>Quotations & Estimation {readOnly && <small className="text-muted">(Snapshot)</small>}</span>
                 <div className="d-flex gap-2">
-                    {est ? (
+                    {!isCargillsInquiry && (est ? (
                         <>
                             <Button size="sm" variant="outline-secondary" onClick={load} disabled={loading}>
                                 {loading ? 'Loading…' : 'Reload'}
@@ -244,7 +263,7 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
                                 Create Estimation
                             </Button>
                         )
-                    )}
+                    ))}
                 </div>
             </Card.Header>
 
@@ -253,8 +272,41 @@ export default function ProjectEstimationCard({ projectId, onOpen, readOnly, cur
                 {projectId && loading && (
                     <div className="small text-muted"><Spinner size="sm" className="me-2" /> Loading estimation…</div>
                 )}
-                {projectId && !loading && !est && (
+                {projectId && !loading && !isCargillsInquiry && !est && (
                     <div className="text-muted">No estimation yet for this project.</div>
+                )}
+                {projectId && !loading && isCargillsInquiry && (
+                    <>
+                        <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+                            <div>
+                                <Badge bg="info" className="mb-1">Cargills method</Badge>
+                                <div className="small text-muted">Materials and Panels follow separate approval and quotation tracks.</div>
+                            </div>
+                            <strong>{currency} {money(cargillsTracks.reduce((sum, track) => sum + val(track.estimation?.computedGrandTotal), 0))}</strong>
+                        </div>
+                        <Table size="sm" bordered responsive className="mb-2">
+                            <thead>
+                                <tr><th>Track</th><th>Status</th><th className="text-end">Final total</th><th className="text-end">Action</th></tr>
+                            </thead>
+                            <tbody>
+                                {cargillsTracks.map((track) => (
+                                    <tr key={track.key}>
+                                        <td className="fw-semibold">{track.label}</td>
+                                        <td>{track.estimation?.approvalStatus || track.estimation?.status || "Not created"}</td>
+                                        <td className="text-end">{currency} {money(track.estimation?.computedGrandTotal)}</td>
+                                        <td className="text-end">
+                                            {(track.estimation || !readOnly) ? (
+                                                <Button size="sm" variant={track.estimation ? "outline-primary" : "primary"} onClick={() => openEditor(track.type)}>
+                                                    {track.estimation ? (readOnly ? "View" : "View / Edit") : "Create"}
+                                                </Button>
+                                            ) : "-"}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                        <div className="small text-muted">Combined inquiry value updates from the two saved estimation totals. Invoices can be generated after both quotations are finalized, using their combined total.</div>
+                    </>
                 )}
                 {est && !loading && (
                     <>

@@ -62,7 +62,39 @@ const PRINT_FORMATS = {
     COMPONENTS_WITH_ITEMS: "componentsWithItems",
     TOTALS_ONLY: "totalsOnly",
     CUSTOM: "custom",
+    CARGILLS_CUSTOM_LINES: "cargillsCustomLines",
 };
+
+const PROTECTED_CARGILLS_OPTIONS = new Set([
+    "showSubtotal",
+    "showVat",
+    "showOtherTax",
+    "showTotalAmount",
+    "showPayments",
+    "showTotalDue",
+]);
+
+const createCustomLine = (line = {}) => ({
+    key: line.key || `custom-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    itemCode: line.itemCode || "",
+    description: line.description || "",
+    quantity: line.quantity ?? "",
+    unit: line.unit || "",
+    unitPrice: line.unitPrice ?? "",
+    total: line.total ?? "",
+});
+
+const customLineAmount = (line) =>
+    Math.round(Number(line?.total || 0) * 100) / 100;
+
+const customLineSignature = (lines = []) => JSON.stringify(lines.map((line) => ({
+    itemCode: String(line.itemCode || "").trim(),
+    description: String(line.description || "").trim(),
+    quantity: Number(line.quantity),
+    unit: String(line.unit || "").trim(),
+    unitPrice: Math.round(Number(line.unitPrice) * 100) / 100,
+    total: customLineAmount(line),
+})));
 
 const TAX_PRINT_PRESETS = {
     [PRINT_FORMATS.ALL]: {
@@ -474,6 +506,8 @@ const InvoiceView = () => {
     const [previewPrintEntry, setPreviewPrintEntry] = useState(null);
     const [taxPrintFormat, setTaxPrintFormat] = useState(PRINT_FORMATS.ALL);
     const [taxPrintOptions, setTaxPrintOptions] = useState(TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]);
+    const [customLines, setCustomLines] = useState([]);
+    const [savingCustomLines, setSavingCustomLines] = useState(false);
     const { role, projectRoles } = useAuth();
     const rolesHeader = useMemo(() => [role, ...(Array.isArray(projectRoles) ? projectRoles : [])]
         .filter(Boolean)
@@ -486,6 +520,21 @@ const InvoiceView = () => {
     const currentPrintLayout = invoice?.printLayouts?.[selectedType];
     const isPrintLayoutLocked = isFinalInvoiceType && currentPrintLayout?.locked === true;
     const canEditPrintLayout = !isPrintLayoutLocked || isAdmin;
+    const isCargillsInvoice = project?.cargillsInquiry === true;
+    const usesCargillsCustomLines = isCargillsInvoice && taxPrintFormat === PRINT_FORMATS.CARGILLS_CUSTOM_LINES;
+    const customLinesTotal = decimalTotal(customLines.map(customLineAmount));
+    const protectedSupplyValue = numberValue(invoice?.subtotal);
+    const customLinesComplete = customLines.length > 0 && customLines.every((line) =>
+        String(line.description || "").trim()
+        && Number(line.quantity) > 0
+        && line.unitPrice !== ""
+        && Number.isFinite(Number(line.unitPrice))
+        && line.total !== ""
+        && Number.isFinite(Number(line.total)));
+    const customLinesMatch = customLinesComplete
+        && Math.round(customLinesTotal * 100) === Math.round(protectedSupplyValue * 100);
+    const customLinesSaved = usesCargillsCustomLines
+        && customLineSignature(customLines) === customLineSignature(currentPrintLayout?.customLines || []);
     const currentPrintAuditEntries = Array.isArray(invoice?.printAuditTrail)
         ? invoice.printAuditTrail.filter(entry => entry.documentType === selectedType)
         : [];
@@ -515,11 +564,15 @@ const InvoiceView = () => {
                 }
 
                 if (invRes.data.projectId) {
-                    try {
-                        const estRes = await api.get(`/estimations/by-project/${invRes.data.projectId}`);
-                        setEstimation(estRes.data);
-                    } catch (estErr) {
-                        console.warn("Could not fetch source estimation", estErr);
+                    if ((invRes.data.estimationIds || []).length > 1) {
+                        setEstimation(null);
+                    } else {
+                        try {
+                            const estRes = await api.get(`/estimations/by-project/${invRes.data.projectId}`);
+                            setEstimation(estRes.data);
+                        } catch (estErr) {
+                            console.warn("Could not fetch source estimation", estErr);
+                        }
                     }
 
                     const projRes = await api.get(`/projects/${invRes.data.projectId}`);
@@ -571,12 +624,18 @@ const InvoiceView = () => {
 
     useEffect(() => {
         const layout = invoice?.printLayouts?.[selectedType];
-        if (!layout?.locked || !isFinalInvoiceType) return;
-        setTaxPrintFormat(layout.printFormat || PRINT_FORMATS.CUSTOM);
-        setTaxPrintOptions({
-            ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
-            ...(layout.printOptions || {}),
-        });
+        if (!layout) {
+            setCustomLines([]);
+            return;
+        }
+        if ((layout.locked && isFinalInvoiceType) || layout.printFormat === PRINT_FORMATS.CARGILLS_CUSTOM_LINES) {
+            setTaxPrintFormat(layout.printFormat || PRINT_FORMATS.CUSTOM);
+            setTaxPrintOptions({
+                ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
+                ...(layout.printOptions || {}),
+            });
+        }
+        setCustomLines((layout.customLines || []).map(createCustomLine));
     }, [invoice, selectedType, isFinalInvoiceType]);
 
     const groupedItems = useMemo(() => {
@@ -736,16 +795,46 @@ const InvoiceView = () => {
         documentType: selectedType,
         printFormat: taxPrintFormat,
         printOptions: taxPrintOptions,
+        customLines: usesCargillsCustomLines
+            ? customLines.map((line) => ({
+                itemCode: String(line.itemCode || "").trim(),
+                description: String(line.description || "").trim(),
+                quantity: Number(line.quantity),
+                unit: String(line.unit || "").trim(),
+                unitPrice: Number(line.unitPrice),
+                total: customLineAmount(line),
+            }))
+            : [],
     });
 
     const applyPrintLayoutFromInvoice = (updatedInvoice) => {
         const layout = updatedInvoice?.printLayouts?.[selectedType];
-        if (!layout?.locked || !isFinalInvoiceType) return;
+        if (!layout) return;
+        if (!layout.locked && layout.printFormat !== PRINT_FORMATS.CARGILLS_CUSTOM_LINES) return;
         setTaxPrintFormat(layout.printFormat || PRINT_FORMATS.CUSTOM);
         setTaxPrintOptions({
             ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
             ...(layout.printOptions || {}),
         });
+        setCustomLines((layout.customLines || []).map(createCustomLine));
+    };
+
+    const handleSaveCustomLines = async () => {
+        if (!customLinesMatch) return;
+        setSavingCustomLines(true);
+        try {
+            const res = await api.patch(`/invoices/${id}/cargills-custom-lines`, currentPrintPayload(), {
+                headers: { "X-Roles": rolesHeader },
+            });
+            setInvoice(res.data);
+            applyPrintLayoutFromInvoice(res.data);
+            toast.success("Custom invoice lines saved");
+        } catch (error) {
+            console.error("Failed to save custom invoice lines", error);
+            toast.error(error.response?.data?.message || "Custom lines were not saved. Check that their total matches the protected supply value.");
+        } finally {
+            setSavingCustomLines(false);
+        }
     };
 
     const handleApplyPrintLayout = async () => {
@@ -786,15 +875,35 @@ const InvoiceView = () => {
         setTaxPrintFormat(value);
         if (TAX_PRINT_PRESETS[value]) {
             setTaxPrintOptions(TAX_PRINT_PRESETS[value]);
+        } else if (value === PRINT_FORMATS.CARGILLS_CUSTOM_LINES) {
+            setTaxPrintOptions({
+                ...Object.fromEntries(Object.keys(TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]).map((key) => [key, false])),
+                showSubtotal: true,
+                showVat: true,
+                showOtherTax: true,
+                showTotalAmount: true,
+                showPayments: true,
+                showTotalDue: true,
+            });
+            setCustomLines((current) => current.length ? current : [createCustomLine()]);
         }
     };
 
     const toggleTaxPrintOption = (key) => {
-        setTaxPrintFormat(PRINT_FORMATS.CUSTOM);
+        if (usesCargillsCustomLines && PROTECTED_CARGILLS_OPTIONS.has(key)) return;
+        setTaxPrintFormat(usesCargillsCustomLines ? PRINT_FORMATS.CARGILLS_CUSTOM_LINES : PRINT_FORMATS.CUSTOM);
         setTaxPrintOptions((current) => ({
             ...current,
             [key]: !current[key],
         }));
+    };
+
+    const updateCustomLine = (key, field, value) => {
+        setCustomLines((current) => current.map((line) => line.key === key ? { ...line, [field]: value } : line));
+    };
+
+    const removeCustomLine = (key) => {
+        setCustomLines((current) => current.filter((line) => line.key !== key));
     };
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -828,7 +937,9 @@ const InvoiceView = () => {
     const storedSubtotal = isTaxInvoice && sourceSubtotal > 0 ? sourceSubtotal : invoiceSubtotal;
     const storedVatTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceVatTotal : invoiceVatTotal;
     const storedOtherTaxTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
-    const storedDocumentTotal = showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : storedSubtotal;
+    const storedDocumentTotal = usesCargillsCustomLines
+        ? invoiceDocumentTotal
+        : showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : storedSubtotal;
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
     const deliveryDate = deliverySchedule?.scheduledDate || project?.estimatedEnd || invoice.issuedDate;
     const projectText = project?.projectName ? `${inquiryRef} (${project.projectName})` : inquiryRef;
@@ -852,6 +963,18 @@ const InvoiceView = () => {
         .map((line) => line.trim())
         .filter(Boolean);
     const taxLineRows = (() => {
+        if (usesCargillsCustomLines) {
+            return customLines.map((line, index) => ({
+                key: line.key || `cargills-custom-${index}`,
+                itemCode: String(line.itemCode || "").trim(),
+                description: String(line.description || "").trim(),
+                quantity: Number(line.quantity || 0),
+                unit: String(line.unit || "").trim(),
+                unitPrice: Number(line.unitPrice || 0),
+                total: customLineAmount(line),
+                isCustom: true,
+            }));
+        }
         const estimationComponentRows = estimation?.components?.length
             ? estimation.components.map((component, index) => {
                 const quantity = componentQuantity(component);
@@ -963,7 +1086,7 @@ const InvoiceView = () => {
         })),
     ];
     const pricedTaxLineRows = taxLineRows.filter((row) => !row.isSubItem);
-    const hasSourceDocumentTotal = sourceDocumentTotal > 0;
+    const hasSourceDocumentTotal = sourceDocumentTotal > 0 || (invoice?.estimationIds || []).length > 1;
     const printedSubtotal = isTaxInvoice && pricedTaxLineRows.length && !hasSourceDocumentTotal
         ? decimalTotal(pricedTaxLineRows.map((row) => row.total))
         : storedSubtotal;
@@ -977,7 +1100,13 @@ const InvoiceView = () => {
         ? decimalTotal([printedSubtotal, printedVatTotal, printedOtherTaxTotal])
         : storedDocumentTotal;
     const balanceDue = Math.max(printedDocumentTotal - totalReceived, 0);
-    const showTaxLineColumns = {
+    const showTaxLineColumns = usesCargillsCustomLines ? {
+        code: true,
+        qty: true,
+        unit: true,
+        unitPrice: true,
+        amount: true,
+    } : {
         code: taxPrintOptions.showItemCode,
         qty: taxPrintOptions.showItemQuantities,
         unit: taxPrintOptions.showItemUnits,
@@ -996,10 +1125,19 @@ const InvoiceView = () => {
         + (showTaxLineColumns.qty ? 1 : 0)
         + (showTaxLineColumns.unit ? 1 : 0)
         + (showTaxLineColumns.unitPrice ? 1 : 0);
-    const showStandardLines = taxPrintOptions.showComponents || taxPrintOptions.showItems;
-    const showStandardQty = taxPrintOptions.showItemQuantities;
-    const showStandardRate = taxPrintOptions.showComponentPrices || taxPrintOptions.showItemUnitPrices;
-    const showStandardAmount = taxPrintOptions.showComponentPrices || taxPrintOptions.showItemTotals;
+    const standardInvoiceRows = usesCargillsCustomLines
+        ? customLines.map((line, index) => ({
+            key: line.key || `cargills-custom-standard-${index}`,
+            description: String(line.description || "").trim(),
+            quantity: Number(line.quantity || 0),
+            unitPrice: Number(line.unitPrice || 0),
+            total: customLineAmount(line),
+        }))
+        : invoiceRows;
+    const showStandardLines = usesCargillsCustomLines || taxPrintOptions.showComponents || taxPrintOptions.showItems;
+    const showStandardQty = usesCargillsCustomLines || taxPrintOptions.showItemQuantities;
+    const showStandardRate = usesCargillsCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemUnitPrices;
+    const showStandardAmount = usesCargillsCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemTotals;
     const showStandardSummary = taxPrintOptions.showSubtotal
         || taxPrintOptions.showVat
         || taxPrintOptions.showOtherTax
@@ -1009,8 +1147,15 @@ const InvoiceView = () => {
     const previewOptions = previewPrintEntry
         ? { ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL], ...(previewPrintEntry.printOptions || {}) }
         : null;
+    const previewUsesCustomLines = (previewPrintEntry?.customLines || []).length > 0;
     const previewRows = previewOptions
-        ? groupedItems.flatMap((group, groupIdx) => [
+        ? (previewPrintEntry.customLines || []).length
+            ? previewPrintEntry.customLines.map((line, index) => ({
+                ...line,
+                key: `preview-custom-${index}`,
+                isCustom: true,
+            }))
+            : groupedItems.flatMap((group, groupIdx) => [
             ...(previewOptions.showComponents ? [{
                 key: `preview-component-${groupIdx}`,
                 description: group.description,
@@ -1453,32 +1598,34 @@ const InvoiceView = () => {
                                 <div className="small mb-2">
                                     <strong>Bill To:</strong> {displayCustomer?.comName || displayCustomer?.name || "N/A"}
                                 </div>
-                                {(previewOptions.showComponents || previewOptions.showItems) && (
+                                {(previewUsesCustomLines || previewOptions.showComponents || previewOptions.showItems) && (
                                     <div className="table-responsive">
                                         <table className="table table-sm table-bordered mb-3">
                                             <thead className="table-light">
                                                 <tr>
+                                                    {previewUsesCustomLines && <th>Item code</th>}
                                                     <th>Description</th>
-                                                    {previewOptions.showItemQuantities && <th className="text-end">Qty</th>}
-                                                    {previewOptions.showItemUnits && <th className="text-end">Unit</th>}
-                                                    {(previewOptions.showComponentPrices || previewOptions.showItemUnitPrices) && <th className="text-end">Unit Price</th>}
-                                                    {(previewOptions.showComponentPrices || previewOptions.showItemTotals) && <th className="text-end">Amount</th>}
+                                                    {(previewUsesCustomLines || previewOptions.showItemQuantities) && <th className="text-end">Qty</th>}
+                                                    {(previewUsesCustomLines || previewOptions.showItemUnits) && <th className="text-end">Unit</th>}
+                                                    {(previewUsesCustomLines || previewOptions.showComponentPrices || previewOptions.showItemUnitPrices) && <th className="text-end">Unit Price</th>}
+                                                    {(previewUsesCustomLines || previewOptions.showComponentPrices || previewOptions.showItemTotals) && <th className="text-end">Amount</th>}
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {(previewRows.length ? previewRows : [{ key: "empty", description: "No line items shown" }]).map(row => (
                                                     <tr key={row.key}>
+                                                        {previewUsesCustomLines && <td>{row.itemCode || ""}</td>}
                                                         <td className={row.isSubItem ? "ps-4" : ""}>{row.description}</td>
-                                                        {previewOptions.showItemQuantities && <td className="text-end">{row.description && (!row.isSubItem || previewOptions.showItemQuantities) ? formatQuantity(row.quantity) : ""}</td>}
-                                                        {previewOptions.showItemUnits && <td className="text-end">{row.unit || ""}</td>}
-                                                        {(previewOptions.showComponentPrices || previewOptions.showItemUnitPrices) && (
+                                                        {(previewUsesCustomLines || previewOptions.showItemQuantities) && <td className="text-end">{row.description && (!row.isSubItem || previewOptions.showItemQuantities) ? formatQuantity(row.quantity) : ""}</td>}
+                                                        {(previewUsesCustomLines || previewOptions.showItemUnits) && <td className="text-end">{row.unit || ""}</td>}
+                                                        {(previewUsesCustomLines || previewOptions.showComponentPrices || previewOptions.showItemUnitPrices) && (
                                                             <td className="text-end">
-                                                                {(row.isComponent && previewOptions.showComponentPrices) || (row.isSubItem && previewOptions.showItemUnitPrices) ? money(row.unitPrice) : ""}
+                                                                {row.isCustom || (row.isComponent && previewOptions.showComponentPrices) || (row.isSubItem && previewOptions.showItemUnitPrices) ? money(row.unitPrice) : ""}
                                                             </td>
                                                         )}
-                                                        {(previewOptions.showComponentPrices || previewOptions.showItemTotals) && (
+                                                        {(previewUsesCustomLines || previewOptions.showComponentPrices || previewOptions.showItemTotals) && (
                                                             <td className="text-end">
-                                                                {(row.isComponent && previewOptions.showComponentPrices) || (row.isSubItem && previewOptions.showItemTotals) ? money(row.total) : ""}
+                                                                {row.isCustom || (row.isComponent && previewOptions.showComponentPrices) || (row.isSubItem && previewOptions.showItemTotals) ? money(row.total) : ""}
                                                             </td>
                                                         )}
                                                     </tr>
@@ -1562,6 +1709,9 @@ const InvoiceView = () => {
                         <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
                         <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
                         <option value={PRINT_FORMATS.CUSTOM}>Custom</option>
+                        {isCargillsInvoice && (
+                            <option value={PRINT_FORMATS.CARGILLS_CUSTOM_LINES}>Cargills custom lines</option>
+                        )}
                     </Form.Select>
                     <Dropdown autoClose="outside" align="end">
                         <Dropdown.Toggle size="sm" variant="outline-secondary" disabled={!canEditPrintLayout}>
@@ -1580,7 +1730,8 @@ const InvoiceView = () => {
                                             label={label}
                                             checked={!!taxPrintOptions[key]}
                                             onChange={() => toggleTaxPrintOption(key)}
-                                            disabled={!canEditPrintLayout}
+                                            disabled={!canEditPrintLayout
+                                                || (usesCargillsCustomLines && PROTECTED_CARGILLS_OPTIONS.has(key))}
                                         />
                                     ))}
                                 </div>
@@ -1597,11 +1748,154 @@ const InvoiceView = () => {
                             {refreshingInvoice ? "Refreshing..." : "Refresh Invoice"}
                         </Button>
                     )}
-                    <Button variant="primary" onClick={handlePrint} disabled={recordingPrint}>
+                    <Button
+                        variant="primary"
+                        onClick={handlePrint}
+                        disabled={recordingPrint
+                            || (usesCargillsCustomLines && (!customLinesMatch || !customLinesSaved))}
+                    >
                         {recordingPrint ? "Recording..." : "Print / Save PDF"}
                     </Button>
                 </div>
             </div>
+
+            {usesCargillsCustomLines && (
+                <section className="no-print mb-3 border rounded p-3 bg-light" aria-labelledby="cargills-custom-lines-title">
+                    <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                        <div>
+                            <div id="cargills-custom-lines-title" className="fw-semibold">Cargills custom invoice lines</div>
+                            <div className="small text-muted">
+                                Enter the printed descriptions, quantities, units, and rates. The financial summary below is protected.
+                            </div>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline-primary"
+                            onClick={() => setCustomLines((current) => [...current, createCustomLine()])}
+                            disabled={!canEditPrintLayout}
+                        >
+                            Add custom line
+                        </Button>
+                    </div>
+
+                    <div className="table-responsive">
+                        <table className="table table-sm align-middle mb-2">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: 130 }}>Item code</th>
+                                    <th style={{ minWidth: 260 }}>Description</th>
+                                    <th style={{ width: 120 }}>Quantity</th>
+                                    <th style={{ width: 110 }}>Unit</th>
+                                    <th style={{ width: 160 }}>Unit price</th>
+                                    <th className="text-end" style={{ width: 170 }}>Amount excluding VAT</th>
+                                    <th className="text-end" style={{ width: 90 }}>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {customLines.map((line, index) => (
+                                    <tr key={line.key}>
+                                        <td>
+                                            <Form.Control
+                                                size="sm"
+                                                value={line.itemCode}
+                                                onChange={(event) => updateCustomLine(line.key, "itemCode", event.target.value)}
+                                                aria-label={`Custom line ${index + 1} item code`}
+                                                disabled={!canEditPrintLayout}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Form.Control
+                                                size="sm"
+                                                value={line.description}
+                                                onChange={(event) => updateCustomLine(line.key, "description", event.target.value)}
+                                                aria-label={`Custom line ${index + 1} description`}
+                                                disabled={!canEditPrintLayout}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Form.Control
+                                                size="sm"
+                                                type="number"
+                                                min="0.000001"
+                                                step="any"
+                                                value={line.quantity}
+                                                onChange={(event) => updateCustomLine(line.key, "quantity", event.target.value)}
+                                                aria-label={`Custom line ${index + 1} quantity`}
+                                                disabled={!canEditPrintLayout}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Form.Control
+                                                size="sm"
+                                                value={line.unit}
+                                                onChange={(event) => updateCustomLine(line.key, "unit", event.target.value)}
+                                                aria-label={`Custom line ${index + 1} unit`}
+                                                placeholder="Nos"
+                                                disabled={!canEditPrintLayout}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Form.Control
+                                                size="sm"
+                                                type="number"
+                                                step="0.01"
+                                                value={line.unitPrice}
+                                                onChange={(event) => updateCustomLine(line.key, "unitPrice", event.target.value)}
+                                                aria-label={`Custom line ${index + 1} unit price`}
+                                                disabled={!canEditPrintLayout}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Form.Control
+                                                size="sm"
+                                                type="number"
+                                                step="0.01"
+                                                value={line.total}
+                                                onChange={(event) => updateCustomLine(line.key, "total", event.target.value)}
+                                                aria-label={`Custom line ${index + 1} amount excluding VAT`}
+                                                disabled={!canEditPrintLayout}
+                                            />
+                                        </td>
+                                        <td className="text-end">
+                                            <Button
+                                                size="sm"
+                                                variant="outline-danger"
+                                                onClick={() => removeCustomLine(line.key)}
+                                                aria-label={`Remove custom line ${index + 1}`}
+                                                disabled={!canEditPrintLayout}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="d-flex justify-content-between align-items-end gap-3 flex-wrap border-top pt-3">
+                        <div className="small" role={customLinesMatch ? "status" : "alert"}>
+                            <div>Protected Total Value of Supply: <strong>LKR {money(protectedSupplyValue)}</strong></div>
+                            <div>Custom line total: <strong>LKR {money(customLinesTotal)}</strong></div>
+                            <div className={customLinesMatch ? "text-success" : "text-danger"}>
+                                {customLinesMatch && customLinesSaved
+                                    ? "Totals match and the saved lines are ready to print."
+                                    : customLinesMatch
+                                        ? "Totals match. Save the custom lines before printing."
+                                    : `Difference: LKR ${money(protectedSupplyValue - customLinesTotal)}. Match the protected supply value to continue.`}
+                            </div>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="success"
+                            onClick={handleSaveCustomLines}
+                            disabled={!canEditPrintLayout || !customLinesMatch || savingCustomLines}
+                        >
+                            {savingCustomLines ? "Saving custom lines..." : "Save custom lines"}
+                        </Button>
+                    </div>
+                </section>
+            )}
 
             {(isPrintLayoutLocked || currentPrintAuditEntries.length > 0) && (
                 <div className="no-print mb-3 border rounded p-3 bg-light">
@@ -1809,14 +2103,14 @@ const InvoiceView = () => {
                                     )}
                                     {showTaxLineColumns.unitPrice && (
                                         <td className="unit">
-                                            {item.description && ((item.isComponent && taxPrintOptions.showComponentPrices) || (item.isSubItem && taxPrintOptions.showItemUnitPrices))
+                                            {item.description && (item.isCustom || (item.isComponent && taxPrintOptions.showComponentPrices) || (item.isSubItem && taxPrintOptions.showItemUnitPrices))
                                                 ? money(item.unitPrice)
                                                 : ""}
                                         </td>
                                     )}
                                     {showTaxLineColumns.amount && (
                                         <td className="amount">
-                                            {item.description && ((item.isComponent && taxPrintOptions.showComponentPrices) || (item.isSubItem && taxPrintOptions.showItemTotals))
+                                            {item.description && (item.isCustom || (item.isComponent && taxPrintOptions.showComponentPrices) || (item.isSubItem && taxPrintOptions.showItemTotals))
                                                 ? money(item.total)
                                                 : ""}
                                         </td>
@@ -1977,7 +2271,7 @@ const InvoiceView = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {invoiceRows.map((item, index) => (
+                        {standardInvoiceRows.map((item, index) => (
                             <tr key={item.key || `${item.description}-${index}`}>
                                 <td>{item.description}</td>
                                 {showStandardQty && <td className="qty">{formatQuantity(item.quantity)}</td>}
@@ -2015,7 +2309,7 @@ const InvoiceView = () => {
 
                     {showStandardSummary && (
                     <div className="invoice-summary">
-                        {(showTax || isProforma || totalReceived > 0) && (
+                        {(showTax || isProforma || totalReceived > 0 || usesCargillsCustomLines) && (
                             <>
                                 {taxPrintOptions.showSubtotal && (
                                 <div className="invoice-summary-row">
@@ -2023,7 +2317,7 @@ const InvoiceView = () => {
                                     <span>{money(printedSubtotal)}</span>
                                 </div>
                                 )}
-                                {showTax && (taxPrintOptions.showVat || taxPrintOptions.showOtherTax) && (
+                                {(showTax || usesCargillsCustomLines) && (taxPrintOptions.showVat || taxPrintOptions.showOtherTax) && (
                                     <div className="invoice-summary-row">
                                         <span>TAX</span>
                                         <span>{money(printedTaxTotal)}</span>

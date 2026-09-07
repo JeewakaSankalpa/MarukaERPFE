@@ -98,7 +98,7 @@ function UploadOverlay({ text }) {
  * @param {Array} props.filesOverride - Snapshotted files to display (optional)
  * @param {boolean} props.readOnly - If true, disable uploads
  */
-export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfterChange, reloadKey, filesOverride, readOnly }) {
+export default function ProjectFiles({ id, project, actions, stageObj, roleHeader, onAfterChange, reloadKey, filesOverride, readOnly }) {
     const fileInputRef = useRef(null);
     const [files, setFiles] = useState([]);
     const [filesLoading, setFilesLoading] = useState(false);
@@ -208,20 +208,30 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
 
             let generatedFiles = [];
             try {
-                const estRes = await api.get(`/estimations/by-project/${id}`);
-                const est = estRes.data;
-                const quotationApproved = ["APPROVED", "FINALIZED"].includes(
-                    String(est?.approvalStatus || est?.status || "").toUpperCase()
-                );
-                if (est && quotationApproved) {
-                    generatedFiles.push({
-                        displayName: `Quotation${est.version ? ` v${est.version}` : ''}`,
-                        url: appRoute(`/projects/${id}/quotation`),
-                        docType: 'Quotation',
-                        _kind: 'quotation',
-                        uploadedAt: est.updatedAt || est.createdAt
-                    });
-                }
+                const tracks = project?.cargillsInquiry
+                    ? [
+                        { type: "CARGILLS_MATERIALS", label: "Materials Quotation" },
+                        { type: "CARGILLS_PANELS", label: "Panels Quotation" },
+                    ]
+                    : [{ type: "STANDARD", label: "Quotation" }];
+                const estimates = await Promise.all(tracks.map(async (track) => ({
+                    ...track,
+                    estimation: (await api.get(`/estimations/by-project/${id}`, { params: { estimationType: track.type } })).data,
+                })));
+                estimates.forEach(({ type, label, estimation }) => {
+                    const quotationApproved = ["APPROVED", "FINALIZED"].includes(
+                        String(estimation?.approvalStatus || estimation?.status || "").toUpperCase()
+                    );
+                    if (estimation && quotationApproved) {
+                        generatedFiles.push({
+                            displayName: `${label}${estimation.version ? ` v${estimation.version}` : ''}`,
+                            url: appRoute(`/projects/${id}/quotation${type === "STANDARD" ? "" : `?estimationType=${type}`}`),
+                            docType: 'Quotation',
+                            _kind: 'quotation',
+                            uploadedAt: estimation.updatedAt || estimation.createdAt
+                        });
+                    }
+                });
             } catch {
                 // ignore projects without an estimation/quotation
             }
@@ -299,7 +309,7 @@ export default function ProjectFiles({ id, actions, stageObj, roleHeader, onAfte
     useEffect(() => {
         if (id || filesOverride) loadFiles();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, stageType, reloadKey, filesOverride]);
+    }, [id, stageType, reloadKey, filesOverride, project?.cargillsInquiry]);
 
     useEffect(() => {
         if (!stageType || !actions) return;
