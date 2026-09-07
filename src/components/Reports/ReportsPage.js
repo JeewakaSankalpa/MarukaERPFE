@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import React, { useEffect, useState } from "react";
 import { Container, Table, Tabs, Tab, Badge, Form, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -95,12 +95,14 @@ export default function ReportsPage() {
                     <Tab eventKey="stock" title="Current Stock">
                         <div className="text-end mb-2">
                             <button className="btn btn-primary btn-sm" onClick={() => navigate("/reports/stock")}>
-                                📄 View Stock Valuation Report
+                                <FileText size={15} className="me-1" />
+                                View Stock Valuation Report
                             </button>
                         </div>
                         <Table hover responsive striped>
                             <thead>
                                 <tr>
+                                    <th>Product Name</th>
                                     <th>Product ID</th>
                                     <th className="text-end">Quantity On Hand</th>
                                 </tr>
@@ -108,6 +110,7 @@ export default function ReportsPage() {
                             <tbody>
                                 {stock.map((s, i) => (
                                     <tr key={i}>
+                                        <td className="fw-semibold">{s.productName || "Unknown product"}</td>
                                         <td>{s.productId}</td>
                                         <td className="text-end">{s.quantity}</td>
                                     </tr>

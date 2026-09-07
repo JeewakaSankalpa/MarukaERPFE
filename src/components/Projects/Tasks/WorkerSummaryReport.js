@@ -149,6 +149,8 @@ const WorkerSummaryReport = () => {
     const totalHoursAllWorkers = workerData.reduce((sum, w) => sum + w.totalLoggedHours, 0);
     const totalCompletedAllWorkers = workerData.reduce((sum, w) => sum + w.completedTasks, 0);
     const reportPeriod = dateFrom || dateTo ? `${dateFrom || 'Start'} to ${dateTo || 'Today'}` : 'All time';
+    const reportFilter = workerSearch.trim();
+    const reportSubtitle = `Period: ${reportPeriod}${reportFilter ? ` | Worker / trade: ${reportFilter}` : ''}`;
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
 
@@ -182,18 +184,18 @@ const WorkerSummaryReport = () => {
                             </Button>
                         )}
                         <div className="vr d-none d-md-block" />
-                        <span className="fw-semibold text-muted small">Worker:</span>
+                        <span className="fw-semibold text-muted small">Worker / trade:</span>
                         <Form.Control
                             type="search"
                             size="sm"
                             style={{ maxWidth: '220px' }}
                             value={workerSearch}
                             onChange={e => setWorkerSearch(e.target.value)}
-                            placeholder="Search by worker name"
+                            placeholder="Name, designation, or trade"
                         />
                         {workerSearch && (
                             <Button size="sm" variant="outline-secondary" onClick={() => setWorkerSearch('')}>
-                                Clear Worker
+                                Clear Filter
                             </Button>
                         )}
                         <Button
@@ -210,7 +212,7 @@ const WorkerSummaryReport = () => {
                 </Card.Body>
             </Card>
 
-            <ReportLayout title="Daily Worker Summary" subtitle={`Period: ${reportPeriod}`} orientation="landscape">
+            <ReportLayout title="Worker Time Summary" subtitle={reportSubtitle} orientation="landscape">
                 <style>{`
                     .worker-summary-stat {
                         border: 1px solid #e5e7eb;
