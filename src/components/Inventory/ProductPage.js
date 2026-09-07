@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from "react";
-import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab, Spinner } from "react-bootstrap";
+import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab, Spinner, Alert } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import Select from "react-select";
 import api from "../../api/api";
@@ -21,6 +21,8 @@ const updateProduct = async (id, payload) => (await api.put(`/products/${id}`, p
 const patchProductStatus = async (id, status) =>
     (await api.patch(`/products/${id}/status`, { status })).data;
 const getReorderSuggestion = async (id) => (await api.get(`/products/${id}/reorder-suggestion`)).data;
+const getSimilarProducts = async ({ name, sku, barcode }) =>
+    (await api.get(`/products/similar?${qp({ name, sku, barcode, limit: 5 })}`)).data || [];
 const PRODUCT_FORM_DEFAULTS = {
     sku: "", barcode: "", name: "", categoryId: "", unit: "pcs", status: "ACTIVE",
     originalCostPrice: "", defaultSellingPrice: "", reorderLevel: "", suppliers: []
@@ -138,6 +140,9 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
     const [stockBatches, setStockBatches] = useState([]);
     const [reorderSuggestion, setReorderSuggestion] = useState(null);
     const [loadingReorderSuggestion, setLoadingReorderSuggestion] = useState(false);
+    const [similarProducts, setSimilarProducts] = useState([]);
+    const [checkingSimilarProducts, setCheckingSimilarProducts] = useState(false);
+    const [similarProductsReviewed, setSimilarProductsReviewed] = useState(false);
 
     const loadStockBatches = async () => {
         if (!id) return;
@@ -195,8 +200,47 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
         })();
     }, [id, startEditing, initialValues]);
 
+    useEffect(() => {
+        if (isEdit) {
+            setSimilarProducts([]);
+            return;
+        }
+
+        const hasLookupText = [form.name, form.sku, form.barcode].some(v => String(v || "").trim().length >= 2);
+        if (!hasLookupText) {
+            setSimilarProducts([]);
+            setCheckingSimilarProducts(false);
+            return;
+        }
+
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setCheckingSimilarProducts(true);
+            try {
+                const matches = await getSimilarProducts({
+                    name: form.name,
+                    sku: form.sku,
+                    barcode: form.barcode,
+                });
+                if (!cancelled) setSimilarProducts(matches);
+            } catch {
+                if (!cancelled) setSimilarProducts([]);
+            } finally {
+                if (!cancelled) setCheckingSimilarProducts(false);
+            }
+        }, 350);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [isEdit, form.name, form.sku, form.barcode]);
+
     const bind = (k, sub) => e => {
         const v = e.target.value;
+        if (!isEdit && ["name", "sku", "barcode"].includes(k)) {
+            setSimilarProductsReviewed(false);
+        }
         if (sub) setForm(f => ({ ...f, [k]: { ...(f[k] || {}), [sub]: v }}));
         else setForm(f => ({ ...f, [k]: v }));
     };
@@ -217,6 +261,10 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
         setValidated(true);
         if (!form.sku && !isEdit) return;
         if (!form.name || !form.defaultSellingPrice) return;
+        if (!isEdit && similarProducts.length > 0 && !similarProductsReviewed) {
+            toast.warn("Review similar products before creating this one.");
+            return;
+        }
 
         const payload = {
             sku: form.sku,
@@ -318,6 +366,47 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                                       value={form.name} onChange={bind("name")} disabled={!isEditMode} />
                         <Form.Control.Feedback type="invalid">Name is required.</Form.Control.Feedback>
                     </Form.Group>
+
+                    {!isEdit && (checkingSimilarProducts || similarProducts.length > 0) && (
+                        <Alert variant={similarProducts.length > 0 ? "warning" : "light"} className="border mb-3">
+                            <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                <div className="fw-semibold">Similar existing products</div>
+                                {checkingSimilarProducts && <Spinner size="sm" />}
+                            </div>
+                            {similarProducts.length > 0 ? (
+                                <>
+                                    <div className="d-grid gap-2">
+                                        {similarProducts.map(product => (
+                                            <div key={product.id} className="d-flex justify-content-between align-items-start gap-3 bg-white border rounded p-2">
+                                                <div>
+                                                    <div className="fw-semibold">{product.name}</div>
+                                                    <div className="small text-muted">
+                                                        {product.sku || "-"} {product.barcode ? `| ${product.barcode}` : ""}
+                                                    </div>
+                                                    {(product.reasons || []).length > 0 && (
+                                                        <div className="small text-muted">{product.reasons.join(", ")}</div>
+                                                    )}
+                                                </div>
+                                                <div className="d-flex align-items-center gap-2 flex-shrink-0">
+                                                    <Badge bg={product.status === "ACTIVE" ? "success" : "secondary"}>{product.status || "-"}</Badge>
+                                                    <Badge bg="warning" text="dark">{product.score}%</Badge>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Form.Check
+                                        className="mt-3"
+                                        type="checkbox"
+                                        label="I checked these matches and still want to create a new product"
+                                        checked={similarProductsReviewed}
+                                        onChange={e => setSimilarProductsReviewed(e.target.checked)}
+                                    />
+                                </>
+                            ) : (
+                                <div className="small text-muted">Checking for similar products...</div>
+                            )}
+                        </Alert>
+                    )}
 
                     <Row className="g-3">
                         <Col md={6}>
@@ -500,7 +589,9 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                     </div>
 
                             {(isEditMode || !id) && (
-                                <Button type="submit" className="w-100 mt-3">{id ? "Update Product" : "Save Product"}</Button>
+                                <Button type="submit" className="w-100 mt-3">
+                                    {id ? "Update Product" : similarProducts.length > 0 && similarProductsReviewed ? "Create New Product Anyway" : "Save Product"}
+                                </Button>
                             )}
                         </Form>
                     </Tab>
