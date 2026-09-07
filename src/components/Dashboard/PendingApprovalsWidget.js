@@ -78,7 +78,7 @@ export default function PendingApprovalsWidget() {
             const canVerifyGRNPayment = isAdmin || hasModule("procurement.grn_payment_verify") || hasWorkflowRole(workflow.grnPaymentVerifierRoles);
             const canApproveGRNPrint = isAdmin || hasModule("procurement.grn_print_approve") || hasWorkflowRole(workflow.grnPrintApproverRoles);
             const canSeeStockAudits = isAdmin || hasModule("inventory.audit_approvals");
-            const canSeeInternalReturns = isAdmin || hasModule("inventory.approvals");
+            const canSeeInternalReturns = isAdmin || hasModule("inventory.approvals") || hasWorkflowRole(workflow.consumptionReturnApproverRoles);
             const canSeeSupplierReturns = isAdmin || hasModule("inventory.supplier_approvals") || hasModule("inventory.approvals");
 
             const requests = [];
@@ -209,7 +209,7 @@ export default function PendingApprovalsWidget() {
 
             if (canSeeInternalReturns) {
                 requests.push(
-                    api.get("/inventory/returns/internal", { params: { status: "PENDING", size: 100 } })
+                    api.get("/inventory/returns/internal/pending-approvals", { params: { employeeId } })
                         .then((res) => pageItems(res).map((ret) => ({
                             id: `internal-return-${ret.id}`,
                             typeKey: "returns",

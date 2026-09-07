@@ -1,25 +1,27 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/api';
-import { Container, Card, Table, Button, Spinner } from 'react-bootstrap';
+import { Container, Card, Table, Button, Spinner, Badge } from 'react-bootstrap';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { confirmAction, promptAction } from '../../utils/brandedDialogs';
 
 const InternalReturnApprovals = () => {
     const navigate = useNavigate();
     const [returns, setReturns] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
+    const employeeId = localStorage.getItem('employeeId');
 
-    useEffect(() => {
-        fetchReturns();
-    }, []);
-
-    const fetchReturns = async () => {
+    const fetchReturns = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await api.get('/inventory/returns/internal?status=PENDING');
+            if (!employeeId) {
+                setReturns([]);
+                return;
+            }
+            const response = await api.get('/inventory/returns/internal/pending-approvals', { params: { employeeId } });
             setReturns(response.data?.content || response.data || []);
         } catch (err) {
             console.error("Error fetching returns:", err);
@@ -27,9 +29,18 @@ const InternalReturnApprovals = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [employeeId]);
+
+    useEffect(() => {
+        fetchReturns();
+    }, [fetchReturns]);
 
     const handleApprove = async (ret) => {
+        if (!await confirmAction({
+            title: "Approve internal return",
+            message: `Approve return ${ret.returnNumber || ret.id}? Inventory will only be restored for usable returned items.`,
+            confirmLabel: "Approve return",
+        })) return;
         setProcessingId(ret.id);
         try {
             await api.post(`/inventory/returns/internal/${ret.id}/approve`);
@@ -41,6 +52,35 @@ const InternalReturnApprovals = () => {
         } finally {
             setProcessingId(null);
         }
+    };
+
+    const handleReject = async (ret) => {
+        const comment = await promptAction({
+            title: "Reject internal return",
+            label: "Reason",
+            message: `Reject return ${ret.returnNumber || ret.id}?`,
+            confirmLabel: "Reject return",
+            tone: "danger",
+        });
+        if (comment == null) return;
+        setProcessingId(ret.id);
+        try {
+            await api.post(`/inventory/returns/internal/${ret.id}/reject`, { comment });
+            toast.success("Return rejected.");
+            fetchReturns();
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to reject return.");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const formatReturnType = (value) => {
+        if (value === 'NORMAL_RETURN') return 'Normal return';
+        if (value === 'DAMAGED_AFTER_CONSUMPTION') return 'Damaged';
+        if (value === 'WRONG_ITEM_USED') return 'Wrong item';
+        return 'Customer changed mind';
     };
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -59,20 +99,28 @@ const InternalReturnApprovals = () => {
                             <tr>
                                 <th>Ref #</th>
                                 <th>Project</th>
+                                <th>Type</th>
                                 <th>Date</th>
                                 <th>Items</th>
                                 <th>Reason</th>
-                                <th style={{ width: 120 }}>Actions</th>
+                                <th>Approvals</th>
+                                <th style={{ width: 170 }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {returns.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center text-muted">No pending returns found.</td></tr>
+                                <tr><td colSpan="8" className="text-center text-muted">No pending returns found.</td></tr>
                             ) : (
                                 returns.map(r => (
                                     <tr key={r.id}>
                                         <td>{r.returnNumber}</td>
                                         <td>{r.projectId}</td>
+                                        <td>
+                                            <Badge bg={r.returnType === 'DAMAGED_AFTER_CONSUMPTION' ? 'danger' : 'info'} text={r.returnType === 'DAMAGED_AFTER_CONSUMPTION' ? undefined : 'dark'}>
+                                                {formatReturnType(r.returnType)}
+                                            </Badge>
+                                            {r.sourceConsumptionId && <div className="small text-muted mt-1">From consumption</div>}
+                                        </td>
                                         <td>{new Date(r.createdAt).toLocaleDateString()}</td>
                                         <td>
                                             {r.items?.map((item, idx) => (
@@ -85,13 +133,28 @@ const InternalReturnApprovals = () => {
                                         </td>
                                         <td>{r.items?.[0]?.reason || '-'}</td>
                                         <td>
+                                            <div className="small">{r.approvalPolicy || 'ALL'}</div>
+                                            <div className="small text-muted">
+                                                {(r.approvals || []).filter(a => a.status === 'APPROVED').length} / {(r.approverIds || []).length}
+                                            </div>
+                                        </td>
+                                        <td>
                                             <Button 
                                                 variant="success" 
                                                 size="sm" 
+                                                className="me-1"
                                                 onClick={() => handleApprove(r)}
                                                 disabled={processingId === r.id}
                                             >
                                                 Approve
+                                            </Button>
+                                            <Button
+                                                variant="outline-danger"
+                                                size="sm"
+                                                onClick={() => handleReject(r)}
+                                                disabled={processingId === r.id}
+                                            >
+                                                Reject
                                             </Button>
                                         </td>
                                     </tr>

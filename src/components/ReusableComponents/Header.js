@@ -31,7 +31,9 @@ const Header = ({ onToggleSidebar }) => {
         const res = await api.get("/notifications/unread-count");
         setUnreadCount(res.data || 0);
       } catch (e) {
-        if (e?.response) {
+        if (e?.response?.status === 403) {
+          setUnreadCount(0);
+        } else if (e?.response) {
           console.warn("Notification count unavailable", e.response.status);
         }
       }

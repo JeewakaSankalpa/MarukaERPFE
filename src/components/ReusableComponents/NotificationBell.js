@@ -57,11 +57,14 @@ export default function NotificationBell() {
                 });
             },
             onStompError: (frame) => {
-                console.error('Broker reported error: ' + frame.headers['message']);
-                console.error('Additional details: ' + frame.body);
+                if (process.env.NODE_ENV === 'development') {
+                    console.debug('Notification broker reported error:', frame.headers['message'], frame.body);
+                }
             },
             onWebSocketError: (event) => {
-                console.error('WebSocket Error:', event);
+                if (process.env.NODE_ENV === 'development') {
+                    console.debug('Notification WebSocket unavailable:', event?.type || event);
+                }
             }
         });
 
@@ -77,7 +80,10 @@ export default function NotificationBell() {
             const res = await api.get('/notifications/unread-count');
             setCount(res.data);
         } catch (e) {
-            console.error("Failed to fetch notification count", e);
+            if (e?.response?.status !== 403) {
+                console.warn("Failed to fetch notification count", e?.response?.status || e?.message);
+            }
+            setCount(0);
         }
     };
 

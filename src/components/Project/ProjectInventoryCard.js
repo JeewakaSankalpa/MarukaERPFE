@@ -31,15 +31,24 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const [showConsumedReport, setShowConsumedReport] = useState(false);
     const [showComponentReport, setShowComponentReport] = useState(false);
     const [consumptionRecords, setConsumptionRecords] = useState([]);
+    const [returnRequests, setReturnRequests] = useState([]);
     const [loadingConsumption, setLoadingConsumption] = useState(false);
 
     // Consume state
     const [showConsume, setShowConsume] = useState(false);
-    const [consumeData, setConsumeData] = useState({ quantities: {}, serials: {}, note: '' });
+    const [consumeData, setConsumeData] = useState({ quantities: {}, serials: {}, components: {}, note: '' });
 
     // Return state
     const [showReturn, setShowReturn] = useState(false);
-    const [returnData, setReturnData] = useState({ productId: '', batchId: '', quantity: '', reason: '' });
+    const [returnData, setReturnData] = useState({
+        productId: '',
+        batchId: '',
+        quantity: '',
+        reason: '',
+        returnType: 'NORMAL_RETURN',
+        sourceMode: 'PROJECT_STOCK',
+        sourceConsumptionId: ''
+    });
     const [returnBatches, setReturnBatches] = useState([]); // Batches for the selected return product
     const [selectedReturnSerials, setSelectedReturnSerials] = useState({}); // { batchId: Set(serials) }
 
@@ -76,18 +85,22 @@ export default function ProjectInventoryCard({ projectId, project }) {
         if (!projectId) return;
         try {
             setLoading(true);
-            const [invRes, panelRes, trRes, estimationRes, draftsRes] = await Promise.all([
+            const [invRes, panelRes, trRes, estimationRes, draftsRes, returnsRes] = await Promise.all([
                 api.get(`/inventory/project/${projectId}`),
                 api.get(`/inventory/project/${projectId}/panels`).catch(() => ({ data: [] })),
                 api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`),
                 api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null })),
-                api.get('/item-requests/my').catch(() => ({ data: [] }))
+                api.get('/item-requests/my').catch(() => ({ data: [] })),
+                api.get(`/inventory/returns/internal/project/${projectId}`, {
+                    params: { size: 1000, sort: 'createdAt,desc' }
+                }).catch(() => ({ data: [] }))
             ]);
 
             setInventory(invRes.data || []);
             setPanelInventory(panelRes.data || []);
             setPendingTransfers(trRes.data || []);
             setEstimationComponents(estimationRes.data?.components || []);
+            setReturnRequests(returnsRes.data?.content || returnsRes.data || []);
             setDraftRequests((Array.isArray(draftsRes.data) ? draftsRes.data : [])
                 .filter(request => request.status === 'DRAFT' && request.projectId === projectId));
         } catch (e) {
@@ -146,6 +159,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     productId: item.productId,
                     productName: item.productName || item.productId,
                     productNameSnapshot: item.productName || item.productId,
+                    componentName: consumeData.components?.[item.productId] || '',
                     unit: item.unit,
                     quantity,
                     availableQty,
@@ -174,10 +188,10 @@ export default function ProjectInventoryCard({ projectId, project }) {
             });
             toast.success('Items consumed');
             setShowConsume(false);
-            setConsumeData({ quantities: {}, serials: {}, note: '' });
+            setConsumeData({ quantities: {}, serials: {}, components: {}, note: '' });
             load();
         } catch (e) {
-            const message = e?.response?.data?.message || e?.message || 'Failed to consume items';
+            const message = apiErrorMessage(e, 'Failed to consume items');
             toast.error(message);
             console.error('Failed to consume items:', e?.response?.data || e);
         } finally {
@@ -192,6 +206,19 @@ export default function ProjectInventoryCard({ projectId, project }) {
         return date.toLocaleString();
     };
 
+    const apiErrorMessage = (error, fallback) => {
+        const data = error?.response?.data;
+        return data?.message || (typeof data === 'string' ? data : null) || error?.message || fallback;
+    };
+
+    const formatConsumptionReference = (record) => record?.consumptionNumber || record?.id || 'Consumption record';
+
+    const formatConsumptionOption = (record) => {
+        const itemCount = (record.items || []).length;
+        const qty = (record.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        return `${formatConsumptionReference(record)} | ${formatDateTime(record.createdAt)} | ${itemCount} item${itemCount === 1 ? '' : 's'} | Qty ${qty}`;
+    };
+
     const buildConsumedRows = (records) => {
         const productNames = inventory.reduce((map, item) => {
             map[item.productId] = item.productName;
@@ -203,6 +230,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
             date: record.createdAt,
             consumptionNumber: record.consumptionNumber || record.id || '-',
             productName: item.productNameSnapshot || productNames[item.productId] || item.productId || '-',
+            componentName: item.componentName || 'General / not assigned',
             quantity: item.quantity ?? 0,
             unit: item.unit || '',
             serials: (item.serials || []).join(', '),
@@ -214,9 +242,8 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const consumedRows = buildConsumedRows(consumptionRecords);
     const totalConsumedQty = consumedRows.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
 
-    const openConsumedReport = async () => {
+    const fetchConsumptionRecords = async () => {
         if (!projectId) return;
-        setShowConsumedReport(true);
         setLoadingConsumption(true);
         try {
             const res = await api.get(`/consumptions/project/${projectId}`, {
@@ -231,10 +258,120 @@ export default function ProjectInventoryCard({ projectId, project }) {
         }
     };
 
+    const openConsumedReport = async () => {
+        setShowConsumedReport(true);
+        fetchConsumptionRecords();
+    };
+
+    const returnProductOptions = useMemo(() => {
+        if (returnData.sourceMode === 'CONSUMED' && returnData.sourceConsumptionId) {
+            const source = consumptionRecords.find(record => record.id === returnData.sourceConsumptionId);
+            const products = new Map();
+            (source?.items || []).forEach(item => {
+                if (!item.productId) return;
+                const current = products.get(item.productId) || {
+                    productId: item.productId,
+                    productName: item.productNameSnapshot || item.productId,
+                    onHandQty: 0,
+                    unit: item.unit
+                };
+                current.onHandQty += Number(item.quantity || 0);
+                products.set(item.productId, current);
+            });
+            return Array.from(products.values());
+        }
+        return inventory.filter(item => item.productId && !item.isCancelled && Number(item.onHandQty || 0) > 0);
+    }, [consumptionRecords, inventory, returnData.sourceConsumptionId, returnData.sourceMode]);
+
+    const reservedReturnQtyByProduct = useMemo(() => {
+        const products = new Map();
+        returnRequests
+            .filter(request => request.status === 'PENDING' || request.status === 'PENDING_APPROVAL')
+            .filter(request => !request.sourceConsumptionId)
+            .forEach(request => {
+                (request.items || []).forEach(item => {
+                    if (!item.productId) return;
+                    products.set(item.productId, (products.get(item.productId) || 0) + Number(item.quantity || 0));
+                });
+            });
+        return products;
+    }, [returnRequests]);
+
+    const reservedConsumedReturnQtyByProduct = useMemo(() => {
+        const products = new Map();
+        returnRequests
+            .filter(request => request.status !== 'REJECTED')
+            .filter(request => request.sourceConsumptionId === returnData.sourceConsumptionId)
+            .forEach(request => {
+                (request.items || []).forEach(item => {
+                    if (!item.productId) return;
+                    products.set(item.productId, (products.get(item.productId) || 0) + Number(item.quantity || 0));
+                });
+            });
+        return products;
+    }, [returnData.sourceConsumptionId, returnRequests]);
+
+    const selectedReturnProduct = useMemo(
+        () => returnProductOptions.find(product => product.productId === returnData.productId),
+        [returnProductOptions, returnData.productId]
+    );
+
+    const selectedReturnMax = useMemo(() => {
+        if (!returnData.productId) return 0;
+        if (returnData.sourceMode === 'CONSUMED') {
+            const consumedQty = Number(selectedReturnProduct?.onHandQty || 0);
+            const reservedQty = reservedConsumedReturnQtyByProduct.get(returnData.productId) || 0;
+            return Math.max(0, consumedQty - reservedQty);
+        }
+        if (returnData.batchId) {
+            const batch = returnBatches.find(item => item.id === returnData.batchId);
+            const reservedQty = reservedReturnQtyByProduct.get(returnData.productId) || 0;
+            return Math.max(0, Number(batch?.quantity || 0) - reservedQty);
+        }
+        const reservedQty = reservedReturnQtyByProduct.get(returnData.productId) || 0;
+        return Math.max(0, Number(selectedReturnProduct?.onHandQty || 0) - reservedQty);
+    }, [reservedConsumedReturnQtyByProduct, reservedReturnQtyByProduct, returnBatches, returnData.batchId, returnData.productId, returnData.sourceMode, selectedReturnProduct]);
+
+    const clampReturnQuantity = (value, max = selectedReturnMax) => {
+        if (value === '' || value === null || value === undefined) return '';
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric) || numeric <= 0) return '';
+        return max > 0 ? Math.min(numeric, max) : '';
+    };
+
+    const handleReturnQuantityChange = (value) => {
+        const nextQuantity = clampReturnQuantity(value);
+        if (nextQuantity !== '' && Number(value) > selectedReturnMax) {
+            toast.warn(`Maximum return quantity is ${selectedReturnMax}`);
+        }
+        setReturnData(prev => ({ ...prev, quantity: nextQuantity }));
+    };
+
     const handleSelectReturnProduct = async (pid) => {
-        setReturnData({ ...returnData, productId: pid, batchId: '' });
+        const source = returnData.sourceMode === 'CONSUMED' && returnData.sourceConsumptionId
+            ? consumptionRecords.find(record => record.id === returnData.sourceConsumptionId)
+            : null;
+        const consumedQty = (source?.items || [])
+            .filter(item => item.productId === pid)
+            .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const stockQty = returnProductOptions.find(item => item.productId === pid)?.onHandQty || 0;
+        const reservedQty = returnData.sourceMode === 'CONSUMED'
+            ? (reservedConsumedReturnQtyByProduct.get(pid) || 0)
+            : (reservedReturnQtyByProduct.get(pid) || 0);
+        const maxQty = Math.max(0, (returnData.sourceMode === 'CONSUMED' ? consumedQty : Number(stockQty || 0)) - reservedQty);
+        setReturnData({
+            ...returnData,
+            productId: pid,
+            batchId: '',
+            quantity: maxQty > 0 ? clampReturnQuantity(returnData.quantity || 1, maxQty) : ''
+        });
         if (!pid) {
             setReturnBatches([]);
+            return;
+        }
+        if (returnData.sourceMode === 'CONSUMED') {
+            setReturnBatches([]);
+            setSelectedReturnSerials({});
             return;
         }
         // Fetch batches for this product in this project
@@ -255,8 +392,16 @@ export default function ProjectInventoryCard({ projectId, project }) {
     const toggleReturnSerial = (batchId, serial) => {
         setSelectedReturnSerials(prev => {
             const batchSet = new Set(prev[batchId] || []);
-            if (batchSet.has(serial)) batchSet.delete(serial);
-            else batchSet.add(serial);
+            const isRemoving = batchSet.has(serial);
+            const currentTotal = Object.values(prev).reduce((sum, s) => sum + s.size, 0);
+            if (isRemoving) {
+                batchSet.delete(serial);
+            } else if (selectedReturnMax > 0 && currentTotal >= selectedReturnMax) {
+                toast.warn(`Maximum return quantity is ${selectedReturnMax}`);
+                return prev;
+            } else {
+                batchSet.add(serial);
+            }
 
             const next = { ...prev };
             if (batchSet.size === 0) delete next[batchId];
@@ -275,6 +420,18 @@ export default function ProjectInventoryCard({ projectId, project }) {
             toast.warn('Product and Quantity are required');
             return;
         }
+        if (returnData.sourceMode === 'CONSUMED' && !returnData.sourceConsumptionId) {
+            toast.warn('Select the consumption record this return comes from');
+            return;
+        }
+        if (!returnData.reason.trim()) {
+            toast.warn('Reason is required for a return request');
+            return;
+        }
+        if (selectedReturnMax <= 0 || Number(returnData.quantity) > selectedReturnMax) {
+            toast.warn(`Maximum return quantity is ${selectedReturnMax}`);
+            return;
+        }
         try {
             setSubmitting(true);
 
@@ -290,6 +447,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     if (set.size > 0) {
                         items.push({
                             productId: returnData.productId,
+                            productNameSnapshot: returnProductOptions.find(p => p.productId === returnData.productId)?.productName || returnData.productId,
                             quantity: set.size,
                             batchId: bId,
                             serials: Array.from(set),
@@ -301,6 +459,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 // Legacy / Manual mode
                 items.push({
                     productId: returnData.productId,
+                    productNameSnapshot: returnProductOptions.find(p => p.productId === returnData.productId)?.productName || returnData.productId,
                     quantity: Number(returnData.quantity),
                     batchId: returnData.batchId, // Send optional batchId
                     serials: returnData.serials ? returnData.serials.split(',').map(s => s.trim()).filter(s => s) : [],
@@ -313,15 +472,25 @@ export default function ProjectInventoryCard({ projectId, project }) {
             await api.post('/inventory/returns/internal', {
                 projectId,
                 fromType: 'PROJECT',
+                sourceConsumptionId: returnData.sourceMode === 'CONSUMED' ? returnData.sourceConsumptionId : null,
+                returnType: returnData.sourceMode === 'CONSUMED' ? returnData.returnType : 'NORMAL_RETURN',
                 items: items
             });
-            toast.success('Return request created');
+            toast.success('Return request created and sent for approval');
             setShowReturn(false);
-            setShowReturn(false);
-            setReturnData({ productId: '', batchId: '', quantity: '', reason: '' });
+            load();
+            setReturnData({
+                productId: '',
+                batchId: '',
+                quantity: '',
+                reason: '',
+                returnType: 'NORMAL_RETURN',
+                sourceMode: 'PROJECT_STOCK',
+                sourceConsumptionId: ''
+            });
             setSelectedReturnSerials({});
         } catch (e) {
-            toast.error(e?.response?.data?.message || 'Failed to create return request');
+            toast.error(apiErrorMessage(e, 'Failed to create return request'));
         } finally {
             setSubmitting(false);
         }
@@ -381,6 +550,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     // Re-fetch batches for new product
                     handleSelectReturnProduct(productId);
                     return {
+                        ...prev,
                         productId,
                         batchId: batchId || '',
                         quantity: 1,
@@ -416,13 +586,25 @@ export default function ProjectInventoryCard({ projectId, project }) {
 
                     // Sync quantity
                     const total = Object.values(next).reduce((sum, s) => sum + s.size, 0);
-                    setReturnData(d => ({ ...d, quantity: total || 1 })); // Default to 1 if 0? No, if serials exist, count them.
+                    setReturnData(d => ({ ...d, quantity: total || 1 }));
 
                     return next;
                 });
             } else {
-                // Non-serialized scan: just increment qty
-                setReturnData(prev => ({ ...prev, quantity: Number(prev.quantity || 0) + 1 }));
+                setReturnData(prev => {
+                    const productMax = Number(returnProductOptions.find(item => item.productId === productId)?.onHandQty || 0);
+                    const reservedQty = returnData.sourceMode === 'CONSUMED'
+                        ? (reservedConsumedReturnQtyByProduct.get(productId) || 0)
+                        : (reservedReturnQtyByProduct.get(productId) || 0);
+                    const max = prev.productId === productId
+                        ? selectedReturnMax
+                        : Math.max(0, productMax - reservedQty);
+                    const requestedQty = Number(prev.quantity || 0) + 1;
+                    if (max > 0 && requestedQty > max) {
+                        toast.warn(`Maximum return quantity is ${max}`);
+                    }
+                    return { ...prev, quantity: clampReturnQuantity(requestedQty, max) };
+                });
             }
 
             toast.success(`Scanned: ${serialNo || productId}`);
@@ -448,9 +630,29 @@ export default function ProjectInventoryCard({ projectId, project }) {
     };
 
     const handleRowReturnClick = (item) => {
-        // Pre-fill the return modal with the clicked product
-        handleSelectReturnProduct(item.productId);
+        setReturnData(prev => ({
+            ...prev,
+            sourceMode: 'PROJECT_STOCK',
+            sourceConsumptionId: '',
+            returnType: 'NORMAL_RETURN',
+            productId: item.productId,
+            batchId: '',
+            quantity: ''
+        }));
+        setSelectedReturnSerials({});
         setShowReturn(true);
+        if (consumptionRecords.length === 0) fetchConsumptionRecords();
+        api.get(`/inventory/batches?productId=${item.productId}`)
+            .then(res => {
+                const filtered = (res.data || []).filter(b => b.ownerId === projectId && b.quantity > 0);
+                setReturnBatches(filtered);
+            })
+            .catch(e => console.error("Failed to fetch batches", e));
+    };
+
+    const openReturnModal = () => {
+        setShowReturn(true);
+        if (consumptionRecords.length === 0) fetchConsumptionRecords();
     };
 
     // State for Cancel Modal
@@ -521,6 +723,27 @@ export default function ProjectInventoryCard({ projectId, project }) {
         [panelInventory, activeInventoryView]
     );
     const isPanelView = activeInventoryView !== 'ALL';
+
+    const componentOptionsByProduct = useMemo(() => {
+        const byProduct = new Map();
+        panelInventory.forEach(panel => {
+            (panel.items || []).forEach(item => {
+                if (!item.productId || item.cancelled) return;
+                const options = byProduct.get(item.productId) || [];
+                const exists = options.some(option => option.value === panel.panelName);
+                if (!exists) {
+                    options.push({
+                        value: panel.panelName,
+                        label: panel.panelName,
+                        requestedQty: item.requestedQty,
+                        coverageQty: item.coverageQty
+                    });
+                }
+                byProduct.set(item.productId, options);
+            });
+        });
+        return byProduct;
+    }, [panelInventory]);
 
     const displayedInventory = useMemo(() => {
         const source = isPanelView ? (activePanel?.items || []) : activeInventory;
@@ -602,6 +825,9 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     </Button>
                     <Button size="sm" variant="outline-secondary" onClick={() => setShowComponentReport(true)} disabled={!projectId || loading}>
                         Print Component Report
+                    </Button>
+                    <Button size="sm" variant="outline-warning" onClick={openReturnModal} disabled={!projectId}>
+                        Create Return Request
                     </Button>
                     <Button size="sm" variant="primary" onClick={() => setShowConsume(true)} disabled={!projectId}>
                         Consume Items
@@ -1036,10 +1262,11 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                             <th style={{ width: '12%' }}>Date</th>
                                             <th style={{ width: '13%' }}>Reference</th>
                                             <th>Product</th>
+                                            <th style={{ width: '14%' }}>Main Item / Component</th>
                                             <th className="text-end" style={{ width: '9%' }}>Qty</th>
                                             <th style={{ width: '8%' }}>Unit</th>
-                                            <th style={{ width: '18%' }}>Serials</th>
-                                            <th style={{ width: '16%' }}>Note</th>
+                                            <th style={{ width: '14%' }}>Serials</th>
+                                            <th style={{ width: '14%' }}>Note</th>
                                             <th style={{ width: '10%' }}>By</th>
                                         </tr>
                                     </thead>
@@ -1049,6 +1276,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                                 <td>{formatDateTime(row.date)}</td>
                                                 <td>{row.consumptionNumber}</td>
                                                 <td className="fw-semibold">{row.productName}</td>
+                                                <td>{row.componentName}</td>
                                                 <td className="text-end">{row.quantity}</td>
                                                 <td>{row.unit || '-'}</td>
                                                 <td>{row.serials || '-'}</td>
@@ -1179,7 +1407,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                         })}
 
                         <div className="small text-muted border-top pt-2">
-                            Allocated quantities are distributed once across components. Project Consumed and Project On Hand are shared project-wide figures because consumption records are not assigned to a specific component.
+                            Allocated quantities are distributed once across components. New consumption records can now capture the main item/component selected at consumption time; older consumption records remain general until manually reconciled.
                         </div>
                     </ReportLayout>
                 </Modal.Body>
@@ -1223,6 +1451,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                         <thead className="table-light">
                                             <tr>
                                                 <th>Product Name</th>
+                                                <th style={{ width: '24%' }}>Main Item / Component</th>
                                                 <th className="text-end" style={{ width: '15%' }}>Remaining</th>
                                                 <th className="text-end" style={{ width: '15%' }}>Received</th>
                                                 <th className="text-end" style={{ width: '18%' }}>Want to Consume</th>
@@ -1231,12 +1460,13 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                         <tbody>
                                             {activeInventory.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={4} className="text-center text-muted py-3">
+                                                    <td colSpan={5} className="text-center text-muted py-3">
                                                         No project inventory lines are available.
                                                     </td>
                                                 </tr>
                                             ) : activeInventory.map(item => {
                                                 const consumeQty = consumeData.quantities?.[item.productId] ?? '';
+                                                const componentOptions = componentOptionsByProduct.get(item.productId) || [];
                                                 return (
                                                     <tr key={`consume-${item.productId}`}>
                                                         <td>
@@ -1258,6 +1488,29 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                                                     }))}
                                                                     placeholder="Serial numbers"
                                                                 />
+                                                            )}
+                                                        </td>
+                                                        <td>
+                                                            <SafeSelect
+                                                                size="sm"
+                                                                value={consumeData.components?.[item.productId] || ''}
+                                                                onChange={(event) => setConsumeData(prev => ({
+                                                                    ...prev,
+                                                                    components: {
+                                                                        ...(prev.components || {}),
+                                                                        [item.productId]: event.target.value
+                                                                    }
+                                                                }))}
+                                                            >
+                                                                <option value="">General / not assigned</option>
+                                                                {componentOptions.map(option => (
+                                                                    <option key={`${item.productId}-${option.value}`} value={option.value}>
+                                                                        {option.label}
+                                                                    </option>
+                                                                ))}
+                                                            </SafeSelect>
+                                                            {componentOptions.length === 0 && (
+                                                                <div className="form-text small">No component allocation found.</div>
                                                             )}
                                                         </td>
                                                         <td className="text-end fw-semibold">{Number(item.onHandQty || 0)}</td>
@@ -1313,10 +1566,10 @@ export default function ProjectInventoryCard({ projectId, project }) {
             {/* Return Modal */}
             {showReturn && (
                 <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
-                    <div className="modal-dialog">
+                    <div className="modal-dialog modal-lg">
                         <div className="modal-content">
                             <div className="modal-header">
-                                <h5 className="modal-title">Return to Stores</h5>
+                                <h5 className="modal-title">Create Return Request</h5>
                                 <button type="button" className="btn-close" onClick={() => setShowReturn(false)}></button>
                             </div>
                             <div className="modal-body">
@@ -1338,6 +1591,78 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                     <div className="form-text small">Scan item to auto-select and increment qty.</div>
                                 </div>
                                 <form>
+                                    <div className="row g-3 mb-3">
+                                        <div className="col-md-6">
+                                            <label className="form-label">Return source</label>
+                                            <SafeSelect
+                                                value={returnData.sourceMode}
+                                                onChange={(e) => {
+                                                    setReturnData({
+                                                        ...returnData,
+                                                        sourceMode: e.target.value,
+                                                        returnType: e.target.value === 'CONSUMED' ? 'CUSTOMER_CHANGED_MIND' : 'NORMAL_RETURN',
+                                                        sourceConsumptionId: '',
+                                                        productId: '',
+                                                        batchId: '',
+                                                        quantity: ''
+                                                    });
+                                                    setReturnBatches([]);
+                                                    setSelectedReturnSerials({});
+                                                }}
+                                            >
+                                                <option value="PROJECT_STOCK">Not consumed: current project stock</option>
+                                                <option value="CONSUMED">Already consumed: return against consumption</option>
+                                            </SafeSelect>
+                                            <div className="form-text">
+                                                A CON reference is the consumption record used for audit tracing.
+                                            </div>
+                                        </div>
+                                        {returnData.sourceMode === 'PROJECT_STOCK' ? (
+                                            <div className="col-md-6">
+                                                <label className="form-label">Return type</label>
+                                                <div className="form-control bg-light">Normal return</div>
+                                            </div>
+                                        ) : (
+                                            <div className="col-md-6">
+                                                <label className="form-label">Return type</label>
+                                                <SafeSelect
+                                                    value={returnData.returnType}
+                                                    onChange={(e) => setReturnData({ ...returnData, returnType: e.target.value })}
+                                                >
+                                                    <option value="CUSTOMER_CHANGED_MIND">Customer changed mind / exchange</option>
+                                                    <option value="DAMAGED_AFTER_CONSUMPTION">Damaged after consumption</option>
+                                                    <option value="WRONG_ITEM_USED">Wrong item used</option>
+                                                </SafeSelect>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {returnData.sourceMode === 'CONSUMED' && (
+                                        <div className="mb-3">
+                                            <label className="form-label">Consumption record</label>
+                                            <SafeSelect
+                                                value={returnData.sourceConsumptionId}
+                                                onChange={(e) => {
+                                                    setReturnData({
+                                                        ...returnData,
+                                                        sourceConsumptionId: e.target.value,
+                                                        productId: '',
+                                                        batchId: '',
+                                                        quantity: ''
+                                                    });
+                                                    setReturnBatches([]);
+                                                    setSelectedReturnSerials({});
+                                                }}
+                                            >
+                                                <option value="">Select CON record</option>
+                                                {consumptionRecords.map(record => (
+                                                    <option key={record.id} value={record.id}>
+                                                        {formatConsumptionOption(record)}
+                                                    </option>
+                                                ))}
+                                            </SafeSelect>
+                                            {loadingConsumption && <div className="form-text">Loading consumption records...</div>}
+                                        </div>
+                                    )}
                                     <div className="mb-3">
                                         <label className="form-label">Product</label>
                                         <SafeSelect
@@ -1345,16 +1670,33 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                             onChange={(e) => handleSelectReturnProduct(e.target.value)}
                                         >
                                             <option value="">Select Product</option>
-                                            {inventory.map(i => (
-                                                <option key={i.productId} value={i.productId}>{i.productName} (Avail: {i.onHandQty})</option>
+                                            {returnProductOptions.map(i => (
+                                                <option key={`${returnData.sourceConsumptionId || returnData.sourceMode}-${i.productId}`} value={i.productId}>
+                                                    {i.productName || i.productId} {returnData.sourceMode === 'CONSUMED' ? `(Consumed qty: ${i.onHandQty})` : `(Project stock: ${i.onHandQty})`}
+                                                </option>
                                             ))}
                                         </SafeSelect>
+                                        {returnData.sourceMode === 'CONSUMED' && !returnData.sourceConsumptionId && (
+                                            <div className="form-text">Select a consumption record first.</div>
+                                        )}
                                     </div>
+                                    {returnData.sourceMode === 'PROJECT_STOCK' && (
                                     <div className="mb-3">
                                         <label className="form-label">Batch / Serial No</label>
                                         <SafeSelect
                                             value={returnData.batchId}
-                                            onChange={(e) => setReturnData({ ...returnData, batchId: e.target.value })}
+                                            onChange={(e) => {
+                                                const nextBatchId = e.target.value;
+                                                const nextBatch = returnBatches.find(batch => batch.id === nextBatchId);
+                                                const nextMax = nextBatchId
+                                                    ? Number(nextBatch?.quantity || 0)
+                                                    : Number(selectedReturnProduct?.onHandQty || 0);
+                                                setReturnData({
+                                                    ...returnData,
+                                                    batchId: nextBatchId,
+                                                    quantity: clampReturnQuantity(returnData.quantity, nextMax)
+                                                });
+                                            }}
                                             disabled={!returnData.productId}
                                         >
                                             <option value="">Any Batch / FIFO</option>
@@ -1365,9 +1707,10 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                             ))}
                                         </SafeSelect>
                                     </div>
+                                    )}
 
                                     {/* Multi-Select Serials (New Feature) */}
-                                    {returnData.productId && returnBatches.some(b => b.serials && b.serials.length > 0) && (
+                                    {returnData.sourceMode === 'PROJECT_STOCK' && returnData.productId && returnBatches.some(b => b.serials && b.serials.length > 0) && (
                                         <div className="mb-3 border rounded p-2 bg-light">
                                             <label className="form-label small fw-bold">Select Specific Serials (Multi-select)</label>
                                             <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
@@ -1414,10 +1757,20 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                             type="number"
                                             className="form-control"
                                             value={returnData.quantity}
-                                            onChange={(e) => setReturnData({ ...returnData, quantity: e.target.value })}
+                                            onChange={(e) => handleReturnQuantityChange(e.target.value)}
                                             min="1"
+                                            max={selectedReturnMax || undefined}
+                                            disabled={!returnData.productId || selectedReturnMax <= 0}
                                         />
+                                        {returnData.productId && selectedReturnMax > 0 && (
+                                            <div className="form-text">Maximum returnable quantity: {selectedReturnMax}</div>
+                                        )}
                                     </div>
+                                    {returnData.returnType === 'DAMAGED_AFTER_CONSUMPTION' && (
+                                        <div className="alert alert-warning small">
+                                            Damaged returns require approval and will be recorded for audit, but they will not be added back into usable store stock.
+                                        </div>
+                                    )}
                                     {/* Legacy Serial Input Removed in favor of Multi-select above */}
                                     {/* If manual serial entry is absolutely needed for non-batched items, we can re-enable it or add a small toggle. 
                             For now, consolidating per user request. */}
