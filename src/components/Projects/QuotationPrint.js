@@ -327,6 +327,10 @@ const aggregateItems = (items = [], multiplier = 1) => {
     const qtyMultiplier = Math.max(1, Number(multiplier || 1) || 1);
 
     items.forEach((item, index) => {
+        if (Number(item?.quantity || 0) <= 0) {
+            return;
+        }
+
         const description = itemDescription(item);
         const key = item?.productId
             ? `product:${item.productId}`

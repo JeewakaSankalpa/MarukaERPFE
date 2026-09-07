@@ -1474,6 +1474,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 const isManual = r.lineType === LINE_TYPES.MANUAL;
                 const hasManualDescription = String(r.description || "").trim().length > 0;
 
+                if (Number(qtyVal || 0) <= 0) {
+                    return;
+                }
+
                 if (r.productId) {
                     items.push({
                         lineType: LINE_TYPES.PRODUCT,

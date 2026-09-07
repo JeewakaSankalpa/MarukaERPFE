@@ -307,6 +307,10 @@ const aggregateLineItems = (items = [], options = {}) => {
         : `manual:${normalizeLineText(getDescription(item))}:${Number(getUnitPrice(item) || 0)}`);
 
     items.forEach((item, index) => {
+        if (Number(item?.quantity || 0) <= 0) {
+            return;
+        }
+
         const description = getDescription(item);
         const quantity = getQuantity(item);
         const total = getTotal(item);
