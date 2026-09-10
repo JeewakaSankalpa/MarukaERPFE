@@ -513,6 +513,7 @@ const InvoiceView = () => {
         .filter(Boolean)
         .join(","), [role, projectRoles]);
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
+    const printApproved = Boolean(invoice?.printApprovedAt);
 
     const selectedType = searchParams.get("type") || DOC_TYPES.PROFORMA;
     const isProforma = selectedType === DOC_TYPES.PROFORMA;
@@ -857,6 +858,10 @@ const InvoiceView = () => {
     };
 
     const handlePrint = async () => {
+        if (!printApproved) {
+            toast.warn("An admin or super admin must approve this invoice before printing.");
+            return;
+        }
         setRecordingPrint(true);
         try {
             const res = await api.post(`/invoices/${id}/print-events`, currentPrintPayload());
@@ -868,6 +873,16 @@ const InvoiceView = () => {
             toast.error(error.response?.data?.message || "Could not record print audit. Print cancelled.");
         } finally {
             setRecordingPrint(false);
+        }
+    };
+
+    const handleApprovePrint = async () => {
+        try {
+            const res = await api.post(`/invoices/${id}/approve-print`, {}, { headers: { "X-Roles": rolesHeader } });
+            setInvoice(res.data);
+            toast.success("Invoice approved for printing");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to approve invoice printing");
         }
     };
 
@@ -1744,6 +1759,11 @@ const InvoiceView = () => {
                         </Button>
                     )}
                     {isAdmin && (
+                        <Button size="sm" variant="outline-success" onClick={handleApprovePrint} disabled={printApproved}>
+                            {printApproved ? "Print Approved" : "Approve Print"}
+                        </Button>
+                    )}
+                    {isAdmin && (
                         <Button size="sm" variant="outline-warning" onClick={handleRefreshInvoice} disabled={refreshingInvoice}>
                             {refreshingInvoice ? "Refreshing..." : "Refresh Invoice"}
                         </Button>
@@ -1752,6 +1772,7 @@ const InvoiceView = () => {
                         variant="primary"
                         onClick={handlePrint}
                         disabled={recordingPrint
+                            || !printApproved
                             || (usesCargillsCustomLines && (!customLinesMatch || !customLinesSaved))}
                     >
                         {recordingPrint ? "Recording..." : "Print / Save PDF"}
