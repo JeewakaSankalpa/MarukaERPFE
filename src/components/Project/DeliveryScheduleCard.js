@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Form, Row, Col, Button } from 'react-bootstrap';
+import { Card, Form, Row, Col, Button, Modal, Table } from 'react-bootstrap';
 import api from '../../api/api';
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
@@ -13,11 +13,17 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
         vehicleDetails: '',
         responsibleEmployeeId: '',
         responsibleEmployeeName: '',
-        status: 'PENDING'
+        status: 'PENDING', customerName: '', customerId: '', customerAddress: '', customerTelephone: '',
+        customerEmail: '', contactPerson: '', deliveryTime: '', poNumber: '', invoiceNumber: '',
+        recipientName: '', recipientId: '', recipientDesignation: ''
     });
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
+    const [components, setComponents] = useState([]);
+    const [selectedComponents, setSelectedComponents] = useState([]);
+    const [history, setHistory] = useState([]);
+    const [showGatePassModal, setShowGatePassModal] = useState(false);
 
     useEffect(() => {
         fetchInitialData();
@@ -35,6 +41,16 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
             if (res.status === 200 && res.data) {
                 setData(res.data);
             }
+            const [estimationRes, historyRes] = await Promise.all([
+                api.get(`/estimations/by-project/${projectId}`),
+                api.get(`/projects/${projectId}/delivery/gatepass/history`)
+            ]);
+            const nextComponents = (estimationRes.data?.components || []).filter(c => c?.name);
+            setComponents(nextComponents);
+            const nextHistory = historyRes.data || [];
+            const sent = new Set(nextHistory.flatMap(item => item.componentNames || []));
+            setSelectedComponents(nextComponents.map(c => c.name).filter(name => !sent.has(name)));
+            setHistory(nextHistory);
         } catch (e) {
             console.error("Failed to load delivery data", e);
         } finally {
@@ -87,7 +103,7 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
         }
     };
 
-    const downloadPdf = async (type) => { // 'gatepass' or 'confirmation'
+    const downloadPdf = async (type) => { // 'confirmation'
         try {
             const res = await api.get(`/projects/${projectId}/delivery/${type}`, {
                 responseType: 'blob'
@@ -101,6 +117,41 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
             link.remove();
         } catch (e) {
             toast.error(`Failed to download ${type}`);
+        }
+    };
+
+    const generateGatePass = async () => {
+        if (!selectedComponents.length) {
+            toast.warn('Select at least one estimation component for the gate pass.');
+            return;
+        }
+        try {
+            const res = await api.post(`/projects/${projectId}/delivery/gatepass`, { componentNames: selectedComponents }, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `gatepass_${projectId}.pdf`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+            const [deliveryRes, historyRes] = await Promise.all([
+                api.get(`/projects/${projectId}/delivery`),
+                api.get(`/projects/${projectId}/delivery/gatepass/history`)
+            ]);
+            setData(deliveryRes.data);
+            setHistory(historyRes.data || []);
+            setShowGatePassModal(false);
+            toast.success('Gate pass generated.');
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Failed to generate gate pass');
+        }
+    };
+
+    const viewGatePass = async (passNumber) => {
+        try {
+            const res = await api.get(`/projects/${projectId}/delivery/gatepass/history/${encodeURIComponent(passNumber)}`, { responseType: 'blob' });
+            window.open(window.URL.createObjectURL(new Blob([res.data])), '_blank', 'noopener,noreferrer');
+        } catch (e) {
+            toast.error('Failed to open gate pass');
         }
     };
 
@@ -119,7 +170,7 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                             Processing...
                         </span>
                     )}
-                    <Button variant="outline-danger" size="sm" onClick={() => downloadPdf('gatepass')} disabled={!data.id || loading}>
+                    <Button variant="outline-danger" size="sm" onClick={() => setShowGatePassModal(true)} disabled={!data.id || loading}>
                         <FaFilePdf /> Gate Pass
                     </Button>
                     <Button variant="outline-success" size="sm" onClick={() => downloadPdf('confirmation')} disabled={!data.id || loading}>
@@ -129,6 +180,20 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
             </Card.Header>
             <Card.Body>
                 <Form>
+                    <h6 className="text-primary border-bottom pb-2">Customer Information</h6>
+                    <Row className="mb-3">
+                        <Col md={6}><Form.Label>Customer Name / ID</Form.Label><Form.Control name="customerName" value={data.customerName || ''} onChange={handleChange} /></Col>
+                        <Col md={6}><Form.Label>Customer ID</Form.Label><Form.Control name="customerId" value={data.customerId || ''} onChange={handleChange} /></Col>
+                    </Row>
+                    <Row className="mb-3">
+                        <Col md={6}><Form.Label>Address</Form.Label><Form.Control name="customerAddress" value={data.customerAddress || ''} onChange={handleChange} /></Col>
+                        <Col md={3}><Form.Label>Telephone</Form.Label><Form.Control name="customerTelephone" value={data.customerTelephone || ''} onChange={handleChange} /></Col>
+                        <Col md={3}><Form.Label>Email</Form.Label><Form.Control type="email" name="customerEmail" value={data.customerEmail || ''} onChange={handleChange} /></Col>
+                    </Row>
+                    <Row className="mb-3">
+                        <Col md={6}><Form.Label>Contact Person</Form.Label><Form.Control name="contactPerson" value={data.contactPerson || ''} onChange={handleChange} /></Col>
+                    </Row>
+                    <h6 className="text-primary border-bottom pb-2">Delivery References</h6>
                     <Row className="mb-3">
                         <Col md={6}>
                             <Form.Group>
@@ -140,7 +205,8 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                                 />
                             </Form.Group>
                         </Col>
-                        <Col md={6}>
+                        <Col md={3}><Form.Label>Delivery Time</Form.Label><Form.Control type="time" name="deliveryTime" value={data.deliveryTime || ''} onChange={handleChange} /></Col>
+                        <Col md={3}>
                             <Form.Group>
                                 <Form.Label>Target Location</Form.Label>
                                 <Form.Control
@@ -152,6 +218,16 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                                 />
                             </Form.Group>
                         </Col>
+                    </Row>
+                    <Row className="mb-3">
+                        <Col md={6}><Form.Label>PO Number</Form.Label><Form.Control name="poNumber" value={data.poNumber || ''} onChange={handleChange} /></Col>
+                        <Col md={6}><Form.Label>Invoice Number</Form.Label><Form.Control name="invoiceNumber" value={data.invoiceNumber || ''} onChange={handleChange} /></Col>
+                    </Row>
+                    <h6 className="text-primary border-bottom pb-2">Recipient / Acknowledgement</h6>
+                    <Row className="mb-3">
+                        <Col md={4}><Form.Label>Recipient Name</Form.Label><Form.Control name="recipientName" value={data.recipientName || ''} onChange={handleChange} /></Col>
+                        <Col md={4}><Form.Label>Recipient ID</Form.Label><Form.Control name="recipientId" value={data.recipientId || ''} onChange={handleChange} /></Col>
+                        <Col md={4}><Form.Label>Designation</Form.Label><Form.Control name="recipientDesignation" value={data.recipientDesignation || ''} onChange={handleChange} /></Col>
                     </Row>
                     <Row className="mb-3">
                         <Col md={6}>
@@ -190,7 +266,16 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                         </Button>
                     </div>
                 </Form>
+                {history.length > 0 && <div className="mt-4"><h6>Gate Pass Generation History</h6><Table size="sm" responsive><thead><tr><th>Pass</th><th>Components</th><th>Generated by</th><th>Generated at</th><th></th></tr></thead><tbody>{history.map((item, index) => <tr key={`${item.passNumber || 'pass'}-${index}`}><td>{item.passNumber || '-'}</td><td>{(item.componentNames || []).join(', ')}</td><td>{item.generatedBy || '-'}</td><td>{item.generatedAt ? new Date(item.generatedAt).toLocaleString() : '-'}</td><td><Button size="sm" variant="outline-secondary" onClick={() => viewGatePass(item.passNumber)}>View</Button></td></tr>)}</tbody></Table></div>}
             </Card.Body>
+            <Modal show={showGatePassModal} onHide={() => setShowGatePassModal(false)}>
+                <Modal.Header closeButton><Modal.Title>Generate Gate Pass</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <p className="text-muted">Select the estimation components being sent in this delivery.</p>
+                    {components.length === 0 ? <div className="text-muted">No estimation components found.</div> : components.map(component => { const sent = history.some(item => (item.componentNames || []).includes(component.name)); return <Form.Check key={component.name} type="checkbox" label={`${component.name} (${component.items?.length || 0} lines)${sent ? ' - already sent' : ''}`} checked={selectedComponents.includes(component.name)} disabled={sent} onChange={() => setSelectedComponents(current => current.includes(component.name) ? current.filter(name => name !== component.name) : [...current, component.name])} /> })}
+                </Modal.Body>
+                <Modal.Footer><Button variant="secondary" onClick={() => setShowGatePassModal(false)}>Cancel</Button><Button variant="danger" onClick={generateGatePass}>Generate Gate Pass</Button></Modal.Footer>
+            </Modal>
         </Card>
     );
 }
