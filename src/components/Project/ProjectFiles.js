@@ -60,6 +60,11 @@ const uploadedTime = (file) => {
     return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
 };
 
+const OFFICE_TIME_ZONE = 'Asia/Colombo';
+const formatUploadedAt = (value) => new Date(value).toLocaleString('en-LK', {
+    timeZone: OFFICE_TIME_ZONE,
+});
+
 /* ---------- Upload overlay ---------- */
 function UploadOverlay({ text }) {
     return (
@@ -580,7 +585,7 @@ export default function ProjectFiles({ id, project, actions, stageObj, roleHeade
                                 </td>
                                 <td>
                                     {f.uploadedAt ? (
-                                        <span className="small text-muted">{new Date(f.uploadedAt).toLocaleString()}</span>
+                                        <span className="small text-muted">{formatUploadedAt(f.uploadedAt)}</span>
                                     ) : (
                                         <span className="text-muted small">-</span>
                                     )}
@@ -649,7 +654,7 @@ export default function ProjectFiles({ id, project, actions, stageObj, roleHeade
                                             <div className="small text-muted">System name: {f.systemName}</div>
                                         ) : null}
                                     </td>
-                                    <td>{f.uploadedAt ? new Date(f.uploadedAt).toLocaleString() : '-'}</td>
+                                    <td>{f.uploadedAt ? formatUploadedAt(f.uploadedAt) : '-'}</td>
                                     <td className="d-flex gap-2 justify-content-center">
                                         <a className="btn btn-sm btn-outline-primary" href={f.url} target="_blank" rel="noreferrer">View</a>
                                         <a className="btn btn-sm btn-success" href={f.url} target="_blank" rel="noreferrer" download={f.originalName || f.displayName}>Download</a>
