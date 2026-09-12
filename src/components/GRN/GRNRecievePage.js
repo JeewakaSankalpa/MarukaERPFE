@@ -24,6 +24,14 @@ const calculateDiscountAdjustedUnitCost = (item, subtotal, discountAmount) => {
     return roundMoney((lineTotal - discountShare) / qty).toFixed(2);
 };
 
+const calculateEffectiveDiscount = (subtotal, discountType, discountValue) => {
+    const value = Math.max(Number(discountValue || 0), 0);
+    if (discountType === "PERCENTAGE") {
+        return roundMoney(Math.min(value, 100) * Math.max(Number(subtotal || 0), 0) / 100);
+    }
+    return roundMoney(Math.min(value, Math.max(Number(subtotal || 0), 0)));
+};
+
 export default function GRNReceivePage({ poId: initialPoId }) {
     const navigate = useNavigate();
     const [poInput, setPoInput] = useState(initialPoId || "");  // what the user types
@@ -37,6 +45,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const [creditPeriodDays, setCreditPeriodDays] = useState("");
     const [vatAmount, setVatAmount] = useState("");
     const [discountAmount, setDiscountAmount] = useState("");
+    const [discountType, setDiscountType] = useState("AMOUNT");
+    const [discountValue, setDiscountValue] = useState("");
     const [deliveryCharge, setDeliveryCharge] = useState("");
 
     const [posting, setPosting] = useState(false);
@@ -83,11 +93,24 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     batches: []
                 })));
                 setDiscountAmount(d.discountAmount ?? "");
+                setDiscountType(d.discountType || "AMOUNT");
+                setDiscountValue(d.discountValue ?? d.discountAmount ?? "");
                 if (d.deliveryCharge) setDeliveryCharge(d.deliveryCharge);
                 if (d.vatAmount) setVatAmount(d.vatAmount);
             } catch (e) { console.error(e); toast.error(e?.response?.data?.message || e?.message || "Failed to load PO"); }
         })();
     }, [poId]);
+
+    useEffect(() => {
+        if (!po) return;
+        const subtotal = Number(po.subTotal || (po.items || []).reduce((sum, it) => sum + ((Number(it.orderedQty) || 0) * (Number(it.unitPrice) || 0)), 0));
+        const effectiveDiscount = calculateEffectiveDiscount(subtotal, discountType, discountValue);
+        setDiscountAmount(effectiveDiscount ? String(effectiveDiscount) : "");
+        setRows(rs => rs.map(row => ({
+            ...row,
+            adjustedUnitCost: calculateDiscountAdjustedUnitCost(row, subtotal, effectiveDiscount)
+        })));
+    }, [discountType, discountValue, po]);
 
     const addBatch = (i) => setRows(rs => {
         const cp = [...rs];
@@ -152,6 +175,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 creditPeriodDays: creditPeriodDays ? Number(creditPeriodDays) : undefined,
                 vatAmount: vatAmount ? Number(vatAmount) : 0,
                 discountAmount: discountAmount ? Number(discountAmount) : 0,
+                discountType,
+                discountValue: discountValue ? Number(discountValue) : 0,
                 deliveryCharge: deliveryCharge ? Number(deliveryCharge) : 0
             };
 
@@ -164,6 +189,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             setSupplierInvoiceNo(""); setSupplierInvoiceDate("");
             setCreditPeriodDays("");
             setDiscountAmount("");
+            setDiscountValue("");
 
             // Fetch created batches for QR display
             try {
@@ -272,7 +298,14 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Seller Discount</Form.Label>
-                            <Form.Control type="number" value={discountAmount} readOnly style={{ backgroundColor: '#e9ecef' }} />
+                            <div className="d-flex gap-2">
+                                <Form.Select value={discountType} onChange={e => setDiscountType(e.target.value)}>
+                                    <option value="AMOUNT">Amount (Rs.)</option>
+                                    <option value="PERCENTAGE">Percentage (%)</option>
+                                </Form.Select>
+                                <Form.Control type="number" min="0" max={discountType === "PERCENTAGE" ? "100" : undefined} step="0.01" value={discountValue} onChange={e => setDiscountValue(e.target.value)} placeholder="0" />
+                            </div>
+                            <Form.Text>Applied discount: Rs. {Number(discountAmount || 0).toFixed(2)}</Form.Text>
                         </Form.Group>
                     </Col>
                     <Col md={3}>
