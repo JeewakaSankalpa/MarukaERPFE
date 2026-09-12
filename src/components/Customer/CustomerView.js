@@ -7,7 +7,7 @@ import api from '../../api/api';
 
 function CustomerView({ onEditCustomer }) {
     const [customers, setCustomers] = useState([]);
-    const [searchMobile, setSearchMobile] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const navigate = useNavigate();
@@ -26,18 +26,26 @@ function CustomerView({ onEditCustomer }) {
         }
     };
 
-    const handleSearch = async () => {
-        if (searchMobile) {
-            try {
-                const response = await api.get(`/customer/search?mobileNumber=${searchMobile}`);
-                setCustomers(response.data);
-            } catch (error) {
-                console.error('Failed to search customers:', error);
-            }
-        } else {
-            fetchCustomers();
-        }
-    };
+    const searchableCustomerFields = (customer) => [
+        customer.comName,
+        customer.comAddress,
+        customer.comEmail,
+        customer.comContactNumber,
+        customer.businessRegNumber,
+        customer.currency,
+        customer.creditPeriod,
+        customer.vatType,
+        customer.vatNumber,
+        customer.contactPersonData?.name,
+        customer.contactPersonData?.contactNumber,
+        customer.contactPersonData?.email,
+    ];
+
+    const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+    const filteredCustomers = normalizedSearchTerm
+        ? customers.filter((customer) => searchableCustomerFields(customer)
+            .some((field) => String(field ?? '').toLocaleLowerCase().includes(normalizedSearchTerm)))
+        : customers;
 
     const handleShowDetails = async (customer) => {
         // Fetch fresh details to ensure valid signed URLs
@@ -80,14 +88,16 @@ function CustomerView({ onEditCustomer }) {
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h2 className="mb-0 mb-0 text-center mb-0">Customer List</h2>
                         </div>
-<Form className="d-flex mb-3">
+            <Form className="d-flex mb-3" onSubmit={(event) => event.preventDefault()}>
                 <Form.Control
                     type="text"
-                    placeholder="Search by Mobile Number"
-                    value={searchMobile}
-                    onChange={(e) => setSearchMobile(e.target.value)}
+                    placeholder="Search customer name, phone, email, address, BR, VAT..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <Button variant="primary" onClick={handleSearch} className="me-2">Search</Button>
+                <Button variant="outline-secondary" type="button" onClick={() => setSearchTerm('')} className="me-2">
+                    Clear
+                </Button>
                 <Button variant="success" onClick={() => navigate('/customer/create')}>+ Create Customer</Button>
             </Form>
             <div
@@ -106,7 +116,7 @@ function CustomerView({ onEditCustomer }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {customers.map((customer) => (
+                        {filteredCustomers.map((customer) => (
                             <tr key={customer.id}>
                                 <td>{customer.comName}</td>
                                 <td>{customer.contactPersonData?.name || '-'}</td>
