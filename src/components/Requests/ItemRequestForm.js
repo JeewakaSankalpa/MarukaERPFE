@@ -919,7 +919,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                             <td className="text-end">{row.estimatedQuantities?.[activeComponent] ?? "-"}</td>
                                             <td>
                                                 <InputGroup>
-                                                    <Form.Control type="number" min="0"
+                                                    <Form.Control type="number" min="0" step="0.01" inputMode="decimal"
                                                         value={row.quantities[activeComponent] ?? ""}
                                                         onChange={event => setComponentQuantity(row.productId, event.target.value)}
                                                         disabled={!canEditActiveComponent || !row.selectedComponents[activeComponent]} />
