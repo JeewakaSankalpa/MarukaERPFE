@@ -921,6 +921,9 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                                 <InputGroup>
                                                     <Form.Control type="number" min="0" step="0.01" inputMode="decimal"
                                                         value={row.quantities[activeComponent] ?? ""}
+                                                        onFocus={event => {
+                                                            if (event.target.value === "0") event.target.select();
+                                                        }}
                                                         onChange={event => setComponentQuantity(row.productId, event.target.value)}
                                                         disabled={!canEditActiveComponent || !row.selectedComponents[activeComponent]} />
                                                     <InputGroup.Text>{row.unit}</InputGroup.Text>
