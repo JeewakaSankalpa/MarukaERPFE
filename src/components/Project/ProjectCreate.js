@@ -67,6 +67,7 @@ const ProjectForm = () => {
     salesRep: "",
     inquiryType: "JOB",
     cargillsInquiry: false,
+    originalCargillsInquiry: false,
     workflowId: "", // NEW
     comment: "",
     currency: "LKR",
@@ -202,6 +203,7 @@ const ProjectForm = () => {
         setProjectData((prev) => ({
           ...prev,
           ...p,
+          originalCargillsInquiry: Boolean(p.cargillsInquiry),
           id: p.id,
           fileList: fileItems,
         }));
@@ -292,6 +294,13 @@ const ProjectForm = () => {
         }, 1500);
       } else {
         // UPDATE (optional backend)
+        const changingEstimationMethod = Boolean(projectData.cargillsInquiry) !== Boolean(projectData.originalCargillsInquiry);
+        if (changingEstimationMethod) {
+          const confirmed = window.confirm(
+            "Are you sure? Changing the estimation method will remove the project's existing created estimation so it can be recreated for the new method. Approved or in-process estimations cannot be changed."
+          );
+          if (!confirmed) return;
+        }
         // 1) update basic fields
         try {
           await api.put(`/projects/${routeId}`, {
@@ -305,8 +314,9 @@ const ProjectForm = () => {
             status: projectData.status, // keep status if you want to allow change later
           });
           toast.success("Project updated");
-        } catch {
-          toast.warn("Update endpoint not available (PUT /projects/{id})");
+        } catch (error) {
+          const message = error?.response?.data?.message || error?.response?.data?.error;
+          toast.error(message || "Project update failed");
         }
 
         // 2) upload additional files if any
