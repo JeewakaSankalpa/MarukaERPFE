@@ -503,13 +503,14 @@ body {
 .estimation-lines-table .estimation-component-col {
     min-width: max(42px, calc(150px * var(--estimation-matrix-zoom)));
     width: max(42px, calc(150px * var(--estimation-matrix-zoom)));
-    transition: min-width 160ms ease, width 160ms ease, background-color 160ms ease;
+    /* Keep the table geometry stable while it is being scrolled. Changing a
+       column width from :hover causes the nested scroll container to reflow
+       and can oscillate at the bottom edge of the estimation. */
+    transition: background-color 160ms ease;
 }
 
 .estimation-lines-table .estimation-component-col:hover,
 .estimation-lines-table .estimation-component-col:focus-within {
-    min-width: max(64px, calc(240px * var(--estimation-matrix-zoom)));
-    width: max(64px, calc(240px * var(--estimation-matrix-zoom)));
     background: #f8fafc;
 }
 
