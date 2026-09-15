@@ -41,6 +41,7 @@ const patchEstimationComponentsAPI = async (projectId, estimationType, payload) 
 const saveDraftEstimationAPI = async (projectId, estimationType, payload) => (await api.post(`/estimations/by-project/${projectId}/draft`, payload, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 const promoteDraftEstimationAPI = async (projectId, estimationType) => (await api.post(`/estimations/by-project/${projectId}/draft/promote`, null, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 const discardDraftEstimationAPI = async (projectId, estimationType) => (await api.delete(`/estimations/by-project/${projectId}/draft`, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
+const restoreDraftEstimationAPI = async (projectId, estimationType, draftId) => (await api.post(`/estimations/by-project/${projectId}/draft/${draftId}/restore`, null, { params: { estimationType }, timeout: ESTIMATION_SAVE_TIMEOUT_MS })).data;
 
 const LINE_TYPES = {
     PRODUCT: "PRODUCT",
@@ -323,6 +324,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const lastDraftSignatureRef = useRef("");
     const pendingNavigationRef = useRef(null);
     const [latestDraft, setLatestDraft] = useState(null);
+    const [draftSnapshots, setDraftSnapshots] = useState([]);
     const [saveHistory, setSaveHistory] = useState([]);
     const [autosaveStatus, setAutosaveStatus] = useState("idle");
     const [autosaveError, setAutosaveError] = useState("");
@@ -596,6 +598,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setApprovalPolicy(est.approvalPolicy || "ALL");
                 setVersions(est.history || []); // If we stored history in `history` field
                 setLatestDraft(est.latestDraft || null);
+                setDraftSnapshots(est.draftSnapshots || []);
                 setSaveHistory(est.saveHistory || []);
 
                 // rows
@@ -1668,12 +1671,29 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
         toast.info("Autosaved draft restored. Click Save to make it official.");
     };
 
+    const handleRestoreHistoricalDraft = async (draft) => {
+        const pid = projectOpt?.value;
+        if (!pid || !draft?.draftId) return;
+        try {
+            const res = await restoreDraftEstimationAPI(pid, estimationType, draft.draftId);
+            const selected = res.latestDraft || draft;
+            setLatestDraft(selected);
+            setDraftSnapshots(res.draftSnapshots || draftSnapshots);
+            setSaveHistory(res.saveHistory || []);
+            hydratePayloadIntoEditor(selected.estimation);
+            toast.info("Selected autosaved draft restored. Click Save to make it official.");
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Failed to restore autosaved draft"));
+        }
+    };
+
     const handleDiscardLatestDraft = async () => {
         const pid = projectOpt?.value;
         if (!pid) return;
         try {
             const res = await discardDraftEstimationAPI(pid, estimationType);
             setLatestDraft(res.latestDraft || null);
+            setDraftSnapshots(res.draftSnapshots || []);
             setSaveHistory(res.saveHistory || []);
             setAutosaveStatus("idle");
             toast.info("Autosaved draft discarded.");
@@ -1709,6 +1729,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
             .then(res => {
                 lastDraftSignatureRef.current = signature;
                 setLatestDraft(res.latestDraft || null);
+                setDraftSnapshots(res.draftSnapshots || []);
                 setSaveHistory(res.saveHistory || []);
                 if (!estimationId && res.id) setEstimationId(res.id);
                 setAutosaveStatus("saved");
@@ -1911,6 +1932,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 setExistingFileUrl(res.data.quotationFileUrl);
             }
             setLatestDraft(res.data?.latestDraft || null);
+            setDraftSnapshots(res.data?.draftSnapshots || []);
             setSaveHistory(res.data?.saveHistory || []);
             setSavedTotals({
                 rawSubtotal: res.data?.computedSubtotal,
@@ -3151,6 +3173,22 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                             </div>
                         )}
                     </div>
+
+                    {draftSnapshots.length > 1 && (
+                        <div className="bg-white shadow rounded p-3 mt-3">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <h6 className="mb-0">Recoverable Autosave Snapshots</h6>
+                                <Badge bg="light" text="dark" className="border">{draftSnapshots.length} retained</Badge>
+                            </div>
+                            <div className="small text-muted mb-2">The newest snapshot is used automatically. Restore an older one if needed.</div>
+                            {[...draftSnapshots].reverse().map((draft) => (
+                                <div key={draft.draftId} className="d-flex justify-content-between align-items-center border-top py-2">
+                                    <span>{draft.savedAt ? new Date(draft.savedAt).toLocaleString() : "-"} · {draft.savedBy || "system"}</span>
+                                    <Button size="sm" variant="outline-secondary" onClick={() => handleRestoreHistoricalDraft(draft)}>Restore</Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="bg-white shadow rounded p-3 mt-3 estimation-template-panel">
                         <div className="estimation-template-panel-header">
