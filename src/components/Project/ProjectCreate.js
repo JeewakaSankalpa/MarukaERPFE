@@ -55,6 +55,14 @@ const uploadedFileSystemName = (file, index) => {
 
 const uploadedFileUrl = (file) => typeof file === "string" ? file : file?.url;
 
+const fetchEstimationMethodHistory = async (projectId) => {
+  if (!projectId) return [];
+  const response = await api.get(`/audit-logs/project/${projectId}`);
+  return (response.data || [])
+    .filter((entry) => entry.action === "ESTIMATION_METHOD_CHANGED")
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+};
+
 const ProjectForm = () => {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
@@ -81,6 +89,7 @@ const ProjectForm = () => {
   const [validated, setValidated] = useState(false);
   const [isEditMode, setIsEditMode] = useState(!routeId); // create: editable, edit: view-only
   const [files, setFiles] = useState([]); // selected File[] before submit
+  const [estimationMethodHistory, setEstimationMethodHistory] = useState([]);
 
   const [customerSearch, setCustomerSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
@@ -173,6 +182,12 @@ const ProjectForm = () => {
         // project details
         const pRes = await api.get(`/projects/${routeId}`);
         const p = pRes.data || {};
+
+        try {
+          setEstimationMethodHistory(await fetchEstimationMethodHistory(routeId));
+        } catch {
+          setEstimationMethodHistory([]);
+        }
 
         // try files endpoint; fallback to p.fileList
         let fileItems = [];
@@ -313,6 +328,17 @@ const ProjectForm = () => {
             currency: projectData.currency,
             status: projectData.status, // keep status if you want to allow change later
           });
+          if (changingEstimationMethod) {
+            setProjectData((prev) => ({
+              ...prev,
+              originalCargillsInquiry: Boolean(prev.cargillsInquiry),
+            }));
+            try {
+              setEstimationMethodHistory(await fetchEstimationMethodHistory(routeId));
+            } catch {
+              toast.warn("Project updated, but estimation method history could not be refreshed");
+            }
+          }
           toast.success("Project updated");
         } catch (error) {
           const message = error?.response?.data?.message || error?.response?.data?.error;
@@ -583,11 +609,28 @@ const ProjectForm = () => {
                     label="Use the Cargills two-quotation method"
                     checked={Boolean(projectData.cargillsInquiry)}
                     onChange={(event) => setProjectData((prev) => ({ ...prev, cargillsInquiry: event.target.checked }))}
-                    disabled={!isEditMode || Boolean(routeId)}
+                    disabled={!isEditMode}
                   />
                   <div className="small text-muted mt-1 ms-4">
                     Creates separate Materials and Panels estimation tracks with independent approvals and quotations. Every generated invoice uses the sum of their final totals.
                   </div>
+                  {routeId && (
+                    <div className="mt-3 ms-4">
+                      <div className="small fw-semibold">Estimation method change history</div>
+                      {estimationMethodHistory.length === 0 ? (
+                        <div className="small text-muted">No estimation method changes recorded.</div>
+                      ) : (
+                        <div className="small text-muted d-grid gap-1 mt-1">
+                          {estimationMethodHistory.map((entry) => (
+                            <div key={entry.id || `${entry.timestamp}-${entry.performedBy}`}>
+                              {entry.comments} by {entry.performedBy || "system"}
+                              {entry.timestamp ? ` on ${new Date(entry.timestamp).toLocaleString()}` : ""}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Col>
               <Col xs={12} md={6}>
