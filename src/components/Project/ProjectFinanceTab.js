@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Button, Table, Badge, Spin, Modal, Form, Input, InputNumber, Upload, Tabs, Select, Tag, Divider, DatePicker } from 'antd';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { DollarOutlined, BankOutlined, PlusOutlined, UploadOutlined, ArrowUpOutlined, ArrowDownOutlined, SwapOutlined, FileTextOutlined } from '@ant-design/icons';
+import { DollarOutlined, BankOutlined, PlusOutlined, UploadOutlined, ArrowUpOutlined, ArrowDownOutlined, SwapOutlined, FileTextOutlined, UndoOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 import ProjectFinancialReport from '../finance/ProjectFinancialReport';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
@@ -41,6 +41,12 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
     const [payForm] = Form.useForm();
     const [payFileList, setPayFileList] = useState([]);
     const [selectedPaymentAccount, setSelectedPaymentAccount] = useState(null);
+    const [reversalPayment, setReversalPayment] = useState(null);
+    const [reversalLoading, setReversalLoading] = useState(false);
+    const [reversalForm] = Form.useForm();
+    const [transactionHistoryVersion, setTransactionHistoryVersion] = useState(0);
+    const userRole = (localStorage.getItem('role') || '').toUpperCase();
+    const canReversePayments = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
 
     // Lists
     const [expenses, setExpenses] = useState([]);
@@ -169,6 +175,23 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
             toast.error('Failed to record payment');
         } finally {
             setPayLoading(false);
+        }
+    };
+
+    const handleReversePayment = async ({ reason }) => {
+        if (!reversalPayment) return;
+        setReversalLoading(true);
+        try {
+            await api.post(`/project-accounts/${projectId}/payments/${reversalPayment.id}/reverse`, { reason });
+            toast.success('Payment reversed successfully');
+            setReversalPayment(null);
+            reversalForm.resetFields();
+            setTransactionHistoryVersion(version => version + 1);
+            await Promise.all([fetchAccount(), fetchPayments()]);
+        } catch (e) {
+            toast.error(e?.response?.data?.message || e?.response?.data?.error || 'Failed to reverse payment');
+        } finally {
+            setReversalLoading(false);
         }
     };
 
@@ -351,19 +374,22 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
                         size="small"
                         columns={[
                             { title: 'Date', dataIndex: 'paidAt', render: d => new Date(d).toLocaleDateString() },
-                            { title: 'Amount', dataIndex: 'amount', render: v => `${currency} ${v.toLocaleString()}` },
+                            { title: 'Amount', dataIndex: 'amount', render: (v, p) => <span style={{ textDecoration: p.reversed ? 'line-through' : 'none' }}>{fmtAmt(v, currency)}</span> },
                             { title: 'Note', dataIndex: 'note' },
                             {
                                 title: 'Slip', dataIndex: 'fileUrl', render: url => url ? (
                                     <Button type="link" icon={<FileTextOutlined />} onClick={() => window.open(url, '_blank')}>View</Button>
                                 ) : '-'
                             },
-                            { title: 'Added By', dataIndex: 'createdBy' }
+                            { title: 'Added By', dataIndex: 'createdBy' },
+                            { title: 'Status', render: (_, p) => p.reversed ? <Tag color="red">Reversed</Tag> : <Tag color="green">Active</Tag> },
+                            { title: 'Reversal Audit', render: (_, p) => p.reversed ? <div><strong>{p.reversedBy}</strong><br />{new Date(p.reversedAt).toLocaleString()}<br />{p.reversalReason}<br /><span className="text-muted">IP: {p.reversalIpAddress || '-'} · Device: {p.reversalDeviceId || '-'}</span></div> : '-' },
+                            { title: 'Action', render: (_, p) => canReversePayments && !p.reversed ? <Button danger size="small" icon={<UndoOutlined />} onClick={() => setReversalPayment(p)}>Reverse</Button> : null }
                         ]}
                     />
                 </TabPane>
                 <TabPane tab="Transaction History" key="2">
-                    <TransactionHistory projectId={projectId} currency={currency} />
+                    <TransactionHistory key={transactionHistoryVersion} projectId={projectId} currency={currency} />
                 </TabPane>
 
                 {/* --- Financial Report --- */}
@@ -490,6 +516,23 @@ const ProjectFinanceTab = ({ projectId, currency = 'LKR' }) => {
 
             {/* Add Payment Modal */}
             <Modal
+                title="Reverse Customer Payment"
+                open={Boolean(reversalPayment)}
+                onCancel={() => { setReversalPayment(null); reversalForm.resetFields(); }}
+                onOk={() => reversalForm.submit()}
+                okText="Reverse Payment"
+                okButtonProps={{ danger: true }}
+                confirmLoading={reversalLoading}
+            >
+                <p>This keeps the original payment in history and creates an accounting reversal for <strong>{fmtAmt(reversalPayment?.amount, currency)}</strong>.</p>
+                <Form form={reversalForm} layout="vertical" onFinish={handleReversePayment}>
+                    <Form.Item name="reason" label="Reason for reversal" rules={[{ required: true, whitespace: true, min: 10, message: 'Enter a clear reason of at least 10 characters' }]}>
+                        <Input.TextArea rows={3} maxLength={500} showCount placeholder="Explain why this payment was recorded incorrectly" />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <Modal
                 title="Record Customer Payment"
                 open={payModalVisible}
                 onCancel={() => setPayModalVisible(false)}
@@ -555,6 +598,7 @@ const TransactionHistory = ({ projectId, currency = 'LKR' }) => {
 
     const typeConfig = {
         PAYMENT_RECEIVED: { color: 'green', icon: <ArrowDownOutlined />, label: 'Payment Received' },
+        PAYMENT_REVERSED: { color: 'red', icon: <UndoOutlined />, label: 'Payment Reversed' },
         PETTY_CASH_ALLOCATED: { color: 'blue', icon: <SwapOutlined />, label: 'Funds Allocated' },
         PETTY_CASH_RETURNED: { color: 'orange', icon: <ArrowUpOutlined />, label: 'Funds Returned' },
         EXPENSE_ADDED: { color: 'red', icon: <ArrowUpOutlined />, label: 'Expense' },

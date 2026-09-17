@@ -34,6 +34,19 @@ api.interceptors.request.use((config) => {
     const username = localStorage.getItem('username');
     if (username) config.headers['X-User'] = username;
 
+    try {
+        let deviceId = localStorage.getItem('marukaDeviceId');
+        if (!deviceId) {
+            deviceId = typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            localStorage.setItem('marukaDeviceId', deviceId);
+        }
+        config.headers['X-Device-Id'] = deviceId;
+    } catch (e) {
+        // Storage may be unavailable in hardened/private browser contexts.
+    }
+
     return config;
 });
 
