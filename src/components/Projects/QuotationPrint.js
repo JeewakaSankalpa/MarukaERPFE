@@ -388,6 +388,10 @@ const QuotationPrint = () => {
     const [activeTab, setActiveTab] = useState("quotation");
     const [workflow, setWorkflow] = useState({});
     const [approvingPrint, setApprovingPrint] = useState(false);
+    const [showSplitInvoice, setShowSplitInvoice] = useState(false);
+    const [splitAmount, setSplitAmount] = useState("");
+    const [splitComponents, setSplitComponents] = useState([]);
+    const [splitNotes, setSplitNotes] = useState("");
 
     const fetchData = async () => {
         try {
@@ -438,17 +442,15 @@ const QuotationPrint = () => {
     }, [projectId, estimationType]);
 
     useEffect(() => {
-        const hasFinalInvoice = invoices
+        const target = roundMoney(project?.totalProjectValue);
+        const invoiced = decimalTotal(invoices
             .filter(inv => inv.status !== "CANCELLED")
-            .some(inv => {
-                const type = getInvoiceDocumentType(inv);
-                return type === INVOICE_TYPES.NORMAL || type === INVOICE_TYPES.TAX;
-            });
-
-        if (hasFinalInvoice && invoiceType !== INVOICE_TYPES.PROFORMA) {
+            .filter(inv => [INVOICE_TYPES.NORMAL, INVOICE_TYPES.TAX].includes(getInvoiceDocumentType(inv)))
+            .map(inv => inv.totalAmount));
+        if (target > 0 && roundMoney(target - invoiced) <= 0 && invoiceType !== INVOICE_TYPES.PROFORMA) {
             setInvoiceType(INVOICE_TYPES.PROFORMA);
         }
-    }, [invoices, invoiceType]);
+    }, [invoices, invoiceType, project?.totalProjectValue]);
 
     const handleFinalize = async () => {
         if (!estimation?.id) {
@@ -483,6 +485,19 @@ const QuotationPrint = () => {
     };
 
     const handleGenerateInvoice = async () => {
+        if (invoiceType !== INVOICE_TYPES.PROFORMA) {
+            const target = roundMoney(project?.totalProjectValue);
+            const alreadyInvoiced = decimalTotal(invoices
+                .filter(inv => inv.status !== "CANCELLED")
+                .filter(inv => [INVOICE_TYPES.NORMAL, INVOICE_TYPES.TAX].includes(getInvoiceDocumentType(inv)))
+                .map(inv => inv.totalAmount));
+            const remaining = roundMoney(target - alreadyInvoiced);
+            setSplitAmount(remaining > 0 ? String(remaining) : "");
+            setSplitComponents([]);
+            setSplitNotes("");
+            setShowSplitInvoice(true);
+            return;
+        }
         const label = invoiceTypeLabels[invoiceType] || "invoice";
         if (!await confirmAction({
             title: `Generate ${label}`,
@@ -548,6 +563,30 @@ const QuotationPrint = () => {
         }
     };
 
+    const handleGenerateSplitInvoice = async () => {
+        const amount = roundMoney(splitAmount);
+        if (amount <= 0 || splitComponents.length === 0) {
+            toast.warn("Enter an invoice amount and select at least one component.");
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            await api.post(`/invoices/generate-split-from-estimation/${estimation.id}?type=${invoiceType}`, {
+                totalAmount: amount,
+                componentNames: splitComponents,
+                notes: splitNotes,
+            });
+            toast.success(`${invoiceTypeLabels[invoiceType]} generated successfully.`);
+            setShowSplitInvoice(false);
+            await fetchData();
+        } catch (error) {
+            const msg = error.response?.data?.message || error.response?.data || "Failed to generate split invoice";
+            toast.error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const handlePrintFormatChange = (value) => {
         setPrintFormat(value);
         if (PRINT_PRESETS[value]) {
@@ -584,10 +623,19 @@ const QuotationPrint = () => {
         const type = getInvoiceDocumentType(inv);
         return type === INVOICE_TYPES.NORMAL || type === INVOICE_TYPES.TAX;
     });
+    const finalInvoicedTotal = decimalTotal(activeInvoices
+        .filter(inv => [INVOICE_TYPES.NORMAL, INVOICE_TYPES.TAX].includes(getInvoiceDocumentType(inv)))
+        .map(inv => inv.totalAmount));
+    const projectBillingTarget = roundMoney(project?.totalProjectValue);
+    const remainingInvoiceValue = roundMoney(projectBillingTarget - finalInvoicedTotal);
     const availableInvoiceTypes = [
         INVOICE_TYPES.PROFORMA,
-        ...(!hasActiveFinalInvoice ? [INVOICE_TYPES.NORMAL, INVOICE_TYPES.TAX] : []),
+        ...(remainingInvoiceValue > 0 ? [INVOICE_TYPES.NORMAL, INVOICE_TYPES.TAX] : []),
     ];
+    const componentOptions = Array.from(new Set([
+        ...(estimation?.components || []).map(component => component?.name),
+        ...(companionEstimation?.components || []).map(component => component?.name),
+    ].filter(Boolean)));
     const today = new Date();
     const validUntil = new Date();
     validUntil.setDate(today.getDate() + 30);
@@ -616,6 +664,61 @@ const QuotationPrint = () => {
                     <h5>Generating Invoice...</h5>
                     <p className="text-muted mb-0">Please wait while the invoice is being created.</p>
                 </Modal.Body>
+            </Modal>
+            <Modal show={showSplitInvoice} onHide={() => !isGenerating && setShowSplitInvoice(false)} centered size="lg">
+                <Modal.Header closeButton={!isGenerating}>
+                    <Modal.Title>Create split {invoiceTypeLabels[invoiceType]}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Alert variant="info">
+                        Component selections describe this invoice only. Their estimation values do not control the invoice amount.
+                    </Alert>
+                    <div className="row g-3 mb-3">
+                        <div className="col-md-4"><div className="small text-muted">Approved project value</div><strong>LKR {money(projectBillingTarget)}</strong></div>
+                        <div className="col-md-4"><div className="small text-muted">Already invoiced</div><strong>LKR {money(finalInvoicedTotal)}</strong></div>
+                        <div className="col-md-4"><div className="small text-muted">Remaining</div><strong className="text-success">LKR {money(remainingInvoiceValue)}</strong></div>
+                    </div>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Invoice total</Form.Label>
+                        <Form.Control
+                            type="number"
+                            min="0.01"
+                            max={remainingInvoiceValue}
+                            step="0.01"
+                            value={splitAmount}
+                            onChange={event => setSplitAmount(event.target.value)}
+                        />
+                        <Form.Text>Maximum available: LKR {money(remainingInvoiceValue)}</Form.Text>
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Components covered by this invoice</Form.Label>
+                        <div className="border rounded p-3" style={{ maxHeight: 240, overflowY: "auto" }}>
+                            {componentOptions.map(name => (
+                                <Form.Check
+                                    key={name}
+                                    type="checkbox"
+                                    id={`split-component-${name}`}
+                                    label={name}
+                                    checked={splitComponents.includes(name)}
+                                    onChange={event => setSplitComponents(current => event.target.checked
+                                        ? [...current, name]
+                                        : current.filter(value => value !== name))}
+                                />
+                            ))}
+                            {componentOptions.length === 0 && <div className="text-muted">No components are available.</div>}
+                        </div>
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>Additional invoice note (optional)</Form.Label>
+                        <Form.Control as="textarea" rows={3} value={splitNotes} onChange={event => setSplitNotes(event.target.value)} />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowSplitInvoice(false)} disabled={isGenerating}>Cancel</Button>
+                    <Button variant="warning" onClick={handleGenerateSplitInvoice} disabled={isGenerating || remainingInvoiceValue <= 0}>
+                        Generate {invoiceTypeLabels[invoiceType]}
+                    </Button>
+                </Modal.Footer>
             </Modal>
             {/* Controls */}
             <div className="d-flex justify-content-between mb-4 no-print">
@@ -712,6 +815,12 @@ const QuotationPrint = () => {
                                 <div className="text-muted small">
                                     Every generated invoice is recorded here with its number, version, creator, timestamp, and total.
                                 </div>
+                                {hasActiveFinalInvoice && (
+                                    <div className="small mt-1">
+                                        Final invoices: <strong>LKR {money(finalInvoicedTotal)}</strong> of <strong>LKR {money(projectBillingTarget)}</strong>
+                                        {remainingInvoiceValue > 0 ? ` · LKR ${money(remainingInvoiceValue)} remaining` : " · Fully invoiced"}
+                                    </div>
+                                )}
                             </div>
                             {canGenerateInvoice && (
                                 <div className="d-flex gap-2 align-items-center">
