@@ -76,6 +76,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 setPoInput(d.poNumber); // update the label with full number
                 setPo(d);
                 setRows((d.items || []).map(it => ({
+                    poLineId: it.poLineId,
                     productId: it.productId,
                     pendingLineKey: it.pendingLineKey,
                     itemRequestId: it.itemRequestId,
@@ -84,10 +85,13 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     projectId: it.projectId,
                     inquiryNumber: it.inquiryNumber,
                     jobNumber: it.jobNumber,
+                    componentAllocations: it.componentAllocations || [],
+                    receivedComponentQuantities: {},
                     productName: it.productNameSnapshot || it.productName,
                     sku: it.sku,
                     unit: it.unit || "pcs",
                     orderedQty: it.orderedQty,
+                    previouslyReceivedQty: Number(it.receivedQty || 0),
                     unitPrice: it.unitPrice,
                     adjustedUnitCost: calculateDiscountAdjustedUnitCost(it, subtotal, discount),
                     batches: []
@@ -108,7 +112,11 @@ export default function GRNReceivePage({ poId: initialPoId }) {
         setDiscountAmount(effectiveDiscount ? String(effectiveDiscount) : "");
         setRows(rs => rs.map(row => ({
             ...row,
-            adjustedUnitCost: calculateDiscountAdjustedUnitCost(row, subtotal, effectiveDiscount)
+            adjustedUnitCost: calculateDiscountAdjustedUnitCost(row, subtotal, effectiveDiscount),
+            batches: (row.batches || []).map(batch => ({
+                ...batch,
+                unitCost: calculateDiscountAdjustedUnitCost(row, subtotal, effectiveDiscount)
+            }))
         })));
     }, [discountType, discountValue, po]);
 
@@ -127,10 +135,26 @@ export default function GRNReceivePage({ poId: initialPoId }) {
         cp[i] = { ...cp[i], batches: (cp[i].batches || []).filter((_, idx) => idx !== bi) };
         return cp;
     });
+    const setReceivedComponentQty = (i, componentName, value) => setRows(rs => {
+        const cp = [...rs];
+        cp[i] = {
+            ...cp[i],
+            receivedComponentQuantities: {
+                ...(cp[i].receivedComponentQuantities || {}),
+                [componentName]: value
+            }
+        };
+        return cp;
+    });
 
     const save = async () => {
         try {
             if (!po?.id) { toast.warn("Select a PO"); return; }
+            const poSubtotal = Number(po.subTotal || (po.items || []).reduce((sum, it) => sum + ((Number(it.orderedQty) || 0) * (Number(it.unitPrice) || 0)), 0));
+            const enteredDiscount = Number(discountValue || 0);
+            if (enteredDiscount < 0) { toast.warn("Seller discount cannot be negative"); return; }
+            if (discountType === "PERCENTAGE" && enteredDiscount > 100) { toast.warn("Seller discount percentage cannot exceed 100%"); return; }
+            if (discountType === "AMOUNT" && enteredDiscount > poSubtotal) { toast.warn("Seller discount cannot exceed the PO subtotal"); return; }
             const items = rows.map(r => {
                 const activeBatches = (r.batches || []).filter(b => Number(b.qty) > 0);
                 
@@ -142,7 +166,23 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 }
 
                 const totalQty = activeBatches.reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+                const remainingQty = Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0));
+                if (totalQty > remainingQty) {
+                    throw new Error(`Receiving quantity exceeds the remaining ${remainingQty} for ${r.itemRequestNumber || r.productName}`);
+                }
+                const sourceComponents = r.componentAllocations || [];
+                const receivedComponentAllocations = sourceComponents.length === 1
+                    ? [{ componentName: sourceComponents[0].componentName, quantity: totalQty }]
+                    : sourceComponents.map(allocation => ({
+                        componentName: allocation.componentName,
+                        quantity: Number(r.receivedComponentQuantities?.[allocation.componentName] || 0)
+                    })).filter(allocation => allocation.quantity > 0);
+                const componentAllocatedQty = receivedComponentAllocations.reduce((sum, allocation) => sum + allocation.quantity, 0);
+                if (sourceComponents.length > 1 && componentAllocatedQty !== totalQty) {
+                    throw new Error(`Allocate all ${totalQty} received units across the listed components for ${r.itemRequestNumber || r.productName}`);
+                }
                 return {
+                    poLineId: r.poLineId,
                     productId: r.productId,
                     pendingLineKey: r.pendingLineKey,
                     itemRequestId: r.itemRequestId,
@@ -151,6 +191,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     projectId: r.projectId,
                     inquiryNumber: r.inquiryNumber,
                     jobNumber: r.jobNumber,
+                    componentAllocations: r.componentAllocations,
+                    receivedComponentAllocations,
                     unit: r.unit,
                     receivedQty: totalQty,
                     batches: activeBatches.map(b => ({
@@ -239,6 +281,17 @@ export default function GRNReceivePage({ poId: initialPoId }) {
         setTimeout(() => { window.print(); setPrintBatches([]); }, 500);
     };
 
+    const grossReceivedGoods = rows.reduce((total, row) => {
+        const receivedQty = (row.batches || []).reduce((sum, batch) => sum + (Number(batch.qty) || 0), 0);
+        return total + receivedQty * (Number(row.unitPrice) || 0);
+    }, 0);
+    const netReceivedGoods = rows.reduce((total, row) => total + (row.batches || []).reduce(
+        (sum, batch) => sum + (Number(batch.qty) || 0) * (Number(batch.unitCost) || 0), 0
+    ), 0);
+    const appliedReceiptDiscount = Math.max(0, grossReceivedGoods - netReceivedGoods);
+    const finalPayable = netReceivedGoods + (Number(vatAmount) || 0) + (Number(deliveryCharge) || 0);
+    const money = value => Number(value || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     return (
         <Container className="py-4">
             <div className="bg-white shadow rounded p-4">
@@ -320,11 +373,26 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                 <Badge bg="light" text="dark">PO: {po.poNumber}</Badge>
                                 <Badge bg="light" text="dark">Supplier: {po.supplierNameSnapshot || po.supplierName}</Badge>
                                 <Badge bg={po.status === "FULLY_RECEIVED" ? "success" : po.status === "PARTIALLY_RECEIVED" ? "info" : "secondary"}>{po.status}</Badge>
-                                <Badge bg="primary">Payable: Rs. {((rows.reduce((acc, r) => acc + (r.batches || []).reduce((sum, b) => sum + ((Number(b.qty) || 0) * (Number(b.unitCost) || 0)), 0), 0)) + (Number(vatAmount) || 0) + (Number(deliveryCharge) || 0)).toFixed(2)}</Badge>
+                                <Badge bg="primary">Final Payable: Rs. {money(finalPayable)}</Badge>
                             </div>
                         )}
                     </Col>
                 </Row>
+
+                {po && (
+                    <div className="border rounded bg-light p-3 mb-3" aria-label="GRN payable calculation">
+                        <div className="fw-semibold mb-2">Payable calculation</div>
+                        <Row className="g-2 small">
+                            <Col md={2}><span className="text-muted">Gross received goods</span><div>Rs. {money(grossReceivedGoods)}</div></Col>
+                            <Col md={2}><span className="text-muted">Seller discount applied</span><div className="text-danger">- Rs. {money(appliedReceiptDiscount)}</div></Col>
+                            <Col md={2}><span className="text-muted">Net goods amount</span><div>Rs. {money(netReceivedGoods)}</div></Col>
+                            <Col md={2}><span className="text-muted">VAT</span><div>+ Rs. {money(vatAmount)}</div></Col>
+                            <Col md={2}><span className="text-muted">Delivery</span><div>+ Rs. {money(deliveryCharge)}</div></Col>
+                            <Col md={2}><span className="text-muted">Final payable</span><div className="fw-bold text-primary">Rs. {money(finalPayable)}</div></Col>
+                        </Row>
+                        <div className="text-muted small mt-2">Final payable uses the discounted batch unit costs shown below. Changing the seller discount automatically updates existing batch costs.</div>
+                    </div>
+                )}
 
                 {!po
                     ? <div className="text-muted">Enter and load a PO to proceed.</div>
@@ -333,18 +401,44 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                             <Table hover responsive>
                                 <thead>
                                     <tr>
-                                        <th>Product</th><th>SKU</th><th className="text-end">Ordered</th>
-                                        <th style={{ width: 100 }}>Receive Qty</th><th>Batches</th>
+                                        <th>Exact PO line / source</th><th>Product</th><th>SKU</th>
+                                        <th className="text-end">Ordered</th><th className="text-end">Previously received</th>
+                                        <th className="text-end">Remaining</th><th style={{ width: 100 }}>Receiving now</th><th>Batches</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {rows.map((r, i) => {
                                         const totalQty = (r.batches || []).reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
                                         return (
-                                            <tr key={r.productId}>
+                                            <tr key={r.poLineId || `${r.productId}-${i}`}>
+                                                <td>
+                                                    <div className="fw-semibold">{r.itemRequestNumber || r.jobNumber || r.inquiryNumber || `PO line ${i + 1}`}</div>
+                                                    <div className="small text-muted">
+                                                        {[r.originType, r.jobNumber, r.inquiryNumber].filter(Boolean).join(" · ") || "Direct purchase"}
+                                                    </div>
+                                                    {(r.componentAllocations || []).map((allocation, allocationIndex) => (
+                                                        <div className="small text-primary d-flex align-items-center gap-2 mt-1" key={`${allocation.componentName}-${allocationIndex}`}>
+                                                            <span>Component: {allocation.componentName} (requested {allocation.quantity})</span>
+                                                            {(r.componentAllocations || []).length > 1 && (
+                                                                <Form.Control
+                                                                    aria-label={`Receiving quantity for ${allocation.componentName}`}
+                                                                    type="number"
+                                                                    min="0"
+                                                                    placeholder="Receiving"
+                                                                    value={r.receivedComponentQuantities?.[allocation.componentName] || ""}
+                                                                    onChange={event => setReceivedComponentQty(i, allocation.componentName, event.target.value)}
+                                                                    style={{ width: 105 }}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {r.pendingLineKey && <div className="small text-muted text-break">Source: {r.pendingLineKey}</div>}
+                                                </td>
                                                 <td>{r.productName}</td>
                                                 <td>{r.sku}</td>
                                                 <td className="text-end">{r.orderedQty}</td>
+                                                <td className="text-end">{r.previouslyReceivedQty}</td>
+                                                <td className="text-end fw-semibold">{Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0))}</td>
                                                 <td>
                                                     <Form.Control type="number" readOnly value={totalQty} style={{ backgroundColor: '#e9ecef' }} />
                                                 </td>
@@ -366,7 +460,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                                         style={{ maxWidth: 150 }}
                                                                     />
                                                                     <Form.Control
-                                                                        type="number" min="0" placeholder="Qty"
+                                                                        type="number" min="0" max={Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0))} placeholder="Qty"
                                                                         value={b.qty}
                                                                         onChange={e => setBatch(i, bi, "qty", e.target.value)}
                                                                         style={{ maxWidth: 80 }}
