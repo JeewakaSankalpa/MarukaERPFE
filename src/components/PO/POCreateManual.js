@@ -121,6 +121,7 @@ export default function POCreateManual({ poId, onCreated }) {
                         product = null;
                     }
                     return {
+                        poLineId: item.poLineId,
                         productId: item.productId,
                         name: product?.name || item.productNameSnapshot,
                         sku: product?.sku || item.sku,
@@ -487,6 +488,7 @@ export default function POCreateManual({ poId, onCreated }) {
             if (!supplier?.id) { toast.warn("Select a supplier"); setIsSubmitting(false); return; }
 
             const items = rows.filter(r => Number(r.qty) > 0).map(r => ({
+                poLineId: r.poLineId,
                 productId: r.productId,
                 qty: Number(r.qty),
                 unitPrice: r.unitPrice ? String(r.unitPrice) : undefined,

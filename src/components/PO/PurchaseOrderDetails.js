@@ -58,6 +58,10 @@ const itemGrnStatus = (item) => {
 const sameCleanValue = (left, right) => String(left || "").trim() === String(right || "").trim();
 const poItemMatchesGrnItem = (poItem, grnItem) => {
     if (!poItem || !grnItem) return false;
+    if (poItem.poLineId && grnItem.poLineId) {
+        return sameCleanValue(poItem.poLineId, grnItem.poLineId);
+    }
+    if (poItem.poLineId || grnItem.poLineId) return false;
     if (poItem.pendingLineKey && grnItem.pendingLineKey) {
         return sameCleanValue(poItem.pendingLineKey, grnItem.pendingLineKey);
     }
@@ -74,7 +78,8 @@ const grnReceiptsForItem = (item, grns) => (grns || [])
             receivedQty: numericQty(grnItem.receivedQty),
             createdAt: grn.createdAt,
             supplierInvoiceNo: grn.supplierInvoiceNo,
-            status: grn.status
+            status: grn.status,
+            receivedComponentAllocations: grnItem.receivedComponentAllocations || []
         })))
     .filter(receipt => receipt.receivedQty > 0);
 
@@ -363,6 +368,13 @@ export default function PurchaseOrderDetails() {
     const totalOrderedQty = (po.items || []).reduce((sum, item) => sum + numericQty(item.orderedQty), 0);
     const totalReceivedQty = (po.items || []).reduce((sum, item) => sum + numericQty(item.receivedQty), 0);
     const totalBalanceQty = Math.max(0, totalOrderedQty - totalReceivedQty);
+    const legacyUnallocatedReceipts = poGrns.flatMap(grn => (grn.items || [])
+        .filter(item => numericQty(item.receivedQty) > 0 && !item.poLineId)
+        .map(item => ({
+            grnNumber: grn.grnNumber || grn.id,
+            productName: item.productNameSnapshot || item.sku || item.productId,
+            quantity: numericQty(item.receivedQty)
+        })));
     const snapshotItemByProduct = (snapshot) => new Map((snapshot?.items || []).map(item => [item.productId, item]));
     const adminEditChanged = (edit, productId, field) => {
         const beforeItem = snapshotItemByProduct(edit?.beforeSnapshot).get(productId);
@@ -568,6 +580,15 @@ export default function PurchaseOrderDetails() {
                             </Badge>
                         </div>
 
+                        {legacyUnallocatedReceipts.length > 0 && (
+                            <div className="alert alert-warning py-2" role="alert">
+                                <div className="fw-semibold">Legacy GRN receipts need line allocation</div>
+                                <div className="small">
+                                    These receipts predate exact PO-line tracking and are not guessed against duplicate products: {legacyUnallocatedReceipts.map(receipt => `${receipt.grnNumber} · ${receipt.productName} · ${receipt.quantity}`).join("; ")}.
+                                </div>
+                            </div>
+                        )}
+
                         <Table hover responsive bordered>
                             <thead className="bg-light">
                                 <tr>
@@ -590,7 +611,7 @@ export default function PurchaseOrderDetails() {
                                     const status = itemGrnStatus(item);
                                     const receipts = grnReceiptsForItem(item, poGrns);
                                     return (
-                                        <React.Fragment key={`${item.pendingLineKey || item.productId || "item"}-${idx}`}>
+                                        <React.Fragment key={item.poLineId || `${item.pendingLineKey || item.productId || "item"}-${idx}`}>
                                             <tr>
                                                 <td>
                                                     <div>{item.productNameSnapshot}</div>
@@ -599,6 +620,11 @@ export default function PurchaseOrderDetails() {
                                                             {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
                                                         </div>
                                                     )}
+                                                    {(item.componentAllocations || []).map((allocation, allocationIndex) => (
+                                                        <div className="small text-primary" key={`${allocation.componentName}-${allocationIndex}`}>
+                                                            Component: {allocation.componentName} (requested {allocation.quantity})
+                                                        </div>
+                                                    ))}
                                                 </td>
                                                 <td>{item.sku}</td>
                                                 <td>{item.unit}</td>
@@ -626,10 +652,14 @@ export default function PurchaseOrderDetails() {
                                                                 title={[
                                                                     receipt.createdAt ? new Date(receipt.createdAt).toLocaleString() : null,
                                                                     receipt.supplierInvoiceNo ? `Invoice ${receipt.supplierInvoiceNo}` : null,
+                                                                    receipt.receivedComponentAllocations.length > 0
+                                                                        ? receipt.receivedComponentAllocations.map(allocation => `${allocation.componentName}: ${allocation.quantity}`).join(", ")
+                                                                        : null,
                                                                     receipt.status
                                                                 ].filter(Boolean).join(" | ")}
                                                             >
                                                                 {receipt.grnNumber}: {receipt.receivedQty} {item.unit || ""}
+                                                                {receipt.receivedComponentAllocations.length > 0 && ` · ${receipt.receivedComponentAllocations.map(allocation => `${allocation.componentName} ${allocation.quantity}`).join(", ")}`}
                                                             </Badge>
                                                         )) : (
                                                             <span className="text-muted">No GRN received for this item yet.</span>

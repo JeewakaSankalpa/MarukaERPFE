@@ -531,6 +531,7 @@ function ItemsModal({ grn, onClose }) {
                         <thead className="bg-light">
                             <tr>
                                 <th>Product Name</th>
+                                <th>PO line / component</th>
                                 <th>SKU</th>
                                 <th className="text-end">Received Qty</th>
                                 <th className="text-end">Unit Cost</th>
@@ -540,11 +541,19 @@ function ItemsModal({ grn, onClose }) {
                         </thead>
                         <tbody>
                             {(!grn.items || grn.items.length === 0) ? (
-                                <tr><td colSpan="6" className="text-center text-muted">No items found</td></tr>
+                                <tr><td colSpan="7" className="text-center text-muted">No items found</td></tr>
                             ) : (
                                 grn.items.map((item, idx) => (
                                     <tr key={idx}>
                                         <td>{item.productNameSnapshot || "-"}</td>
+                                        <td>
+                                            <div>{item.itemRequestNumber || item.jobNumber || item.inquiryNumber || "Direct purchase"}</div>
+                                            {(item.receivedComponentAllocations || []).map((allocation, allocationIndex) => (
+                                                <div className="small text-primary" key={`${allocation.componentName}-${allocationIndex}`}>
+                                                    {allocation.componentName}: {allocation.quantity} {item.unit || ""}
+                                                </div>
+                                            ))}
+                                        </td>
                                         <td>{item.sku || "-"}</td>
                                         <td className="text-end">{item.receivedQty} {item.unit}</td>
                                         <td className="text-end">
