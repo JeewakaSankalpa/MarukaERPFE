@@ -213,7 +213,8 @@ export default function IRFulfilmentPage() {
     const addShortagesForIR = async () => {
         if (!selected) return;
         const hasShortage = (selected.items || []).some(it => {
-            const remaining = Math.max(0, (it.requestedQty || 0) - (it.fulfilledQty || 0));
+            const netFulfilled = Math.max(0, Number(it.fulfilledQty || 0) - Number(it.returnedQty || 0));
+            const remaining = Math.max(0, Number(it.requestedQty || 0) - netFulfilled);
             return remaining > Number(onHand[it.productId] || 0);
         });
         if (!hasShortage) {
@@ -241,7 +242,8 @@ export default function IRFulfilmentPage() {
         return (selected.items || []).map((item) => {
             const requestedQty = Number(item.requestedQty || 0);
             const fulfilledQty = Number(item.fulfilledQty || 0);
-            const remainingQty = Math.max(0, requestedQty - fulfilledQty);
+            const returnedQty = Number(item.returnedQty || 0);
+            const remainingQty = Math.max(0, requestedQty - Math.max(0, fulfilledQty - returnedQty));
             const availableQty = Math.max(0, Number(onHand[item.productId] || 0));
             const issuableQty = Math.min(remainingQty, availableQty);
 
@@ -249,6 +251,7 @@ export default function IRFulfilmentPage() {
                 ...item,
                 requestedQty,
                 fulfilledQty,
+                returnedQty,
                 remainingQty,
                 availableQty,
                 issuableQty,
@@ -319,7 +322,7 @@ export default function IRFulfilmentPage() {
             autoTable(doc, {
                 startY: 61,
                 head: [[
-                    "#", "Item", "SKU", "Unit", "Requested", "Issued",
+                    "#", "Item", "SKU", "Unit", "Requested", "Issued", "Returned",
                     "Balance", "Main Store", "Can Issue", "Shortage", "Note"
                 ]],
                 body: shortageLines.map((item, index) => [
@@ -329,6 +332,7 @@ export default function IRFulfilmentPage() {
                     item.unit || "-",
                     item.requestedQty,
                     item.fulfilledQty,
+                    item.returnedQty,
                     item.remainingQty,
                     item.availableQty,
                     item.issuableQty,
@@ -506,7 +510,9 @@ export default function IRFulfilmentPage() {
             setAvailBatches(filtered);
             setBatchModalProduct({
                 ...it,
-                remainingQty: Math.max(0, (it.requestedQty || 0) - (it.fulfilledQty || 0))
+                remainingQty: Math.max(0,
+                    Number(it.requestedQty || 0)
+                    - Math.max(0, Number(it.fulfilledQty || 0) - Number(it.returnedQty || 0)))
             });
             setSelectedSerials({});
             setShowBatchModal(true);
@@ -868,7 +874,7 @@ export default function IRFulfilmentPage() {
                                                         <div key={itemLine.productId} className="ir-matched-item mb-2">
                                                             <div className="fw-semibold">{itemLine.productNameSnapshot || itemLine.productId || "-"}</div>
                                                             <div className="small text-muted">
-                                                                {itemLine.sku || "-"} / Req {itemLine.requestedQty ?? 0} / Done {itemLine.fulfilledQty ?? 0}
+                                                                {itemLine.sku || "-"} / Req {itemLine.requestedQty ?? 0} / Done {itemLine.fulfilledQty ?? 0} / Returned {itemLine.returnedQty ?? 0}
                                                             </div>
                                                             <div className="ir-component-chips mt-1">
                                                                 {componentAllocationsFor(itemLine).map(allocation => (
@@ -958,6 +964,7 @@ export default function IRFulfilmentPage() {
                                             <th>Product</th>
                                             <th className="text-end">Req</th>
                                             <th className="text-end">Done</th>
+                                            <th className="text-end">Returned</th>
                                             <th className="text-end">Avail</th>
                                             <th>Components</th>
                                             <th>Allocation / Qty</th>
@@ -966,7 +973,8 @@ export default function IRFulfilmentPage() {
                                     </thead>
                                     <tbody>
                                         {(selected.items || []).map((it) => {
-                                            const remaining = Math.max(0, (it.requestedQty || 0) - (it.fulfilledQty || 0));
+                                            const netFulfilled = Math.max(0, Number(it.fulfilledQty || 0) - Number(it.returnedQty || 0));
+                                            const remaining = Math.max(0, Number(it.requestedQty || 0) - netFulfilled);
                                             const avail = Number(onHand[it.productId] || 0);
                                             const maxIssuable = Math.min(remaining, avail);
                                             const allocs = allocations[it.productId] || [];
@@ -980,6 +988,26 @@ export default function IRFulfilmentPage() {
                                                     <td>{it.productNameSnapshot || it.productId}</td>
                                                     <td className="text-end">{it.requestedQty}</td>
                                                     <td className="text-end">{it.fulfilledQty}</td>
+                                                    <td className="text-end">
+                                                        <div>{it.returnedQty || 0}</div>
+                                                        {(it.returnReferences || []).map(reference => (
+                                                            <div
+                                                                key={reference.returnRequestId || reference.returnNumber}
+                                                                className="small text-muted"
+                                                                title={[
+                                                                    reference.returnNumber,
+                                                                    ...(reference.sourceTransferNumbers || []),
+                                                                    ...(reference.projectBatchIds || [])
+                                                                ].filter(Boolean).join(' / ')}
+                                                            >
+                                                                {reference.returnNumber || 'Return'}
+                                                                {(reference.sourceTransferNumbers || []).length > 0
+                                                                    ? ` from ${reference.sourceTransferNumbers.join(', ')}`
+                                                                    : ''}
+                                                                {`: ${reference.quantity}`}
+                                                            </div>
+                                                        ))}
+                                                    </td>
                                                     <td className="text-end">{avail}</td>
                                                     <td>
                                                         <div className="ir-component-chips">
