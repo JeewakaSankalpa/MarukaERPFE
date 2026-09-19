@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
-import { getPurchaseForSources, formatSourceRef, getGrnProgress } from "./poDisplay";
+import { getPurchaseForSources, formatSourceRef, getGrnProgress, orderedQty, formatQty } from "./poDisplay";
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -177,7 +177,7 @@ export default function POListView({ onOpenGRN }) {
                                         )}
                                     </td>
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${i.orderedQty}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
+                                        {(po.items || []).map(i => `${i.productNameSnapshot || i.productName} x${formatQty(orderedQty(i))}`).slice(0, 2).join(", ")}{(po.items?.length > 2) ? "…" : ""}
                                     </td>
                                     <td>
                                         <Badge bg={

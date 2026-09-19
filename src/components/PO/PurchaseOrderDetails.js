@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import SafeSelect from '../ReusableComponents/SafeSelect';
-import { getPurchaseForSources, formatSourceRef } from "./poDisplay";
+import { getPurchaseForSources, formatSourceRef, orderedQty, receivedQty, allocationQty, formatQty } from "./poDisplay";
 
 /* ========== API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -46,11 +46,10 @@ const uploadQuotationAttachmentsAPI = async (id, files) => {
         headers: { "Content-Type": "multipart/form-data" },
     })).data;
 };
-const numericQty = (value) => Number(value || 0);
-const remainingQty = (item) => Math.max(0, numericQty(item.orderedQty) - numericQty(item.receivedQty));
+const remainingQty = (item) => Math.max(0, orderedQty(item) - receivedQty(item));
 const itemGrnStatus = (item) => {
-    const ordered = numericQty(item.orderedQty);
-    const received = numericQty(item.receivedQty);
+    const ordered = orderedQty(item);
+    const received = receivedQty(item);
     if (ordered > 0 && received >= ordered) return { label: "Full GRN", variant: "success" };
     if (received > 0) return { label: "Partial GRN", variant: "info" };
     return { label: "No GRN", variant: "secondary" };
@@ -75,7 +74,7 @@ const grnReceiptsForItem = (item, grns) => (grns || [])
         .filter(grnItem => poItemMatchesGrnItem(item, grnItem))
         .map(grnItem => ({
             grnNumber: grn.grnNumber || grn.id,
-            receivedQty: numericQty(grnItem.receivedQty),
+            receivedQty: receivedQty(grnItem),
             createdAt: grn.createdAt,
             supplierInvoiceNo: grn.supplierInvoiceNo,
             status: grn.status,
@@ -330,7 +329,7 @@ export default function PurchaseOrderDetails() {
     const finalApprovalRecord = approvals.slice().reverse().find(r => r.status === 'APPROVED');
     const isCreatedPO = po.status === 'CREATED' || po.status === 'DRAFT';
     const isDraft = isCreatedPO && (!approvalStatus || approvalStatus === 'DRAFT' || approvalStatus === 'REJECTED');
-    const hasUnreceivedLines = (po.items || []).some(item => Number(item.receivedQty || 0) <= 0);
+    const hasUnreceivedLines = (po.items || []).some(item => receivedQty(item) <= 0);
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
     const canAdminEditUnreceivedLines = isAdmin && !isDraft && hasUnreceivedLines;
     const purchaseForSources = getPurchaseForSources(po);
@@ -365,15 +364,15 @@ export default function PurchaseOrderDetails() {
         return dateA - dateB;
     });
     const money = (value) => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
-    const totalOrderedQty = (po.items || []).reduce((sum, item) => sum + numericQty(item.orderedQty), 0);
-    const totalReceivedQty = (po.items || []).reduce((sum, item) => sum + numericQty(item.receivedQty), 0);
+    const totalOrderedQty = (po.items || []).reduce((sum, item) => sum + orderedQty(item), 0);
+    const totalReceivedQty = (po.items || []).reduce((sum, item) => sum + receivedQty(item), 0);
     const totalBalanceQty = Math.max(0, totalOrderedQty - totalReceivedQty);
     const legacyUnallocatedReceipts = poGrns.flatMap(grn => (grn.items || [])
-        .filter(item => numericQty(item.receivedQty) > 0 && !item.poLineId)
+        .filter(item => receivedQty(item) > 0 && !item.poLineId)
         .map(item => ({
             grnNumber: grn.grnNumber || grn.id,
             productName: item.productNameSnapshot || item.sku || item.productId,
-            quantity: numericQty(item.receivedQty)
+            quantity: receivedQty(item)
         })));
     const snapshotItemByProduct = (snapshot) => new Map((snapshot?.items || []).map(item => [item.productId, item]));
     const adminEditChanged = (edit, productId, field) => {
@@ -401,9 +400,9 @@ export default function PurchaseOrderDetails() {
                         <tr key={`${side}-${item.productId}`}>
                             <td className={changedClass("productNameSnapshot")}>{item.productNameSnapshot || item.productId}</td>
                             <td className={changedClass("sku")}>{item.sku || "-"}</td>
-                            <td className={`text-end ${changedClass("orderedQty")}`}>{item.orderedQty || 0}</td>
+                            <td className={`text-end ${changedClass("orderedQty")}`}>{formatQty(orderedQty(item))}</td>
                             <td className={`text-end ${changedClass("unitPrice")}`}>{item.unitPrice != null ? money(item.unitPrice) : "-"}</td>
-                            <td className="text-end">{item.receivedQty || 0}</td>
+                            <td className="text-end">{formatQty(receivedQty(item))}</td>
                             <td className={changedClass("note")}>{item.note || "-"}</td>
                         </tr>
                     );
@@ -570,10 +569,10 @@ export default function PurchaseOrderDetails() {
 
                         <div className="d-flex flex-wrap gap-2 mb-3">
                             <Badge bg={totalReceivedQty >= totalOrderedQty && totalOrderedQty > 0 ? "success" : totalReceivedQty > 0 ? "info" : "secondary"}>
-                                Received {totalReceivedQty} / {totalOrderedQty}
+                                Received {formatQty(totalReceivedQty)} / {formatQty(totalOrderedQty)}
                             </Badge>
                             <Badge bg={totalBalanceQty > 0 ? "warning" : "success"} text={totalBalanceQty > 0 ? "dark" : "white"}>
-                                Balance {totalBalanceQty}
+                                Balance {formatQty(totalBalanceQty)}
                             </Badge>
                             <Badge bg="light" text="dark">
                                 GRNs {poGrns.length}
@@ -605,7 +604,7 @@ export default function PurchaseOrderDetails() {
                             </thead>
                             <tbody>
                                 {(po.items || []).map((item, idx) => {
-                                    const qty = item.orderedQty;
+                                    const qty = orderedQty(item);
                                     const price = item.unitPrice || 0;
                                     const total = qty * price;
                                     const status = itemGrnStatus(item);
@@ -622,16 +621,16 @@ export default function PurchaseOrderDetails() {
                                                     )}
                                                     {(item.componentAllocations || []).map((allocation, allocationIndex) => (
                                                         <div className="small text-primary" key={`${allocation.componentName}-${allocationIndex}`}>
-                                                            Component: {allocation.componentName} (requested {allocation.quantity})
+                                                            Component: {allocation.componentName} (requested {formatQty(allocationQty(allocation))})
                                                         </div>
                                                     ))}
                                                 </td>
                                                 <td>{item.sku}</td>
                                                 <td>{item.unit}</td>
-                                                <td className="text-end">{qty}</td>
-                                                <td className="text-end fw-semibold">{numericQty(item.receivedQty)}</td>
+                                                <td className="text-end">{formatQty(qty)}</td>
+                                                <td className="text-end fw-semibold">{formatQty(receivedQty(item))}</td>
                                                 <td className={`text-end ${remainingQty(item) > 0 ? "text-danger fw-semibold" : "text-success fw-semibold"}`}>
-                                                    {remainingQty(item)}
+                                                    {formatQty(remainingQty(item))}
                                                 </td>
                                                 <td>
                                                     <Badge bg={status.variant}>{status.label}</Badge>
@@ -653,13 +652,13 @@ export default function PurchaseOrderDetails() {
                                                                     receipt.createdAt ? new Date(receipt.createdAt).toLocaleString() : null,
                                                                     receipt.supplierInvoiceNo ? `Invoice ${receipt.supplierInvoiceNo}` : null,
                                                                     receipt.receivedComponentAllocations.length > 0
-                                                                        ? receipt.receivedComponentAllocations.map(allocation => `${allocation.componentName}: ${allocation.quantity}`).join(", ")
+                                                                        ? receipt.receivedComponentAllocations.map(allocation => `${allocation.componentName}: ${formatQty(allocationQty(allocation))}`).join(", ")
                                                                         : null,
                                                                     receipt.status
                                                                 ].filter(Boolean).join(" | ")}
                                                             >
-                                                                {receipt.grnNumber}: {receipt.receivedQty} {item.unit || ""}
-                                                                {receipt.receivedComponentAllocations.length > 0 && ` · ${receipt.receivedComponentAllocations.map(allocation => `${allocation.componentName} ${allocation.quantity}`).join(", ")}`}
+                                                                {receipt.grnNumber}: {formatQty(receipt.receivedQty)} {item.unit || ""}
+                                                                {receipt.receivedComponentAllocations.length > 0 && ` · ${receipt.receivedComponentAllocations.map(allocation => `${allocation.componentName} ${formatQty(allocationQty(allocation))}`).join(", ")}`}
                                                             </Badge>
                                                         )) : (
                                                             <span className="text-muted">No GRN received for this item yet.</span>
@@ -679,7 +678,7 @@ export default function PurchaseOrderDetails() {
                                 <Table size="sm" borderless className="mb-0">
                                     <tbody>
                                         {(() => {
-                                            const computedSubTotal = (po.subTotal && po.subTotal > 0) ? po.subTotal : (po.items || []).reduce((sum, item) => sum + ((item.orderedQty || 0) * (item.unitPrice || 0)), 0);
+                                            const computedSubTotal = (po.subTotal && po.subTotal > 0) ? po.subTotal : (po.items || []).reduce((sum, item) => sum + (orderedQty(item) * (item.unitPrice || 0)), 0);
                                             const discount = po.discountAmount || 0;
                                             const taxableBase = Math.max(0, computedSubTotal - discount) + (po.deliveryCharge || 0);
                                             const computedGrandTotal = po.grandTotal || (taxableBase + (po.vatAmount || 0) + (po.otherTaxAmount || 0) + (po.taxTotal || 0));

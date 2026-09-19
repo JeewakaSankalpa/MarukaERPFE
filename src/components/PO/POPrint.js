@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
 import signature from "../../assets/signature.png";
-import { formatPurchaseForText } from "./poDisplay";
+import { formatPurchaseForText, orderedQty, formatQty } from "./poDisplay";
 
 const cleanText = (value) => String(value || "").trim();
 
@@ -200,7 +200,8 @@ const POPrint = () => {
                     <tbody>
                         {(po.items || []).map((item, idx) => {
                             if (!item) return null;
-                            const amount = (item.orderedQty || 0) * (item.unitPrice || 0);
+                            const qty = orderedQty(item);
+                            const amount = qty * (item.unitPrice || 0);
                             return (
                                 <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
                                     <td style={{ padding: "12px" }}>
@@ -211,7 +212,7 @@ const POPrint = () => {
                                             </div>
                                         )}
                                     </td>
-                                    <td style={{ padding: "12px", textAlign: "center" }}>{item.orderedQty}</td>
+                                    <td style={{ padding: "12px", textAlign: "center" }}>{formatQty(qty)}</td>
                                     <td style={{ padding: "12px", textAlign: "right" }}>
                                         {item.unitPrice ? item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }) : "-"}
                                     </td>
@@ -228,10 +229,10 @@ const POPrint = () => {
                 <div className="d-flex justify-content-end mb-5">
                     <div style={{ width: "250px" }}>
                         {(() => {
-                            const subTotalCalculated = (po.items || []).reduce((sum, item) => sum + ((item?.orderedQty || 0) * (item?.unitPrice || 0)), 0);
+                            const subTotalCalculated = (po.items || []).reduce((sum, item) => sum + (orderedQty(item) * (item?.unitPrice || 0)), 0);
                             const computedSubTotal = (po.subTotal && po.subTotal > 0) ? po.subTotal : subTotalCalculated;
                             const discount = po.discountAmount || 0;
-                            const taxTotalCalculated = po.taxTotal || (po.items || []).reduce((sum, item) => sum + (((item?.orderedQty || 0) * (item?.unitPrice || 0)) * ((item?.taxPercent || 0) / 100)), 0);
+                            const taxTotalCalculated = po.taxTotal || (po.items || []).reduce((sum, item) => sum + ((orderedQty(item) * (item?.unitPrice || 0)) * ((item?.taxPercent || 0) / 100)), 0);
                             const computedGrandTotal = po.grandTotal || (Math.max(0, computedSubTotal - discount) + (po.deliveryCharge || 0) + (po.vatAmount || 0) + (po.otherTaxAmount || 0) + taxTotalCalculated);
                             
                             return (

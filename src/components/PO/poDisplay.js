@@ -2,6 +2,20 @@ const clean = (value) => String(value || "").trim();
 
 const hasText = (value) => clean(value).length > 0;
 
+export const quantityNumber = (value) => Number(value ?? 0) || 0;
+
+export const orderedQty = (item = {}) => quantityNumber(item.orderedQtyDecimal ?? item.orderedQty);
+
+export const receivedQty = (item = {}) => quantityNumber(item.receivedQtyDecimal ?? item.receivedQty);
+
+export const allocationQty = (allocation = {}) => quantityNumber(allocation.quantityDecimal ?? allocation.quantity);
+
+export const formatQty = (value) => {
+    const number = quantityNumber(value);
+    if (Number.isInteger(number)) return String(number);
+    return number.toFixed(2).replace(/\.?0+$/, "");
+};
+
 const sourceKey = (source) => [
     clean(source.jobNumber),
     clean(source.inquiryNumber),
@@ -70,13 +84,13 @@ export const getGrnProgress = (po = {}) => {
     }
 
     const items = po.items || [];
-    const receivedQty = items.reduce((sum, item) => sum + Number(item.receivedQty || 0), 0);
-    const orderedQty = items.reduce((sum, item) => sum + Number(item.orderedQty || 0), 0);
+    const totalReceivedQty = items.reduce((sum, item) => sum + receivedQty(item), 0);
+    const totalOrderedQty = items.reduce((sum, item) => sum + orderedQty(item), 0);
 
-    if (orderedQty > 0 && receivedQty >= orderedQty) {
+    if (totalOrderedQty > 0 && totalReceivedQty >= totalOrderedQty) {
         return { value: "FULLY_RECEIVED", label: "Full GRN", variant: "success" };
     }
-    if (receivedQty > 0) {
+    if (totalReceivedQty > 0) {
         return { value: "PARTIALLY_RECEIVED", label: "Partial GRN", variant: "info" };
     }
 
