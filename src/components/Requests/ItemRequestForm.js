@@ -8,6 +8,7 @@ import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import SafeSelect from "../ReusableComponents/SafeSelect";
 import "react-toastify/dist/ReactToastify.css";
+import { normalizeItemRequest, quantityCents, quantityValue } from "./decimalQuantity";
 
 const GENERAL_COMPONENT = "General";
 const qp = (values = {}) => {
@@ -20,17 +21,18 @@ const qp = (values = {}) => {
 
 const searchProducts = async (q, page = 0, size = 40) =>
     (await api.get(`/products?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
-const getIR = async (id) => (await api.get(`/item-requests/${id}`)).data;
+const getIR = async (id) => normalizeItemRequest((await api.get(`/item-requests/${id}`)).data);
 const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
 const getComponentHistory = async (sourceEstimationId) =>
     (await api.get("/item-requests/component-history", { params: { sourceEstimationId } })).data;
 
 const addAllocation = (allocations, componentName, quantity) => {
-    const qty = Number(quantity || 0);
-    if (qty <= 0) return;
+    const cents = quantityCents(quantity || 0);
+    if (cents <= 0) return;
+    const qty = cents / 100;
     const name = componentName || GENERAL_COMPONENT;
     const existing = allocations.find(allocation => allocation.componentName === name);
-    if (existing) existing.quantity += qty;
+    if (existing) existing.quantity = (quantityCents(existing.quantity) + cents) / 100;
     else allocations.push({ componentName: name, quantity: qty });
 };
 
@@ -246,6 +248,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 if (!active) return;
                 const drafts = (Array.isArray(response.data) ? response.data : [])
                     .filter(request => request.status === "DRAFT" && request.projectId === draftProjectId)
+                    .map(normalizeItemRequest)
                     .sort((a, b) =>
                         new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
                 setProjectDrafts(drafts);
@@ -486,10 +489,13 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const updateRow = (productId, update) =>
         setRows(previous => previous.map(row => row.productId === productId ? update(row) : row));
 
-    const setComponentQuantity = (productId, value) => updateRow(productId, row => ({
+    const setComponentQuantity = (productId, value) => {
+        if (value !== "" && !/^\d*(?:\.\d{0,2})?$/.test(value)) return;
+        updateRow(productId, row => ({
         ...row,
         quantities: { ...row.quantities, [activeComponent]: value }
-    }));
+        }));
+    };
 
     const toggleComponentSelection = (productId, checked) => updateRow(productId, row => ({
         ...row,
@@ -525,7 +531,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 productId: row.productId,
                 unit: row.unit,
                 note: row.note || "",
-                componentAllocations
+                componentAllocations: componentAllocations.map(allocation => ({
+                    ...allocation,
+                    quantity: quantityValue(quantityCents(allocation.quantity))
+                }))
             }];
         });
 
@@ -559,7 +568,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             const response = routeId
                 ? await api.put(`/item-requests/${routeId}`, buildPayload({ componentNames: [activeComponent] }))
                 : await api.post("/item-requests", buildPayload({ componentNames: [activeComponent] }));
-            const mapped = mapRequestItems(response.data.items);
+            const mapped = mapRequestItems(normalizeItemRequest(response.data).items);
             setComponents(previous => mergeComponentNames(previous, mapped.componentNames));
             setRows(previous => overlayRequestItemsOnRows(previous, mapped.mappedRows));
             if (inlineDraftId && draftOverviewRef.current) {
@@ -600,7 +609,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         ...componentHistory,
                         [activeComponent]: [
                             ...(componentHistory[activeComponent] || []),
-                            ...(response.data.items || []).map(item => ({
+                            ...(normalizeItemRequest(response.data).items || []).map(item => ({
                                 requestId: response.data.id,
                                 irNumber: response.data.irNumber,
                                 status: response.data.status,

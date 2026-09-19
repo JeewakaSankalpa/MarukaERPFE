@@ -9,6 +9,7 @@ import SafeSelect from '../ReusableComponents/SafeSelect';
 import ReportLayout from '../ReusableComponents/ReportLayout';
 import './ProjectInventoryCard.css';
 import { confirmAction } from '../../utils/brandedDialogs';
+import { normalizeItemRequest, quantityNumber, withDecimalQtyFields } from '../Requests/decimalQuantity';
 
 /**
  * Component to display project inventory, consumption, and transfers.
@@ -96,13 +97,23 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 }).catch(() => ({ data: [] }))
             ]);
 
-            setInventory(invRes.data || []);
-            setPanelInventory(panelRes.data || []);
-            setPendingTransfers(trRes.data || []);
+            setInventory((invRes.data || []).map(withDecimalQtyFields));
+            setPanelInventory((panelRes.data || []).map(panel => ({
+                ...withDecimalQtyFields(panel),
+                items: (panel.items || []).map(withDecimalQtyFields)
+            })));
+            setPendingTransfers((trRes.data || []).map(transfer => ({
+                ...transfer,
+                items: (transfer.items || []).map(item => ({
+                    ...item,
+                    qty: quantityNumber(item.qtyDecimal ?? item.qty)
+                }))
+            })));
             setEstimationComponents(estimationRes.data?.components || []);
             setReturnRequests(returnsRes.data?.content || returnsRes.data || []);
             setDraftRequests((Array.isArray(draftsRes.data) ? draftsRes.data : [])
-                .filter(request => request.status === 'DRAFT' && request.projectId === projectId));
+                .filter(request => request.status === 'DRAFT' && request.projectId === projectId)
+                .map(normalizeItemRequest));
         } catch (e) {
             console.error('Failed to load inventory or transfers:', e);
             console.error('Error response:', e?.response?.data);
@@ -161,7 +172,8 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     productNameSnapshot: item.productName || item.productId,
                     componentName: consumeData.components?.[item.productId] || '',
                     unit: item.unit,
-                    quantity,
+                    quantity: Math.trunc(quantity),
+                    quantityDecimal: String(quantity),
                     availableQty,
                     serials,
                     note: consumeData.note
@@ -275,7 +287,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                     onHandQty: 0,
                     unit: item.unit
                 };
-                current.onHandQty += Number(item.quantity || 0);
+                current.onHandQty += Number(item.quantityDecimal ?? item.quantity ?? 0);
                 products.set(item.productId, current);
             });
             return Array.from(products.values());
@@ -291,7 +303,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
             .forEach(request => {
                 (request.items || []).forEach(item => {
                     if (!item.productId) return;
-                    products.set(item.productId, (products.get(item.productId) || 0) + Number(item.quantity || 0));
+                    products.set(item.productId, (products.get(item.productId) || 0) + Number(item.quantityDecimal ?? item.quantity ?? 0));
                 });
             });
         return products;
@@ -305,7 +317,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
             .forEach(request => {
                 (request.items || []).forEach(item => {
                     if (!item.productId) return;
-                    products.set(item.productId, (products.get(item.productId) || 0) + Number(item.quantity || 0));
+                    products.set(item.productId, (products.get(item.productId) || 0) + Number(item.quantityDecimal ?? item.quantity ?? 0));
                 });
             });
         return products;
@@ -353,7 +365,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
             : null;
         const consumedQty = (source?.items || [])
             .filter(item => item.productId === pid)
-            .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+            .reduce((sum, item) => sum + Number(item.quantityDecimal ?? item.quantity ?? 0), 0);
         const stockQty = returnProductOptions.find(item => item.productId === pid)?.onHandQty || 0;
         const reservedQty = returnData.sourceMode === 'CONSUMED'
             ? (reservedConsumedReturnQtyByProduct.get(pid) || 0)
@@ -449,6 +461,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                             productId: returnData.productId,
                             productNameSnapshot: returnProductOptions.find(p => p.productId === returnData.productId)?.productName || returnData.productId,
                             quantity: set.size,
+                            quantityDecimal: String(set.size),
                             batchId: bId,
                             serials: Array.from(set),
                             reason: returnData.reason
@@ -460,7 +473,8 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 items.push({
                     productId: returnData.productId,
                     productNameSnapshot: returnProductOptions.find(p => p.productId === returnData.productId)?.productName || returnData.productId,
-                    quantity: Number(returnData.quantity),
+                    quantity: Math.trunc(Number(returnData.quantity)),
+                    quantityDecimal: String(returnData.quantity),
                     batchId: returnData.batchId, // Send optional batchId
                     serials: returnData.serials ? returnData.serials.split(',').map(s => s.trim()).filter(s => s) : [],
                     reason: returnData.reason
@@ -1518,6 +1532,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                                         <td>
                                                             <Form.Control
                                                                 type="number"
+                                                                step="0.01"
                                                                 size="sm"
                                                                 min="0"
                                                                 max={Number(item.onHandQty || 0)}
@@ -1755,10 +1770,11 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                         <label className="form-label">Quantity</label>
                                         <input
                                             type="number"
+                                            step="0.01"
                                             className="form-control"
                                             value={returnData.quantity}
                                             onChange={(e) => handleReturnQuantityChange(e.target.value)}
-                                            min="1"
+                                            min="0.01"
                                             max={selectedReturnMax || undefined}
                                             disabled={!returnData.productId || selectedReturnMax <= 0}
                                         />

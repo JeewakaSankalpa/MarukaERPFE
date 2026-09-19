@@ -28,8 +28,8 @@ const getOriginalQuantity = (grnItem, batch) => {
     if (batch.originalQuantity !== undefined && batch.originalQuantity !== null) return batch.originalQuantity;
     const batchNumber = String(getBatchNumber(batch));
     const grnBatch = grnItem?.batches?.find(itemBatch => String(itemBatch.batchNo) === batchNumber);
-    if (grnBatch) return grnBatch.qty;
-    if (grnItem) return grnItem.receivedQty;
+    if (grnBatch) return grnBatch.qtyDecimal ?? grnBatch.qty;
+    if (grnItem) return grnItem.receivedQtyDecimal ?? grnItem.receivedQty;
     return "-";
 };
 
@@ -102,7 +102,8 @@ export default function GRNReturnModal({ grn, onClose }) {
                     productName: b.productName || b.productNameSnapshot || originalItem?.productNameSnapshot || "Unknown Product",
                     batchId: b.id, // The inventory batch ID
                     batchNo: getBatchNumber(b),
-                    quantity: returnQty[b.id],
+                    quantity: Math.trunc(returnQty[b.id]),
+                    quantityDecimal: String(returnQty[b.id]),
                     grnNo: grn.grnNumber,
                     reason: returnNote.trim() || `Returned from GRN ${grn.grnNumber}`
                 };
@@ -175,7 +176,7 @@ export default function GRNReturnModal({ grn, onClose }) {
                                         // Calculate pending waiting approvals for this batch
                                         const pendingForThisBatch = pendingReturns
                                             .filter(pr => String(pr.batchId) === String(b.id) || String(pr.batchNo) === String(batchNumber))
-                                            .reduce((sum, pr) => sum + (pr.quantity || 0), 0);
+                                            .reduce((sum, pr) => sum + Number(pr.quantityDecimal ?? pr.quantity ?? 0), 0);
 
                                         const isOrigNumber = !isNaN(Number(origQty)) && origQty !== "-";
                                         const maxQtyCap = isOrigNumber ? Math.min(available, Number(origQty)) : available;
@@ -199,6 +200,7 @@ export default function GRNReturnModal({ grn, onClose }) {
                                                 <td>
                                                     <Form.Control 
                                                         type="number" 
+                                                        step="0.01"
                                                         size="sm"
                                                         min={0}
                                                         max={maxQty}

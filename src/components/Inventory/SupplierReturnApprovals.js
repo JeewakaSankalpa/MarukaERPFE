@@ -7,6 +7,8 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 import { confirmAction } from '../../utils/brandedDialogs';
+const returnQuantity = item => Number(item?.quantityDecimal ?? item?.quantity ?? 0);
+const settledQuantity = item => Number(item?.quantitySettledDecimal ?? item?.quantitySettled ?? 0);
 
 const SupplierReturnApprovals = () => {
     const navigate = useNavigate();
@@ -47,7 +49,7 @@ const SupplierReturnApprovals = () => {
     const handleApprove = async (ret) => {
         if (!await confirmAction({
             title: "Approve supplier return",
-            message: `Approve this return?\nThis will deduct ${ret.quantity} units from batch ${ret.batchNo}.`,
+            message: `Approve this return?\nThis will deduct ${returnQuantity(ret)} units from batch ${ret.batchNo}.`,
             confirmLabel: "Approve return",
             tone: "warning",
         })) return;
@@ -80,8 +82,8 @@ const SupplierReturnApprovals = () => {
 
     const openSettlementModal = (ret) => {
         setSelectedReturn(ret);
-        const alreadySettled = (ret.settlements || []).reduce((acc, s) => acc + s.quantitySettled, 0);
-        const remainingToSettle = ret.quantity - alreadySettled;
+        const alreadySettled = (ret.settlements || []).reduce((acc, s) => acc + settledQuantity(s), 0);
+        const remainingToSettle = returnQuantity(ret) - alreadySettled;
         
         setSettlementData({
             type: 'REPLACEMENT',
@@ -109,7 +111,8 @@ const SupplierReturnApprovals = () => {
         try {
             const payload = {
                 type: settlementData.type,
-                quantitySettled: Number(settlementData.quantitySettled),
+                quantitySettled: Math.trunc(Number(settlementData.quantitySettled)),
+                quantitySettledDecimal: String(settlementData.quantitySettled),
                 amountSettled: Number(settlementData.amountSettled),
                 referenceId: settlementData.referenceId,
                 notes: settlementData.notes
@@ -163,8 +166,8 @@ const SupplierReturnApprovals = () => {
                                 <tr><td colSpan={8} className="text-center text-muted">No {statusFilter.toLowerCase()} returns found.</td></tr>
                             ) : (
                                 returns.map(r => {
-                                    const alreadySettled = (r.settlements || []).reduce((acc, s) => acc + s.quantitySettled, 0);
-                                    const isFullySettled = alreadySettled >= r.quantity;
+                                    const alreadySettled = (r.settlements || []).reduce((acc, s) => acc + settledQuantity(s), 0);
+                                    const isFullySettled = alreadySettled >= returnQuantity(r);
                                     
                                     return (
                                         <tr key={r.id}>
@@ -175,7 +178,7 @@ const SupplierReturnApprovals = () => {
                                                 <div className="small">
                                                     <strong>{r.productName || r.productId}</strong>
                                                     <br/>
-                                                    <Badge bg="info" className="me-2">Qty: {r.quantity}</Badge> 
+                                                    <Badge bg="info" className="me-2">Qty: {returnQuantity(r)}</Badge>
                                                     <Badge bg="secondary">Batch: {r.batchNumber || r.batchNo}</Badge>
                                                     {r.unitCost > 0 && <div>Cost: Rs. {r.unitCost}</div>}
                                                 </div>
@@ -186,7 +189,7 @@ const SupplierReturnApprovals = () => {
                                                         {r.settlementStatus || 'PENDING'}
                                                     </Badge>
                                                     <div className="small mt-1 text-muted">
-                                                        Settled: {alreadySettled} / {r.quantity}
+                                                        Settled: {alreadySettled} / {returnQuantity(r)}
                                                     </div>
                                                 </td>
                                             )}
@@ -250,7 +253,7 @@ const SupplierReturnApprovals = () => {
                                 <h6>Return Info</h6>
                                 <Row className="small">
                                     <Col md={4}><strong>Product:</strong> {selectedReturn.productName}</Col>
-                                    <Col md={4}><strong>Total Returned Qty:</strong> {selectedReturn.quantity}</Col>
+                                    <Col md={4}><strong>Total Returned Qty:</strong> {returnQuantity(selectedReturn)}</Col>
                                     <Col md={4}><strong>Unit Cost:</strong> Rs. {selectedReturn.unitCost}</Col>
                                 </Row>
                                 <hr className="my-2" />
@@ -273,7 +276,7 @@ const SupplierReturnApprovals = () => {
                                                 <tr key={idx}>
                                                     <td>{new Date(s.createdAt).toLocaleDateString()}</td>
                                                     <td><Badge bg="secondary">{s.type}</Badge></td>
-                                                    <td>{s.quantitySettled}</td>
+                                                    <td>{settledQuantity(s)}</td>
                                                     <td>Rs. {s.amountSettled}</td>
                                                     <td>
                                                         <div>{s.referenceId}</div>
@@ -287,7 +290,7 @@ const SupplierReturnApprovals = () => {
                             </div>
                         )}
 
-                        {selectedReturn && ((selectedReturn.settlements || []).reduce((acc, s) => acc + s.quantitySettled, 0) < selectedReturn.quantity) && (
+                        {selectedReturn && ((selectedReturn.settlements || []).reduce((acc, s) => acc + settledQuantity(s), 0) < returnQuantity(selectedReturn)) && (
                             <div className="border p-3 rounded">
                                 <h6 className="mb-3 text-primary">New Settlement Entry</h6>
                                 <Row className="mb-3">
@@ -309,7 +312,8 @@ const SupplierReturnApprovals = () => {
                                             <Form.Label>Quantity Settling</Form.Label>
                                             <Form.Control 
                                                 type="number" min="1" 
-                                                max={selectedReturn.quantity - (selectedReturn.settlements || []).reduce((acc, s) => acc + s.quantitySettled, 0)}
+                                                max={returnQuantity(selectedReturn) - (selectedReturn.settlements || []).reduce((acc, s) => acc + settledQuantity(s), 0)}
+                                                step="0.01"
                                                 value={settlementData.quantitySettled}
                                                 onChange={e => handleSettlementChange('quantitySettled', e.target.value)}
                                                 required
@@ -375,7 +379,7 @@ const SupplierReturnApprovals = () => {
                     </Modal.Body>
                     <Modal.Footer>
                         <Button variant="secondary" onClick={() => setShowSettlementModal(false)}>Close</Button>
-                        {selectedReturn && ((selectedReturn.settlements || []).reduce((acc, s) => acc + s.quantitySettled, 0) < selectedReturn.quantity) && (
+                        {selectedReturn && ((selectedReturn.settlements || []).reduce((acc, s) => acc + settledQuantity(s), 0) < returnQuantity(selectedReturn)) && (
                             <Button variant="primary" type="submit" disabled={submittingSettlement}>
                                 {submittingSettlement ? 'Saving...' : 'Record Settlement'}
                             </Button>

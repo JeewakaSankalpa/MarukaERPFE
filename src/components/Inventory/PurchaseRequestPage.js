@@ -258,7 +258,7 @@ function PRForm({ onSaved }) {
             name: item.productNameSnapshot || item.productId,
             sku: item.sku || "",
             unit: item.unit || "pcs",
-            qty: item.requestedQty || "",
+            qty: item.requestedQtyDecimal ?? item.requestedQty ?? "",
             note: item.note || "",
         }));
         setRows(prev => {
@@ -416,7 +416,7 @@ function PRForm({ onSaved }) {
                                             <td>{r.name}</td>
                                             <td>{r.sku}</td>
                                             <td>
-                                                {fmtNum(sum.totalQty || 0)}{" "}
+                                                {fmtNum(sum.totalQtyDecimal ?? sum.totalQty ?? 0)}{" "}
                                                 <span className="text-muted">({safe(r.unit)})</span>
                                             </td>
                                             <td>
@@ -431,7 +431,8 @@ function PRForm({ onSaved }) {
                                                     <Form.Control
                                                         type="number"
                                                         min="0"
-                                                        inputMode="numeric"
+                                                        step="0.01"
+                                                        inputMode="decimal"
                                                         value={r.qty}
                                                         onChange={(e) => setRow(i, "qty", e.target.value)}
                                                     />
@@ -618,7 +619,7 @@ function PRView({ id, onBack }) {
                                 <td>{it.productNameSnapshot || it.productName || "-"}</td>
                                 <td>{it.sku || "-"}</td>
                                 <td>{it.unit || "pcs"}</td>
-                                <td style={{ textAlign: "right" }}>{fmtNum(it.requestedQty ?? it.quantity)}</td>
+                                <td style={{ textAlign: "right" }}>{fmtNum(it.requestedQtyDecimal ?? it.requestedQty ?? it.quantity)}</td>
                                 <td>{it.note || "-"}</td>
                             </tr>
                         ))}

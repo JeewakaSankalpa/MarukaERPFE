@@ -8,6 +8,7 @@ import { autoTable } from "jspdf-autotable";
 import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import "./IRFulfilmentPage.css";
+import { normalizeItemRequest, quantityCents, quantityValue, roundQuantity } from "./decimalQuantity";
 
 const fetchMainAvail = async () => {
     const res = await api.get("/inventory/available-quantities");
@@ -42,13 +43,14 @@ const listIRs = async (page, size, status, filters = {}) => {
     if (filters.projectNumber?.trim()) params.projectNumber = filters.projectNumber.trim();
     if (filters.requester?.trim()) params.requester = filters.requester.trim();
     if (filters.itemSearch?.trim()) params.itemSearch = filters.itemSearch.trim();
-    return (await api.get("/item-requests/fulfilment", { params })).data;
+    const data = (await api.get("/item-requests/fulfilment", { params })).data;
+    return { ...data, content: (data.content || []).map(normalizeItemRequest) };
 };
 
-const getIR = async (id) => (await api.get(`/item-requests/${id}`)).data;
+const getIR = async (id) => normalizeItemRequest((await api.get(`/item-requests/${id}`)).data);
 
 const fulfilIR = async (id, productIdToQty) =>
-    (await api.post(`/item-requests/${id}/fulfil`, productIdToQty)).data;
+    normalizeItemRequest((await api.post(`/item-requests/${id}/fulfil`, productIdToQty)).data);
 
 const listDepartments = async () =>
     (await api.get(`/departments`, { params: { page: 0, size: 1000 } })).data?.content || [];
@@ -537,7 +539,7 @@ export default function IRFulfilmentPage() {
 
                 newList[existingIdx] = {
                     ...newList[existingIdx],
-                    qty: newList[existingIdx].qty + qtyToAdd,
+                    qty: roundQuantity(newList[existingIdx].qty + qtyToAdd),
                     serials: mergedSerials
                 };
             } else {
@@ -550,7 +552,7 @@ export default function IRFulfilmentPage() {
             }
 
             // Sync total
-            const total = newList.reduce((s, x) => s + x.qty, 0);
+            const total = roundQuantity(newList.reduce((s, x) => s + x.qty, 0));
             setIssue(s => ({ ...s, [pid]: total }));
 
             return { ...prev, [pid]: newList };
@@ -589,7 +591,7 @@ export default function IRFulfilmentPage() {
             }
 
             // Sync total
-            const total = newList.reduce((s, x) => s + x.qty, 0);
+            const total = roundQuantity(newList.reduce((s, x) => s + x.qty, 0));
             setIssue(s => ({ ...s, [pid]: total }));
 
             return { ...prev, [pid]: newList };
@@ -653,7 +655,8 @@ export default function IRFulfilmentPage() {
                     allocs.forEach(a => {
                         payload.push({
                             productId: pid,
-                            qty: a.qty,
+                            qty: Math.floor(a.qty),
+                            qtyDecimal: quantityValue(quantityCents(a.qty)),
                             batchId: a.batchId,
                             serials: a.serials
                         });
@@ -662,7 +665,8 @@ export default function IRFulfilmentPage() {
                     // Use FIFO fallback
                     payload.push({
                         productId: pid,
-                        qty: simpleQty,
+                        qty: Math.floor(simpleQty),
+                        qtyDecimal: quantityValue(quantityCents(simpleQty)),
                         batchId: null, // explicit null
                         serials: null
                     });
@@ -1033,10 +1037,13 @@ export default function IRFulfilmentPage() {
                                                             <Form.Control
                                                                 type="number"
                                                                 min="0"
+                                                                step="0.01"
                                                                 max={maxIssuable}
                                                                 value={issue[it.productId] ?? 0}
                                                                 onChange={(e) => {
-                                                                    const v = Math.max(0, Math.min(maxIssuable, Number(e.target.value || 0)));
+                                                                    const raw = Number(e.target.value || 0);
+                                                                    if (!Number.isFinite(raw) || raw < 0 || Math.abs(raw * 100 - Math.round(raw * 100)) > 1e-8) return;
+                                                                    const v = roundQuantity(Math.max(0, Math.min(maxIssuable, raw)));
                                                                     setIssue((s) => ({ ...s, [it.productId]: v }));
                                                                 }}
                                                             />
@@ -1131,11 +1138,13 @@ export default function IRFulfilmentPage() {
                                                             type="number"
                                                             size="sm"
                                                             min="0"
+                                                            step="0.01"
                                                             max={b.quantity} // Optional cap to prevent over-allocation errors
                                                             placeholder="0"
                                                             value={allocatedQty || ''}
                                                             onChange={(e) => {
-                                                                const val = parseInt(e.target.value) || 0;
+                                                                const val = e.target.value === "" ? 0 : Number(e.target.value);
+                                                                if (!Number.isFinite(val) || val < 0 || Math.abs(val * 100 - Math.round(val * 100)) > 1e-8) return;
                                                                 // Calculate delta to update state correctly? 
                                                                 // No, `addToAllocation` adds DELTA. We need a way to set ABSOLUTE.
                                                                 // Or we change addToAllocation to setAllocation.

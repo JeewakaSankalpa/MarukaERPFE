@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Table, Card, Badge, Button, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
+import { normalizeItemRequest } from './decimalQuantity';
 
 const MyRequestList = () => {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ const MyRequestList = () => {
             setLoading(true);
             const res = await api.get("/item-requests/my");
             const rows = Array.isArray(res.data) ? res.data : [];
-            setRequests([...rows].sort((a, b) => {
+            setRequests(rows.map(normalizeItemRequest).sort((a, b) => {
                 if (a.status === "DRAFT" && b.status !== "DRAFT") return -1;
                 if (a.status !== "DRAFT" && b.status === "DRAFT") return 1;
                 return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);

@@ -6,6 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import { quantityCents, quantityValue } from '../Requests/decimalQuantity';
 
 /* ========== INLINE API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -15,7 +16,7 @@ const createGRN = async (payload) => (await api.post(`/grns`, payload)).data;
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
 const calculateDiscountAdjustedUnitCost = (item, subtotal, discountAmount) => {
-    const qty = Number(item.orderedQty || 0);
+    const qty = Number(item.orderedQtyDecimal ?? item.orderedQty ?? 0);
     const unitPrice = Number(item.unitPrice || 0);
     if (qty <= 0 || unitPrice <= 0) return "";
     const lineTotal = qty * unitPrice;
@@ -85,13 +86,13 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     projectId: it.projectId,
                     inquiryNumber: it.inquiryNumber,
                     jobNumber: it.jobNumber,
-                    componentAllocations: it.componentAllocations || [],
+                    componentAllocations: (it.componentAllocations || []).map(allocation => ({ ...allocation, quantity: Number(allocation.quantityDecimal ?? allocation.quantity) })),
                     receivedComponentQuantities: {},
                     productName: it.productNameSnapshot || it.productName,
                     sku: it.sku,
                     unit: it.unit || "pcs",
-                    orderedQty: it.orderedQty,
-                    previouslyReceivedQty: Number(it.receivedQty || 0),
+                    orderedQty: Number(it.orderedQtyDecimal ?? it.orderedQty ?? 0),
+                    previouslyReceivedQty: Number(it.receivedQtyDecimal ?? it.receivedQty ?? 0),
                     unitPrice: it.unitPrice,
                     adjustedUnitCost: calculateDiscountAdjustedUnitCost(it, subtotal, discount),
                     batches: []
@@ -165,7 +166,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     }
                 }
 
-                const totalQty = activeBatches.reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
+                const totalCents = activeBatches.reduce((sum, b) => sum + quantityCents(b.qty), 0);
+                const totalQty = totalCents / 100;
                 const remainingQty = Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0));
                 if (totalQty > remainingQty) {
                     throw new Error(`Receiving quantity exceeds the remaining ${remainingQty} for ${r.itemRequestNumber || r.productName}`);
@@ -177,8 +179,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                         componentName: allocation.componentName,
                         quantity: Number(r.receivedComponentQuantities?.[allocation.componentName] || 0)
                     })).filter(allocation => allocation.quantity > 0);
-                const componentAllocatedQty = receivedComponentAllocations.reduce((sum, allocation) => sum + allocation.quantity, 0);
-                if (sourceComponents.length > 1 && componentAllocatedQty !== totalQty) {
+                const componentAllocatedCents = receivedComponentAllocations.reduce((sum, allocation) => sum + quantityCents(allocation.quantity), 0);
+                if (sourceComponents.length > 1 && componentAllocatedCents !== totalCents) {
                     throw new Error(`Allocate all ${totalQty} received units across the listed components for ${r.itemRequestNumber || r.productName}`);
                 }
                 return {
@@ -192,19 +194,21 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     inquiryNumber: r.inquiryNumber,
                     jobNumber: r.jobNumber,
                     componentAllocations: r.componentAllocations,
-                    receivedComponentAllocations,
+                    receivedComponentAllocations: receivedComponentAllocations.map(allocation => ({ ...allocation, quantity: Math.trunc(allocation.quantity), quantityDecimal: quantityValue(quantityCents(allocation.quantity)) })),
                     unit: r.unit,
-                    receivedQty: totalQty,
+                    receivedQty: Math.trunc(totalQty),
+                    receivedQtyDecimal: quantityValue(totalCents),
                     batches: activeBatches.map(b => ({
                         batchNo: b.batchNo || undefined,
                         expiryDate: b.expiryDate || undefined,
-                        qty: Number(b.qty),
+                        qty: Math.trunc(Number(b.qty)),
+                        qtyDecimal: quantityValue(quantityCents(b.qty)),
                         unitCost: String(b.unitCost),
                         serials: []
                     })),
                     serials: []
                 };
-            }).filter(r => r.receivedQty > 0);
+            }).filter(r => Number(r.receivedQtyDecimal) > 0);
 
             if (items.length === 0) { toast.info("Enter received quantities via batches"); return; }
 
@@ -423,6 +427,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                                 <Form.Control
                                                                     aria-label={`Receiving quantity for ${allocation.componentName}`}
                                                                     type="number"
+                                                                    step="0.01"
                                                                     min="0"
                                                                     placeholder="Receiving"
                                                                     value={r.receivedComponentQuantities?.[allocation.componentName] || ""}
@@ -460,7 +465,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                                         style={{ maxWidth: 150 }}
                                                                     />
                                                                     <Form.Control
-                                                                        type="number" min="0" max={Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0))} placeholder="Qty"
+                                                                        type="number" min="0" step="0.01" max={Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0))} placeholder="Qty"
                                                                         value={b.qty}
                                                                         onChange={e => setBatch(i, bi, "qty", e.target.value)}
                                                                         style={{ maxWidth: 80 }}

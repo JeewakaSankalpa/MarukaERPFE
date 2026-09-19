@@ -108,8 +108,8 @@ const StockTakingPage = () => {
                 batchId: batch.id,
                 batchNo: batch.batchNo,
                 oldQuantity: batch.quantity,
-                newQuantity: parseInt(adjustments[batch.id]),
-                adjustmentQuantity: parseInt(adjustments[batch.id]) - batch.quantity,
+                newQuantity: Number(adjustments[batch.id]),
+                adjustmentQuantity: Number(adjustments[batch.id]) - batch.quantity,
                 reason: "Manual Stock Taking"
             }))
         };
@@ -265,6 +265,8 @@ const StockTakingPage = () => {
                                     <td className="text-center">
                                         <Form.Control
                                             type="number"
+                                            min="0"
+                                            step="0.01"
                                             size="sm"
                                             value={adjustments[batch.id] !== undefined ? adjustments[batch.id] : ''} // Controlled component
                                             placeholder={batch.quantity.toString()}

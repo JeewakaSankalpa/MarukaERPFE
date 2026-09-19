@@ -6,6 +6,7 @@ import api from '../../../api/api';
 import { toast } from 'react-toastify';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { withDecimalQtyFields } from '../../Requests/decimalQuantity';
 
 const ProjectMaterialReport = () => {
     const [projects, setProjects] = useState([]);
@@ -50,7 +51,7 @@ const ProjectMaterialReport = () => {
         setLoading(true);
         try {
             const res = await api.get(`/inventory/reports/project-material-status?projectId=${project.id}`);
-            const data = res.data || [];
+            const data = (res.data || []).map(withDecimalQtyFields);
             setReportData(data);
             
             // Calculate summary

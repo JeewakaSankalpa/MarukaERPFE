@@ -133,11 +133,11 @@ export default function POCreateManual({ poId, onCreated }) {
                         defaultSellingPrice: product?.defaultSellingPrice,
                         barcode: product?.barcode,
                         categoryId: product?.categoryId,
-                        qty: item.orderedQty || "",
+                        qty: item.orderedQtyDecimal ?? item.orderedQty ?? "",
                         unitPrice: item.unitPrice ?? "",
                         taxPercent: item.taxPercent ?? "",
                         note: item.note || "",
-                        receivedQty: Number(item.receivedQty || 0)
+                        receivedQty: Number(item.receivedQtyDecimal ?? item.receivedQty ?? 0)
                     };
                 }));
                 setRows(loadedRows);
@@ -490,7 +490,8 @@ export default function POCreateManual({ poId, onCreated }) {
             const items = rows.filter(r => Number(r.qty) > 0).map(r => ({
                 poLineId: r.poLineId,
                 productId: r.productId,
-                qty: Number(r.qty),
+                qty: Math.trunc(Number(r.qty)),
+                qtyDecimal: String(r.qty),
                 unitPrice: r.unitPrice ? String(r.unitPrice) : undefined,
                 note: r.note || undefined
             }));
@@ -784,7 +785,7 @@ export default function POCreateManual({ poId, onCreated }) {
                                                 <div><Badge bg="secondary">GRN received: {r.receivedQty}</Badge></div>
                                             )}
                                         </td>
-                                        <td><Form.Control size="sm" type="number" min="0" value={r.qty} disabled={!rowEditable} onChange={e => setRow(i, "qty", e.target.value)} /></td>
+                                        <td><Form.Control size="sm" type="number" min="0" step="0.01" value={r.qty} disabled={!rowEditable} onChange={e => setRow(i, "qty", e.target.value)} /></td>
                                         <td><Form.Control size="sm" type="number" value={r.unitPrice} disabled={!rowEditable} onChange={e => setRow(i, "unitPrice", e.target.value)} /></td>
                                         <td className="text-end align-middle">{line.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="align-middle">

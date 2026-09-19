@@ -127,7 +127,7 @@ const InternalReturnApprovals = () => {
                                                 <div key={idx} className="small border-bottom mb-1 pb-1">
                                                     <strong>{item.productNameSnapshot || item.productName || item.productId}</strong>
                                                     <br/>
-                                                    Qty: {item.quantity} | Batch: {item.batchNumber || item.batchId}
+                                                    Qty: {item.quantityDecimal ?? item.quantity} | Batch: {item.batchNumber || item.batchId}
                                                 </div>
                                             ))}
                                         </td>

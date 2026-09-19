@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Form, Table, Button } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
+import { quantityCents, quantityValue } from "../Requests/decimalQuantity";
 
 export default function ProjectHoldingsPage() {
     const [projectId, setProjectId] = useState("");
@@ -21,8 +22,8 @@ export default function ProjectHoldingsPage() {
 
     const doReturn = async () => {
         const lines = Object.entries(returnQty)
-            .map(([productId, qty]) => ({ productId, qty: Number(qty||0) }))
-            .filter(l => l.qty > 0);
+            .map(([productId, qty]) => ({ productId, qty: quantityValue(quantityCents(qty || 0)) }))
+            .filter(l => Number(l.qty) > 0);
         if (!projectId || lines.length===0) { toast.info("Enter returns"); return; }
         try {
             await api.post(`/inventory/project-returns`, { projectId, lines });
@@ -66,10 +67,12 @@ export default function ProjectHoldingsPage() {
                                 <td>{r.productId}</td>
                                 <td className="text-end">{r.quantity}</td>
                                 <td>
-                                    <Form.Control type="number" min="0" max={maxR}
+                                    <Form.Control type="number" min="0" step="0.01" max={maxR}
                                                   value={returnQty[r.productId] ?? 0}
                                                   onChange={e=>{
-                                                      const v = Math.max(0, Math.min(maxR, Number(e.target.value||0)));
+                                                      const raw = Number(e.target.value || 0);
+                                                      if (!Number.isFinite(raw) || raw < 0 || Math.abs(raw * 100 - Math.round(raw * 100)) > 1e-8) return;
+                                                      const v = Math.max(0, Math.min(maxR, raw));
                                                       setReturnQty(s=>({ ...s, [r.productId]: v }));
                                                   }}
                                     />

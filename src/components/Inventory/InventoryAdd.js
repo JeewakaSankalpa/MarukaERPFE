@@ -53,6 +53,8 @@ function InventoryAdd() {
     try {
       await api.post('/inventory/add', {
         ...inventoryData,
+        quantity: Math.trunc(Number(inventoryData.quantity)),
+        quantityDecimal: String(inventoryData.quantity),
         productId: selectedProduct?.id,
       });
       toast.success('Inventory added successfully');
@@ -144,6 +146,8 @@ function InventoryAdd() {
               <Form.Control
                 type="number"
                 name="quantity"
+                min="0"
+                step="0.01"
                 value={inventoryData.quantity}
                 onChange={handleChange}
                 required

@@ -10,6 +10,7 @@ import CompletenessModal from '../ReusableComponents/CompletenessModal';
 import { buildCompletenessIssues, hasBlockingIssues } from '../../utils/entityCompleteness';
 import { ProductForm } from '../Inventory/ProductPage';
 import { SupplierForm } from '../Supplier/SupplierPage';
+import { quantityCents, quantityValue } from '../Requests/decimalQuantity';
 
 /* ========== INLINE API HELPERS ========== */
 const getPendingPlans = async (sort) => (await api.get(`/stores/pending-purchase`, { params: { sort } })).data;
@@ -60,16 +61,13 @@ const getItemRequestSearchText = (line) => [
 ].filter(Boolean).join(" ").toLowerCase();
 
 const getLineKey = (line) => line.lineKey || `${line.projectId ? `PROJECT:${line.projectId}` : 'STORES'}:${line.productId}`;
-const toNonNegativeNumber = (value) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-};
 const capQtyToShortage = (value, shortageQty) => {
     if (value === "") return "";
-    return Math.min(toNonNegativeNumber(value), toNonNegativeNumber(shortageQty));
+    return Math.min(quantityCents(value), quantityCents(shortageQty)) / 100;
 };
+const shortage = line => line.shortageQtyDecimal ?? line.shortageQty;
 const getInitialChoices = (pendingPlan) => Object.fromEntries(
-    (pendingPlan?.lines || []).map(l => [getLineKey(l), { supplierId:"", qty:l.shortageQty, unitPrice:"", taxPercent:"" }])
+    (pendingPlan?.lines || []).map(l => [getLineKey(l), { supplierId:"", qty:shortage(l), unitPrice:"", taxPercent:"" }])
 );
 const preserveChoicesForPlan = (pendingPlan, previousChoices = {}) => Object.fromEntries(
     (pendingPlan?.lines || []).map(l => {
@@ -81,7 +79,7 @@ const preserveChoicesForPlan = (pendingPlan, previousChoices = {}) => Object.fro
                 unitPrice: "",
                 taxPercent: "",
                 ...(previousChoices[key] || {}),
-                qty: capQtyToShortage((previousChoices[key] || {}).qty ?? l.shortageQty, l.shortageQty)
+                qty: capQtyToShortage((previousChoices[key] || {}).qty ?? shortage(l), shortage(l))
             }
         ];
     })
@@ -209,7 +207,7 @@ export default function PendingToPOPage() {
             if (!c?.supplierId || !(c.qty>0)) return;
             const line = filteredLines.find(l => getLineKey(l) === key);
             if (!line) return;
-            const qty = capQtyToShortage(c.qty, line.shortageQty);
+            const qty = capQtyToShortage(c.qty, shortage(line));
             if (!(qty > 0)) return;
             (map[c.supplierId] ||= []).push({
                 lineKey: key,
@@ -218,7 +216,8 @@ export default function PendingToPOPage() {
                 productId: line.productId,
                 originType: line.originType,
                 projectId: line.projectId,
-                qty,
+                qty: Math.trunc(qty),
+                qtyDecimal: quantityValue(quantityCents(qty)),
                 ...(quotationRefs[c.supplierId]?.trim() ? { quotationRef: quotationRefs[c.supplierId].trim() } : {}),
                 ...(c.unitPrice? { unitPrice: String(c.unitPrice) } : {}),
                 ...(c.taxPercent? { taxPercent: String(c.taxPercent) } : {})
@@ -279,7 +278,7 @@ export default function PendingToPOPage() {
                 nextChoices[key] = {
                     ...(nextChoices[key] || {}),
                     supplierId,
-                    qty: capQtyToShortage(line.qty || "", planLine?.shortageQty),
+                    qty: capQtyToShortage(line.qtyDecimal ?? line.qty ?? "", planLine ? shortage(planLine) : 0),
                     unitPrice: line.unitPrice || "",
                     taxPercent: line.taxPercent || ""
                 };
@@ -565,7 +564,7 @@ export default function PendingToPOPage() {
                                     </Badge>
                                     <div className="text-muted" style={{fontSize:12}}>{origin.subtitle}</div>
                                 </td>
-                                <td className="text-end">{l.shortageQty}</td>
+                                <td className="text-end">{shortage(l)}</td>
                                 <td>
                                     <SafeSelect
                                         value={c.supplierId || ""}
@@ -596,12 +595,13 @@ export default function PendingToPOPage() {
                                 <td>
                                     <Form.Control
                                         type="number"
+                                        step="0.01"
                                         min="0"
-                                        max={l.shortageQty}
+                                        max={shortage(l)}
                                         value={c.qty||""}
-                                        title={`Maximum ${l.shortageQty}`}
-                                        onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, qty: capQtyToShortage(e.target.value, l.shortageQty) } }))} />
-                                    <div className="text-muted" style={{fontSize:12}}>Max {l.shortageQty}</div>
+                                        title={`Maximum ${shortage(l)}`}
+                                        onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, qty: capQtyToShortage(e.target.value, shortage(l)) } }))} />
+                                    <div className="text-muted" style={{fontSize:12}}>Max {shortage(l)}</div>
                                 </td>
                                 <td>
                                     <Form.Control value={c.unitPrice||""}

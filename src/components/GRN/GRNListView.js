@@ -198,8 +198,8 @@ function approvalActionLabel(action) {
 }
 
 function lineTotal(item) {
-    if (item?.unitCost) return Number(item.receivedQty || 0) * Number(item.unitCost || 0);
-    return (item?.batches || []).reduce((sum, batch) => sum + (Number(batch.qty || 0) * Number(batch.unitCost || 0)), 0);
+    if (item?.unitCost) return Number(item.receivedQtyDecimal ?? item.receivedQty ?? 0) * Number(item.unitCost || 0);
+    return (item?.batches || []).reduce((sum, batch) => sum + (Number(batch.qtyDecimal ?? batch.qty ?? 0) * Number(batch.unitCost || 0)), 0);
 }
 
 function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
@@ -305,7 +305,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                                         )}
                                     </td>
                                     <td>{item.sku || "-"}</td>
-                                    <td className="text-end">{item.receivedQty || 0}</td>
+                                    <td className="text-end">{item.receivedQtyDecimal ?? item.receivedQty ?? 0}</td>
                                     <td>{item.unit || "-"}</td>
                                     <td className="text-end">{item.unitCost ? money(item.unitCost) : "-"}</td>
                                     <td className="text-end">{money(lineTotal(item))}</td>
@@ -314,7 +314,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                                             <div className="d-flex flex-column gap-1">
                                                 {item.batches.map((batch, batchIndex) => (
                                                     <span key={batchIndex}>
-                                                        {batch.batchNo || "N/A"} | Qty {batch.qty || 0} | Exp {formatDate(batch.expiryDate)}
+                                                        {batch.batchNo || "N/A"} | Qty {batch.qtyDecimal ?? batch.qty ?? 0} | Exp {formatDate(batch.expiryDate)}
                                                         {(batch.serials || []).length > 0 ? ` | Serials: ${batch.serials.join(", ")}` : ""}
                                                     </span>
                                                 ))}
@@ -555,20 +555,21 @@ function ItemsModal({ grn, onClose }) {
                                             ))}
                                         </td>
                                         <td>{item.sku || "-"}</td>
-                                        <td className="text-end">{item.receivedQty} {item.unit}</td>
+                                        <td className="text-end">{item.receivedQtyDecimal ?? item.receivedQty} {item.unit}</td>
                                         <td className="text-end">
                                             {(() => {
                                                 if (item.unitCost) return item.unitCost.toFixed(2);
                                                 if (!item.batches || item.batches.length === 0) return "-";
-                                                const totalBatchesCost = item.batches.reduce((sum, b) => sum + ((Number(b.qty)||0) * (Number(b.unitCost)||0)), 0);
-                                                return item.receivedQty > 0 ? (totalBatchesCost / item.receivedQty).toFixed(2) : "-";
+                                                const totalBatchesCost = item.batches.reduce((sum, b) => sum + ((Number(b.qtyDecimal ?? b.qty)||0) * (Number(b.unitCost)||0)), 0);
+                                                const received = Number(item.receivedQtyDecimal ?? item.receivedQty ?? 0);
+                                                return received > 0 ? (totalBatchesCost / received).toFixed(2) : "-";
                                             })()}
                                         </td>
                                         <td className="text-end">
                                             {(() => {
-                                                if (item.unitCost) return (item.receivedQty * (item.unitCost || 0)).toFixed(2);
+                                                if (item.unitCost) return (Number(item.receivedQtyDecimal ?? item.receivedQty ?? 0) * (item.unitCost || 0)).toFixed(2);
                                                 if (!item.batches || item.batches.length === 0) return "0.00";
-                                                return item.batches.reduce((sum, b) => sum + ((Number(b.qty)||0) * (Number(b.unitCost)||0)), 0).toFixed(2);
+                                                return item.batches.reduce((sum, b) => sum + ((Number(b.qtyDecimal ?? b.qty)||0) * (Number(b.unitCost)||0)), 0).toFixed(2);
                                             })()}    
                                         </td>
                                         <td>
@@ -576,7 +577,7 @@ function ItemsModal({ grn, onClose }) {
                                                 <div className="d-flex flex-column gap-1">
                                                     {item.batches.map((b, bi) => (
                                                         <div key={bi} className="border p-1 rounded" style={{fontSize: "0.85rem"}}>
-                                                            <strong>Batch:</strong> {b.batchNo || "N/A"} | <strong>Qty:</strong> {b.qty} | <strong>Exp:</strong> {b.expiryDate || "N/A"} | <strong>Cost:</strong> {b.unitCost || "N/A"}
+                                                            <strong>Batch:</strong> {b.batchNo || "N/A"} | <strong>Qty:</strong> {b.qtyDecimal ?? b.qty} | <strong>Exp:</strong> {b.expiryDate || "N/A"} | <strong>Cost:</strong> {b.unitCost || "N/A"}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -614,7 +615,7 @@ function ItemsModal({ grn, onClose }) {
                                                 <h6 className="mb-1">{item.batchNumber || item.batchNo}</h6>
                                                 {item.isSerial && <div className="badge bg-info text-dark mb-1">{item.serialNo}</div>}
                                                 <small className="d-block text-muted">Product: {item.productNameSnapshot || item.productId || "-"}</small>
-                                                <small className="d-block text-muted">Qty: {item.isSerial ? 1 : (item.quantity || item.receivedQty)}</small>
+                                                <small className="d-block text-muted">Qty: {item.isSerial ? 1 : (item.quantity ?? item.receivedQtyDecimal ?? item.receivedQty)}</small>
                                                 <small className="d-block text-muted">Exp: {item.expiryDate || "N/A"}</small>
                                                 <Button size="sm" variant="outline-dark" className="mt-2" onClick={() => handlePrintOne(item)}>Print Sticker</Button>
                                             </div>
@@ -645,7 +646,7 @@ function ItemsModal({ grn, onClose }) {
                             <QRCode value={item.qrValue} size={100} level="M" />
                             <div style={{ fontSize: '12px', marginTop: '5px', fontWeight: 'bold' }}>{item.batchNumber || item.batchNo}</div>
                             {item.isSerial && <div style={{ fontSize: '10px' }}>SN: {item.serialNo}</div>}
-                            <div style={{ fontSize: '10px' }}>Qty: {item.isSerial ? 1 : (item.quantity || item.receivedQty)}</div>
+                            <div style={{ fontSize: '10px' }}>Qty: {item.isSerial ? 1 : (item.quantity ?? item.receivedQtyDecimal ?? item.receivedQty)}</div>
                         </div>
                     ))}
                 </div>

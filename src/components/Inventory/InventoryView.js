@@ -474,8 +474,8 @@ function InventoryView() {
                                                 <small className="text-muted">{batch.id}</small>
                                             </td>
                                             <td>{formatQuantity(batch.quantity)}</td>
-                                            <td>{formatQuantity(batch.originalQuantity)}</td>
-                                            <td>{formatQuantity(batch.reservedQuantity)}</td>
+                                            <td>{formatQuantity(batch.originalQuantityDecimal ?? batch.originalQuantity)}</td>
+                                            <td>{formatQuantity(batch.reservedQuantityDecimal ?? batch.reservedQuantity)}</td>
                                             <td>{formatMoney(batch.costPrice)}</td>
                                             <td>{batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : '-'}</td>
                                             <td>{locationLabel(batch)}</td>

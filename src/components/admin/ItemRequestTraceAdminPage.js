@@ -127,7 +127,7 @@ export default function ItemRequestTraceAdminPage() {
                                     <div>{row.productNameSnapshot || row.productId || "-"}</div>
                                     <div className="text-muted small">{row.productId || ""}</div>
                                 </td>
-                                <td>{row.qty ?? "-"}</td>
+                                <td>{row.qtyDecimal ?? row.qty ?? "-"}</td>
                                 <td>{row.status || "-"}</td>
                                 <td className="small">
                                     <div>IR: {row.itemRequestNumber || row.itemRequestId || "-"}</div>
@@ -211,9 +211,9 @@ export default function ItemRequestTraceAdminPage() {
                                                 <div>{line.productNameSnapshot || line.productId}</div>
                                                 <div className="text-muted small">{line.sku || line.productId}</div>
                                             </td>
-                                            <td>{line.requestedQty}</td>
-                                            <td>{line.fulfilledQty}</td>
-                                            <td>{line.balanceQty}</td>
+                                            <td>{line.requestedQtyDecimal ?? line.requestedQty}</td>
+                                            <td>{line.fulfilledQtyDecimal ?? line.fulfilledQty}</td>
+                                            <td>{line.balanceQtyDecimal ?? line.balanceQty}</td>
                                         </tr>
                                     ))}
                                 </tbody>
