@@ -108,6 +108,7 @@ export default function SalesRevenueReport() {
     };
 
     const rows = report.rows || [];
+    const hasReportData = Boolean(report.generatedAt);
     const summary = useMemo(() => report.summary || {}, [report.summary]);
     const pipelineData = useMemo(() => [
         { name: "New inquiries", value: Number(summary.inquiryCreatedCount || 0), color: "#d99a2b" },
@@ -169,11 +170,11 @@ export default function SalesRevenueReport() {
                     </Col>
                     <Col md={3}>
                         <div className="d-flex gap-2">
-                            <Button variant="info" className="flex-grow-1" onClick={() => fetchReport()}>
+                            <Button variant="info" className="flex-grow-1" onClick={() => fetchReport()} disabled={loading}>
                                 <Search size={16} className="me-1" />
-                                Filter
+                                {loading && hasReportData ? "Updating" : "Filter"}
                             </Button>
-                            <Button variant="outline-secondary" onClick={clearFilters} title="Clear filters">
+                            <Button variant="outline-secondary" onClick={clearFilters} title="Clear filters" disabled={loading}>
                                 <RotateCcw size={16} />
                             </Button>
                         </div>
@@ -195,8 +196,53 @@ export default function SalesRevenueReport() {
                 </div>
             </div>
 
-            {loading ? (
-                <div className="text-center p-5"><Spinner animation="border" /></div>
+            {loading && !hasReportData ? (
+                <div className="p-4 border rounded bg-light">
+                    <div className="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+                        <div>
+                            <h5 className="mb-1">Preparing sales revenue report</h5>
+                            <div className="text-muted small">Loading only the matching sales, payment, expense, and project records...</div>
+                        </div>
+                        <Badge bg="info">Loading</Badge>
+                    </div>
+                    <div className="progress mb-3" style={{ height: 8 }}>
+                        <div className="progress-bar progress-bar-striped progress-bar-animated" style={{ width: "100%" }} />
+                    </div>
+                    <div className="sales-revenue-metrics mb-3">
+                        {[1, 2, 3, 4, 5].map(item => (
+                            <div key={item} className="placeholder-glow">
+                                <span className="placeholder col-6"></span>
+                                <strong><span className="placeholder col-8"></span></strong>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="table-responsive">
+                        <Table bordered size="sm" className="mb-0">
+                            <thead className="table-light">
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Customer</th>
+                                    <th>Sales Rep</th>
+                                    <th className="text-end">Job Value</th>
+                                    <th className="text-end">Cash Received</th>
+                                    <th className="text-end">Net Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[1, 2, 3, 4].map(item => (
+                                    <tr key={item} className="placeholder-glow">
+                                        <td><span className="placeholder col-8"></span></td>
+                                        <td><span className="placeholder col-7"></span></td>
+                                        <td><span className="placeholder col-6"></span></td>
+                                        <td className="text-end"><span className="placeholder col-5"></span></td>
+                                        <td className="text-end"><span className="placeholder col-5"></span></td>
+                                        <td className="text-end"><span className="placeholder col-5"></span></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </div>
+                </div>
             ) : (
                 <ReportLayout
                     title="Sales Revenue Report"
@@ -303,6 +349,12 @@ export default function SalesRevenueReport() {
                     </div>
 
                     <div className="mb-3 small">
+                        {loading && (
+                            <div className="alert alert-info py-2 mb-2 no-print d-flex align-items-center gap-2">
+                                <Spinner animation="border" size="sm" />
+                                Updating report with the selected filters...
+                            </div>
+                        )}
                         <div><strong>Job value date:</strong> Customer PO audit date, quotation date, or project update fallback.</div>
                         <div><strong>Cash/expense date:</strong> Each payment or expense transaction date.</div>
                         {showIncludedValues && (
