@@ -640,6 +640,9 @@ const InvoiceView = () => {
     }, [invoice, selectedType, isFinalInvoiceType]);
 
     const groupedItems = useMemo(() => {
+        if (invoice?.splitInvoice) {
+            return getInvoiceGroups(invoice.items || []);
+        }
         if (estimation?.components?.length) {
             return estimation.components.map((comp) => ({
                 description: componentLabel(comp),
@@ -949,10 +952,10 @@ const InvoiceView = () => {
         ? sourceDocumentTotal - sourceVatTotal - sourceOtherTaxTotal
         : 0;
     const invoiceSubtotal = numberValue(invoice.subtotal);
-    const storedSubtotal = isTaxInvoice && sourceSubtotal > 0 ? sourceSubtotal : invoiceSubtotal;
-    const storedVatTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceVatTotal : invoiceVatTotal;
-    const storedOtherTaxTotal = isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
-    const storedDocumentTotal = usesCargillsCustomLines
+    const storedSubtotal = !invoice.splitInvoice && isTaxInvoice && sourceSubtotal > 0 ? sourceSubtotal : invoiceSubtotal;
+    const storedVatTotal = !invoice.splitInvoice && isTaxInvoice && sourceDocumentTotal > 0 ? sourceVatTotal : invoiceVatTotal;
+    const storedOtherTaxTotal = !invoice.splitInvoice && isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
+    const storedDocumentTotal = invoice.splitInvoice || usesCargillsCustomLines
         ? invoiceDocumentTotal
         : showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : storedSubtotal;
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
@@ -988,6 +991,19 @@ const InvoiceView = () => {
                 unitPrice: Number(line.unitPrice || 0),
                 total: customLineAmount(line),
                 isCustom: true,
+            }));
+        }
+        if (invoice.splitInvoice) {
+            if (!taxPrintOptions.showComponents && !taxPrintOptions.showItems) return [];
+            return invoiceRows.map((item, index) => ({
+                key: item.key || `split-tax-line-${index}`,
+                itemCode: inquiryRef,
+                description: item.description,
+                quantity: item.quantity,
+                unit: item.unit || "Lot",
+                unitPrice: Number(item.unitPrice || 0),
+                total: Number(item.total || 0),
+                isComponent: true,
             }));
         }
         const estimationComponentRows = estimation?.components?.length
@@ -1101,7 +1117,7 @@ const InvoiceView = () => {
         })),
     ];
     const pricedTaxLineRows = taxLineRows.filter((row) => !row.isSubItem);
-    const hasSourceDocumentTotal = sourceDocumentTotal > 0 || (invoice?.estimationIds || []).length > 1;
+    const hasSourceDocumentTotal = invoice.splitInvoice || sourceDocumentTotal > 0 || (invoice?.estimationIds || []).length > 1;
     const printedSubtotal = isTaxInvoice && pricedTaxLineRows.length && !hasSourceDocumentTotal
         ? decimalTotal(pricedTaxLineRows.map((row) => row.total))
         : storedSubtotal;
