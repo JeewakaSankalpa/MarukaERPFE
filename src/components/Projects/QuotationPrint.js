@@ -391,6 +391,7 @@ const QuotationPrint = () => {
     const [showSplitInvoice, setShowSplitInvoice] = useState(false);
     const [splitAmount, setSplitAmount] = useState("");
     const [splitComponents, setSplitComponents] = useState([]);
+    const [splitLineAmounts, setSplitLineAmounts] = useState({});
     const [splitNotes, setSplitNotes] = useState("");
 
     const fetchData = async () => {
@@ -569,15 +570,27 @@ const QuotationPrint = () => {
             toast.warn("Enter an invoice amount and select at least one component.");
             return;
         }
+        if (splitComponents.some(description => roundMoney(splitLineAmounts[description]) <= 0)) {
+            toast.warn("Enter an amount greater than zero for every selected component.");
+            return;
+        }
         setIsGenerating(true);
         try {
             await api.post(`/invoices/generate-split-from-estimation/${estimation.id}?type=${invoiceType}`, {
                 totalAmount: amount,
                 componentNames: splitComponents,
+                lines: splitComponents.map(description => ({
+                    description,
+                    amount: roundMoney(splitLineAmounts[description]),
+                })),
                 notes: splitNotes,
             });
             toast.success(`${invoiceTypeLabels[invoiceType]} generated successfully.`);
             setShowSplitInvoice(false);
+            setSplitAmount("");
+            setSplitComponents([]);
+            setSplitLineAmounts({});
+            setSplitNotes("");
             await fetchData();
         } catch (error) {
             const msg = error.response?.data?.message || error.response?.data || "Failed to generate split invoice";
@@ -632,10 +645,28 @@ const QuotationPrint = () => {
         INVOICE_TYPES.PROFORMA,
         ...(remainingInvoiceValue > 0 ? [INVOICE_TYPES.NORMAL, INVOICE_TYPES.TAX] : []),
     ];
-    const componentOptions = Array.from(new Set([
-        ...(estimation?.components || []).map(component => component?.name),
-        ...(companionEstimation?.components || []).map(component => component?.name),
-    ].filter(Boolean)));
+    const componentAmounts = [
+        ...(estimation?.components || []).map(component => ({
+            component,
+            includeDelivery: estimation?.includeDelivery !== false,
+            includeFreight: estimation?.includeFreight !== false,
+        })),
+        ...(companionEstimation?.components || []).map(component => ({
+            component,
+            includeDelivery: companionEstimation?.includeDelivery !== false,
+            includeFreight: companionEstimation?.includeFreight !== false,
+        })),
+    ].reduce((amounts, { component, includeDelivery, includeFreight }) => {
+            const name = component?.name?.trim();
+            if (!name) return amounts;
+            amounts[name] = decimalTotal([
+                amounts[name] || 0,
+                componentAmount(component, includeDelivery, includeFreight),
+            ]);
+            return amounts;
+        }, {});
+    const componentOptions = Object.entries(componentAmounts).map(([name, amount]) => ({ name, amount }));
+    const splitLinesTotal = decimalTotal(splitComponents.map(name => splitLineAmounts[name]));
     const today = new Date();
     const validUntil = new Date();
     validUntil.setDate(today.getDate() + 30);
@@ -671,7 +702,8 @@ const QuotationPrint = () => {
                 </Modal.Header>
                 <Modal.Body>
                     <Alert variant="info">
-                        Component selections describe this invoice only. Their estimation values do not control the invoice amount.
+                        Selected components start with their approved values. Adjust a line only when this split needs a
+                        specific value. The line total must exactly match the invoice's Total Value of Supply.
                     </Alert>
                     <div className="row g-3 mb-3">
                         <div className="col-md-4"><div className="small text-muted">Approved project value</div><strong>LKR {money(projectBillingTarget)}</strong></div>
@@ -693,19 +725,50 @@ const QuotationPrint = () => {
                     <Form.Group className="mb-3">
                         <Form.Label>Components covered by this invoice</Form.Label>
                         <div className="border rounded p-3" style={{ maxHeight: 240, overflowY: "auto" }}>
-                            {componentOptions.map(name => (
-                                <Form.Check
-                                    key={name}
-                                    type="checkbox"
-                                    id={`split-component-${name}`}
-                                    label={name}
-                                    checked={splitComponents.includes(name)}
-                                    onChange={event => setSplitComponents(current => event.target.checked
-                                        ? [...current, name]
-                                        : current.filter(value => value !== name))}
-                                />
-                            ))}
+                            {componentOptions.map(({ name, amount }) => {
+                                const selected = splitComponents.includes(name);
+                                return (
+                                    <div key={name} className="d-flex align-items-center gap-3 mb-2">
+                                        <Form.Check
+                                            className="flex-grow-1"
+                                            type="checkbox"
+                                            id={`split-component-${name}`}
+                                            label={name}
+                                            checked={selected}
+                                            onChange={event => {
+                                                const checked = event.target.checked;
+                                                setSplitComponents(current => checked
+                                                    ? [...current, name]
+                                                    : current.filter(value => value !== name));
+                                                if (checked) {
+                                                    setSplitLineAmounts(current => ({
+                                                        ...current,
+                                                        [name]: current[name] ?? amount,
+                                                    }));
+                                                }
+                                            }}
+                                        />
+                                        <Form.Control
+                                            aria-label={`${name} amount excluding VAT`}
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            style={{ maxWidth: 180 }}
+                                            disabled={!selected}
+                                            value={selected ? (splitLineAmounts[name] ?? amount) : amount}
+                                            onChange={event => setSplitLineAmounts(current => ({
+                                                ...current,
+                                                [name]: event.target.value,
+                                            }))}
+                                        />
+                                    </div>
+                                );
+                            })}
                             {componentOptions.length === 0 && <div className="text-muted">No components are available.</div>}
+                        </div>
+                        <div className="d-flex justify-content-between mt-2">
+                            <Form.Text>Line amounts exclude VAT and other taxes.</Form.Text>
+                            <strong>Goods/services total: LKR {money(splitLinesTotal)}</strong>
                         </div>
                     </Form.Group>
                     <Form.Group>
