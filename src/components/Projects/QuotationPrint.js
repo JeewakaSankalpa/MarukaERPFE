@@ -576,15 +576,24 @@ const QuotationPrint = () => {
         }
         setIsGenerating(true);
         try {
-            await api.post(`/invoices/generate-split-from-estimation/${estimation.id}?type=${invoiceType}`, {
-                totalAmount: amount,
-                componentNames: splitComponents,
-                lines: splitComponents.map(description => ({
-                    description,
-                    amount: roundMoney(splitLineAmounts[description]),
-                })),
-                notes: splitNotes,
-            });
+            const isOrdinaryFullInvoice = finalInvoicedTotal === 0
+                && amount === projectBillingTarget
+                && componentOptions.length > 0
+                && splitComponents.length === componentOptions.length
+                && componentOptions.every(({ name }) => splitComponents.includes(name));
+            if (isOrdinaryFullInvoice) {
+                await api.post(`/invoices/generate-from-estimation/${estimation.id}?type=${invoiceType}`);
+            } else {
+                await api.post(`/invoices/generate-split-from-estimation/${estimation.id}?type=${invoiceType}`, {
+                    totalAmount: amount,
+                    componentNames: splitComponents,
+                    lines: splitComponents.map(description => ({
+                        description,
+                        amount: roundMoney(splitLineAmounts[description]),
+                    })),
+                    notes: splitNotes,
+                });
+            }
             toast.success(`${invoiceTypeLabels[invoiceType]} generated successfully.`);
             setShowSplitInvoice(false);
             setSplitAmount("");
