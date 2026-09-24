@@ -22,7 +22,9 @@ const qp = (values = {}) => {
 const searchProducts = async (q, page = 0, size = 40) =>
     (await api.get(`/products?${qp({ q, status: "ACTIVE", page, size, sort: "name,asc" })}`)).data;
 const getIR = async (id) => normalizeItemRequest((await api.get(`/item-requests/${id}`)).data);
-const getEstimation = async (projectId) => (await api.get(`/estimations/by-project/${projectId}`)).data;
+const getEstimation = async (projectId, estimationType) => (await api.get(`/estimations/by-project/${projectId}`, {
+    params: estimationType ? { estimationType } : undefined
+})).data;
 const getComponentHistory = async (sourceEstimationId) =>
     (await api.get("/item-requests/component-history", { params: { sourceEstimationId } })).data;
 
@@ -158,8 +160,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
 
     const [departments, setDepartments] = useState([]);
     const [projects, setProjects] = useState([]);
+    const [projectDetails, setProjectDetails] = useState(null);
     const [departmentId, setDepartmentId] = useState(defaultDepartmentId || "");
     const [projectId, setProjectId] = useState(urlProjectId || defaultProjectId || "");
+    const [estimationType, setEstimationType] = useState("CARGILLS_MATERIALS");
     const [sourceEstimationId, setSourceEstimationId] = useState(null);
     const [comment, setComment] = useState("");
 
@@ -182,6 +186,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     const isEditable = !routeId || status === "DRAFT";
     const canEditActiveComponent = isEditable;
     const activeHistory = componentHistory[activeComponent] || [];
+    const selectedProject = projectDetails || projects.find(project => project.id === projectId);
+    const isCargillsProject = Boolean(selectedProject?.cargillsInquiry);
 
     useEffect(() => {
         (async () => {
@@ -206,6 +212,23 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             }
         })();
     }, [urlProjectId]);
+
+    useEffect(() => {
+        let active = true;
+        if (!projectId) {
+            setProjectDetails(null);
+            return () => { active = false; };
+        }
+        setProjectDetails(null);
+        getProject(projectId)
+            .then(project => {
+                if (active) setProjectDetails(project || null);
+            })
+            .catch(() => {
+                if (active) setProjectDetails(null);
+            });
+        return () => { active = false; };
+    }, [projectId]);
 
     useEffect(() => {
         if (!initialRequestId) return;
@@ -269,7 +292,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         (async () => {
             setLoadingEstimation(true);
             try {
-                const estimation = await getEstimation(projectId);
+                const estimation = await getEstimation(projectId,
+                    isCargillsProject ? estimationType : "STANDARD");
                 const estimationComponents = (estimation?.components || []).filter(component => component.items?.length);
                 if (!estimationComponents.length) {
                     setSourceEstimationId(null);
@@ -318,7 +342,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 setActiveComponent(names[0]);
                 setRows([...rowMap.values()]);
                 setComponentHistory(history);
-                toast.info(`Loaded ${rowMap.size} products from the estimation`);
+                const sourceLabel = isCargillsProject
+                    ? estimationType === "CARGILLS_PANELS" ? "Panels estimation" : "Materials estimation"
+                    : "estimation";
+                toast.info(`Loaded ${rowMap.size} products from the ${sourceLabel}`);
             } catch (error) {
                 if (error.response?.status !== 404) toast.error("Could not load the project estimation");
                 setSourceEstimationId(null);
@@ -329,7 +356,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 setLoadingEstimation(false);
             }
         })();
-    }, [projectId, routeId]);
+    }, [estimationType, isCargillsProject, projectId, routeId]);
 
     const loadProductPage = async ({ pageToLoad = 0, append = false, searchText = q } = {}) => {
         append ? setLoadingMoreProducts(true) : setLoadingProducts(true);
@@ -368,9 +395,12 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             row.selectedComponents[component] && Number(row.quantities[component] || 0) > 0)).length,
         [rows, components]
     );
+    const visibleProjectDrafts = useMemo(() => projectDrafts.filter(draft =>
+        !sourceEstimationId || !draft.sourceEstimationId || draft.sourceEstimationId === sourceEstimationId
+    ), [projectDrafts, sourceEstimationId]);
     const draftComponents = useMemo(() => {
         const draftsByComponent = {};
-        projectDrafts.forEach(draft => {
+        visibleProjectDrafts.forEach(draft => {
             (draft.items || []).forEach(item => {
                 const allocations = item.componentAllocations?.length
                     ? item.componentAllocations
@@ -385,8 +415,8 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         return Object.fromEntries(
             Object.entries(draftsByComponent).map(([componentName, draftIds]) => [componentName, draftIds.size])
         );
-    }, [projectDrafts]);
-    const activeComponentDrafts = useMemo(() => projectDrafts.flatMap(draft => {
+    }, [visibleProjectDrafts]);
+    const activeComponentDrafts = useMemo(() => visibleProjectDrafts.flatMap(draft => {
         const items = (draft.items || []).flatMap(item => {
             const allocations = item.componentAllocations?.length
                 ? item.componentAllocations
@@ -404,7 +434,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
             }];
         });
         return items.length ? [{ ...draft, componentItems: items }] : [];
-    }), [activeComponent, projectDrafts]);
+    }), [activeComponent, visibleProjectDrafts]);
 
     const componentSelectedCount = (componentName) => rows.filter(row =>
         row.selectedComponents[componentName] && Number(row.quantities[componentName] || 0) > 0).length;
@@ -721,6 +751,35 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                             onChange={event => setComment(event.target.value)} disabled={!isEditable} />
                     </Form.Group>
 
+                    {isCargillsProject && !routeId && (
+                        <Form.Group className="mt-4">
+                            <Form.Label>Quotation source</Form.Label>
+                            <Nav variant="pills" activeKey={estimationType}>
+                                <Nav.Item>
+                                    <Nav.Link
+                                        eventKey="CARGILLS_MATERIALS"
+                                        onClick={() => setEstimationType("CARGILLS_MATERIALS")}
+                                        disabled={loadingEstimation}
+                                    >
+                                        Materials
+                                    </Nav.Link>
+                                </Nav.Item>
+                                <Nav.Item>
+                                    <Nav.Link
+                                        eventKey="CARGILLS_PANELS"
+                                        onClick={() => setEstimationType("CARGILLS_PANELS")}
+                                        disabled={loadingEstimation}
+                                    >
+                                        Panels
+                                    </Nav.Link>
+                                </Nav.Item>
+                            </Nav>
+                            <Form.Text className="text-muted">
+                                Each request stays linked to its approved Materials or Panels estimation.
+                            </Form.Text>
+                        </Form.Group>
+                    )}
+
                     {loadingEstimation && (
                         <Alert variant="light" className="border mt-4 mb-0">
                             <Spinner animation="border" size="sm" className="me-2" />
@@ -730,7 +789,10 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                     {sourceEstimationId && (
                         <Alert variant="success" className="d-flex align-items-center gap-2 mt-4 mb-0 py-2">
                             <CheckCircle2 size={18} />
-                            Estimation components are ready. Open a tab and submit only that component when it is ready.
+                            {isCargillsProject
+                                ? `${estimationType === "CARGILLS_PANELS" ? "Panels" : "Materials"} estimation components are ready.`
+                                : "Estimation components are ready."}
+                            {' '}Open a tab and submit only that component when it is ready.
                         </Alert>
                     )}
                     <div className="mt-4 border rounded overflow-hidden">

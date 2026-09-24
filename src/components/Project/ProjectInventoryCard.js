@@ -80,17 +80,29 @@ export default function ProjectInventoryCard({ projectId, project }) {
         }
     };
 
-    useEffect(() => { load(); }, [projectId]);
+    useEffect(() => { load(); }, [projectId, project?.cargillsInquiry]);
 
     const load = async () => {
         if (!projectId) return;
         try {
             setLoading(true);
+            const estimationRequest = project?.cargillsInquiry
+                ? Promise.all([
+                    api.get(`/estimations/by-project/${projectId}`, { params: { estimationType: 'CARGILLS_MATERIALS' } })
+                        .catch(() => ({ data: null })),
+                    api.get(`/estimations/by-project/${projectId}`, { params: { estimationType: 'CARGILLS_PANELS' } })
+                        .catch(() => ({ data: null }))
+                ]).then(responses => ({
+                    data: {
+                        components: responses.flatMap(response => response.data?.components || [])
+                    }
+                }))
+                : api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null }));
             const [invRes, panelRes, trRes, estimationRes, draftsRes, returnsRes] = await Promise.all([
                 api.get(`/inventory/project/${projectId}`),
                 api.get(`/inventory/project/${projectId}/panels`).catch(() => ({ data: [] })),
                 api.get(`/transfers?status=PENDING_ACCEPTANCE&toLocationId=${encodeURIComponent(projectId)}`),
-                api.get(`/estimations/by-project/${projectId}`).catch(() => ({ data: null })),
+                estimationRequest,
                 api.get('/item-requests/my').catch(() => ({ data: [] })),
                 api.get(`/inventory/returns/internal/project/${projectId}`, {
                     params: { size: 1000, sort: 'createdAt,desc' }
