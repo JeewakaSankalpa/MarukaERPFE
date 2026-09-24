@@ -27,6 +27,7 @@ export default function GRNListView() {
     const [selectedGRNReport, setSelectedGRNReport] = useState(null);
     const [acceptingId, setAcceptingId] = useState(null);
     const userRole = (localStorage.getItem("role") || "").toUpperCase();
+    const canCorrectRate = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
     const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
     const projectRoles = JSON.parse(localStorage.getItem("projectRoles") || "[]");
     const [workflow, setWorkflow] = useState({});
@@ -147,6 +148,7 @@ export default function GRNListView() {
                                     <Button size="sm" variant="outline-success" className="me-2" onClick={() => setSelectedGRN(g)}>Payments</Button>
                                     <Button size="sm" variant="outline-dark" className="me-2" onClick={() => setSelectedGRNItems(g)}>Items</Button>
                                     <Button size="sm" variant="outline-primary" className="me-2" onClick={() => setSelectedGRNReport(g)}>Report</Button>
+                                    {canCorrectRate && <Button size="sm" variant="outline-warning" className="me-2" onClick={() => navigate(`/grns/${g.id}/rate-correction`)}>Correct Rate</Button>}
                                     <Button size="sm" variant="outline-danger" onClick={() => setSelectedGRNReturn(g)}>Return</Button>
                                 </td>
                             </tr>

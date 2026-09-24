@@ -52,6 +52,7 @@ import TransfersInbox from "./components/Transfers/TransferInbox";
 import POListView from "./components/PO/POListView";
 import GRNReceivePage from "./components/GRN/GRNRecievePage";
 import GRNListView from "./components/GRN/GRNListView";
+import GRNRateCorrectionPage from "./components/GRN/GRNRateCorrectionPage";
 import ProcurementDashboard from "./components/GRN/ProcurementDashboard"; // NEW
 import ItemRequestForm from "./components/Requests/ItemRequestForm";
 import MyRequestList from "./components/Requests/MyRequestList"; // NEW
@@ -314,6 +315,7 @@ function App() {
                         <Route path="/pos/:id" element={<PurchaseOrderDetails />} />
                         <Route path="/grn" element={<GRNRouteWrapper />} />
                         <Route path="/grns" element={<GRNListView />} />
+                        <Route path="/grns/:grnId/rate-correction" element={<GRNRateCorrectionPage />} />
                     </Route>
 
                     {/* Partners (Customers & Suppliers) */}
