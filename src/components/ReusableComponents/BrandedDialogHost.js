@@ -24,6 +24,7 @@ const toneConfig = {
 export default function BrandedDialogHost() {
     const [dialog, setDialog] = useState(null);
     const [inputValue, setInputValue] = useState("");
+    const inputValueRef = useRef("");
     const confirmButtonRef = useRef(null);
     const inputRef = useRef(null);
     const activeElementRef = useRef(null);
@@ -32,7 +33,9 @@ export default function BrandedDialogHost() {
         const handleRequest = (event) => {
             activeElementRef.current = document.activeElement;
             setDialog(event.detail);
-            setInputValue(event.detail.request.defaultValue || "");
+            const defaultValue = event.detail.request.defaultValue || "";
+            inputValueRef.current = defaultValue;
+            setInputValue(defaultValue);
         };
 
         window.addEventListener(DIALOG_EVENT, handleRequest);
@@ -44,13 +47,18 @@ export default function BrandedDialogHost() {
 
         const { request, resolve } = dialog;
         const value = request.type === "prompt"
-            ? (result ? inputValue : null)
+            ? (result ? inputValueRef.current : null)
             : Boolean(result);
 
         resolve(value);
         setDialog(null);
         window.setTimeout(() => activeElementRef.current?.focus?.(), 0);
-    }, [dialog, inputValue]);
+    }, [dialog]);
+
+    const handleInputChange = useCallback((event) => {
+        inputValueRef.current = event.target.value;
+        setInputValue(event.target.value);
+    }, []);
 
     useEffect(() => {
         if (!dialog) return undefined;
@@ -121,14 +129,14 @@ export default function BrandedDialogHost() {
                             <textarea
                                 ref={inputRef}
                                 value={inputValue}
-                                onChange={(event) => setInputValue(event.target.value)}
+                                onChange={handleInputChange}
                                 rows={4}
                             />
                         ) : (
                             <input
                                 ref={inputRef}
                                 value={inputValue}
-                                onChange={(event) => setInputValue(event.target.value)}
+                                onChange={handleInputChange}
                             />
                         )}
                     </label>
