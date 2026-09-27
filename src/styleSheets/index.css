@@ -452,6 +452,9 @@ body {
     height: min(var(--estimation-viewport-height), 72vh);
     max-height: var(--estimation-viewport-height);
     overflow: auto;
+    /* Virtual rows manage their own offsets; browser anchoring fights them. */
+    overflow-anchor: none;
+    scrollbar-gutter: stable;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background: #ffffff;
@@ -462,7 +465,7 @@ body {
 .estimation-lines-table {
     min-width: 100%;
     width: max-content;
-    table-layout: auto;
+    table-layout: fixed;
     font-size: calc(1rem * var(--estimation-matrix-zoom));
 }
 
@@ -546,8 +549,22 @@ body {
     text-overflow: clip;
 }
 
-.estimation-lines-table tbody td {
+/* Table-cell height is only a minimum. Bound the contents to keep virtual
+   row replacement from changing the scroll extent with long text or zoom. */
+.estimation-lines-table > tbody > tr > td {
     height: var(--estimation-row-height);
+    padding: 0;
+}
+
+.estimation-cell-content {
+    box-sizing: border-box;
+    height: calc(var(--estimation-row-height) - 1px);
+    overflow: hidden;
+    padding: max(0.04rem, calc(0.5rem * var(--estimation-matrix-zoom)));
+}
+
+.estimation-cell-content > .small {
+    white-space: nowrap;
 }
 
 .estimation-lines-table td,

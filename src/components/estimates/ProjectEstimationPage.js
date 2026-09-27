@@ -945,7 +945,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     const focusEstimationRow = (rowIndex, rowKey) => {
         if (rowIndex < 0 || !rowKey) return;
-        const nextScrollTop = Math.max(0, rowIndex * ESTIMATION_ROW_HEIGHT * estimationMatrixZoom);
+        const nextScrollTop = Math.max(0, rowIndex * Math.max(10, Math.round(ESTIMATION_ROW_HEIGHT * estimationMatrixZoom)));
 
         if (estimationRowsScrollRef.current) {
             estimationRowsScrollRef.current.scrollTo({ top: nextScrollTop, behavior: "smooth" });
@@ -2152,7 +2152,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     const virtualRowWindow = useMemo(() => {
         const totalRows = rows.length;
         const visibleCount = Math.ceil(estimationMatrixViewportHeight / estimationMatrixRowHeight);
-        const start = Math.max(0, Math.floor(estimationRowsScrollTop / estimationMatrixRowHeight) - ESTIMATION_ROW_OVERSCAN);
+        const start = Math.min(
+            Math.max(0, totalRows - visibleCount),
+            Math.max(0, Math.floor(estimationRowsScrollTop / estimationMatrixRowHeight) - ESTIMATION_ROW_OVERSCAN)
+        );
         const end = Math.min(totalRows, start + visibleCount + (ESTIMATION_ROW_OVERSCAN * 2));
         return {
             rows: rows.slice(start, end).map((row, offset) => ({ row, index: start + offset })),
@@ -2163,11 +2166,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
     }, [rows, estimationRowsScrollTop, estimationMatrixRowHeight, estimationMatrixViewportHeight]);
 
     useEffect(() => {
-        if (!estimationRowsScrollRef.current) return;
-        if (estimationRowsScrollTop <= rows.length * estimationMatrixRowHeight) return;
-        estimationRowsScrollRef.current.scrollTop = 0;
-        setEstimationRowsScrollTop(0);
-    }, [rows.length, estimationRowsScrollTop, estimationMatrixRowHeight]);
+        const viewport = estimationRowsScrollRef.current;
+        if (!viewport) return;
+        // Header and footer occupy space too; row height alone is not a valid
+        // scroll limit. Keep the browser's position after rows/zoom/view changes.
+        setEstimationRowsScrollTop(viewport.scrollTop);
+    }, [rows.length, estimationMatrixRowHeight, showEstimationMatrixPopup]);
 
     // Status Badge Color
     const statusColor = {
@@ -2180,6 +2184,13 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
     // Can current user approve?
     const canApprove = approvalStatus === "PENDING_APPROVAL" && (approverIds || []).includes(employeeId);
+
+    // Fix column geometry independently of which virtual rows are mounted.
+    const estimationColumnWidths = [
+        "max(72px, calc(420px * var(--estimation-matrix-zoom)), calc(34vw * var(--estimation-matrix-zoom)))",
+        ...[[128, 34], [172, 52], ...components.map(() => [150, 42]), [130, 42], [130, 42], [160, 52], [60, 24]]
+            .map(([width, minimum]) => `max(${minimum}px, calc(${width}px * var(--estimation-matrix-zoom)))`),
+    ];
 
     const renderEstimationMatrixEditor = ({ fullscreen = false } = {}) => (
         <div
@@ -2275,7 +2286,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                 className="estimation-lines-virtual-scroll"
                 onScroll={(e) => setEstimationRowsScrollTop(e.currentTarget.scrollTop)}
             >
-                <Table hover className="estimation-lines-table mb-0">
+                <Table hover className="estimation-lines-table mb-0" style={{ width: `max(100%, calc(${estimationColumnWidths.join(" + ")}))` }}>
+                    <colgroup>
+                        {estimationColumnWidths.map((width, index) => <col key={index} style={{ width }} />)}
+                    </colgroup>
                     <thead>
                         <tr>
                             <th className="estimation-product-col">Product / Description</th>
@@ -2310,12 +2324,12 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                     </thead>
                     <tbody>
                         {rows.length === 0 ? (
-                            <tr><td colSpan={components.length + 8} className="text-center text-muted">No rows</td></tr>
+                            <tr><td colSpan={components.length + 7} className="text-center text-muted">No rows</td></tr>
                         ) : (
                             <>
                                 {virtualRowWindow.topPadding > 0 && (
                                     <tr aria-hidden="true">
-                                        <td colSpan={components.length + 8} style={{ height: virtualRowWindow.topPadding, padding: 0, border: 0 }} />
+                                        <td colSpan={components.length + 7} style={{ height: virtualRowWindow.topPadding, padding: 0, border: 0 }} />
                                     </tr>
                                 )}
                                 {virtualRowWindow.rows.map(({ row: r, index: i }) => {
@@ -2329,7 +2343,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                                     return (
                                         <tr key={rowMapKey} className={highlightedRowKey === rowMapKey ? "estimation-row-highlight" : undefined}>
-                                            <td className="estimation-product-col">
+                                            <td className="estimation-product-col"><div className="estimation-cell-content">
                                                 {isManualLine ? (
                                                     <>
                                                         <Form.Control
@@ -2364,18 +2378,18 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         </div>
                                                     </>
                                                 )}
-                                            </td>
+                                            </div></td>
 
-                                            <td className="estimation-unit-col">
+                                            <td className="estimation-unit-col"><div className="estimation-cell-content">
                                                 <Form.Control
                                                     value={r.unit || ""}
                                                     onChange={(e) => setRowField(i, "unit", e.target.value)}
                                                     disabled={isLocked}
                                                     placeholder={isManualLine ? "Nr" : "-"}
                                                 />
-                                            </td>
+                                            </div></td>
 
-                                            <td className="estimation-rate-col">
+                                            <td className="estimation-rate-col"><div className="estimation-cell-content">
                                                 <Form.Control
                                                     className="text-end"
                                                     type="number"
@@ -2399,10 +2413,10 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         </Button>
                                                     </div>
                                                 )}
-                                            </td>
+                                            </div></td>
 
                                             {components.map((c) => (
-                                                <td key={`${i}-${c}`} className="estimation-component-col" title={`${c} quantity`}>
+                                                <td key={`${i}-${c}`} className="estimation-component-col" title={`${c} quantity`}><div className="estimation-cell-content">
                                                     <Form.Control
                                                         className="text-end"
                                                         type="number"
@@ -2412,25 +2426,25 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
                                                         onChange={(e) => setQty(i, c, e.target.value)}
                                                         disabled={isReadOnly}
                                                     />
-                                                </td>
+                                                </div></td>
                                             ))}
 
-                                            <td className="text-end estimation-total-qty-col">{need}</td>
-                                            <td className="text-end estimation-avail-col">
+                                            <td className="text-end estimation-total-qty-col"><div className="estimation-cell-content">{need}</div></td>
+                                            <td className="text-end estimation-avail-col"><div className="estimation-cell-content">
                                                 {isManualLine ? <span className="text-muted">-</span> : (low ? <Badge bg="danger">{avail}</Badge> : <span>{avail}</span>)}
-                                            </td>
-                                            <td className="text-end estimation-amount-col">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</td>
-                                            <td className="text-end estimation-action-col">
+                                            </div></td>
+                                            <td className="text-end estimation-amount-col"><div className="estimation-cell-content">{Number.isFinite(rowTotal) ? rowTotal.toLocaleString() : 0}</div></td>
+                                            <td className="text-end estimation-action-col"><div className="estimation-cell-content">
                                                 {!isReadOnly && (
                                                     <Button size="sm" variant="outline-danger" onClick={() => removeRow(i)}>x</Button>
                                                 )}
-                                            </td>
+                                            </div></td>
                                         </tr>
                                     );
                                 })}
                                 {virtualRowWindow.bottomPadding > 0 && (
                                     <tr aria-hidden="true">
-                                        <td colSpan={components.length + 8} style={{ height: virtualRowWindow.bottomPadding, padding: 0, border: 0 }} />
+                                        <td colSpan={components.length + 7} style={{ height: virtualRowWindow.bottomPadding, padding: 0, border: 0 }} />
                                     </tr>
                                 )}
                             </>
@@ -2439,7 +2453,7 @@ export default function ProjectEstimationPage({ projectId: propProjectId }) {
 
                     <tfoot>
                         <tr>
-                            <td colSpan={components.length + 8}>
+                            <td colSpan={components.length + 7}>
                                 {!isReadOnly && (
                                     <div className="d-flex gap-2">
                                         <Button variant="outline-secondary" onClick={addRow}>+ Add Product Row</Button>
