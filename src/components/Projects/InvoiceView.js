@@ -72,6 +72,7 @@ const PROTECTED_CARGILLS_OPTIONS = new Set([
     "showTotalAmount",
     "showPayments",
     "showTotalDue",
+    "showSignatures",
 ]);
 
 const createCustomLine = (line = {}) => ({
@@ -634,6 +635,7 @@ const InvoiceView = () => {
             setTaxPrintOptions({
                 ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
                 ...(layout.printOptions || {}),
+                ...(layout.printFormat === PRINT_FORMATS.CARGILLS_CUSTOM_LINES ? { showSignatures: true } : {}),
             });
         }
         setCustomLines((layout.customLines || []).map(createCustomLine));
@@ -902,6 +904,7 @@ const InvoiceView = () => {
                 showTotalAmount: true,
                 showPayments: true,
                 showTotalDue: true,
+                showSignatures: true,
             });
             setCustomLines((current) => current.length ? current : [createCustomLine()]);
         }
@@ -1567,9 +1570,12 @@ const InvoiceView = () => {
                     display: grid;
                     grid-template-columns: repeat(3, 1fr);
                     gap: 54px;
-                    margin-top: 34px;
+                    margin-top: 18px;
+                    padding-top: 48px;
                     text-align: center;
                     font-size: 12px;
+                    break-inside: avoid;
+                    page-break-inside: avoid;
                 }
                 .tax-signatures div {
                     border-top: 1.2px dotted #222;
