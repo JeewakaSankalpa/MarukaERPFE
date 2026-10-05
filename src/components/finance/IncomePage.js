@@ -44,6 +44,7 @@ export default function IncomePage() {
             case 'PAID': return <Badge bg="success">PAID</Badge>;
             case 'PENDING': return <Badge bg="warning" text="dark">PENDING</Badge>;
             case 'PARTIALLY_PAID': return <Badge bg="info">PARTIAL</Badge>;
+            case 'CANCELLATION_PENDING': return <Badge bg="warning" text="dark">CANCELLATION PENDING</Badge>;
             case 'CANCELLED': return <Badge bg="danger">CANCELLED</Badge>;
             default: return <Badge bg="secondary">{status}</Badge>;
         }
@@ -68,8 +69,9 @@ export default function IncomePage() {
     // --- Chart Data Preparation ---
     // 1. Monthly Trend (Last 6 months from data or current) based on filtered view? 
     // Usually charts show aggregation. Let's aggregate based on filteredInvoices to respect range.
+    const activeFinancialInvoices = filteredInvoices.filter(inv => inv.status !== 'CANCELLED');
     const monthlyData = {};
-    filteredInvoices.forEach(inv => {
+    activeFinancialInvoices.forEach(inv => {
         const month = inv.issuedDate ? inv.issuedDate.substring(0, 7) : 'Unknown';
         if (!monthlyData[month]) monthlyData[month] = 0;
         monthlyData[month] += (inv.totalAmount || 0);
@@ -92,10 +94,10 @@ export default function IncomePage() {
     }));
 
     // --- Totals ---
-    const totalIncome = filteredInvoices.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
-    const totalReceived = filteredInvoices.reduce((acc, curr) => acc + (curr.paidAmount || 0), 0);
-    const totalPending = filteredInvoices
-        .filter(i => i.status !== 'CANCELLED' && i.status !== 'PAID')
+    const totalIncome = activeFinancialInvoices.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+    const totalReceived = activeFinancialInvoices.reduce((acc, curr) => acc + (curr.paidAmount || 0), 0);
+    const totalPending = activeFinancialInvoices
+        .filter(i => i.status !== 'PAID')
         .reduce((acc, curr) => acc + ((curr.totalAmount || 0) - (curr.paidAmount || 0)), 0);
 
 
@@ -209,6 +211,7 @@ export default function IncomePage() {
                                 <option value="PAID">Paid</option>
                                 <option value="PENDING">Pending</option>
                                 <option value="PARTIALLY_PAID">Partially Paid</option>
+                                <option value="CANCELLATION_PENDING">Cancellation Pending</option>
                                 <option value="CANCELLED">Cancelled</option>
                             </SafeSelect>
                         </Col>

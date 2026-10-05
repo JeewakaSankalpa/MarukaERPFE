@@ -477,6 +477,7 @@ const getStatusVariant = (status) => {
     switch (status) {
         case "PAID": return "success";
         case "PENDING": return "warning";
+        case "CANCELLATION_PENDING": return "warning";
         case "CANCELLED": return "danger";
         default: return "secondary";
     }
@@ -509,11 +510,19 @@ const InvoiceView = () => {
     const [taxPrintOptions, setTaxPrintOptions] = useState(TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]);
     const [customLines, setCustomLines] = useState([]);
     const [savingCustomLines, setSavingCustomLines] = useState(false);
+    const [showCancellationModal, setShowCancellationModal] = useState(false);
+    const [cancellationReason, setCancellationReason] = useState("");
+    const [cancellationBusy, setCancellationBusy] = useState(false);
+    const [creditNote, setCreditNote] = useState(null);
     const { role, projectRoles } = useAuth();
     const rolesHeader = useMemo(() => [role, ...(Array.isArray(projectRoles) ? projectRoles : [])]
         .filter(Boolean)
         .join(","), [role, projectRoles]);
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
+    const isMd = String(role || "").toUpperCase().replace(/^ROLE_/, "") === "MD";
+    const currentUsername = localStorage.getItem("username") || "";
+    const isRecordedCreator = Boolean(currentUsername)
+        && String(invoice?.createdBy || "").toLowerCase() === currentUsername.toLowerCase();
     const printApproved = Boolean(invoice?.printApprovedAt);
 
     const selectedType = searchParams.get("type") || DOC_TYPES.PROFORMA;
@@ -925,6 +934,85 @@ const InvoiceView = () => {
 
     const removeCustomLine = (key) => {
         setCustomLines((current) => current.filter((line) => line.key !== key));
+    };
+
+    const cancellationHeaders = { "X-Roles": rolesHeader, "X-User": currentUsername };
+
+    const handleRequestCancellation = async () => {
+        if (cancellationReason.trim().length < 5) {
+            toast.warn("Enter a cancellation reason of at least 5 characters.");
+            return;
+        }
+        setCancellationBusy(true);
+        try {
+            const res = await api.post(`/invoices/${id}/cancellation-request`,
+                { reason: cancellationReason.trim() }, { headers: cancellationHeaders });
+            setInvoice(res.data);
+            setShowCancellationModal(false);
+            setCancellationReason("");
+            toast.success("Cancellation submitted for MD approval");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to request cancellation");
+        } finally {
+            setCancellationBusy(false);
+        }
+    };
+
+    const handleApproveCancellation = async () => {
+        const confirmed = await confirmAction({
+            title: "Approve full Tax Invoice cancellation",
+            message: "This permanently issues the full Credit Note and posts the GL reversal. It cannot be edited or deleted.",
+            confirmLabel: "Approve and issue Credit Note",
+            variant: "danger",
+        });
+        if (!confirmed) return;
+        setCancellationBusy(true);
+        try {
+            const res = await api.post(`/invoices/${id}/cancellation-approval`, {}, { headers: cancellationHeaders });
+            setCreditNote(res.data);
+            setInvoice(current => ({
+                ...current,
+                status: "CANCELLED",
+                creditNoteId: res.data.id,
+                cancellationApprovedBy: res.data.approvedBy,
+                cancellationApprovedAt: res.data.approvedAt,
+            }));
+            toast.success(`Credit Note ${res.data.creditNoteNumber} issued`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to approve cancellation");
+        } finally {
+            setCancellationBusy(false);
+        }
+    };
+
+    const handleRejectCancellation = async () => {
+        if (cancellationReason.trim().length < 5) {
+            toast.warn("Enter a rejection reason of at least 5 characters.");
+            return;
+        }
+        setCancellationBusy(true);
+        try {
+            const res = await api.post(`/invoices/${id}/cancellation-rejection`,
+                { reason: cancellationReason.trim() }, { headers: cancellationHeaders });
+            setInvoice(res.data);
+            setShowCancellationModal(false);
+            setCancellationReason("");
+            toast.success("Cancellation request rejected");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to reject cancellation");
+        } finally {
+            setCancellationBusy(false);
+        }
+    };
+
+    const openCreditNote = async () => {
+        try {
+            const res = creditNote ? { data: creditNote } : await api.get(`/invoices/${id}/credit-note`);
+            setCreditNote(res.data);
+            navigate(`/invoices/${id}/credit-note`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Credit Note is not available");
+        }
     };
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -1697,6 +1785,32 @@ const InvoiceView = () => {
                 </Modal.Footer>
             </Modal>
 
+            <Modal show={showCancellationModal} onHide={() => !cancellationBusy && setShowCancellationModal(false)} centered>
+                <Modal.Header closeButton={!cancellationBusy}>
+                    <Modal.Title>{isMd && invoice.status === "CANCELLATION_PENDING" ? "Reject cancellation" : "Cancel Tax Invoice"}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <div className="alert alert-warning small">
+                        This is a full cancellation. The issued invoice amount cannot be edited. After MD approval,
+                        the system creates a matching immutable Credit Note and reverses the original accounting entry.
+                    </div>
+                    <Form.Group>
+                        <Form.Label>{isMd && invoice.status === "CANCELLATION_PENDING" ? "Rejection reason" : "Cancellation reason"}</Form.Label>
+                        <Form.Control as="textarea" rows={4} value={cancellationReason}
+                            onChange={(event) => setCancellationReason(event.target.value)} maxLength={1000} />
+                    </Form.Group>
+                    <div className="small text-muted mt-2">Credit Note amount: LKR {money(invoice.totalAmount)}</div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowCancellationModal(false)} disabled={cancellationBusy}>Close</Button>
+                    <Button variant="danger"
+                        onClick={isMd && invoice.status === "CANCELLATION_PENDING" ? handleRejectCancellation : handleRequestCancellation}
+                        disabled={cancellationBusy || cancellationReason.trim().length < 5}>
+                        {cancellationBusy ? "Processing..." : isMd && invoice.status === "CANCELLATION_PENDING" ? "Reject request" : "Submit for MD approval"}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
                 <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
@@ -1789,6 +1903,26 @@ const InvoiceView = () => {
                         <Button size="sm" variant="outline-warning" onClick={handleRefreshInvoice} disabled={refreshingInvoice}>
                             {refreshingInvoice ? "Refreshing..." : "Refresh Invoice"}
                         </Button>
+                    )}
+                    {selectedType === DOC_TYPES.TAX
+                        && !["CANCELLATION_PENDING", "CANCELLED"].includes(invoice.status)
+                        && (isRecordedCreator || isAdmin) && (
+                        <Button size="sm" variant="outline-danger" onClick={() => setShowCancellationModal(true)}>
+                            Request Cancellation
+                        </Button>
+                    )}
+                    {selectedType === DOC_TYPES.TAX && invoice.status === "CANCELLATION_PENDING" && isMd && (
+                        <>
+                            <Button size="sm" variant="danger" onClick={handleApproveCancellation} disabled={cancellationBusy}>
+                                {cancellationBusy ? "Processing..." : "MD Approve Cancellation"}
+                            </Button>
+                            <Button size="sm" variant="outline-danger" onClick={() => setShowCancellationModal(true)} disabled={cancellationBusy}>
+                                Reject
+                            </Button>
+                        </>
+                    )}
+                    {invoice.status === "CANCELLED" && invoice.creditNoteId && (
+                        <Button size="sm" variant="outline-dark" onClick={openCreditNote}>View Credit Note</Button>
                     )}
                     <Button
                         variant="primary"

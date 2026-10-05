@@ -97,6 +97,7 @@ import StockAuditApprovalsPage from "./components/Inventory/Adjustments/StockAud
 import AssetRegister from "./components/Assets/AssetRegister";
 import QuotationPrint from "./components/Projects/QuotationPrint";
 import InvoiceView from "./components/Projects/InvoiceView";
+import CreditNoteView from "./components/Projects/CreditNoteView";
 import AllTasksReport from "./components/Projects/Tasks/AllTasksReport";
 // import QuotationList from "./components/Sales/QuotationList";
 // import QuotationPage from "./components/Sales/QuotationPage";
@@ -342,6 +343,7 @@ function App() {
                         <Route path="/projects/estimation/:id" element={<ProjectEstimationRouteWrapper />} />
                         <Route path="/projects/:projectId/quotation" element={<QuotationPrint />} />
                         <Route path="/invoices/:id" element={<InvoiceView />} />
+                        <Route path="/invoices/:id/credit-note" element={<CreditNoteView />} />
                         <Route path="/reports/project-material" element={<ProjectMaterialReport />} />
                     </Route>
 
