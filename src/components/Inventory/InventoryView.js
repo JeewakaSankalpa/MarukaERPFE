@@ -32,6 +32,16 @@ function InventoryView() {
     const [returnData, setReturnData] = useState({ quantity: '', reason: '' });
     const [submitting, setSubmitting] = useState(false);
 
+    const movementTypeLabel = (movement) => {
+        if (movement?.type === 'TRANSFER_IN'
+            || (movement?.type === 'ADJUSTMENT_IN' && movement?.refDocType === 'TRANSFER')) {
+            return 'TRANSFER IN';
+        }
+        if (movement?.type === 'ADJUSTMENT_IN') return 'STOCK ADJUSTMENT IN';
+        if (movement?.type === 'ADJUSTMENT_OUT') return 'STOCK ADJUSTMENT OUT';
+        return movement?.type || '-';
+    };
+
     useEffect(() => {
         fetchInventory();
         fetchLocations();
@@ -350,9 +360,14 @@ function InventoryView() {
                     </Col>
                 </Row>
                 <div className="d-flex justify-content-between mt-3">
-                    <Button variant="primary" onClick={applyFilters}>
-                        Filter
-                    </Button>
+                    <div className="d-flex gap-2">
+                        <Button variant="primary" onClick={applyFilters}>
+                            Filter
+                        </Button>
+                        <Button variant="outline-primary" onClick={fetchInventory} disabled={loadingInventory}>
+                            {loadingInventory ? 'Refreshing…' : 'Refresh Stock'}
+                        </Button>
+                    </div>
                     <Button variant="secondary" onClick={generatePDF}>
                         Print View
                     </Button>
@@ -409,7 +424,7 @@ function InventoryView() {
                         <>
                             <Row className="g-2 text-center mb-3">
                                 {[
-                                    ['Total (All)', productBreakdown?.totals?.totalQuantity ?? selectedProduct?.totalQuantity],
+                                    ['Total Stock (All Locations)', productBreakdown?.totals?.totalQuantity ?? selectedProduct?.totalQuantity],
                                     ['Main Store', productBreakdown?.totals?.mainStoreQuantity ?? selectedProduct?.mainStoreQuantity],
                                     ['Project Stock', productBreakdown?.totals?.projectQuantity],
                                     ['Department Stock', productBreakdown?.totals?.departmentQuantity],
@@ -424,6 +439,9 @@ function InventoryView() {
                                     </Col>
                                 ))}
                             </Row>
+                            <div className="text-muted small mb-3">
+                                Internal transfers move stock between Main Store and a project; they do not change the total stock across all locations.
+                            </div>
 
                             <h5>Location / Owner Breakdown</h5>
                             <Table bordered hover responsive className="text-center align-middle">
@@ -458,7 +476,7 @@ function InventoryView() {
                                     <tr>
                                         <th>Batch / Serial</th>
                                         <th>Qty</th>
-                                        <th>Original</th>
+                                        <th>Originally Received</th>
                                         <th>Reserved</th>
                                         <th>Cost</th>
                                         <th>Expiry</th>
@@ -518,7 +536,7 @@ function InventoryView() {
                                     {(productBreakdown?.ledgerMovements || []).map((movement) => (
                                         <tr key={movement.id}>
                                             <td>{formatDateTime(movement.at)}</td>
-                                            <td>{movement.type || '-'}</td>
+                                            <td>{movementTypeLabel(movement)}</td>
                                             <td>{formatQuantity(movement.qtyIn)}</td>
                                             <td>{formatQuantity(movement.qtyOut)}</td>
                                             <td>{formatSignedQuantity(movement.netQty)}</td>
