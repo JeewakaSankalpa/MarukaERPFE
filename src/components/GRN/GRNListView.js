@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { Container, Button, Form, Table, Badge, Modal, Row, Col } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
@@ -12,11 +12,13 @@ import { confirmAction, promptAction } from "../../utils/brandedDialogs";
 
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 const listGRNs = async ({ q, page = 0, size = 10, paymentStatus }) => (await api.get(`/grns?${qp({ q, page, size, sort: "createdAt,desc", paymentStatus: paymentStatus || undefined })}`)).data;
-const acceptGRN = async (id, notes) => (await api.patch(`/grns/${id}/accept`, { notes })).data;
+const acceptGRN = async (id, notes, stockOverrideAcknowledged = false) =>
+    (await api.patch(`/grns/${id}/accept`, { notes, stockOverrideAcknowledged })).data;
 const approveGRNPrint = async (id, notes) => (await api.patch(`/grns/${id}/approve-print`, { notes })).data;
 
 export default function GRNListView() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [q, setQ] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [page, setPage] = useState(0);
@@ -26,6 +28,9 @@ export default function GRNListView() {
     const [selectedGRNReturn, setSelectedGRNReturn] = useState(null); // For return modal
     const [selectedGRNReport, setSelectedGRNReport] = useState(null);
     const [acceptingId, setAcceptingId] = useState(null);
+    const [overrideAcceptance, setOverrideAcceptance] = useState(null);
+    const [overrideAcknowledged, setOverrideAcknowledged] = useState(false);
+    const [overrideNotes, setOverrideNotes] = useState("");
     const userRole = (localStorage.getItem("role") || "").toUpperCase();
     const canCorrectRate = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
     const userModules = JSON.parse(localStorage.getItem("moduleAccess") || "[]");
@@ -49,8 +54,21 @@ export default function GRNListView() {
     useEffect(() => {
         api.get("/workflow").then(res => setWorkflow(res.data || {})).catch(() => setWorkflow({}));
     }, []);
+    useEffect(() => {
+        const grnId = new URLSearchParams(location.search).get("grnId");
+        if (!grnId) return;
+        api.get(`/grns/${encodeURIComponent(grnId)}`)
+            .then(response => setSelectedGRNItems(response.data))
+            .catch(() => toast.error("Failed to open GRN record"));
+    }, [location.search]);
 
     const handleAccept = async (grn) => {
+        if (grn.stockOverrides?.length) {
+            setOverrideAcceptance(grn);
+            setOverrideAcknowledged(false);
+            setOverrideNotes("");
+            return;
+        }
         if (!await confirmAction({
             title: "Accept GRN",
             message: `Accept ${grn.grnNumber} for supplier payment?`,
@@ -71,6 +89,21 @@ export default function GRNListView() {
             load();
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to accept GRN");
+        } finally {
+            setAcceptingId(null);
+        }
+    };
+
+    const acceptOverrideGRN = async () => {
+        if (!overrideAcceptance || !overrideAcknowledged) return;
+        setAcceptingId(overrideAcceptance.id);
+        try {
+            await acceptGRN(overrideAcceptance.id, overrideNotes, true);
+            toast.success("GRN accepted for payment");
+            setOverrideAcceptance(null);
+            load();
+        } catch (e) {
+            toast.error(e.response?.data?.message || "Failed to accept GRN");
         } finally {
             setAcceptingId(null);
         }
@@ -169,6 +202,30 @@ export default function GRNListView() {
             {selectedGRNReturn && <GRNReturnModal grn={selectedGRNReturn} onClose={() => { setSelectedGRNReturn(null); load(); }} />}
             {selectedGRNItems && <ItemsModal grn={selectedGRNItems} onClose={() => setSelectedGRNItems(null)} />}
             {selectedGRNReport && <GRNReportModal grn={selectedGRNReport} canApprovePrint={canApproveGRNPrint} onChanged={(updated) => { setSelectedGRNReport(updated); load(); }} onClose={() => setSelectedGRNReport(null)} />}
+            <Modal show={Boolean(overrideAcceptance)} onHide={() => setOverrideAcceptance(null)} size="lg">
+                <Modal.Header closeButton><Modal.Title>Accept GRN with General Stock override</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <p>Review the job request and PO quantities before accepting {overrideAcceptance?.grnNumber} for payment. The goods were added to Main Store when this GRN was posted.</p>
+                    {(overrideAcceptance?.stockOverrides || []).map((record, index) => (
+                        <div key={`${record.poLineId}-${index}`} className="border rounded p-2 mb-2">
+                            <strong>{record.productName}</strong> · {record.jobNumber || record.itemRequestNumber}<br />
+                            Job requested: {record.jobRequestedQty} · PO ordered: {record.poOrderedQty}<br />
+                            Received for job: {record.jobReceivedNowQty} · Extra to General Stock: {record.generalStockReceivedQty}<br />
+                            <span className="text-muted">Posted by {record.postedBy} at {formatDateTime(record.postedAt)} · Reason: {record.reason}</span>
+                        </div>
+                    ))}
+                    <Form.Check type="checkbox" checked={overrideAcknowledged}
+                        onChange={event => setOverrideAcknowledged(event.target.checked)}
+                        label="Yes, I understand the job request remains unchanged and the extra goods entered General Stock." />
+                    <Form.Group className="mt-3"><Form.Label>Approval notes</Form.Label>
+                        <Form.Control as="textarea" rows={2} value={overrideNotes} onChange={event => setOverrideNotes(event.target.value)} />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setOverrideAcceptance(null)}>Close</Button>
+                    <Button onClick={acceptOverrideGRN} disabled={!overrideAcknowledged || Boolean(acceptingId)}>Accept GRN</Button>
+                </Modal.Footer>
+            </Modal>
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
@@ -510,6 +567,21 @@ function ItemsModal({ grn, onClose }) {
                     <Col md={3}><strong>Supplier Inv No:</strong> {grn.supplierInvoiceNo || "-"}</Col>
                     <Col md={3}><strong>Invoice Date:</strong> {grn.supplierInvoiceDate || "-"}</Col>
                 </Row>
+                {(grn.stockOverrides || []).length > 0 && (
+                    <div className="border border-warning rounded p-3 mb-3">
+                        <strong>General Stock override record</strong>
+                        {(grn.stockOverrides || []).map((record, index) => (
+                            <div key={`${record.poLineId}-${index}`} className="mt-2 small">
+                                <strong>{record.productName}</strong> · {record.jobNumber || record.itemRequestNumber} · PO line {record.poLineId}<br />
+                                Job requested {record.jobRequestedQty}; PO ordered {record.poOrderedQty}; job previously received {record.jobPreviouslyReceivedQty}; job received now {record.jobReceivedNowQty}; General Stock received now {record.generalStockReceivedQty}.<br />
+                                Reason: {record.reason} · Posted by {record.postedBy} at {formatDateTime(record.postedAt)}
+                            </div>
+                        ))}
+                        {(grn.stockOverrideAcknowledgements || []).map((entry, index) => (
+                            <div key={`${entry.actor}-${index}`} className="small mt-1">Acknowledged by {entry.actor} at {formatDateTime(entry.acknowledgedAt)}</div>
+                        ))}
+                    </div>
+                )}
                 <Row className="mb-3">
                     <Col md={4}><strong>Accepted By:</strong> {grn.acceptedBy || "-"}</Col>
                     <Col md={4}><strong>Accepted At:</strong> {formatDateTime(grn.acceptedAt)}</Col>

@@ -33,6 +33,16 @@ const calculateEffectiveDiscount = (subtotal, discountType, discountValue) => {
     return roundMoney(Math.min(value, Math.max(Number(subtotal || 0), 0)));
 };
 
+const remainingComponentCents = (row) => {
+    const received = new Map((row.previouslyReceivedComponents || []).map(allocation => [
+        allocation.componentName,
+        quantityCents(allocation.quantityDecimal ?? allocation.quantity)
+    ]));
+    return (row.componentAllocations || []).reduce((sum, allocation) => sum + Math.max(0,
+        quantityCents(allocation.quantity) - (received.get(allocation.componentName) || 0)
+    ), 0);
+};
+
 export default function GRNReceivePage({ poId: initialPoId }) {
     const navigate = useNavigate();
     const [poInput, setPoInput] = useState(initialPoId || "");  // what the user types
@@ -49,6 +59,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const [discountType, setDiscountType] = useState("AMOUNT");
     const [discountValue, setDiscountValue] = useState("");
     const [deliveryCharge, setDeliveryCharge] = useState("");
+    const [stockOverrideReason, setStockOverrideReason] = useState("");
+    const [stockOverrideConfirmed, setStockOverrideConfirmed] = useState(false);
 
     const [posting, setPosting] = useState(false);
     const [showQrModal, setShowQrModal] = useState(false);
@@ -87,6 +99,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     inquiryNumber: it.inquiryNumber,
                     jobNumber: it.jobNumber,
                     componentAllocations: (it.componentAllocations || []).map(allocation => ({ ...allocation, quantity: Number(allocation.quantityDecimal ?? allocation.quantity) })),
+                    previouslyReceivedComponents: it.receivedComponentAllocations || [],
                     receivedComponentQuantities: {},
                     productName: it.productNameSnapshot || it.productName,
                     sku: it.sku,
@@ -173,15 +186,17 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     throw new Error(`Receiving quantity exceeds the remaining ${remainingQty} for ${r.itemRequestNumber || r.productName}`);
                 }
                 const sourceComponents = r.componentAllocations || [];
+                const jobCents = Math.min(totalCents, remainingComponentCents(r));
+                const stockCents = sourceComponents.length ? totalCents - jobCents : 0;
                 const receivedComponentAllocations = sourceComponents.length === 1
-                    ? [{ componentName: sourceComponents[0].componentName, quantity: totalQty }]
+                    ? [{ componentName: sourceComponents[0].componentName, quantity: jobCents / 100 }]
                     : sourceComponents.map(allocation => ({
                         componentName: allocation.componentName,
                         quantity: Number(r.receivedComponentQuantities?.[allocation.componentName] || 0)
                     })).filter(allocation => allocation.quantity > 0);
                 const componentAllocatedCents = receivedComponentAllocations.reduce((sum, allocation) => sum + quantityCents(allocation.quantity), 0);
-                if (sourceComponents.length > 1 && componentAllocatedCents !== totalCents) {
-                    throw new Error(`Allocate all ${totalQty} received units across the listed components for ${r.itemRequestNumber || r.productName}`);
+                if (sourceComponents.length > 1 && componentAllocatedCents !== jobCents) {
+                    throw new Error(`Allocate ${jobCents / 100} units to the listed job components for ${r.itemRequestNumber || r.productName}; the extra ${stockCents / 100} goes to General Stock`);
                 }
                 return {
                     poLineId: r.poLineId,
@@ -195,6 +210,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     jobNumber: r.jobNumber,
                     componentAllocations: r.componentAllocations,
                     receivedComponentAllocations: receivedComponentAllocations.map(allocation => ({ ...allocation, quantity: Math.trunc(allocation.quantity), quantityDecimal: quantityValue(quantityCents(allocation.quantity)) })),
+                    generalStockQtyDecimal: quantityValue(stockCents),
                     unit: r.unit,
                     receivedQty: Math.trunc(totalQty),
                     receivedQtyDecimal: quantityValue(totalCents),
@@ -211,6 +227,11 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             }).filter(r => Number(r.receivedQtyDecimal) > 0);
 
             if (items.length === 0) { toast.info("Enter received quantities via batches"); return; }
+            if (items.some(item => Number(item.generalStockQtyDecimal) > 0)
+                && (!stockOverrideConfirmed || !stockOverrideReason.trim())) {
+                toast.warn("Confirm the General Stock override and enter a reason before posting");
+                return;
+            }
 
             const payload = {
                 poId: po.id,
@@ -223,7 +244,9 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 discountAmount: discountAmount ? Number(discountAmount) : 0,
                 discountType,
                 discountValue: discountValue ? Number(discountValue) : 0,
-                deliveryCharge: deliveryCharge ? Number(deliveryCharge) : 0
+                deliveryCharge: deliveryCharge ? Number(deliveryCharge) : 0,
+                stockOverrideReason: stockOverrideReason.trim() || undefined,
+                stockOverrideConfirmed
             };
 
             setPosting(true);
@@ -236,6 +259,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             setCreditPeriodDays("");
             setDiscountAmount("");
             setDiscountValue("");
+            setStockOverrideReason(""); setStockOverrideConfirmed(false);
 
             // Fetch created batches for QR display
             try {
@@ -295,6 +319,14 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     const appliedReceiptDiscount = Math.max(0, grossReceivedGoods - netReceivedGoods);
     const finalPayable = netReceivedGoods + (Number(vatAmount) || 0) + (Number(deliveryCharge) || 0);
     const money = value => Number(value || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const stockOverridePreview = rows.map(row => {
+        const receivingCents = (row.batches || []).reduce((sum, batch) => {
+            try { return sum + quantityCents(batch.qty); } catch { return sum; }
+        }, 0);
+        const extraCents = row.componentAllocations?.length
+            ? Math.max(0, receivingCents - remainingComponentCents(row)) : 0;
+        return { row, extraCents };
+    }).filter(entry => entry.extraCents > 0);
 
     return (
         <Container className="py-4">
@@ -495,6 +527,26 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                     })}
                                 </tbody>
                             </Table>
+
+                            {stockOverridePreview.length > 0 && (
+                                <div className="border border-warning rounded p-3 mb-3">
+                                    <strong>Receive PO excess into General Stock</strong>
+                                    <p className="mb-2 small">The job request stays unchanged. These extra units enter Main Store stock and require a new request before issue to the job.</p>
+                                    {stockOverridePreview.map(({ row, extraCents }) => (
+                                        <div key={row.poLineId || row.productId} className="small">
+                                            {row.jobNumber || row.itemRequestNumber || row.productName}: job requested {(row.componentAllocations || []).reduce((sum, allocation) => sum + Number(allocation.quantity || 0), 0)}, PO ordered {row.orderedQty}, job allocation remaining {remainingComponentCents(row) / 100}, General Stock now {extraCents / 100}
+                                        </div>
+                                    ))}
+                                    <Form.Group className="mt-2">
+                                        <Form.Label>Reason for General Stock override</Form.Label>
+                                        <Form.Control as="textarea" rows={2} value={stockOverrideReason}
+                                            onChange={event => setStockOverrideReason(event.target.value)} />
+                                    </Form.Group>
+                                    <Form.Check className="mt-2" type="checkbox" checked={stockOverrideConfirmed}
+                                        onChange={event => setStockOverrideConfirmed(event.target.checked)}
+                                        label="I understand the extra quantity will enter General Stock, not increase the job request." />
+                                </div>
+                            )}
 
                             <Button
                                 className="w-100 mt-2"
