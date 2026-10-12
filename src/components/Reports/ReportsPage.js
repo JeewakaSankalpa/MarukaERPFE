@@ -104,7 +104,8 @@ export default function ReportsPage() {
                                 <tr>
                                     <th>Product Name</th>
                                     <th>Product ID</th>
-                                    <th className="text-end">Quantity On Hand</th>
+                                    <th className="text-end">Usable Quantity</th>
+                                    <th className="text-end">Damaged Holding</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -112,7 +113,8 @@ export default function ReportsPage() {
                                     <tr key={i}>
                                         <td className="fw-semibold">{s.productName || "Unknown product"}</td>
                                         <td>{s.productId}</td>
-                                        <td className="text-end">{s.quantity}</td>
+                                        <td className="text-end">{s.usableQuantity ?? s.quantity}</td>
+                                        <td className="text-end">{s.damagedQuantity || 0}</td>
                                     </tr>
                                 ))}
                             </tbody>

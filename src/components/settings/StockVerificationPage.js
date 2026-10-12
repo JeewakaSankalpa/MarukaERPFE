@@ -50,17 +50,22 @@ const parsePhysicalUpload = (text = "") => {
     const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
     if (!lines.length) return { rows: [], report: emptyUploadReport() };
     const header = splitCsvLine(lines[0]).map(value => value.trim().toLowerCase());
-    const hasHeader = header.some(value => ["sku", "quantity", "qty", "unitcost", "unit cost", "price", "cost", "rate", "reorderlevel", "reorder level", "reorder", "supplier"].includes(value));
+    const hasHeader = header.some(value => ["sku", "quantity", "qty", "countedqty", "runid", "unitcost", "unit cost", "price", "cost", "rate", "reorderlevel", "reorder level", "reorder", "supplier"].includes(value));
     const start = hasHeader ? 1 : 0;
     const columns = hasHeader ? header : ["sku", "quantity", "unitcost", "productname", "reorderlevel", "supplier"];
     const find = (...names) => names.map(name => columns.indexOf(name)).find(index => index >= 0);
     const skuIndex = find("sku", "item code", "itemcode", "code");
-    const qtyIndex = find("quantity", "qty", "stock", "physical qty", "physical quantity");
+    const countSheet = columns.includes("runid");
+    const runIndex = find("runid");
+    const countedAtIndex = find("countedat");
+    const qtyIndex = find("countedqty", "quantity", "qty", "stock", "physical qty", "physical quantity");
     const costIndex = find("unitcost", "unit cost", "item rate", "rate", "price", "cost", "unit price");
     const nameIndex = find("productname", "product name", "name", "item", "description", "item description");
     const reorderIndex = find("reorderlevel", "reorder level", "reorder", "reorder qty", "reorder quantity", "minimum stock", "min stock", "minimum order level", "min order level");
     const supplierIndex = find("supplier", "supplier name", "vendor");
     const minOrderQtyIndex = find("minorderqty", "min order qty", "minimum order qty", "minimum order quantity", "moq");
+    const proposedSellingIndex = find("proposedsellingprice");
+    const proposedSupplierIndex = find("proposedsuppliername");
     const report = emptyUploadReport();
 
     const rows = lines.slice(start).map((line, index) => {
@@ -77,6 +82,8 @@ const parsePhysicalUpload = (text = "") => {
         const reorderRaw = reorderIndex == null ? "" : String(cells[reorderIndex] ?? "").trim();
         const supplierName = supplierIndex == null ? "" : String(cells[supplierIndex] || "").trim();
         const minOrderQtyRaw = minOrderQtyIndex == null ? "" : String(cells[minOrderQtyIndex] ?? "").trim();
+        const countedAtRaw = countedAtIndex == null ? "" : String(cells[countedAtIndex] ?? "").trim();
+        const proposedSellingRaw = proposedSellingIndex == null ? "" : String(cells[proposedSellingIndex] ?? "").trim();
         const quantity = Number(quantityRaw.replace(/,/g, ""));
         const unitCost = Number(unitCostRaw.replace(/,/g, ""));
         const reorderLevel = Number(reorderRaw.replace(/,/g, ""));
@@ -93,10 +100,13 @@ const parsePhysicalUpload = (text = "") => {
         return {
             sku,
             productName,
-            quantity: Number.isFinite(quantity) ? quantity : 0,
+            runId: runIndex == null ? undefined : String(cells[runIndex] || "").trim(),
+            countedAt: countedAtRaw && Number.isFinite(Date.parse(countedAtRaw)) ? new Date(countedAtRaw).toISOString() : null,
+            quantity: countSheet && !quantityRaw ? null : Number.isFinite(quantity) ? quantity : 0,
             unitCost: Number.isFinite(unitCost) ? unitCost : 0,
             reorderLevel: Number.isFinite(reorderLevel) ? reorderLevel : 0,
-            supplierName,
+            supplierName: proposedSupplierIndex == null ? supplierName : String(cells[proposedSupplierIndex] || "").trim(),
+            proposedSellingPrice: proposedSellingRaw && Number.isFinite(Number(proposedSellingRaw)) ? Number(proposedSellingRaw) : null,
             minOrderQty: minOrderQtyIndex == null ? undefined : (Number.isFinite(minOrderQty) ? minOrderQty : 0),
         };
     }).filter(Boolean);
@@ -232,6 +242,11 @@ const statusBadge = (status) => {
         UNRESOLVED: "warning",
         SENT_TO_APPROVAL: "primary",
         RESOLVED: "success",
+        CLOSED: "success",
+        COUNTING: "info",
+        PENDING_APPROVAL: "primary",
+        SUPERSEDED: "secondary",
+        NOT_COUNTED: "info",
     }[status] || "secondary";
     return <Badge bg={variant} text={variant === "warning" || variant === "info" ? "dark" : "white"}>{status || "-"}</Badge>;
 };
@@ -287,6 +302,8 @@ const buildPrintableDifferences = (rows = [], duplicateGroups = []) => {
         if (row.uploadedReorderLevel != null && row.uploadedReorderLevel !== row.systemReorderLevel) {
             issues.push(`Reorder: system ${row.systemReorderLevel ?? "-"} / uploaded ${row.uploadedReorderLevel ?? "-"} / diff ${row.reorderLevelDifference ?? "-"}`);
         }
+        if (row.proposedSellingPrice != null) issues.push(`Selling price proposal: ${formatMoney(row.proposedSellingPrice)} (review separately)`);
+        if (row.proposedSupplierName) issues.push(`Supplier proposal: ${row.proposedSupplierName} (review separately)`);
         if (issues.length) {
             differences.push({
                 sku: row.sku || "-",
@@ -734,6 +751,8 @@ function SkuVerificationTab() {
 function ReconciliationTab() {
     const navigate = useNavigate();
     const [title, setTitle] = useState("");
+    const [locationId, setLocationId] = useState("LOC_STORES_MAIN");
+    const [locations, setLocations] = useState(["LOC_STORES_MAIN"]);
     const [uploadText, setUploadText] = useState("");
     const [uploadBase64, setUploadBase64] = useState("");
     const [sourceFileName, setSourceFileName] = useState("");
@@ -841,8 +860,44 @@ function ReconciliationTab() {
 
     useEffect(() => {
         loadHistory();
+        api.get("/stock-reconciliations/locations")
+            .then(res => setLocations(res.data || ["LOC_STORES_MAIN"]))
+            .catch(() => toast.error("Failed to load count locations"));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const downloadRunSheet = async (runId) => {
+        const res = await api.get(`/stock-reconciliations/${runId}/count-sheet`, { responseType: "blob" });
+        downloadBlob(res.data, `stock-count-${runId}.csv`);
+    };
+
+    const startCount = async () => {
+        setCreating(true);
+        try {
+            const res = await api.post("/stock-reconciliations/count-sheet", { locationId, title });
+            await downloadRunSheet(res.data.id);
+            toast.success("Count sheet saved and downloaded");
+            await loadHistory();
+            await loadRows(res.data.id, "ALL", 0);
+            setFilter("ALL");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Failed to create count sheet"));
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const supersedeRun = async () => {
+        const reason = window.prompt("Why is this count being replaced?");
+        if (!reason?.trim()) return;
+        try {
+            await api.post(`/stock-reconciliations/${selectedRun.id}/supersede`, { reason });
+            await refreshSelectedRun();
+            toast.success("Count marked superseded");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Failed to supersede count"));
+        }
+    };
 
     const handleFile = async (event) => {
         const file = event.target.files?.[0];
@@ -867,8 +922,11 @@ function ReconciliationTab() {
         }
         setCreating(true);
         try {
-            const res = await api.post("/stock-reconciliations", {
+            const countRunId = parsedRows[0]?.runId;
+            const endpoint = countRunId ? `/stock-reconciliations/${countRunId}/count-sheet` : "/stock-reconciliations";
+            const res = await api.post(endpoint, {
                 title: title || undefined,
+                locationId,
                 rows: parsedRows,
                 uploadReport,
                 uploadedSourceText: uploadText,
@@ -885,7 +943,7 @@ function ReconciliationTab() {
             setTitle("");
             setFilter("UNRESOLVED");
             setPage(0);
-            toast.success("Physical stock reconciliation created");
+            toast.success(countRunId ? "Count sheet submitted" : "Physical stock reconciliation created");
             await loadHistory();
             await loadRows(res.data.id, "UNRESOLVED", 0);
         } catch (err) {
@@ -1001,15 +1059,24 @@ function ReconciliationTab() {
         <Row className="g-3">
             <Col lg={3}>
                 <div className="bg-white border rounded p-3 mb-3">
-                    <h5 className="mb-3">Physical count upload</h5>
+                        <h5 className="mb-3">Physical count</h5>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Count location</Form.Label>
+                            <Form.Select value={locationId} onChange={e => setLocationId(e.target.value)}>
+                                {locations.map(loc => <option key={loc} value={loc}>{loc === "LOC_STORES_MAIN" ? "Main Store" : loc}</option>)}
+                            </Form.Select>
+                        </Form.Group>
                     <Form.Group className="mb-3">
                         <Form.Label>Report title</Form.Label>
                         <Form.Control value={title} onChange={e => setTitle(e.target.value)} placeholder="Example: July physical count" />
                     </Form.Group>
+                    <Button variant="outline-primary" className="w-100 mb-3" onClick={startCount} disabled={creating}>
+                        <Download size={16} className="me-1" /> Start count and download CSV
+                    </Button>
                     <Form.Group className="mb-3">
                         <Form.Label>Upload CSV</Form.Label>
                         <Form.Control type="file" accept=".csv,text/csv" onChange={handleFile} />
-                        <Form.Text>Columns: sku, quantity, unitCost/rate, productName, reorderLevel, supplier</Form.Text>
+                        <Form.Text>Fill countedAt (ISO date and time) and countedQty in the downloaded sheet. Existing stock, cost, and supplier columns are reference only.</Form.Text>
                     </Form.Group>
                     <div className="border rounded p-3 bg-light mb-3">
                         {sourceFileName ? (
@@ -1043,7 +1110,7 @@ function ReconciliationTab() {
                     )}
                     <Button className="w-100" onClick={createRun} disabled={creating || !sourceFileName || !parsedRows.length}>
                         {creating ? <Spinner size="sm" className="me-1" /> : <Upload size={16} className="me-1" />}
-                        Compare Physical Stock
+                        {parsedRows[0]?.runId ? "Submit Count Sheet" : "Compare Physical Stock"}
                     </Button>
                 </div>
 
@@ -1065,6 +1132,11 @@ function ReconciliationTab() {
                                                 {formatDate(item.createdAt)} | {item.mismatchCount || 0} differences
                                             </div>
                                         </Button>
+                                        {item.status === "COUNTING" && (
+                                            <Button size="sm" variant="outline-primary" className="w-100 mt-2" onClick={() => downloadRunSheet(item.id)}>
+                                                <Download size={14} className="me-1" /> Download Count Sheet
+                                            </Button>
+                                        )}
                                         {hasUpload && (
                                             <Button
                                                 size="sm"
@@ -1092,10 +1164,12 @@ function ReconciliationTab() {
                                 <div>
                                     <h4 className="mb-1">{selectedRun.title || "Physical stock reconciliation"}</h4>
                                     <div className="text-muted small">
-                                        Created {formatDate(selectedRun.createdAt)} by {selectedRun.createdBy || "system"} | {statusBadge(selectedRun.status)}
+                                        Created {formatDate(selectedRun.createdAt)} by {selectedRun.createdBy || "system"} | {selectedRun.locationId || "Main Store"} | {statusBadge(selectedRun.status)}
                                     </div>
                                 </div>
                                 <div className="d-flex gap-2">
+                                    {selectedRun.status === "COUNTING" && <Button variant="outline-primary" onClick={() => downloadRunSheet(selectedRun.id)}>Download Count Sheet</Button>}
+                                    {!["CLOSED", "SUPERSEDED", "PENDING_APPROVAL"].includes(selectedRun.status) && <Button variant="outline-danger" onClick={supersedeRun}>Supersede</Button>}
                                     {(selectedRun.uploadedSourceText || selectedRun.uploadedSourceAvailable) && (
                                         <Button variant="outline-secondary" onClick={() => downloadUploadedSource(selectedRun, "physical-stock-upload", "csv", `/stock-reconciliations/${selectedRun.id}/source`)}>
                                             <Download size={16} className="me-1" /> Download Worker CSV
@@ -1107,7 +1181,7 @@ function ReconciliationTab() {
                                     </Button>
                                     <Button
                                         variant="outline-primary"
-                                        disabled={submitting || filter === "DUPLICATES" || filter === "UPLOADED_ONLY" || filter === "MISSING" || filter === "RESOLVED" || filter === "SENT"}
+                                        disabled={submitting || ["COUNTING", "CLOSED", "SUPERSEDED"].includes(selectedRun.status) || filter === "DUPLICATES" || filter === "UPLOADED_ONLY" || filter === "MISSING" || filter === "RESOLVED" || filter === "SENT"}
                                         onClick={submitCurrentFilter}
                                     >
                                         {submitting ? <Spinner size="sm" className="me-1" /> : <Send size={16} className="me-1" />}
@@ -1269,6 +1343,8 @@ function ReconciliationTab() {
                                                     <td>
                                                         <div><code>{row.sku || "-"}</code></div>
                                                         <div className="fw-semibold">{row.productName || "Unknown product"}</div>
+                                                        {row.proposedSellingPrice != null && <div className="small text-muted">Selling price proposal: {formatMoney(row.proposedSellingPrice)}</div>}
+                                                        {row.proposedSupplierName && <div className="small text-muted">Supplier proposal: {row.proposedSupplierName}</div>}
                                                         {row.matchStatus === "UPLOADED_ONLY" && (
                                                             <div className="mt-2">
                                                                 <div className="text-muted small mb-1">Create this product before stock can be adjusted.</div>

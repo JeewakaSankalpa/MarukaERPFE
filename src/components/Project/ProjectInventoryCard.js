@@ -499,7 +499,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                 projectId,
                 fromType: 'PROJECT',
                 sourceConsumptionId: returnData.sourceMode === 'CONSUMED' ? returnData.sourceConsumptionId : null,
-                returnType: returnData.sourceMode === 'CONSUMED' ? returnData.returnType : 'NORMAL_RETURN',
+                returnType: returnData.returnType,
                 items: items
             });
             toast.success('Return request created and sent for approval');
@@ -1647,7 +1647,13 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                         {returnData.sourceMode === 'PROJECT_STOCK' ? (
                                             <div className="col-md-6">
                                                 <label className="form-label">Return type</label>
-                                                <div className="form-control bg-light">Normal return</div>
+                                                <SafeSelect
+                                                    value={returnData.returnType === 'DAMAGED_UNCONSUMED' ? 'DAMAGED_UNCONSUMED' : 'NORMAL_RETURN'}
+                                                    onChange={(e) => setReturnData({ ...returnData, returnType: e.target.value })}
+                                                >
+                                                    <option value="NORMAL_RETURN">Usable: return to Main Store</option>
+                                                    <option value="DAMAGED_UNCONSUMED">Damaged: move to damaged stock</option>
+                                                </SafeSelect>
                                             </div>
                                         ) : (
                                             <div className="col-md-6">
@@ -1794,7 +1800,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                             <div className="form-text">Maximum returnable quantity: {selectedReturnMax}</div>
                                         )}
                                     </div>
-                                    {returnData.returnType === 'DAMAGED_AFTER_CONSUMPTION' && (
+                                    {(returnData.returnType === 'DAMAGED_AFTER_CONSUMPTION' || returnData.returnType === 'DAMAGED_UNCONSUMED') && (
                                         <div className="alert alert-warning small">
                                             Damaged returns require approval and will be recorded for audit, but they will not be added back into usable store stock.
                                         </div>

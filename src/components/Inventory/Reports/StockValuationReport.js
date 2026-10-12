@@ -127,7 +127,7 @@ const StockValuationReport = () => {
                             ))}
                             {/* Grand Total Footer */}
                             <tr className="table-light fw-bold border-top border-dark">
-                                <td colSpan="2" className="text-end">GRAND TOTAL ASSETS (STORE STOCK)</td>
+                                <td colSpan="2" className="text-end">GRAND TOTAL STOCK ASSETS (INCLUDING DAMAGED HOLDING)</td>
                                 <td className="text-end">{totals.qty.toLocaleString()}</td>
                                 <td className="text-end text-primary" style={{ fontSize: "1.1em" }}>
                                     {totals.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -150,7 +150,10 @@ const ExpandableStockRow = ({ item }) => {
             <tr className={expanded ? "table-active" : ""} style={{ cursor: 'pointer' }} onClick={() => setExpanded(!expanded)}>
                 <td className="text-center">{batches.length > 0 ? (expanded ? "▼" : "►") : "-"}</td>
                 <td className="fw-bold">{item.productName || "Unknown Product"}</td>
-                <td className="text-end fw-bold">{item.quantity?.toLocaleString()}</td>
+                <td className="text-end fw-bold">
+                    {item.quantity?.toLocaleString()}
+                    {Number(item.damagedQuantity || 0) > 0 && <div className="small text-warning">Damaged: {item.damagedQuantity} · Usable: {item.usableQuantity}</div>}
+                </td>
                 <td className="text-end fw-bold">{item.totalValue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
             {expanded && batches.length > 0 && (
@@ -162,6 +165,7 @@ const ExpandableStockRow = ({ item }) => {
                                     <tr>
                                         <th>Batch No</th>
                                         <th>Expiry</th>
+                                        <th>Location / condition</th>
                                         <th className="text-end">Qty</th>
                                         <th className="text-end">Unit Cost</th>
                                         <th className="text-end">Total</th>
@@ -172,6 +176,7 @@ const ExpandableStockRow = ({ item }) => {
                                         <tr key={i}>
                                             <td className="small">{b.batchNo}</td>
                                             <td className="small">{b.expiryDate || "-"}</td>
+                                            <td className="small">{b.locationId || "-"}{b.ownerType === "DAMAGED" ? " · Damaged holding" : ""}</td>
                                             <td className="text-end small">{b.quantity}</td>
                                             <td className="text-end small">{b.unitCost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             <td className="text-end small">{b.totalValue?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>

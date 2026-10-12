@@ -27,7 +27,7 @@ export default function ProjectHoldingsPage() {
         if (!projectId || lines.length===0) { toast.info("Enter returns"); return; }
         try {
             await api.post(`/inventory/project-returns`, { projectId, lines });
-            toast.success("Returned to Main Store");
+            toast.success("Usable return submitted for approval. Stock moves after approval.");
             await load(projectId);
         } catch {
             toast.error("Failed to return");
