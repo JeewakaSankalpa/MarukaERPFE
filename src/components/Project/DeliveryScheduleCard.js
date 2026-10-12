@@ -142,7 +142,17 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
             setShowGatePassModal(false);
             toast.success('Gate pass generated.');
         } catch (e) {
-            toast.error(e.response?.data?.message || 'Failed to generate gate pass');
+            let message = e.response?.data?.message;
+            if (!message && e.response?.data instanceof Blob) {
+                try {
+                    const text = await e.response.data.text();
+                    const body = JSON.parse(text);
+                    message = body.message || body.error;
+                } catch {
+                    // The server may have returned a non-JSON error body.
+                }
+            }
+            toast.error(message || 'Failed to generate gate pass');
         }
     };
 
