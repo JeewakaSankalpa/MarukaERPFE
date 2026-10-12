@@ -62,6 +62,7 @@ const PRINT_FORMATS = {
     COMPONENTS_WITH_ITEMS: "componentsWithItems",
     TOTALS_ONLY: "totalsOnly",
     CUSTOM: "custom",
+    CUSTOM_LINES: "customLines",
     CARGILLS_CUSTOM_LINES: "cargillsCustomLines",
 };
 
@@ -504,6 +505,8 @@ const InvoiceView = () => {
     const [savingCustomerPhone, setSavingCustomerPhone] = useState(false);
     const [refreshingInvoice, setRefreshingInvoice] = useState(false);
     const [savingPrintLayout, setSavingPrintLayout] = useState(false);
+    const [showReopenFormatModal, setShowReopenFormatModal] = useState(false);
+    const [reopeningFormat, setReopeningFormat] = useState(false);
     const [recordingPrint, setRecordingPrint] = useState(false);
     const [previewPrintEntry, setPreviewPrintEntry] = useState(null);
     const [taxPrintFormat, setTaxPrintFormat] = useState(PRINT_FORMATS.ALL);
@@ -532,9 +535,8 @@ const InvoiceView = () => {
     const isFinalInvoiceType = selectedType === DOC_TYPES.NORMAL || selectedType === DOC_TYPES.TAX;
     const currentPrintLayout = invoice?.printLayouts?.[selectedType];
     const isPrintLayoutLocked = isFinalInvoiceType && currentPrintLayout?.locked === true;
-    const canEditPrintLayout = !isPrintLayoutLocked || isAdmin;
-    const isCargillsInvoice = project?.cargillsInquiry === true;
-    const usesCargillsCustomLines = isCargillsInvoice && taxPrintFormat === PRINT_FORMATS.CARGILLS_CUSTOM_LINES;
+    const canEditPrintLayout = !isPrintLayoutLocked;
+    const usesCustomLines = [PRINT_FORMATS.CUSTOM_LINES, PRINT_FORMATS.CARGILLS_CUSTOM_LINES].includes(taxPrintFormat);
     const customLinesTotal = decimalTotal(customLines.map(customLineAmount));
     const protectedSupplyValue = numberValue(invoice?.subtotal);
     const customLinesComplete = customLines.length > 0 && customLines.every((line) =>
@@ -546,11 +548,12 @@ const InvoiceView = () => {
         && Number.isFinite(Number(line.total)));
     const customLinesMatch = customLinesComplete
         && Math.round(customLinesTotal * 100) === Math.round(protectedSupplyValue * 100);
-    const customLinesSaved = usesCargillsCustomLines
+    const customLinesSaved = usesCustomLines
         && customLineSignature(customLines) === customLineSignature(currentPrintLayout?.customLines || []);
     const currentPrintAuditEntries = Array.isArray(invoice?.printAuditTrail)
         ? invoice.printAuditTrail.filter(entry => entry.documentType === selectedType)
         : [];
+    const lastPrintEntry = currentPrintAuditEntries.slice().reverse().find(entry => entry.action === "PRINTED");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -641,12 +644,12 @@ const InvoiceView = () => {
             setCustomLines([]);
             return;
         }
-        if ((layout.locked && isFinalInvoiceType) || layout.printFormat === PRINT_FORMATS.CARGILLS_CUSTOM_LINES) {
+        if ((layout.locked && isFinalInvoiceType) || [PRINT_FORMATS.CUSTOM_LINES, PRINT_FORMATS.CARGILLS_CUSTOM_LINES].includes(layout.printFormat)) {
             setTaxPrintFormat(layout.printFormat || PRINT_FORMATS.CUSTOM);
             setTaxPrintOptions({
-                ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
+                ...(layout.locked ? {} : TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]),
                 ...(layout.printOptions || {}),
-                ...(layout.printFormat === PRINT_FORMATS.CARGILLS_CUSTOM_LINES ? { showSignatures: true } : {}),
+                ...(!layout.locked && [PRINT_FORMATS.CUSTOM_LINES, PRINT_FORMATS.CARGILLS_CUSTOM_LINES].includes(layout.printFormat) ? { showSignatures: true } : {}),
             });
         }
         setCustomLines((layout.customLines || []).map(createCustomLine));
@@ -812,7 +815,7 @@ const InvoiceView = () => {
         documentType: selectedType,
         printFormat: taxPrintFormat,
         printOptions: taxPrintOptions,
-        customLines: usesCargillsCustomLines
+        customLines: usesCustomLines
             ? customLines.map((line) => ({
                 itemCode: String(line.itemCode || "").trim(),
                 description: String(line.description || "").trim(),
@@ -827,10 +830,10 @@ const InvoiceView = () => {
     const applyPrintLayoutFromInvoice = (updatedInvoice) => {
         const layout = updatedInvoice?.printLayouts?.[selectedType];
         if (!layout) return;
-        if (!layout.locked && layout.printFormat !== PRINT_FORMATS.CARGILLS_CUSTOM_LINES) return;
+        if (!layout.locked && ![PRINT_FORMATS.CUSTOM_LINES, PRINT_FORMATS.CARGILLS_CUSTOM_LINES].includes(layout.printFormat)) return;
         setTaxPrintFormat(layout.printFormat || PRINT_FORMATS.CUSTOM);
         setTaxPrintOptions({
-            ...TAX_PRINT_PRESETS[PRINT_FORMATS.ALL],
+            ...(layout.locked ? {} : TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]),
             ...(layout.printOptions || {}),
         });
         setCustomLines((layout.customLines || []).map(createCustomLine));
@@ -840,7 +843,7 @@ const InvoiceView = () => {
         if (!customLinesMatch) return;
         setSavingCustomLines(true);
         try {
-            const res = await api.patch(`/invoices/${id}/cargills-custom-lines`, currentPrintPayload(), {
+            const res = await api.patch(`/invoices/${id}/custom-lines`, currentPrintPayload(), {
                 headers: { "X-Roles": rolesHeader },
             });
             setInvoice(res.data);
@@ -894,7 +897,7 @@ const InvoiceView = () => {
 
     const handleApprovePrint = async () => {
         try {
-            const res = await api.post(`/invoices/${id}/approve-print`, {}, { headers: { "X-Roles": rolesHeader } });
+            const res = await api.post(`/invoices/${id}/approve-print`, { documentType: selectedType }, { headers: { "X-Roles": rolesHeader } });
             setInvoice(res.data);
             toast.success("Invoice approved for printing");
         } catch (error) {
@@ -902,11 +905,26 @@ const InvoiceView = () => {
         }
     };
 
+    const handleReopenPrintFormat = async () => {
+        setReopeningFormat(true);
+        try {
+            const res = await api.post(`/invoices/${id}/reopen-print-format`, { documentType: selectedType });
+            setInvoice(res.data);
+            applyPrintLayoutFromInvoice(res.data);
+            setShowReopenFormatModal(false);
+            toast.success("Format reopened. Apply the revision and approve it before printing.");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Could not reopen the print format");
+        } finally {
+            setReopeningFormat(false);
+        }
+    };
+
     const handleTaxPrintFormatChange = (value) => {
         setTaxPrintFormat(value);
         if (TAX_PRINT_PRESETS[value]) {
             setTaxPrintOptions(TAX_PRINT_PRESETS[value]);
-        } else if (value === PRINT_FORMATS.CARGILLS_CUSTOM_LINES) {
+        } else if ([PRINT_FORMATS.CUSTOM_LINES, PRINT_FORMATS.CARGILLS_CUSTOM_LINES].includes(value)) {
             setTaxPrintOptions({
                 ...Object.fromEntries(Object.keys(TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]).map((key) => [key, false])),
                 showSubtotal: true,
@@ -922,8 +940,8 @@ const InvoiceView = () => {
     };
 
     const toggleTaxPrintOption = (key) => {
-        if (usesCargillsCustomLines && PROTECTED_CARGILLS_OPTIONS.has(key)) return;
-        setTaxPrintFormat(usesCargillsCustomLines ? PRINT_FORMATS.CARGILLS_CUSTOM_LINES : PRINT_FORMATS.CUSTOM);
+        if (usesCustomLines && PROTECTED_CARGILLS_OPTIONS.has(key)) return;
+        setTaxPrintFormat(usesCustomLines ? PRINT_FORMATS.CUSTOM_LINES : PRINT_FORMATS.CUSTOM);
         setTaxPrintOptions((current) => ({
             ...current,
             [key]: !current[key],
@@ -1048,7 +1066,7 @@ const InvoiceView = () => {
     const storedSubtotal = !invoice.splitInvoice && isTaxInvoice && sourceSubtotal > 0 ? sourceSubtotal : invoiceSubtotal;
     const storedVatTotal = !invoice.splitInvoice && isTaxInvoice && sourceDocumentTotal > 0 ? sourceVatTotal : invoiceVatTotal;
     const storedOtherTaxTotal = !invoice.splitInvoice && isTaxInvoice && sourceDocumentTotal > 0 ? sourceOtherTaxTotal : invoiceOtherTaxTotal;
-    const storedDocumentTotal = invoice.splitInvoice || usesCargillsCustomLines
+    const storedDocumentTotal = invoice.splitInvoice || usesCustomLines
         ? invoiceDocumentTotal
         : showTax ? (sourceDocumentTotal > 0 ? sourceDocumentTotal : invoiceDocumentTotal) : storedSubtotal;
     const dueDateLabel = isProforma ? "EXPIRATION DATE" : "DUE DATE";
@@ -1074,7 +1092,7 @@ const InvoiceView = () => {
         .map((line) => line.trim())
         .filter(Boolean);
     const taxLineRows = (() => {
-        if (usesCargillsCustomLines) {
+        if (usesCustomLines) {
             return customLines.map((line, index) => ({
                 key: line.key || `cargills-custom-${index}`,
                 itemCode: String(line.itemCode || "").trim(),
@@ -1224,7 +1242,7 @@ const InvoiceView = () => {
         ? decimalTotal([printedSubtotal, printedVatTotal, printedOtherTaxTotal])
         : storedDocumentTotal;
     const balanceDue = Math.max(printedDocumentTotal - totalReceived, 0);
-    const showTaxLineColumns = usesCargillsCustomLines ? {
+    const showTaxLineColumns = usesCustomLines ? {
         code: true,
         qty: true,
         unit: true,
@@ -1249,7 +1267,7 @@ const InvoiceView = () => {
         + (showTaxLineColumns.qty ? 1 : 0)
         + (showTaxLineColumns.unit ? 1 : 0)
         + (showTaxLineColumns.unitPrice ? 1 : 0);
-    const standardInvoiceRows = usesCargillsCustomLines
+    const standardInvoiceRows = usesCustomLines
         ? customLines.map((line, index) => ({
             key: line.key || `cargills-custom-standard-${index}`,
             description: String(line.description || "").trim(),
@@ -1258,10 +1276,10 @@ const InvoiceView = () => {
             total: customLineAmount(line),
         }))
         : invoiceRows;
-    const showStandardLines = usesCargillsCustomLines || taxPrintOptions.showComponents || taxPrintOptions.showItems;
-    const showStandardQty = usesCargillsCustomLines || taxPrintOptions.showItemQuantities;
-    const showStandardRate = usesCargillsCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemUnitPrices;
-    const showStandardAmount = usesCargillsCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemTotals;
+    const showStandardLines = usesCustomLines || taxPrintOptions.showComponents || taxPrintOptions.showItems;
+    const showStandardQty = usesCustomLines || taxPrintOptions.showItemQuantities;
+    const showStandardRate = usesCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemUnitPrices;
+    const showStandardAmount = usesCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemTotals;
     const showStandardSummary = taxPrintOptions.showSubtotal
         || taxPrintOptions.showVat
         || taxPrintOptions.showOtherTax
@@ -1279,7 +1297,17 @@ const InvoiceView = () => {
                 key: `preview-custom-${index}`,
                 isCustom: true,
             }))
-            : groupedItems.flatMap((group, groupIdx) => [
+            : (previewPrintEntry?.invoiceItems?.length
+                ? previewPrintEntry.invoiceItems.map((item, index) => ({
+                    key: `preview-snapshot-${index}`,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit: "Lot",
+                    unitPrice: item.unitPrice,
+                    total: item.total,
+                    isComponent: true,
+                }))
+                : groupedItems.flatMap((group, groupIdx) => [
             ...(previewOptions.showComponents ? [{
                 key: `preview-component-${groupIdx}`,
                 description: group.description,
@@ -1298,7 +1326,7 @@ const InvoiceView = () => {
                 total: item.total,
                 isSubItem: true,
             })) : []),
-        ]).slice(0, 8)
+        ]))
         : [];
     const visiblePreviewOptions = previewPrintEntry
         ? TAX_PRINT_OPTION_GROUPS.flatMap(group => group.options)
@@ -1719,12 +1747,14 @@ const InvoiceView = () => {
                                     </div>
                                     <div className="text-end">
                                         <div className="fw-bold">{String(previewPrintEntry.documentType || selectedType).toUpperCase()} INVOICE</div>
-                                        <div className="small text-muted">{invoiceNo}</div>
+                                        <div className="small text-muted">{previewPrintEntry.invoiceNumber || invoiceNo}</div>
                                     </div>
                                 </div>
                                 <div className="small mb-2">
-                                    <strong>Bill To:</strong> {displayCustomer?.comName || displayCustomer?.name || "N/A"}
+                                    <strong>Bill To:</strong> {previewPrintEntry.customerName || displayCustomer?.comName || displayCustomer?.name || "N/A"}
                                 </div>
+                                {previewPrintEntry.customerAddress && <div className="small mb-2">{previewPrintEntry.customerAddress}</div>}
+                                {previewPrintEntry.poNumber && <div className="small mb-2"><strong>PO:</strong> {previewPrintEntry.poNumber}</div>}
                                 {(previewUsesCustomLines || previewOptions.showComponents || previewOptions.showItems) && (
                                     <div className="table-responsive">
                                         <table className="table table-sm table-bordered mb-3">
@@ -1763,9 +1793,9 @@ const InvoiceView = () => {
                                 )}
                                 <div className="d-flex justify-content-end">
                                     <div style={{ minWidth: 260 }}>
-                                        {previewOptions.showSubtotal && <div className="d-flex justify-content-between"><span>Subtotal</span><span>{money(printedSubtotal)}</span></div>}
-                                        {(previewOptions.showVat || previewOptions.showOtherTax) && <div className="d-flex justify-content-between"><span>Tax</span><span>{money(printedTaxTotal)}</span></div>}
-                                        {previewOptions.showTotalAmount && <div className="d-flex justify-content-between fw-bold"><span>Total</span><span>{money(printedDocumentTotal)}</span></div>}
+                                        {previewOptions.showSubtotal && <div className="d-flex justify-content-between"><span>Subtotal</span><span>{money(previewPrintEntry.subtotal ?? printedSubtotal)}</span></div>}
+                                        {(previewOptions.showVat || previewOptions.showOtherTax) && <div className="d-flex justify-content-between"><span>Tax</span><span>{money(numberValue(previewPrintEntry.vatAmount ?? storedVatTotal) + numberValue(previewPrintEntry.taxAmount ?? storedOtherTaxTotal))}</span></div>}
+                                        {previewOptions.showTotalAmount && <div className="d-flex justify-content-between fw-bold"><span>Total</span><span>{money(previewPrintEntry.totalAmount ?? printedDocumentTotal)}</span></div>}
                                         {previewOptions.showTotalDue && <div className="d-flex justify-content-between fw-bold border-top mt-2 pt-2"><span>Total Due</span><span>{money(balanceDue)}</span></div>}
                                     </div>
                                 </div>
@@ -1784,6 +1814,25 @@ const InvoiceView = () => {
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setPreviewPrintEntry(null)}>Close</Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showReopenFormatModal} onHide={() => !reopeningFormat && setShowReopenFormatModal(false)} centered>
+                <Modal.Header closeButton={!reopeningFormat}><Modal.Title>Reopen invoice format?</Modal.Title></Modal.Header>
+                <Modal.Body>
+                    <p>The current format was applied by {currentPrintLayout?.updatedBy || "system"} on {formatDateTime(currentPrintLayout?.updatedAt)}.</p>
+                    {lastPrintEntry ? (
+                        <p className="text-danger">A print was recorded by {lastPrintEntry.performedBy || "system"} on {formatDateTime(lastPrintEntry.performedAt)}. A copy may already be with the customer. Are you sure you want to revise this format?</p>
+                    ) : (
+                        <p>Printing has not been recorded for this format. Are you sure you want to return it for changes?</p>
+                    )}
+                    <p className="mb-0">The previous version will stay in the history. Printing will be blocked until the revised format is applied and approved again. The invoice number and final amount will stay the same.</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowReopenFormatModal(false)} disabled={reopeningFormat}>Keep format</Button>
+                    <Button variant="warning" onClick={handleReopenPrintFormat} disabled={reopeningFormat}>
+                        {reopeningFormat ? "Reopening..." : "Reopen for revision"}
+                    </Button>
                 </Modal.Footer>
             </Modal>
 
@@ -1862,9 +1911,7 @@ const InvoiceView = () => {
                         <option value={PRINT_FORMATS.COMPONENTS_WITH_ITEMS}>Components + subcomponent names</option>
                         <option value={PRINT_FORMATS.TOTALS_ONLY}>Totals only</option>
                         <option value={PRINT_FORMATS.CUSTOM}>Custom</option>
-                        {isCargillsInvoice && (
-                            <option value={PRINT_FORMATS.CARGILLS_CUSTOM_LINES}>Cargills custom lines</option>
-                        )}
+                        <option value={PRINT_FORMATS.CUSTOM_LINES}>Custom lines</option>
                     </Form.Select>
                     <Dropdown autoClose="outside" align="end">
                         <Dropdown.Toggle size="sm" variant="outline-secondary" disabled={!canEditPrintLayout}>
@@ -1884,20 +1931,25 @@ const InvoiceView = () => {
                                             checked={!!taxPrintOptions[key]}
                                             onChange={() => toggleTaxPrintOption(key)}
                                             disabled={!canEditPrintLayout
-                                                || (usesCargillsCustomLines && PROTECTED_CARGILLS_OPTIONS.has(key))}
+                                                || (usesCustomLines && PROTECTED_CARGILLS_OPTIONS.has(key))}
                                         />
                                     ))}
                                 </div>
                             ))}
                         </Dropdown.Menu>
                     </Dropdown>
-                    {isAdmin && isFinalInvoiceType && (
-                        <Button size="sm" variant="outline-success" onClick={handleApplyPrintLayout} disabled={savingPrintLayout}>
+                    {isAdmin && isFinalInvoiceType && isPrintLayoutLocked && (
+                        <Button size="sm" variant="outline-warning" onClick={() => setShowReopenFormatModal(true)}>
+                            Reopen format
+                        </Button>
+                    )}
+                    {isAdmin && isFinalInvoiceType && !isPrintLayoutLocked && (
+                        <Button size="sm" variant="outline-success" onClick={handleApplyPrintLayout} disabled={savingPrintLayout || (usesCustomLines && (!customLinesMatch || !customLinesSaved))}>
                             {savingPrintLayout ? "Saving Format..." : "Apply Format"}
                         </Button>
                     )}
                     {isAdmin && (
-                        <Button size="sm" variant="outline-success" onClick={handleApprovePrint} disabled={printApproved}>
+                        <Button size="sm" variant="outline-success" onClick={handleApprovePrint} disabled={printApproved || (isFinalInvoiceType && !isPrintLayoutLocked) || invoice?.printFormatRevisionOpen === true}>
                             {printApproved ? "Print Approved" : "Approve Print"}
                         </Button>
                     )}
@@ -1931,18 +1983,19 @@ const InvoiceView = () => {
                         onClick={handlePrint}
                         disabled={recordingPrint
                             || !printApproved
-                            || (usesCargillsCustomLines && (!customLinesMatch || !customLinesSaved))}
+                            || (isFinalInvoiceType && !isPrintLayoutLocked)
+                            || (usesCustomLines && (!customLinesMatch || !customLinesSaved))}
                     >
                         {recordingPrint ? "Recording..." : "Print / Save PDF"}
                     </Button>
                 </div>
             </div>
 
-            {usesCargillsCustomLines && (
-                <section className="no-print mb-3 border rounded p-3 bg-light" aria-labelledby="cargills-custom-lines-title">
+            {usesCustomLines && (
+                <section className="no-print mb-3 border rounded p-3 bg-light" aria-labelledby="custom-lines-title">
                     <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
                         <div>
-                            <div id="cargills-custom-lines-title" className="fw-semibold">Cargills custom invoice lines</div>
+                            <div id="custom-lines-title" className="fw-semibold">Custom invoice lines</div>
                             <div className="small text-muted">
                                 Enter the printed descriptions, quantities, units, and rates. The financial summary below is protected.
                             </div>
@@ -2085,12 +2138,12 @@ const InvoiceView = () => {
                                 {isPrintLayoutLocked
                                     ? `Version ${currentPrintLayout.version || 1} applied by ${currentPrintLayout.updatedBy || "system"} on ${formatDateTime(currentPrintLayout.updatedAt)}.`
                                     : "This document type can be reprinted with the selected format."}
-                                {isPrintLayoutLocked && !isAdmin && " Only an admin or super admin can change this print format."}
+                                {isPrintLayoutLocked && !isAdmin && " Ask an admin to reopen this format for changes."}
                             </div>
                         </div>
                         <Badge bg="secondary">{selectedType.toUpperCase()}</Badge>
                     </div>
-                    {currentPrintAuditEntries.length > 0 && (
+                    {isAdmin && currentPrintAuditEntries.length > 0 && (
                         <div className="mt-3">
                             <div className="fw-semibold small mb-2">Recent print activity</div>
                             <div className="table-responsive">
@@ -2107,7 +2160,7 @@ const InvoiceView = () => {
                                     </thead>
                                     <tbody>
                                         {currentPrintAuditEntries
-                                            .slice(-5)
+                                            .slice()
                                             .reverse()
                                             .map((entry, index) => (
                                                 <tr key={`${entry.action}-${entry.performedAt}-${index}`}>
@@ -2128,7 +2181,7 @@ const InvoiceView = () => {
                             </div>
                         </div>
                     )}
-                    {isTaxInvoice && Array.isArray(invoice.taxInvoiceVersions) && invoice.taxInvoiceVersions.length > 0 && (
+                    {isAdmin && isTaxInvoice && Array.isArray(invoice.taxInvoiceVersions) && invoice.taxInvoiceVersions.length > 0 && (
                         <div className="mt-3">
                             <div className="fw-semibold small mb-2">Tax invoice version history</div>
                             <div className="table-responsive">
@@ -2488,7 +2541,7 @@ const InvoiceView = () => {
 
                     {showStandardSummary && (
                     <div className="invoice-summary">
-                        {(showTax || isProforma || totalReceived > 0 || usesCargillsCustomLines) && (
+                        {(showTax || isProforma || totalReceived > 0 || usesCustomLines) && (
                             <>
                                 {taxPrintOptions.showSubtotal && (
                                 <div className="invoice-summary-row">
@@ -2496,7 +2549,7 @@ const InvoiceView = () => {
                                     <span>{money(printedSubtotal)}</span>
                                 </div>
                                 )}
-                                {(showTax || usesCargillsCustomLines) && (taxPrintOptions.showVat || taxPrintOptions.showOtherTax) && (
+                                {(showTax || usesCustomLines) && (taxPrintOptions.showVat || taxPrintOptions.showOtherTax) && (
                                     <div className="invoice-summary-row">
                                         <span>TAX</span>
                                         <span>{money(printedTaxTotal)}</span>
