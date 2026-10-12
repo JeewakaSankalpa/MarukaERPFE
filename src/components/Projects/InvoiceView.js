@@ -519,7 +519,9 @@ const InvoiceView = () => {
         .filter(Boolean)
         .join(","), [role, projectRoles]);
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(String(role || "").toUpperCase());
-    const isMd = String(role || "").toUpperCase().replace(/^ROLE_/, "") === "MD";
+    const canApproveCancellation = ["MD", "ADMIN", "SUPER_ADMIN"].includes(
+        String(role || "").toUpperCase().replace(/^ROLE_/, "")
+    );
     const currentUsername = localStorage.getItem("username") || "";
     const isRecordedCreator = Boolean(currentUsername)
         && String(invoice?.createdBy || "").toLowerCase() === currentUsername.toLowerCase();
@@ -1787,7 +1789,7 @@ const InvoiceView = () => {
 
             <Modal show={showCancellationModal} onHide={() => !cancellationBusy && setShowCancellationModal(false)} centered>
                 <Modal.Header closeButton={!cancellationBusy}>
-                    <Modal.Title>{isMd && invoice.status === "CANCELLATION_PENDING" ? "Reject cancellation" : "Cancel Tax Invoice"}</Modal.Title>
+                    <Modal.Title>{canApproveCancellation && invoice.status === "CANCELLATION_PENDING" ? "Reject cancellation" : "Cancel Tax Invoice"}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <div className="alert alert-warning small">
@@ -1795,7 +1797,7 @@ const InvoiceView = () => {
                         the system creates a matching immutable Credit Note and reverses the original accounting entry.
                     </div>
                     <Form.Group>
-                        <Form.Label>{isMd && invoice.status === "CANCELLATION_PENDING" ? "Rejection reason" : "Cancellation reason"}</Form.Label>
+                        <Form.Label>{canApproveCancellation && invoice.status === "CANCELLATION_PENDING" ? "Rejection reason" : "Cancellation reason"}</Form.Label>
                         <Form.Control as="textarea" rows={4} value={cancellationReason}
                             onChange={(event) => setCancellationReason(event.target.value)} maxLength={1000} />
                     </Form.Group>
@@ -1804,9 +1806,9 @@ const InvoiceView = () => {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowCancellationModal(false)} disabled={cancellationBusy}>Close</Button>
                     <Button variant="danger"
-                        onClick={isMd && invoice.status === "CANCELLATION_PENDING" ? handleRejectCancellation : handleRequestCancellation}
+                        onClick={canApproveCancellation && invoice.status === "CANCELLATION_PENDING" ? handleRejectCancellation : handleRequestCancellation}
                         disabled={cancellationBusy || cancellationReason.trim().length < 5}>
-                        {cancellationBusy ? "Processing..." : isMd && invoice.status === "CANCELLATION_PENDING" ? "Reject request" : "Submit for MD approval"}
+                        {cancellationBusy ? "Processing..." : canApproveCancellation && invoice.status === "CANCELLATION_PENDING" ? "Reject request" : "Submit for MD approval"}
                     </Button>
                 </Modal.Footer>
             </Modal>
@@ -1911,10 +1913,10 @@ const InvoiceView = () => {
                             Request Cancellation
                         </Button>
                     )}
-                    {selectedType === DOC_TYPES.TAX && invoice.status === "CANCELLATION_PENDING" && isMd && (
+                    {selectedType === DOC_TYPES.TAX && invoice.status === "CANCELLATION_PENDING" && canApproveCancellation && (
                         <>
                             <Button size="sm" variant="danger" onClick={handleApproveCancellation} disabled={cancellationBusy}>
-                                {cancellationBusy ? "Processing..." : "MD Approve Cancellation"}
+                                {cancellationBusy ? "Processing..." : "Approve Cancellation"}
                             </Button>
                             <Button size="sm" variant="outline-danger" onClick={() => setShowCancellationModal(true)} disabled={cancellationBusy}>
                                 Reject
