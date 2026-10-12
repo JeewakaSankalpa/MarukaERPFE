@@ -78,6 +78,7 @@ import SalaryReport from "./components/Employee/Reports/SalaryReport";
 import LeaveUtilizationReport from "./components/Employee/Reports/LeaveUtilizationReport";
 import ProjectMaterialReport from "./components/Inventory/Reports/ProjectMaterialReport";
 import StockValuationReport from "./components/Inventory/Reports/StockValuationReport";
+import StockControlCenter from "./components/Inventory/Reports/StockControlCenter";
 import PayablesReport from './components/Inventory/Reports/PayablesReport';
 import ReceivablesReport from './components/Inventory/Reports/ReceivablesReport';
 import ExpensesPage from './components/finance/ExpensesPage';
@@ -369,6 +370,9 @@ function App() {
 
                     {/* Reports */}
                     <Route element={<PrivateRoute module="reports" />}>
+                        <Route element={<PrivateRoute module="reports.stock_control" />}>
+                            <Route path="/reports/stock-control" element={<StockControlCenter />} />
+                        </Route>
                         <Route path="/reports" element={<ReportsPage />} />
                         <Route path="/reports/sales-revenue" element={<SalesRevenueReport />} />
                         <Route path="/reports/all-tasks" element={<AllTasksReport />} />

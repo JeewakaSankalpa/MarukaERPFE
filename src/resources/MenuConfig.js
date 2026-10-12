@@ -111,6 +111,7 @@ export const MenuConfig = [
             { id: "reports.dashboard", title: "Reports Dashboard", path: "/reports" },
             { id: "reports.sales_revenue", title: "Sales Revenue", path: "/reports/sales-revenue" },
             { id: "reports.stock", title: "Stock Valuation", path: "/reports/stock" },
+            { id: "reports.stock_control", title: "Stock Control Center", path: "/reports/stock-control" },
             { id: "reports.payables", title: "Payables Report", path: "/reports/payables" },
             { id: "reports.receivables", title: "Receivables Report", path: "/reports/receivables" },
             { id: "reports.leave", title: "Leave Utilization", path: "/reports/leave" },

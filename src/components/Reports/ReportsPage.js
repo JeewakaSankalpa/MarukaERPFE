@@ -10,6 +10,8 @@ const getPayables = async () => (await api.get("/reports/payables")).data;
 const getReceivables = async () => (await api.get("/projects/receivables")).data;
 
 export default function ReportsPage() {
+    const canViewStockControl = (localStorage.getItem('role') || '').toUpperCase() === 'SUPER_ADMIN' ||
+        JSON.parse(localStorage.getItem('moduleAccess') || '[]').includes('reports.stock_control');
     const [key, setKey] = useState("hr");
     const navigate = useNavigate();
     const [stock, setStock] = useState([]);
@@ -94,6 +96,7 @@ export default function ReportsPage() {
                     </Tab>
                     <Tab eventKey="stock" title="Current Stock">
                         <div className="text-end mb-2">
+                            {canViewStockControl && <button className="btn btn-outline-primary btn-sm me-2" onClick={() => navigate("/reports/stock-control")}>Stock Control Center</button>}
                             <button className="btn btn-primary btn-sm" onClick={() => navigate("/reports/stock")}>
                                 <FileText size={15} className="me-1" />
                                 View Stock Valuation Report
