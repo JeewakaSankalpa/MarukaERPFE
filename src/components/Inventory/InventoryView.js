@@ -424,23 +424,23 @@ function InventoryView() {
                         <>
                             <Row className="g-2 text-center mb-3">
                                 {[
-                                    ['Total Stock (All Locations)', productBreakdown?.totals?.totalQuantity ?? selectedProduct?.totalQuantity],
+                                    ['Total in current stock', productBreakdown?.totals?.totalQuantity ?? selectedProduct?.totalQuantity],
                                     ['Main Store', productBreakdown?.totals?.mainStoreQuantity ?? selectedProduct?.mainStoreQuantity],
-                                    ['Project Stock', productBreakdown?.totals?.projectQuantity],
-                                    ['Department Stock', productBreakdown?.totals?.departmentQuantity],
-                                    ['Other Stores', productBreakdown?.totals?.otherStoreQuantity],
-                                    ['Open Batches', productBreakdown?.totals?.openBatchCount],
+                                    ['Accepted project stock', productBreakdown?.totals?.projectQuantity],
+                                    ['Pending project acceptance', productBreakdown?.totals?.pendingAcceptanceQuantity],
+                                    ['Department / other stores', (productBreakdown?.totals?.departmentQuantity || 0) + (productBreakdown?.totals?.otherStoreQuantity || 0)],
+                                    ['Open batches', productBreakdown?.totals?.openBatchCount],
                                 ].map(([label, value]) => (
                                     <Col key={label} xs={6} md={4} lg={2}>
-                                        <div className="border rounded p-2 h-100">
+                                        <div className="border rounded p-2 h-100 bg-light">
                                             <div className="text-muted small">{label}</div>
                                             <div className="fw-bold">{formatQuantity(value)}</div>
                                         </div>
                                     </Col>
                                 ))}
                             </Row>
-                            <div className="text-muted small mb-3">
-                                Internal transfers move stock between Main Store and a project; they do not change the total stock across all locations.
+                            <div className="alert alert-info mb-3" role="note">
+                                <strong>Stock stage guide:</strong> Main Store is physically in the store; Accepted project stock has arrived and is owned by a project; Pending project acceptance has been issued from the store but is still awaiting site acceptance. Pending quantities are shown separately and are not added to current batch stock.
                             </div>
 
                             <h5>Location / Owner Breakdown</h5>

@@ -94,6 +94,8 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 ## Last updated
 
+2026-10-15 by Codex: Stock Search product details now use a stage-aware inventory summary: current stock, Main Store, accepted project stock, pending project acceptance, and other custody. Keep pending acceptance visibly separate from physical batch quantities and keep the breakdown usable as an audit surface.
+
 2026-10-12 by Codex: Stock Control Center under Reports follows the existing blue operational style, with compact scan-friendly metrics, separate position and movement views, batch breakdown drawers, clear source references, and explicit labels for unverified physical counts and audit decreases. Keep responsive density and keyboard-visible focus in report views.
 
 2026-08-01 by Codex: added Customer Portal and Supplier Portal project interface guidance.
