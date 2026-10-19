@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileCheck2, Info, WalletCards } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Container, Table, Card, Badge, Form, Row, Col, InputGroup } from 'react-bootstrap';
 import { toast } from 'react-toastify';
@@ -122,23 +122,25 @@ export default function IncomePage() {
                         <Card.Body>
                             <h6>Total Invoiced</h6>
                             <h3>{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <small>Invoice amounts</small>
                         </Card.Body>
                     </Card>
                 </Col>
                 <Col md={3}>
                     <Card className="text-center shadow-sm border-0 bg-success text-white h-100">
                         <Card.Body>
-                            <h6>Total Received</h6>
+                            <h6><FileCheck2 size={15} className="me-1" aria-hidden="true" />Invoice Payments</h6>
                             <h3>{totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <small>Allocated to invoices</small>
                         </Card.Body>
                     </Card>
                 </Col>
                 <Col md={3}>
                     <Card className="text-center shadow-sm border-0 bg-info text-white h-100">
                         <Card.Body>
-                            <h6>Project Payments</h6>
+                            <h6><WalletCards size={15} className="me-1" aria-hidden="true" />Project Payments</h6>
                             <h3>{projectPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
-                            <small>Project receipts not allocated to invoices</small>
+                            <small>Received for projects, not invoices</small>
                         </Card.Body>
                     </Card>
                 </Col>
@@ -147,10 +149,25 @@ export default function IncomePage() {
                         <Card.Body>
                             <h6>Outstanding</h6>
                             <h3>{totalPending.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <small>Invoice balances only</small>
                         </Card.Body>
                     </Card>
                 </Col>
             </Row>
+
+            <Card className="mb-4 border-0 shadow-sm" aria-label="Income totals explanation">
+                <Card.Body className="d-flex align-items-start gap-3 py-3">
+                    <Info className="text-primary flex-shrink-0 mt-1" size={20} aria-hidden="true" />
+                    <div>
+                        <div className="fw-semibold">How to read these totals</div>
+                        <div className="text-muted small">
+                            Invoice Payments are linked to a specific invoice. Project Payments are receipts recorded
+                            in Project Finance and remain unallocated until someone assigns them to an invoice.
+                            They are shown separately so the same payment is not counted twice.
+                        </div>
+                    </div>
+                </Card.Body>
+            </Card>
 
             {/* Charts Section */}
             <Row className="mb-4 g-3">

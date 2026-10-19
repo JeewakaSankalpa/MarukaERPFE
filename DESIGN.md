@@ -94,6 +94,8 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 ## Last updated
 
+2026-10-19 by Codex: Finance Income distinguishes invoice-allocated payments from project-level receipts with explicit labels, icons, and an inline accounting explanation. Preserve this separation to prevent double-counting.
+
 2026-10-19 by Codex: Workflow stage visibility now uses a hierarchical project-path registry with compact sticky-column matrix controls and explicit role states (inherit, allow, deny). Preserve the blue operational palette, administrator visibility, keyboard focus, and mobile horizontal containment when extending project paths.
 
 2026-10-15 by Codex: Stock Search product details now use a stage-aware inventory summary: current stock, Main Store, accepted project stock, pending project acceptance, and other custody. Keep pending acceptance visibly separate from physical batch quantities and keep the breakdown usable as an audit surface.
