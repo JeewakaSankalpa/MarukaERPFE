@@ -15,6 +15,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
 export default function IncomePage() {
     const navigate = useNavigate();
     const [invoices, setInvoices] = useState([]);
+    const [projectReceivables, setProjectReceivables] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // Filters
@@ -29,8 +30,12 @@ export default function IncomePage() {
     const loadInvoices = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/invoices');
-            setInvoices(res.data || []);
+            const [invoiceRes, receivableRes] = await Promise.all([
+                api.get('/invoices'),
+                api.get('/projects/receivables')
+            ]);
+            setInvoices(invoiceRes.data || []);
+            setProjectReceivables(receivableRes.data || []);
         } catch (e) {
             console.error(e);
             toast.error("Failed to load income data");
@@ -96,6 +101,9 @@ export default function IncomePage() {
     // --- Totals ---
     const totalIncome = activeFinancialInvoices.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
     const totalReceived = activeFinancialInvoices.reduce((acc, curr) => acc + (curr.paidAmount || 0), 0);
+    const projectPaymentsReceived = projectReceivables.reduce(
+        (acc, project) => acc + (Number(project.totalReceived) || 0), 0
+    );
     const totalPending = activeFinancialInvoices
         .filter(i => i.status !== 'PAID')
         .reduce((acc, curr) => acc + ((curr.totalAmount || 0) - (curr.paidAmount || 0)), 0);
@@ -109,7 +117,7 @@ export default function IncomePage() {
                         </div>
 {/* Summary Cards */}
             <Row className="mb-4 g-3">
-                <Col md={4}>
+                <Col md={3}>
                     <Card className="text-center shadow-sm border-0 bg-primary text-white h-100">
                         <Card.Body>
                             <h6>Total Invoiced</h6>
@@ -117,7 +125,7 @@ export default function IncomePage() {
                         </Card.Body>
                     </Card>
                 </Col>
-                <Col md={4}>
+                <Col md={3}>
                     <Card className="text-center shadow-sm border-0 bg-success text-white h-100">
                         <Card.Body>
                             <h6>Total Received</h6>
@@ -125,7 +133,16 @@ export default function IncomePage() {
                         </Card.Body>
                     </Card>
                 </Col>
-                <Col md={4}>
+                <Col md={3}>
+                    <Card className="text-center shadow-sm border-0 bg-info text-white h-100">
+                        <Card.Body>
+                            <h6>Project Payments</h6>
+                            <h3>{projectPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <small>Project receipts not allocated to invoices</small>
+                        </Card.Body>
+                    </Card>
+                </Col>
+                <Col md={3}>
                     <Card className="text-center shadow-sm border-0 bg-warning text-dark h-100">
                         <Card.Body>
                             <h6>Outstanding</h6>
