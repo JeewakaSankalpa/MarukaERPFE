@@ -34,15 +34,20 @@ const splitCsvLine = (line) => {
     for (let i = 0; i < line.length; i += 1) {
         const char = line[i];
         if (char === '"') {
-            quoted = !quoted;
+            if (quoted && line[i + 1] === '"') {
+                current += '"';
+                i += 1;
+            } else {
+                quoted = !quoted;
+            }
         } else if (char === "," && !quoted) {
-            result.push(current.trim().replace(/^"|"$/g, ""));
+            result.push(current.trim());
             current = "";
         } else {
             current += char;
         }
     }
-    result.push(current.trim().replace(/^"|"$/g, ""));
+    result.push(current.trim());
     return result;
 };
 
@@ -50,13 +55,14 @@ const parsePhysicalUpload = (text = "") => {
     const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
     if (!lines.length) return { rows: [], report: emptyUploadReport() };
     const header = splitCsvLine(lines[0]).map(value => value.trim().toLowerCase());
-    const hasHeader = header.some(value => ["sku", "quantity", "qty", "countedqty", "runid", "unitcost", "unit cost", "price", "cost", "rate", "reorderlevel", "reorder level", "reorder", "supplier"].includes(value));
+    const hasHeader = header.some(value => ["sku", "quantity", "qty", "countedqty", "runid", "rowid", "unitcost", "unit cost", "price", "cost", "rate", "reorderlevel", "reorder level", "reorder", "supplier"].includes(value));
     const start = hasHeader ? 1 : 0;
     const columns = hasHeader ? header : ["sku", "quantity", "unitcost", "productname", "reorderlevel", "supplier"];
     const find = (...names) => names.map(name => columns.indexOf(name)).find(index => index >= 0);
     const skuIndex = find("sku", "item code", "itemcode", "code");
     const countSheet = columns.includes("runid");
     const runIndex = find("runid");
+    const rowIndex = find("rowid");
     const countedAtIndex = find("countedat");
     const qtyIndex = find("countedqty", "quantity", "qty", "stock", "physical qty", "physical quantity");
     const costIndex = find("unitcost", "unit cost", "item rate", "rate", "price", "cost", "unit price");
@@ -90,17 +96,20 @@ const parsePhysicalUpload = (text = "") => {
         const minOrderQty = Number(minOrderQtyRaw.replace(/,/g, ""));
         const item = { rowNumber, sku, productName };
 
-        if (!productName) report.missingDescription.push(item);
+        if (!countSheet && !productName) report.missingDescription.push(item);
         if (!quantityRaw) report.missingQuantity.push(item);
-        if (!unitCostRaw) report.missingRate.push(item);
-        if (!supplierName) report.missingSupplier.push(item);
-        if (!reorderRaw) report.missingMinimumOrderLevel.push(item);
-        if (minOrderQtyIndex != null && !minOrderQtyRaw) report.missingMinimumOrderQty.push(item);
+        if (!countSheet) {
+            if (!unitCostRaw) report.missingRate.push(item);
+            if (!supplierName) report.missingSupplier.push(item);
+            if (!reorderRaw) report.missingMinimumOrderLevel.push(item);
+            if (minOrderQtyIndex != null && !minOrderQtyRaw) report.missingMinimumOrderQty.push(item);
+        }
 
         return {
             sku,
             productName,
             runId: runIndex == null ? undefined : String(cells[runIndex] || "").trim(),
+            rowId: rowIndex == null ? undefined : String(cells[rowIndex] || "").trim(),
             countedAt: countedAtRaw && Number.isFinite(Date.parse(countedAtRaw)) ? new Date(countedAtRaw).toISOString() : null,
             quantity: countSheet && !quantityRaw ? null : Number.isFinite(quantity) ? quantity : 0,
             unitCost: Number.isFinite(unitCost) ? unitCost : 0,
@@ -162,6 +171,9 @@ const getErrorMessage = (err, fallback) => {
     const data = err?.response?.data;
     if (typeof data === "string") return data;
     if (data?.message) return data.message;
+    if (err?.code === "ECONNABORTED") return `${fallback}: request timed out. Check the run status before retrying.`;
+    if (err?.request && !err?.response) return `${fallback}: no response from the server. Check the connection and run status before retrying.`;
+    if (err?.response?.status) return `${fallback}: server returned HTTP ${err.response.status}.`;
     return fallback;
 };
 
@@ -1076,7 +1088,7 @@ function ReconciliationTab() {
                     <Form.Group className="mb-3">
                         <Form.Label>Upload CSV</Form.Label>
                         <Form.Control type="file" accept=".csv,text/csv" onChange={handleFile} />
-                        <Form.Text>Fill countedAt (ISO date and time) and countedQty in the downloaded sheet. Existing stock, cost, and supplier columns are reference only.</Form.Text>
+                        <Form.Text>Fill countedQty in the downloaded sheet. Keep runId, rowId, and SKU unchanged. Product name, existing stock, cost, and supplier columns are for reference only. Complete the count while stock movements are paused.</Form.Text>
                     </Form.Group>
                     <div className="border rounded p-3 bg-light mb-3">
                         {sourceFileName ? (
