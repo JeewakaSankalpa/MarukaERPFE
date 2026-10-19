@@ -5,6 +5,7 @@ import { Printer, CheckCircle } from "lucide-react";
 import api from "../../api/api";
 import { toast } from "react-toastify";
 import { useState } from "react";
+import { getErrorMessage } from "../../utils/errorMessage";
 
 const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, actions, roleHeader }) => {
     const navigate = useNavigate();
@@ -102,7 +103,8 @@ const ProjectQuotationCard = ({ project, projectId, isVisible, reloadKey, action
                 window.location.reload();
             }
         } catch (error) {
-            toast.error("Failed to record customer PO: " + (error.response?.data?.message || error.message));
+            console.error('Failed to record customer PO', error);
+            toast.error(`Failed to record customer PO: ${getErrorMessage(error)}`);
         } finally {
             setIsAccepting(false);
         }

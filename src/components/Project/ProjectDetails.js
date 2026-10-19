@@ -8,6 +8,7 @@ import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { getWorkflow } from '../../services/workflowApi';
 import { useAuth } from '../../context/AuthContext';
+import { getErrorMessage } from '../../utils/errorMessage';
 import { COMPONENT_IDS, ProjectComponentRegistry } from './ComponentRegistry'; // Registry Import
 import ProjectLifecycle from './ProjectLifecycle';
 
@@ -293,15 +294,18 @@ export default function ProjectDetails() {
 
         try {
             await api.post(`/projects/${id}/accept-quotation`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'X-Roles': rolesHeader
+                }
             });
             toast.success("Customer PO recorded. Job number generated.");
             setShowAcceptModal(false);
             setAcceptFile(null);
             await refresh();
         } catch (e) {
-            console.error(e);
-            toast.error("Failed to record customer PO: " + (e.response?.data?.message || e.message));
+            console.error('Failed to record customer PO', e);
+            toast.error(`Failed to record customer PO: ${getErrorMessage(e)}`);
         } finally {
             setAccepting(false);
         }
