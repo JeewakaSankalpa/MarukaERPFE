@@ -209,6 +209,41 @@ function PortalPreviewRouteWrapper({ type }) {
 
 /* ------------------- App ------------------- */
 function App() {
+    React.useEffect(() => {
+        const selectZeroOnFocus = (event) => {
+            const input = event.target;
+            if (
+                input instanceof HTMLInputElement &&
+                input.type === "number" &&
+                !input.disabled &&
+                !input.readOnly &&
+                /^0(?:\.0+)?$/.test(input.value)
+            ) {
+                input.select();
+            }
+        };
+
+        const preventWheelChanges = (event) => {
+            const input = event.target instanceof Element
+                ? event.target.closest('input[type="number"]')
+                : null;
+
+            if (input && !input.disabled && !input.readOnly) {
+                // Blurring cancels the native spinner change while preserving
+                // normal page scrolling when the pointer is over the field.
+                input.blur();
+            }
+        };
+
+        document.addEventListener("focusin", selectZeroOnFocus);
+        document.addEventListener("wheel", preventWheelChanges, { capture: true });
+
+        return () => {
+            document.removeEventListener("focusin", selectZeroOnFocus);
+            document.removeEventListener("wheel", preventWheelChanges, { capture: true });
+        };
+    }, []);
+
     return (
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <BrandedDialogHost />
