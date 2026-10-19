@@ -40,6 +40,13 @@ const addAllocation = (allocations, componentName, quantity) => {
 
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
 
+const requestedHistoryQuantity = (history = [], productId) => history
+    .filter(item => item.productId === productId)
+    .reduce((total, item) => total + Number(item.requestedQty || 0), 0);
+
+const remainingEstimatedQuantity = (estimatedQuantity, history, productId) =>
+    Math.max(0, Number(estimatedQuantity || 0) - requestedHistoryQuantity(history, productId));
+
 const listDepartments = async () => {
     try {
         const res = await api.get(`/departments?${qp({ status: "ACTIVE", page: 0, size: 1000, sort: "name,asc" })}`);
@@ -331,9 +338,14 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                             selectedComponents: {}
                         };
                         const estimatedQty = Number(item.quantity) * sets;
+                        const remainingQty = remainingEstimatedQuantity(
+                            estimatedQty,
+                            history[componentName] || [],
+                            item.productId
+                        );
                         current.estimatedQuantities[componentName] = estimatedQty;
-                        current.quantities[componentName] = history[componentName]?.length ? 0 : estimatedQty;
-                        current.selectedComponents[componentName] = !history[componentName]?.length;
+                        current.quantities[componentName] = remainingQty;
+                        current.selectedComponents[componentName] = remainingQty > 0;
                         rowMap.set(item.productId, current);
                     });
                 });
@@ -655,11 +667,20 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 }
             }
             setComponentHistory(nextHistory);
-            setRows(previous => previous.map(row => ({
-                ...row,
-                quantities: { ...row.quantities, [activeComponent]: 0 },
-                selectedComponents: { ...row.selectedComponents, [activeComponent]: false }
-            })));
+            setRows(previous => previous.map(row => {
+                if (!Object.prototype.hasOwnProperty.call(row.quantities, activeComponent)) return row;
+                const estimatedQty = Number(row.estimatedQuantities?.[activeComponent] || 0);
+                const remainingQty = remainingEstimatedQuantity(
+                    estimatedQty,
+                    nextHistory[activeComponent] || [],
+                    row.productId
+                );
+                return {
+                    ...row,
+                    quantities: { ...row.quantities, [activeComponent]: remainingQty },
+                    selectedComponents: { ...row.selectedComponents, [activeComponent]: remainingQty > 0 }
+                };
+            }));
 
             let updatedDraft = null;
             if (routeId && status === "DRAFT") {
