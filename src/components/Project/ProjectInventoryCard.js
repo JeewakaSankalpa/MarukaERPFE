@@ -638,15 +638,15 @@ export default function ProjectInventoryCard({ projectId, project }) {
     };
 
     const handleCancelRow = async () => {
-        if (!cancelData.productId) return;
+        if (!cancelData.productId || !cancelData.itemRequestId) return;
         setSubmitting(true);
         try {
-            await api.patch(`/inventory/project/${projectId}/cancel?productId=${encodeURIComponent(cancelData.productId)}`, {
+            await api.patch(`/inventory/project/request/${cancelData.itemRequestId}/cancel?productId=${encodeURIComponent(cancelData.productId)}`, {
                 reason: cancelData.reason
             });
             toast.success("Order cancelled successfully");
             setShowCancelModal(false);
-            setCancelData({ productId: '', productName: '', reason: '' });
+            setCancelData({ productId: '', productName: '', itemRequestId: '', reason: '' });
             load();
         } catch (e) {
             toast.error(e?.response?.data?.message || "Failed to cancel order");
@@ -683,7 +683,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
 
     // State for Cancel Modal
     const [showCancelModal, setShowCancelModal] = useState(false);
-    const [cancelData, setCancelData] = useState({ productId: '', productName: '', reason: '' });
+    const [cancelData, setCancelData] = useState({ productId: '', productName: '', itemRequestId: '', reason: '' });
 
     const getReceiptStatusBadge = (status) => {
         if (status === 'CANCELED' || status === 'CANCELLED') return <Badge bg="danger">Cancelled</Badge>;
@@ -1029,7 +1029,12 @@ export default function ProjectInventoryCard({ projectId, project }) {
                                                     variant="outline-danger"
                                                     title="Cancel project-wide request"
                                                     onClick={() => {
-                                                        setCancelData({ productId: i.productId, productName: i.productName, reason: '' });
+                                                        const requestIds = i.itemRequestIds || [];
+                                                        if (requestIds.length !== 1) {
+                                                            toast.info('This product belongs to multiple active requests. Open the request history and cancel the specific request.');
+                                                            return;
+                                                        }
+                                                        setCancelData({ productId: i.productId, productName: i.productName, itemRequestId: requestIds[0], reason: '' });
                                                         setShowCancelModal(true);
                                                     }}>
                                                     Cancel
