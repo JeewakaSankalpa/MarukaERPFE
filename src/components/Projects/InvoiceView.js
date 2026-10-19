@@ -109,6 +109,7 @@ const TAX_PRINT_PRESETS = {
         showItemUnitPrices: false,
         showItemTotals: false,
         showSubtotal: true,
+        showDiscount: true,
         showVat: true,
         showOtherTax: true,
         showTotalAmount: true,
@@ -131,6 +132,7 @@ const TAX_PRINT_PRESETS = {
         showItemUnitPrices: false,
         showItemTotals: false,
         showSubtotal: true,
+        showDiscount: true,
         showVat: true,
         showOtherTax: true,
         showTotalAmount: true,
@@ -153,6 +155,7 @@ const TAX_PRINT_PRESETS = {
         showItemUnitPrices: false,
         showItemTotals: false,
         showSubtotal: true,
+        showDiscount: true,
         showVat: true,
         showOtherTax: true,
         showTotalAmount: true,
@@ -175,6 +178,7 @@ const TAX_PRINT_PRESETS = {
         showItemUnitPrices: false,
         showItemTotals: false,
         showSubtotal: true,
+        showDiscount: true,
         showVat: true,
         showOtherTax: true,
         showTotalAmount: true,
@@ -212,6 +216,7 @@ const TAX_PRINT_OPTION_GROUPS = [
         title: "Totals and footer",
         options: [
             ["showSubtotal", "Subtotal"],
+            ["showDiscount", "Discount"],
             ["showVat", "VAT"],
             ["showOtherTax", "Other tax"],
             ["showTotalAmount", "Total amount"],
@@ -928,6 +933,7 @@ const InvoiceView = () => {
             setTaxPrintOptions({
                 ...Object.fromEntries(Object.keys(TAX_PRINT_PRESETS[PRINT_FORMATS.ALL]).map((key) => [key, false])),
                 showSubtotal: true,
+                showDiscount: true,
                 showVat: true,
                 showOtherTax: true,
                 showTotalAmount: true,
@@ -1055,6 +1061,7 @@ const InvoiceView = () => {
     const totalReceived = numberValue(invoice.paidAmount);
     const sourceVatTotal = numberValue(estimation?.computedVatAmount);
     const sourceOtherTaxTotal = numberValue(estimation?.computedTaxAmount);
+    const invoiceDiscountAmount = numberValue(estimation?.computedDiscountAmount);
     const sourceDocumentTotal = numberValue(estimation?.computedGrandTotal);
     const invoiceVatTotal = numberValue(invoice.vatAmount);
     const invoiceOtherTaxTotal = numberValue(invoice.taxAmount);
@@ -1162,21 +1169,6 @@ const InvoiceView = () => {
             })
             : [];
         const componentRows = estimationComponentRows.length ? estimationComponentRows : quotationComponentRows;
-        const actualDiscountAmount = numberValue(estimation?.computedDiscountAmount);
-        const rowsWithDiscount = actualDiscountAmount > 0.004
-            ? [
-                ...componentRows,
-                {
-                    key: "supply-discount",
-                    itemCode: "",
-                    description: "Discount",
-                    quantity: "",
-                    unit: "",
-                    unitPrice: -actualDiscountAmount,
-                    total: -actualDiscountAmount,
-                },
-            ]
-            : componentRows;
         const groupedComponentRows = groupedItems.map((group, index) => ({
             key: `component-${index}`,
             itemCode: inquiryRef,
@@ -1205,12 +1197,10 @@ const InvoiceView = () => {
                     isSubItem: true,
                 })) : []),
             ]);
-            return actualDiscountAmount > 0.004 && taxPrintOptions.showComponents
-                ? [...rows, rowsWithDiscount[rowsWithDiscount.length - 1]]
-                : rows;
+            return rows;
         }
 
-        return componentRows.length ? rowsWithDiscount : invoiceRows.map((item, index) => ({
+        return componentRows.length ? componentRows : invoiceRows.map((item, index) => ({
             key: item.key || `tax-line-${index}`,
             itemCode: item.productId || inquiryRef,
             description: item.description,
@@ -1256,6 +1246,7 @@ const InvoiceView = () => {
         amount: taxPrintOptions.showComponentPrices
             || taxPrintOptions.showItemTotals
             || taxPrintOptions.showSubtotal
+            || taxPrintOptions.showDiscount
             || taxPrintOptions.showVat
             || taxPrintOptions.showOtherTax
             || taxPrintOptions.showTotalAmount
@@ -1281,6 +1272,7 @@ const InvoiceView = () => {
     const showStandardRate = usesCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemUnitPrices;
     const showStandardAmount = usesCustomLines || taxPrintOptions.showComponentPrices || taxPrintOptions.showItemTotals;
     const showStandardSummary = taxPrintOptions.showSubtotal
+        || taxPrintOptions.showDiscount
         || taxPrintOptions.showVat
         || taxPrintOptions.showOtherTax
         || taxPrintOptions.showTotalAmount
@@ -1794,6 +1786,7 @@ const InvoiceView = () => {
                                 <div className="d-flex justify-content-end">
                                     <div style={{ minWidth: 260 }}>
                                         {previewOptions.showSubtotal && <div className="d-flex justify-content-between"><span>Subtotal</span><span>{money(previewPrintEntry.subtotal ?? printedSubtotal)}</span></div>}
+                                        {previewOptions.showDiscount && invoiceDiscountAmount > 0.004 && <div className="d-flex justify-content-between"><span>Discount</span><span>-{money(invoiceDiscountAmount)}</span></div>}
                                         {(previewOptions.showVat || previewOptions.showOtherTax) && <div className="d-flex justify-content-between"><span>Tax</span><span>{money(numberValue(previewPrintEntry.vatAmount ?? storedVatTotal) + numberValue(previewPrintEntry.taxAmount ?? storedOtherTaxTotal))}</span></div>}
                                         {previewOptions.showTotalAmount && <div className="d-flex justify-content-between fw-bold"><span>Total</span><span>{money(previewPrintEntry.totalAmount ?? printedDocumentTotal)}</span></div>}
                                         {previewOptions.showTotalDue && <div className="d-flex justify-content-between fw-bold border-top mt-2 pt-2"><span>Total Due</span><span>{money(balanceDue)}</span></div>}
@@ -2349,6 +2342,12 @@ const InvoiceView = () => {
                                     )}
                                 </tr>
                             ))}
+                            {taxPrintOptions.showDiscount && invoiceDiscountAmount > 0.004 && (
+                            <tr>
+                                <td className="tax-summary-label" colSpan={taxSummaryColSpan}>Discount</td>
+                                <td className="amount">-{money(invoiceDiscountAmount)}</td>
+                            </tr>
+                            )}
                             {taxPrintOptions.showSubtotal && (
                             <tr>
                                 <td className="tax-summary-label" colSpan={taxSummaryColSpan}>Total Value of Supply</td>
@@ -2541,12 +2540,18 @@ const InvoiceView = () => {
 
                     {showStandardSummary && (
                     <div className="invoice-summary">
-                        {(showTax || isProforma || totalReceived > 0 || usesCustomLines) && (
+                        {(showTax || isProforma || totalReceived > 0 || usesCustomLines || (taxPrintOptions.showDiscount && invoiceDiscountAmount > 0.004)) && (
                             <>
                                 {taxPrintOptions.showSubtotal && (
                                 <div className="invoice-summary-row">
                                     <span>SUBTOTAL</span>
                                     <span>{money(printedSubtotal)}</span>
+                                </div>
+                                )}
+                                {taxPrintOptions.showDiscount && invoiceDiscountAmount > 0.004 && (
+                                <div className="invoice-summary-row">
+                                    <span>DISCOUNT</span>
+                                    <span>-{money(invoiceDiscountAmount)}</span>
                                 </div>
                                 )}
                                 {(showTax || usesCustomLines) && (taxPrintOptions.showVat || taxPrintOptions.showOtherTax) && (
