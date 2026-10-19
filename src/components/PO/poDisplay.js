@@ -16,6 +16,76 @@ export const formatQty = (value) => {
     return number.toFixed(2).replace(/\.?0+$/, "");
 };
 
+const displayItemKey = (item = {}) => {
+    const productId = clean(item.productId);
+    if (productId) return `PRODUCT:${productId}`;
+    const sku = clean(item.sku);
+    if (sku) return `SKU:${sku}`;
+    return `NAME:${clean(item.productNameSnapshot || item.productName).toLowerCase()}`;
+};
+
+const mergeAllocations = (items, field) => {
+    const byComponent = new Map();
+    (items || []).forEach(item => {
+        (item?.[field] || []).forEach(allocation => {
+            const name = clean(allocation?.componentName) || "Unassigned";
+            const existing = byComponent.get(name) || { componentName: name, quantity: 0 };
+            const quantity = allocationQty(allocation);
+            existing.quantity += quantity;
+            existing.quantityDecimal = existing.quantity;
+            byComponent.set(name, existing);
+        });
+    });
+    return [...byComponent.values()];
+};
+
+/**
+ * Groups identical products for presentation only. The original lines are
+ * retained on each group so GRN matching, audit history, and line traceability
+ * never depend on the aggregated display row.
+ */
+export const getDisplayPOItems = (items = []) => {
+    const groups = new Map();
+    (items || []).filter(Boolean).forEach(item => {
+        const key = displayItemKey(item);
+        const existing = groups.get(key);
+        if (existing) {
+            existing.items.push(item);
+            existing.orderedQty += orderedQty(item);
+            existing.receivedQty += receivedQty(item);
+            existing.amount += orderedQty(item) * quantityNumber(item.unitPrice);
+            return;
+        }
+
+        groups.set(key, {
+            key,
+            item: { ...item },
+            items: [item],
+            orderedQty: orderedQty(item),
+            receivedQty: receivedQty(item),
+            amount: orderedQty(item) * quantityNumber(item.unitPrice),
+            componentAllocations: mergeAllocations([item], "componentAllocations"),
+        });
+    });
+
+    return [...groups.values()].map(group => {
+        const itemsInGroup = group.items;
+        const displayItem = {
+            ...group.item,
+            orderedQtyDecimal: group.orderedQty,
+            orderedQty: Math.trunc(group.orderedQty),
+            receivedQtyDecimal: group.receivedQty,
+            receivedQty: Math.trunc(group.receivedQty),
+            componentAllocations: mergeAllocations(itemsInGroup, "componentAllocations"),
+            // A single rate is only shown when every source line has the same rate.
+            unitPrice: itemsInGroup.every(source => quantityNumber(source.unitPrice) === quantityNumber(itemsInGroup[0].unitPrice))
+                ? itemsInGroup[0].unitPrice
+                : null,
+        };
+        return { ...group, item: displayItem };
+    });
+};
+
 const sourceKey = (source) => [
     clean(source.jobNumber),
     clean(source.inquiryNumber),

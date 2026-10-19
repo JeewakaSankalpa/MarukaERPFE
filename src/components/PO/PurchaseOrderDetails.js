@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import SafeSelect from '../ReusableComponents/SafeSelect';
-import { getPurchaseForSources, formatSourceRef, orderedQty, receivedQty, allocationQty, formatQty } from "./poDisplay";
+import { getPurchaseForSources, formatSourceRef, orderedQty, receivedQty, allocationQty, formatQty, getDisplayPOItems } from "./poDisplay";
 
 /* ========== API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -367,6 +367,7 @@ export default function PurchaseOrderDetails() {
     const totalOrderedQty = (po.items || []).reduce((sum, item) => sum + orderedQty(item), 0);
     const totalReceivedQty = (po.items || []).reduce((sum, item) => sum + receivedQty(item), 0);
     const totalBalanceQty = Math.max(0, totalOrderedQty - totalReceivedQty);
+    const displayItems = getDisplayPOItems(po.items || []);
     const legacyUnallocatedReceipts = poGrns.flatMap(grn => (grn.items || [])
         .filter(item => receivedQty(item) > 0 && !item.poLineId)
         .map(item => ({
@@ -603,14 +604,15 @@ export default function PurchaseOrderDetails() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {(po.items || []).map((item, idx) => {
+                                {displayItems.map((displayRow) => {
+                                    const item = displayRow.item;
                                     const qty = orderedQty(item);
                                     const price = item.unitPrice || 0;
-                                    const total = qty * price;
+                                    const total = displayRow.amount;
                                     const status = itemGrnStatus(item);
-                                    const receipts = grnReceiptsForItem(item, poGrns);
+                                    const receipts = displayRow.items.flatMap(sourceItem => grnReceiptsForItem(sourceItem, poGrns));
                                     return (
-                                        <React.Fragment key={item.poLineId || `${item.pendingLineKey || item.productId || "item"}-${idx}`}>
+                                        <React.Fragment key={displayRow.key}>
                                             <tr>
                                                 <td>
                                                     <div>{item.productNameSnapshot}</div>
@@ -624,7 +626,7 @@ export default function PurchaseOrderDetails() {
                                                     )}
                                                     {(item.componentAllocations || []).map((allocation, allocationIndex) => (
                                                         <div className="small text-primary" key={`${allocation.componentName}-${allocationIndex}`}>
-                                                            Component: {allocation.componentName} (requested {formatQty(allocationQty(allocation))})
+                                                            Component: {allocation.componentName} (total requested {formatQty(allocationQty(allocation))})
                                                         </div>
                                                     ))}
                                                 </td>

@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
 import signature from "../../assets/signature.png";
-import { formatPurchaseForText, orderedQty, formatQty } from "./poDisplay";
+import { formatPurchaseForText, orderedQty, formatQty, allocationQty, getDisplayPOItems } from "./poDisplay";
 
 const cleanText = (value) => String(value || "").trim();
 
@@ -40,6 +40,8 @@ const POPrint = () => {
     const [loading, setLoading] = useState(true);
     const [po, setPo] = useState(null);
     const [supplier, setSupplier] = useState(null);
+    const [showComponents, setShowComponents] = useState(true);
+    const [showTraceReferences, setShowTraceReferences] = useState(true);
 
     useEffect(() => {
         const load = async () => {
@@ -91,7 +93,25 @@ const POPrint = () => {
             {/* Action Bar - Hidden in Print */}
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
-                <Button variant="primary" onClick={handlePrint}>Print / PDF</Button>
+                <div className="d-flex align-items-center gap-3">
+                    <label className="d-flex align-items-center gap-2 mb-0" style={{ cursor: "pointer" }}>
+                        <input
+                            type="checkbox"
+                            checked={showComponents}
+                            onChange={event => setShowComponents(event.target.checked)}
+                        />
+                        <span>Show component breakdown</span>
+                    </label>
+                    <label className="d-flex align-items-center gap-2 mb-0" style={{ cursor: "pointer" }}>
+                        <input
+                            type="checkbox"
+                            checked={showTraceReferences}
+                            onChange={event => setShowTraceReferences(event.target.checked)}
+                        />
+                        <span>Show IR / MIN / MJN</span>
+                    </label>
+                    <Button variant="primary" onClick={handlePrint}>Print / PDF</Button>
+                </div>
             </div>
             
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop className="no-print" />
@@ -198,20 +218,36 @@ const POPrint = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {(po.items || []).map((item, idx) => {
+                        {getDisplayPOItems(po.items || []).map((displayRow) => {
+                            const item = displayRow.item;
                             if (!item) return null;
                             const qty = orderedQty(item);
-                            const amount = qty * (item.unitPrice || 0);
+                            const amount = displayRow.amount;
+                            const traceReferences = displayRow.items
+                                .map(sourceItem => [
+                                    sourceItem.itemRequestNumber ? `IR: ${sourceItem.itemRequestNumber}` : null,
+                                    sourceItem.inquiryNumber || sourceItem.projectId ? `MIN: ${sourceItem.inquiryNumber || sourceItem.projectId}` : null,
+                                    sourceItem.jobNumber ? `MJN: ${sourceItem.jobNumber}` : null,
+                                ].filter(Boolean).join(" / "))
+                                .filter(Boolean)
+                                .filter((reference, index, references) => references.indexOf(reference) === index);
                             return (
-                                <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
+                                <tr key={displayRow.key} style={{ borderBottom: "1px solid #eee" }}>
                                     <td style={{ padding: "12px" }}>
                                         <div>{item.productNameSnapshot || item.productName}</div>
+                                        {showComponents && (item.componentAllocations || []).map((allocation) => (
+                                            <div key={allocation.componentName} className="text-muted" style={{ fontSize: "0.75rem" }}>
+                                                {allocation.componentName}: {formatQty(allocationQty(allocation))}
+                                            </div>
+                                        ))}
                                         {item.baseUnitPrice != null && (item.discountPercent != null || item.discountAmount != null) && (
                                             <div style={{ color: "#166534", fontSize: "0.75rem" }}>List {Number(item.baseUnitPrice).toFixed(2)} · {item.discountAmount != null ? `${Number(item.discountAmount).toFixed(2)} fixed line discount` : `${Number(item.discountPercent).toFixed(2)}% line discount`}</div>
                                         )}
-                                        {(item.projectId || item.jobNumber || item.inquiryNumber) && (
+                                        {showTraceReferences && traceReferences.length > 0 && (
                                             <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-                                                {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}
+                                                {traceReferences.map((reference, referenceIndex) => (
+                                                    <div key={`${reference}-${referenceIndex}`}>{reference}</div>
+                                                ))}
                                             </div>
                                         )}
                                     </td>
