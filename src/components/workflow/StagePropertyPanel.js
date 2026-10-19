@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Card, Form, Accordion, Badge, Button, Modal, Table } from 'react-bootstrap';
+import { Card, Form, Accordion, Badge, Button, Modal } from 'react-bootstrap';
 import { Trash2 } from 'lucide-react';
-import { PROJECT_COMPONENTS } from '../Project/ComponentRegistry';
+import { VISIBILITY_PATH_ROWS } from '../Project/ProjectVisibilityPaths';
 import { confirmAction } from '../../utils/brandedDialogs';
 
 const ALWAYS_VISIBLE_ROLES = ["ADMIN", "SUPER_ADMIN"];
@@ -24,6 +24,47 @@ export default function StagePropertyPanel({
     const isInitial = flow.initialStage === stage;
     const fileRules = flow.fileRequirements?.[stage] || [];
     const visibilityRoles = Array.from(new Set([...ALWAYS_VISIBLE_ROLES, ...(roles || [])]));
+
+    const visibilityRule = flow.visibility?.[stage] || {};
+    const visiblePaths = visibilityRule.visiblePaths || VISIBILITY_PATH_ROWS.map(path => path.id);
+    const pathVisibility = visibilityRule.rolePathVisibility || {};
+
+    const updateVisibilityRule = (patch) => onUpdateFlow({
+        ...flow,
+        visibility: { ...flow.visibility, [stage]: { ...visibilityRule, ...patch } }
+    });
+
+    const setPathVisibility = (pathId, visible) => {
+        const next = visible
+            ? Array.from(new Set([...visiblePaths, pathId]))
+            : visiblePaths.filter(id => id !== pathId);
+        const root = VISIBILITY_PATH_ROWS.find(path => path.id === pathId && path.depth === 0);
+        const currentComponents = visibilityRule.visibleComponents || VISIBILITY_PATH_ROWS
+            .filter(path => path.depth === 0)
+            .map(path => path.componentId);
+        const nextComponents = root
+            ? (visible
+                ? Array.from(new Set([...currentComponents, root.componentId]))
+                : currentComponents.filter(id => id !== root.componentId))
+            : currentComponents;
+        updateVisibilityRule({ visiblePaths: next, visibleComponents: nextComponents });
+    };
+
+    const setRoleDecision = (kind, role, pathId, decision) => {
+        const source = pathVisibility;
+        const next = Object.fromEntries(Object.entries(source).map(([key, value]) => [key, { ...value }]));
+        const roleMap = { ...(next[role] || {}) };
+        if (decision === 'INHERIT') delete roleMap[pathId];
+        else roleMap[pathId] = decision;
+        if (Object.keys(roleMap).length) next[role] = roleMap;
+        else delete next[role];
+        updateVisibilityRule({ rolePathVisibility: next });
+    };
+
+    const roleDecision = (kind, role, id) => {
+        const source = pathVisibility;
+        return source?.[role]?.[id] || 'INHERIT';
+    };
 
     const toggleApproval = (role) => {
         const next = approvals.includes(role)
@@ -220,67 +261,68 @@ export default function StagePropertyPanel({
                 dialogClassName="workflow-visibility-dialog"
                 contentClassName="workflow-visibility-content"
             >
-                <Modal.Header closeButton><Modal.Title>Visibility Matrix: {stage}</Modal.Title></Modal.Header>
+                <Modal.Header closeButton>
+                    <div>
+                        <Modal.Title>Visibility matrix: {stage}</Modal.Title>
+                        <div className="small text-muted mt-1">Control each project path. Role decisions override the shared setting.</div>
+                    </div>
+                </Modal.Header>
                 <Modal.Body className="workflow-visibility-body">
+                    <div className="workflow-visibility-legend" aria-label="Visibility decision legend">
+                        <span><b className="visibility-dot inherited" /> Inherited</span>
+                        <span><b className="visibility-dot allowed" /> Allowed</span>
+                        <span><b className="visibility-dot denied" /> Denied</span>
+                    </div>
                     <div className="workflow-visibility-table-wrap">
-                    <Table bordered hover size="sm" className="small workflow-visibility-table">
-                        <thead>
-                            <tr>
-                                <th className="workflow-visibility-component-col">Component</th>
-                                <th className="workflow-visibility-check-col">Everyone</th>
-                                {visibilityRoles.map(r => <th key={r} className="workflow-visibility-role-col">{r}</th>)}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {PROJECT_COMPONENTS.map(comp => {
-                                const rule = flow.visibility?.[stage] || {};
-                                const isGlobalList = rule.visibleComponents || PROJECT_COMPONENTS.map(c => c.id);
-                                const isVisibleAll = isGlobalList.includes(comp.id);
-                                return (
-                                    <tr key={comp.id}>
-                                        <td className="workflow-visibility-component-col">{comp.label}</td>
-                                        <td className="workflow-visibility-check-cell">
-                                            <Form.Check 
-                                                type="checkbox" checked={isVisibleAll}
-                                                onChange={(e) => {
-                                                    const nextList = e.target.checked
-                                                        ? Array.from(new Set([...isGlobalList, comp.id]))
-                                                        : isGlobalList.filter(id => id !== comp.id);
-                                                    onUpdateFlow({ ...flow, visibility: { ...flow.visibility, [stage]: { ...rule, visibleComponents: nextList } } });
-                                                }}
-                                            />
-                                        </td>
-                                        {visibilityRoles.map(r => {
-                                            const isAlwaysVisibleRole = ALWAYS_VISIBLE_ROLES.includes(String(r || "").toUpperCase());
-                                            const roleMap = rule.roleVisibility || {};
-                                            const existingRoleKey = Object.keys(roleMap).find(key => key.toUpperCase() === String(r || "").toUpperCase());
-                                            const roleList = roleMap[existingRoleKey || r] || [];
-                                            return (
-                                                <td key={r} className="workflow-visibility-check-cell">
-                                                    <Form.Check 
-                                                        type="checkbox"
-                                                        disabled={isVisibleAll || isAlwaysVisibleRole}
-                                                        checked={isAlwaysVisibleRole || isVisibleAll || roleList.includes(comp.id)}
-                                                        onChange={(e) => {
-                                                            const nextRoleList = e.target.checked
-                                                                ? Array.from(new Set([...roleList, comp.id]))
-                                                                : roleList.filter(id => id !== comp.id);
-                                                            const nextRoleMap = { ...roleMap };
-                                                            if (existingRoleKey && existingRoleKey !== r) {
-                                                                delete nextRoleMap[existingRoleKey];
-                                                            }
-                                                            nextRoleMap[r] = nextRoleList;
-                                                            onUpdateFlow({ ...flow, visibility: { ...flow.visibility, [stage]: { ...rule, roleVisibility: nextRoleMap } } });
-                                                        }}
-                                                    />
+                        <table className="table table-sm workflow-visibility-table">
+                            <thead>
+                                <tr>
+                                    <th className="workflow-visibility-component-col">Project path</th>
+                                    <th className="workflow-visibility-check-col">Everyone</th>
+                                    {visibilityRoles.map(r => <th key={r} className="workflow-visibility-role-col">{r}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {VISIBILITY_PATH_ROWS.map(path => {
+                                    const isGlobalVisible = visiblePaths.includes(path.id);
+                                    const isRoot = path.depth === 0;
+                                    return (
+                                        <tr key={path.id} className={isRoot ? 'workflow-visibility-root-row' : ''}>
+                                            <td className="workflow-visibility-component-col">
+                                                <div style={{ paddingLeft: `${path.depth * 1.15}rem` }}>
+                                                    <span className="workflow-visibility-path-label">{path.label}</span>
+                                                    <small className="workflow-visibility-path-id">{path.id}</small>
+                                                </div>
+                                            </td>
+                                            <td className="workflow-visibility-check-cell">
+                                                <Form.Check
+                                                    type="checkbox"
+                                                    aria-label={`${path.label}: everyone`}
+                                                    checked={isGlobalVisible}
+                                                    onChange={(e) => setPathVisibility(path.id, e.target.checked)}
+                                                />
+                                            </td>
+                                            {visibilityRoles.map(role => (
+                                                <td key={role} className="workflow-visibility-check-cell">
+                                                    <Form.Select
+                                                        size="sm"
+                                                        value={roleDecision('path', role, path.id)}
+                                                        aria-label={`${path.label}: ${role}`}
+                                                        disabled={ALWAYS_VISIBLE_ROLES.includes(String(role || '').toUpperCase())}
+                                                        title={ALWAYS_VISIBLE_ROLES.includes(String(role || '').toUpperCase()) ? 'Administrators always retain visibility' : undefined}
+                                                        onChange={(e) => setRoleDecision('path', role, path.id, e.target.value)}
+                                                    >
+                                                        <option value="INHERIT">Inherit</option>
+                                                        <option value="ALLOW">Allow</option>
+                                                        <option value="DENY">Deny</option>
+                                                    </Form.Select>
                                                 </td>
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </Table>
+                                            ))}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 </Modal.Body>
             </Modal>

@@ -1154,7 +1154,7 @@ textarea.form-control {
 }
 
 .workflow-visibility-table {
-    min-width: max-content;
+    min-width: 780px;
     margin-bottom: 0;
     border-color: #dbe3ef;
 }
@@ -1216,6 +1216,76 @@ textarea.form-control {
 .workflow-visibility-check-cell .form-check-input {
     float: none;
     margin-left: 0;
+}
+
+.workflow-visibility-root-row td {
+    background: #f8fbff;
+    font-weight: 600;
+}
+
+.workflow-visibility-path-label {
+    display: block;
+    color: #172033;
+}
+
+.workflow-visibility-path-id {
+    display: block;
+    color: #526176;
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.workflow-visibility-table .form-select {
+    min-width: 96px;
+    min-height: 38px;
+    border-color: #cbd5e1;
+    color: #172033;
+    font-size: 0.78rem;
+}
+
+.workflow-visibility-table .form-check-input {
+    min-width: 20px;
+    min-height: 20px;
+}
+
+.workflow-visibility-table .form-select:focus,
+.workflow-visibility-table .form-check-input:focus {
+    border-color: #075985;
+    box-shadow: 0 0 0 0.2rem rgba(7, 89, 133, 0.18);
+}
+
+.workflow-visibility-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin: 0 0 0.75rem;
+    color: #526176;
+    font-size: 0.78rem;
+}
+
+.visibility-dot {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-right: 0.25rem;
+    border-radius: 50%;
+}
+
+.visibility-dot.inherited { background: #94a3b8; }
+.visibility-dot.allowed { background: #166534; }
+.visibility-dot.denied { background: #991b1b; }
+
+@media (max-width: 640px) {
+    .workflow-visibility-dialog {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+    }
+
+    .workflow-visibility-body { padding: 0.5rem; }
+    .workflow-visibility-table-wrap { max-height: 72vh; }
+    .workflow-visibility-table th,
+    .workflow-visibility-table td { padding: 0.4rem; }
 }
 
 .portal-tabs {

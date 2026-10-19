@@ -89,6 +89,8 @@ const collectFlowRoles = (flow) => {
 
     Object.values(flow.visibility || {}).forEach((rule) => {
         Object.keys(rule?.roleVisibility || {}).forEach(addRole);
+        Object.keys(rule?.roleComponentVisibility || {}).forEach(addRole);
+        Object.keys(rule?.rolePathVisibility || {}).forEach(addRole);
     });
 
     return Array.from(roleSet);
