@@ -304,7 +304,9 @@ export default function ProjectInventoryCard({ projectId, project }) {
             });
             return Array.from(products.values());
         }
-        return inventory.filter(item => item.productId && !item.isCancelled && Number(item.onHandQty || 0) > 0);
+        return inventory.filter(item => item.productId
+            && !(item.isCancelled || item.cancelled)
+            && Number(item.onHandQty || 0) > 0);
     }, [consumptionRecords, inventory, returnData.sourceConsumptionId, returnData.sourceMode]);
 
     const reservedReturnQtyByProduct = useMemo(() => {
@@ -716,7 +718,7 @@ export default function ProjectInventoryCard({ projectId, project }) {
 
     const activeInventory = useMemo(() => {
         const products = new Map();
-        inventory.filter(item => !item.isCancelled).forEach(item => {
+        inventory.filter(item => !(item.isCancelled || item.cancelled)).forEach(item => {
             const estimatedQty = estimatedByProduct.get(item.productId)?.estimatedQty || 0;
             products.set(item.productId, {
                 ...item,
@@ -743,7 +745,10 @@ export default function ProjectInventoryCard({ projectId, project }) {
         return [...products.values()].sort((left, right) =>
             String(left.productName || '').localeCompare(String(right.productName || '')));
     }, [estimatedByProduct, inventory]);
-    const cancelledInventory = useMemo(() => inventory.filter(item => item.isCancelled), [inventory]);
+    const cancelledInventory = useMemo(
+        () => inventory.filter(item => item.isCancelled || item.cancelled),
+        [inventory]
+    );
     const activePanel = useMemo(
         () => panelInventory.find(panel => panel.panelName === activeInventoryView),
         [panelInventory, activeInventoryView]
@@ -777,7 +782,9 @@ export default function ProjectInventoryCard({ projectId, project }) {
             : inventoryStatus === 'CANCELED' ? cancelledInventory : activeInventory;
         const search = inventorySearch.trim().toLowerCase();
         return source.filter(item => {
-            const cancelled = isPanelView ? item.cancelled : item.isCancelled;
+            const cancelled = isPanelView
+                ? item.cancelled
+                : Boolean(item.isCancelled || item.cancelled);
             if (cancelled && inventoryStatus !== 'CANCELED') return false;
             const status = isPanelView ? item.coverageStatus : item.orderStatus;
             const matchesSearch = !search

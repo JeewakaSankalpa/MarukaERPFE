@@ -237,6 +237,7 @@ export default function IRFulfilmentPage() {
     const addShortagesForIR = async () => {
         if (!selected) return;
         const hasShortage = (selected.items || []).some(it => {
+            if (it.isCancelled || it.cancelled) return false;
             const netFulfilled = Math.max(0, Number(it.fulfilledQty || 0) - Number(it.returnedQty || 0));
             const remaining = Math.max(0, Number(it.requestedQty || 0) - netFulfilled);
             return remaining > Number(onHand[it.productId] || 0);
