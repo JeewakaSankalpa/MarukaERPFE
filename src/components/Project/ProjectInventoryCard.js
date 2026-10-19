@@ -772,10 +772,13 @@ export default function ProjectInventoryCard({ projectId, project }) {
     }, [panelInventory]);
 
     const displayedInventory = useMemo(() => {
-        const source = isPanelView ? (activePanel?.items || []) : activeInventory;
+        const source = isPanelView
+            ? (activePanel?.items || [])
+            : inventoryStatus === 'CANCELED' ? cancelledInventory : activeInventory;
         const search = inventorySearch.trim().toLowerCase();
         return source.filter(item => {
-            if (item.cancelled) return false;
+            const cancelled = isPanelView ? item.cancelled : item.isCancelled;
+            if (cancelled && inventoryStatus !== 'CANCELED') return false;
             const status = isPanelView ? item.coverageStatus : item.orderStatus;
             const matchesSearch = !search
                 || String(item.productName || '').toLowerCase().includes(search)
@@ -783,10 +786,12 @@ export default function ProjectInventoryCard({ projectId, project }) {
             const matchesStatus = inventoryStatus === 'ALL'
                 || (inventoryStatus === 'SHORTFALL'
                     ? (isPanelView ? item.shortfallQty > 0 : item.receivedQty < item.requestedQty)
-                    : status === inventoryStatus);
+                    : inventoryStatus === 'CANCELED'
+                        ? (status === 'CANCELED' || status === 'CANCELLED')
+                        : status === inventoryStatus);
             return matchesSearch && matchesStatus;
         });
-    }, [activeInventory, activePanel, inventorySearch, inventoryStatus, isPanelView]);
+    }, [activeInventory, activePanel, cancelledInventory, inventorySearch, inventoryStatus, isPanelView]);
 
     const inventorySummary = useMemo(() => {
         if (isPanelView) {
@@ -944,17 +949,19 @@ export default function ProjectInventoryCard({ projectId, project }) {
                             >
                                 <option value="ALL">All statuses</option>
                                 <option value="SHORTFALL">Has shortfall</option>
-                                {isPanelView ? (
+            {isPanelView ? (
                                     <>
                                         <option value="COVERED">Covered</option>
                                         <option value="PARTIALLY_COVERED">Partially covered</option>
                                         <option value="NOT_COVERED">Not covered</option>
+                                        <option value="CANCELED">Canceled</option>
                                     </>
                                 ) : (
                                     <>
                                         <option value="FULLY_RECEIVED">Fully received</option>
                                         <option value="PARTIALLY_RECEIVED">Partially received</option>
                                         <option value="NOT_RECEIVED">Not received</option>
+                                        <option value="CANCELED">Canceled</option>
                                     </>
                                 )}
                             </Form.Select>

@@ -84,6 +84,9 @@ export default function IRFulfilmentPage() {
     const [irs, setIrs] = useState({});
     const [page, setPage] = useState(0);
     const [selected, setSelected] = useState(null);
+    const [cancelTarget, setCancelTarget] = useState(null);
+    const [cancelReason, setCancelReason] = useState("");
+    const [reloadToken, setReloadToken] = useState(0);
     const [issue, setIssue] = useState({}); // { productId: qty }
     const [statusFilter, setStatusFilter] = useState("SUBMITTED");
 
@@ -172,7 +175,26 @@ export default function IRFulfilmentPage() {
             } catch { toast.error("Failed to load requests"); }
             setLoadingList(false);
         })();
-    }, [page, activeStatuses, requestFilters]);
+    }, [page, activeStatuses, requestFilters, reloadToken]);
+
+    const cancelRequestLine = async () => {
+        if (!cancelTarget || !cancelReason.trim()) {
+            toast.warn("Enter a cancellation reason");
+            return;
+        }
+        try {
+            await api.patch(`/inventory/project/request/${cancelTarget.requestId}/cancel?productId=${encodeURIComponent(cancelTarget.productId)}`, {
+                reason: cancelReason.trim()
+            });
+            toast.success("Request line canceled and retained in history");
+            setCancelTarget(null);
+            setCancelReason("");
+            setReloadToken(token => token + 1);
+            await openIR(cancelTarget.requestId);
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Unable to cancel this request line");
+        }
+    };
 
     const openIR = async (id) => {
         setLoadingDetail(true);
@@ -259,7 +281,7 @@ export default function IRFulfilmentPage() {
                 issuableQty,
                 shortageQty: Math.max(0, remainingQty - availableQty)
             };
-        }).filter((item) => item.shortageQty > 0);
+        }).filter((item) => !item.isCancelled && !item.cancelled && item.shortageQty > 0);
     }, [selected, onHand]);
 
     const exportShortageReport = () => {
@@ -774,6 +796,7 @@ export default function IRFulfilmentPage() {
                                     <option value="SUBMITTED">Submitted</option>
                                     <option value="PENDING_PURCHASE">Pending Purchase</option>
                                     <option value="PARTIALLY_FULFILLED">Partially Fulfilled</option>
+                                    <option value="CANCELLED">Canceled History</option>
                                 </SafeSelect>
                             </Form.Group>
                         </div>
@@ -866,7 +889,7 @@ export default function IRFulfilmentPage() {
                                     return (
                                         <tr key={ir.id} onClick={() => openIR(ir.id)} style={{ cursor: "pointer" }}>
                                             <td>{ir.irNumber}</td>
-                                            <td><Badge bg={ir.status === "SUBMITTED" ? "secondary" : ir.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{ir.status}</Badge></td>
+                                            <td><Badge bg={ir.status === "CANCELLED" ? "danger" : ir.status === "SUBMITTED" ? "secondary" : ir.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{ir.status}</Badge></td>
                                             <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>
                                             <td>
                                                 <div>{projectLabel(ir.projectId)}</div>
@@ -934,7 +957,7 @@ export default function IRFulfilmentPage() {
                             <>
                                 <div className="mb-3">
                                     <strong>{selected.irNumber}</strong>{" "}
-                                    <Badge bg={selected.status === "SUBMITTED" ? "secondary" : selected.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{selected.status}</Badge>
+                                    <Badge bg={selected.status === "CANCELLED" ? "danger" : selected.status === "SUBMITTED" ? "secondary" : selected.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{selected.status}</Badge>
                                     <div className="small text-muted">
                                         Dept: {deptMap[selected.departmentId] || selected.departmentId || "-"} &nbsp;|&nbsp; Project:{" "}
                                         {projectLabel(selected.projectId)} &nbsp;|&nbsp; Requester:{" "}
@@ -966,6 +989,7 @@ export default function IRFulfilmentPage() {
                                     <thead>
                                         <tr>
                                             <th>Product</th>
+                                            <th className="text-end">Estimated</th>
                                             <th className="text-end">Req</th>
                                             <th className="text-end">Done</th>
                                             <th className="text-end">Returned</th>
@@ -977,6 +1001,7 @@ export default function IRFulfilmentPage() {
                                     </thead>
                                     <tbody>
                                         {(selected.items || []).map((it) => {
+                                            const isCancelled = Boolean(it.isCancelled || it.cancelled);
                                             const netFulfilled = Math.max(0, Number(it.fulfilledQty || 0) - Number(it.returnedQty || 0));
                                             const remaining = Math.max(0, Number(it.requestedQty || 0) - netFulfilled);
                                             const avail = Number(onHand[it.productId] || 0);
@@ -988,8 +1013,14 @@ export default function IRFulfilmentPage() {
                                             const currentQty = issue[it.productId] || 0;
 
                                             return (
-                                                <tr key={it.productId}>
-                                                    <td>{it.productNameSnapshot || it.productId}</td>
+                                                <tr key={it.productId} className={isCancelled ? "table-danger" : undefined}>
+                                                    <td>
+                                                        {it.productNameSnapshot || it.productId}
+                                                        {isCancelled && <Badge bg="danger" className="ms-2">CANCELED</Badge>}
+                                                    </td>
+                                                    <td className="text-end">
+                                                        {it.estimatedAmount == null ? "-" : `${Number(it.estimatedAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                    </td>
                                                     <td className="text-end">{it.requestedQty}</td>
                                                     <td className="text-end">{it.fulfilledQty}</td>
                                                     <td className="text-end">
@@ -1040,6 +1071,7 @@ export default function IRFulfilmentPage() {
                                                                 step="0.01"
                                                                 max={maxIssuable}
                                                                 value={issue[it.productId] ?? 0}
+                                                                disabled={isCancelled}
                                                                 onChange={(e) => {
                                                                     const raw = Number(e.target.value || 0);
                                                                     if (!Number.isFinite(raw) || raw < 0 || Math.abs(raw * 100 - Math.round(raw * 100)) > 1e-8) return;
@@ -1050,9 +1082,22 @@ export default function IRFulfilmentPage() {
                                                         )}
                                                     </td>
                                                     <td>
-                                                        <Button size="sm" variant="outline-dark" onClick={() => openBatchModal(it)}>
+                                                        <Button size="sm" variant={isCancelled ? "outline-danger" : "outline-dark"} disabled={isCancelled} onClick={() => openBatchModal(it)}>
                                                             Batches
                                                         </Button>
+                                                        {!isCancelled && Number(it.fulfilledQty || 0) === 0 && selected.status !== "CANCELLED" && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline-danger"
+                                                                className="ms-2"
+                                                                onClick={() => {
+                                                                    setCancelTarget({ requestId: selected.id, productId: it.productId, productName: it.productNameSnapshot || it.productId });
+                                                                    setCancelReason("");
+                                                                }}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        )}
                                                         {isAllocated && (
                                                             <Button size="sm" variant="link" className="text-danger p-0 ms-2" onClick={() => clearAllocations(it.productId)}>
                                                                 Clear
@@ -1212,6 +1257,27 @@ export default function IRFulfilmentPage() {
                         <FaDownload className="me-2" />
                         Download PDF
                     </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={Boolean(cancelTarget)} onHide={() => setCancelTarget(null)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Cancel request line</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p className="mb-2">Cancel <strong>{cancelTarget?.productName}</strong> from this item request?</p>
+                    <Form.Control
+                        as="textarea"
+                        rows={3}
+                        placeholder="Reason for cancellation"
+                        value={cancelReason}
+                        onChange={event => setCancelReason(event.target.value)}
+                    />
+                    <div className="small text-muted mt-2">The line will remain visible in canceled history and can be requested again from the estimation.</div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setCancelTarget(null)}>Keep request</Button>
+                    <Button variant="danger" onClick={cancelRequestLine}>Cancel line</Button>
                 </Modal.Footer>
             </Modal>
 

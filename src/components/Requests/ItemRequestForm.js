@@ -41,7 +41,7 @@ const addAllocation = (allocations, componentName, quantity) => {
 const componentQuantity = (component) => Math.max(1, Number(component?.quantity || 1) || 1);
 
 const requestedHistoryQuantity = (history = [], productId) => history
-    .filter(item => item.productId === productId)
+    .filter(item => item.productId === productId && !item.cancelled && item.status !== "CANCELLED")
     .reduce((total, item) => total + Number(item.requestedQty || 0), 0);
 
 const remainingEstimatedQuantity = (estimatedQuantity, history, productId) =>
@@ -584,6 +584,12 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         departmentId: departmentId || null,
         projectId: projectId || null,
         sourceEstimationId,
+        supersedesItemRequestId: [...new Set((componentNames || []).flatMap(componentName =>
+            (componentHistory[componentName] || [])
+                .filter(item => item.cancelled || item.status === "CANCELLED")
+                .map(item => item.requestId)
+                .filter(Boolean)
+        ))][0] || null,
         comment,
         items: buildItems(componentNames),
         status: requestStatus
@@ -921,7 +927,11 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                                     <td>{item.productName || item.productId}</td>
                                                     <td className="text-end">{item.requestedQty} {item.unit}</td>
                                                     <td className="text-end">{item.fulfilledQty} {item.unit}</td>
-                                                    <td><Badge bg={item.status === "FULFILLED" ? "success" : "secondary"}>{item.status}</Badge></td>
+                                                    <td>
+                                                        <Badge bg={item.cancelled || item.status === "CANCELLED" ? "danger" : item.status === "FULFILLED" ? "success" : "secondary"}>
+                                                            {item.cancelled ? "CANCELLED" : item.status}
+                                                        </Badge>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
