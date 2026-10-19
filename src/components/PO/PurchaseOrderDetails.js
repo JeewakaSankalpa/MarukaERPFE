@@ -614,6 +614,9 @@ export default function PurchaseOrderDetails() {
                                             <tr>
                                                 <td>
                                                     <div>{item.productNameSnapshot}</div>
+                                                    {item.baseUnitPrice != null && (item.discountPercent != null || item.discountAmount != null) && (
+                                                        <div className="small text-success">List {Number(item.baseUnitPrice).toFixed(2)} · {item.discountAmount != null ? `${Number(item.discountAmount).toFixed(2)} fixed line discount` : `${Number(item.discountPercent).toFixed(2)}% line discount`}</div>
+                                                    )}
                                                     {(item.projectId || item.jobNumber || item.inquiryNumber) && (
                                                         <div className="small text-muted">
                                                             {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}

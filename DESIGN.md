@@ -94,6 +94,8 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 ## Last updated
 
+2026-10-19 by Codex: Manual Purchase Order lines support direct net price, list-price-plus-discount percentage, and list-price-plus-fixed-discount amount modes. Keep the selector and calculated net rate inside each line, let pricing fields flex/wrap so large amounts remain readable, preserve the compact blue operational style, and repeat saved line-discount context in PO details and print output for auditability.
+
 2026-10-19 by Codex: Finance Income distinguishes invoice-allocated payments from project-level receipts with explicit labels, icons, and an inline accounting explanation. Preserve this separation to prevent double-counting.
 
 2026-10-19 by Codex: Workflow stage visibility now uses a hierarchical project-path registry with compact sticky-column matrix controls and explicit role states (inherit, allow, deny). Preserve the blue operational palette, administrator visibility, keyboard focus, and mobile horizontal containment when extending project paths.

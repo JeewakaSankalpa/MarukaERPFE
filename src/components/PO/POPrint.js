@@ -206,6 +206,9 @@ const POPrint = () => {
                                 <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
                                     <td style={{ padding: "12px" }}>
                                         <div>{item.productNameSnapshot || item.productName}</div>
+                                        {item.baseUnitPrice != null && (item.discountPercent != null || item.discountAmount != null) && (
+                                            <div style={{ color: "#166534", fontSize: "0.75rem" }}>List {Number(item.baseUnitPrice).toFixed(2)} · {item.discountAmount != null ? `${Number(item.discountAmount).toFixed(2)} fixed line discount` : `${Number(item.discountPercent).toFixed(2)}% line discount`}</div>
+                                        )}
                                         {(item.projectId || item.jobNumber || item.inquiryNumber) && (
                                             <div className="text-muted" style={{ fontSize: "0.75rem" }}>
                                                 {item.itemRequestNumber ? `IR: ${item.itemRequestNumber} / ` : ""}MIN: {item.inquiryNumber || item.projectId || "-"}{item.jobNumber ? ` / MJN: ${item.jobNumber}` : ""}

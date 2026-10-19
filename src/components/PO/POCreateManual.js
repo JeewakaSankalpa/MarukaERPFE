@@ -62,7 +62,8 @@ export default function POCreateManual({ poId, onCreated }) {
     const [quotationRef, setQuotationRef] = useState("");
     const [note, setNote] = useState("");
 
-    // Rows: { productId, name, sku, unit, qty, unitPrice, taxPercent, taxAmount, note }
+    // Rows keep the final unitPrice for backwards compatibility. Optional baseUnitPrice +
+    // discountPercent preserve supplier line-level pricing when the quote provides it.
     const [rows, setRows] = useState([]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,7 +135,11 @@ export default function POCreateManual({ poId, onCreated }) {
                         barcode: product?.barcode,
                         categoryId: product?.categoryId,
                         qty: item.orderedQtyDecimal ?? item.orderedQty ?? "",
+                        pricingMode: item.baseUnitPrice != null && item.discountAmount != null ? "AMOUNT" : item.baseUnitPrice != null && item.discountPercent != null ? "PERCENT" : "NET",
                         unitPrice: item.unitPrice ?? "",
+                        baseUnitPrice: item.baseUnitPrice ?? "",
+                        discountPercent: item.discountPercent ?? "",
+                        discountAmount: item.discountAmount ?? "",
                         taxPercent: item.taxPercent ?? "",
                         note: item.note || "",
                         receivedQty: Number(item.receivedQtyDecimal ?? item.receivedQty ?? 0)
@@ -206,7 +211,8 @@ export default function POCreateManual({ poId, onCreated }) {
                 status: product.status, originalCostPrice: product.originalCostPrice, reorderLevel: product.reorderLevel,
                 suppliers: product.suppliers || [], defaultSellingPrice: product.defaultSellingPrice,
                 barcode: product.barcode, categoryId: product.categoryId,
-                qty: "", unitPrice: product.lastPurchasePrice || product.originalCostPrice || "",
+                qty: "", pricingMode: "NET", unitPrice: product.lastPurchasePrice || product.originalCostPrice || "",
+                baseUnitPrice: "", discountPercent: "", discountAmount: "",
                 taxPercent: "", // Line-level tax override
                 note: ""
             }
@@ -214,6 +220,18 @@ export default function POCreateManual({ poId, onCreated }) {
     };
 
     const setRow = (i, k, v) => setRows(prev => { const cp = [...prev]; cp[i] = { ...cp[i], [k]: v }; return cp; });
+    const effectiveUnitPrice = (row) => {
+        const base = Number(row.baseUnitPrice || 0);
+        const percent = Number(row.discountPercent || 0);
+        const amount = Number(row.discountAmount || 0);
+        if (row.pricingMode === "PERCENT" && base > 0) {
+            return Math.max(0, base * (1 - percent / 100));
+        }
+        if (row.pricingMode === "AMOUNT" && base > 0) {
+            return Math.max(0, base - amount);
+        }
+        return Number(row.unitPrice || 0);
+    };
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
     const isDraftEditState = (poStatus === "CREATED" || poStatus === "DRAFT")
         && (!poApprovalStatus || poApprovalStatus === "DRAFT" || poApprovalStatus === "REJECTED");
@@ -302,7 +320,7 @@ export default function POCreateManual({ poId, onCreated }) {
         // Sum line items
         rows.forEach(r => {
             const qty = Number(r.qty || 0);
-            const price = Number(r.unitPrice || 0);
+            const price = effectiveUnitPrice(r);
             sub += (qty * price);
         });
 
@@ -492,11 +510,23 @@ export default function POCreateManual({ poId, onCreated }) {
                 productId: r.productId,
                 qty: Math.trunc(Number(r.qty)),
                 qtyDecimal: String(r.qty),
-                unitPrice: r.unitPrice ? String(r.unitPrice) : undefined,
+                unitPrice: String(effectiveUnitPrice(r)),
+                baseUnitPrice: r.pricingMode === "PERCENT" && r.baseUnitPrice !== "" ? String(r.baseUnitPrice) : undefined,
+                discountPercent: r.pricingMode === "PERCENT" && r.discountPercent !== "" ? String(r.discountPercent) : undefined,
+                discountAmount: r.pricingMode === "AMOUNT" && r.discountAmount !== "" ? String(r.discountAmount) : undefined,
                 note: r.note || undefined
             }));
 
             if (items.length === 0) { toast.warn("Add at least one product line"); return; }
+            const invalidLine = rows.find(r => Number(r.qty) > 0 && r.pricingMode !== "NET" && (
+                Number(r.baseUnitPrice || 0) < 0 || r.baseUnitPrice === "" ||
+                (r.pricingMode === "PERCENT" && (r.discountPercent === "" || Number(r.discountPercent || 0) < 0 || Number(r.discountPercent || 0) > 100)) ||
+                (r.pricingMode === "AMOUNT" && (r.discountAmount === "" || Number(r.discountAmount || 0) < 0 || Number(r.discountAmount || 0) > Number(r.baseUnitPrice || 0)))
+            ));
+            if (invalidLine) {
+                toast.warn(`Enter valid list price and line discount details for ${invalidLine.name}`);
+                return;
+            }
             if (Number(discountAmount || 0) > totals.sub) {
                 toast.warn("Seller discount cannot exceed subtotal");
                 return;
@@ -766,14 +796,14 @@ export default function POCreateManual({ poId, onCreated }) {
                             <tr>
                                 <th>Product</th>
                                 <th style={{ width: 100 }}>Qty</th>
-                                <th style={{ width: 140 }}>Unit Price</th>
+                                <th style={{ width: 260 }}>Supplier Pricing</th>
                                 <th className="text-end" style={{ width: 150 }}>Line Total</th>
                                 <th style={{ width: 50 }}></th>
                             </tr>
                         </thead>
                         <tbody>
                             {rows.map((r, i) => {
-                                const qty = Number(r.qty || 0), price = Number(r.unitPrice || 0);
+                                const qty = Number(r.qty || 0), price = effectiveUnitPrice(r);
                                 const line = qty * price;
                                 const rowEditable = canEditRow(r);
                                 return (
@@ -786,7 +816,25 @@ export default function POCreateManual({ poId, onCreated }) {
                                             )}
                                         </td>
                                         <td><Form.Control size="sm" type="number" min="0" step="0.01" value={r.qty} disabled={!rowEditable} onChange={e => setRow(i, "qty", e.target.value)} /></td>
-                                        <td><Form.Control size="sm" type="number" value={r.unitPrice} disabled={!rowEditable} onChange={e => setRow(i, "unitPrice", e.target.value)} /></td>
+                                        <td>
+                                            <Form.Select size="sm" className="mb-1" value={r.pricingMode || "NET"} disabled={!rowEditable} onChange={e => setRow(i, "pricingMode", e.target.value)} aria-label={`Pricing method for ${r.name}`}>
+                                                <option value="NET">Net unit price</option>
+                                                <option value="PERCENT">List price + discount %</option>
+                                                <option value="AMOUNT">List price + discount amount</option>
+                                            </Form.Select>
+                                            {r.pricingMode === "PERCENT" || r.pricingMode === "AMOUNT" ? (
+                                                <div className="d-flex gap-1 flex-wrap">
+                                                    <Form.Control size="sm" type="number" min="0" step="0.01" placeholder="List price" aria-label={`List price for ${r.name}`} value={r.baseUnitPrice} disabled={!rowEditable} onChange={e => setRow(i, "baseUnitPrice", e.target.value)} style={{ flex: "1 1 160px", minWidth: 150 }} />
+                                                    <div className="input-group input-group-sm" style={{ flex: "1 1 150px", minWidth: 145 }}>
+                                                        <Form.Control type="number" min="0" max={r.pricingMode === "PERCENT" ? 100 : undefined} step="0.01" placeholder={r.pricingMode === "PERCENT" ? "Discount %" : "Discount amount"} aria-label={`${r.pricingMode === "PERCENT" ? "Discount percentage" : "Discount amount"} for ${r.name}`} value={r.pricingMode === "PERCENT" ? r.discountPercent : r.discountAmount} disabled={!rowEditable} onChange={e => setRow(i, r.pricingMode === "PERCENT" ? "discountPercent" : "discountAmount", e.target.value)} />
+                                                        <span className="input-group-text">{r.pricingMode === "PERCENT" ? "%" : "Rs."}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <Form.Control size="sm" type="number" min="0" step="0.01" value={r.unitPrice} disabled={!rowEditable} onChange={e => setRow(i, "unitPrice", e.target.value)} aria-label={`Net unit price for ${r.name}`} />
+                                            )}
+                                            <small className="text-muted">Net: {price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</small>
+                                        </td>
                                         <td className="text-end align-middle">{line.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="align-middle">
                                             <Button
