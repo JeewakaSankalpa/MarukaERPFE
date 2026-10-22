@@ -378,7 +378,8 @@ const ProjectForm = () => {
       } else if (error.response?.status === 413) {
         toast.error("Uploaded files are too large (413)");
       } else {
-        toast.error("Request failed");
+        const message = error.response?.data?.message || error.response?.data?.error;
+        toast.error(message || "Request failed");
       }
     } finally {
       setIsSubmitting(false);
