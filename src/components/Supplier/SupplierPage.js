@@ -119,6 +119,7 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
     const [isEditMode, setIsEditMode] = useState(!id || startEditing);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [createPortalLogin, setCreatePortalLogin] = useState(!id);
+    const [portalUsername, setPortalUsername] = useState("");
     const [portalPassword, setPortalPassword] = useState("");
 
     useEffect(() => {
@@ -136,6 +137,7 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
                     contactPerson: d.contactPerson || "",
                     address: d.address || {},
                 });
+                setPortalUsername(d.email || "");
                 setIsEditMode(Boolean(startEditing));
             } catch { toast.error("Failed to load supplier"); }
         })();
@@ -177,7 +179,14 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
             setIsSubmitting(false);
             return;
         }
+        const username = (portalUsername || form.email).trim();
+        if (createPortalLogin && !username) {
+            toast.error("Portal username is required");
+            setIsSubmitting(false);
+            return;
+        }
 
+        let supplierSaved = false;
         try {
             const payload = {
                 name: form.name,
@@ -190,17 +199,24 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
                 ...(isEdit ? {} : { supplierCode: form.supplierCode || undefined }),
             };
             const saved = isEdit ? await updateSupplier(id, payload) : await createSupplier(payload);
+            supplierSaved = true;
             if (createPortalLogin && portalPassword.trim()) {
                 await createSupplierPortalAccount(saved.id || id, {
-                    username: form.email,
+                    username,
                     password: portalPassword,
                 });
             }
             toast.success(isEdit ? "Supplier updated" : "Supplier created");
             onSaved?.(saved);
             onClose?.();
-        } catch {
-            toast.error("Save failed");
+        } catch (error) {
+            const serverMessage = error.response?.data?.message || error.response?.data;
+            const message = typeof serverMessage === "string" ? serverMessage : error.message;
+            if (supplierSaved && error.response?.status === 409) {
+                toast.error(`Supplier saved, but portal login was not created: ${message}`);
+            } else {
+                toast.error(`Save failed: ${message || "Unknown error"}`);
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -333,8 +349,12 @@ export function SupplierForm({ id, onClose, onSaved, startEditing = false, compa
                                 <Row className="g-3 mt-1">
                                     <Col md={6}>
                                         <Form.Group>
-                                            <Form.Label>Portal Username</Form.Label>
-                                            <Form.Control value={form.email} disabled />
+                                            <Form.Label>Portal Username <span className="text-danger">*</span></Form.Label>
+                                            <Form.Control
+                                                value={portalUsername || form.email}
+                                                onChange={(e) => setPortalUsername(e.target.value)}
+                                                placeholder="Use a unique username or email"
+                                            />
                                         </Form.Group>
                                     </Col>
                                     <Col md={6}>
