@@ -11,6 +11,7 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
         scheduledDate: '',
         location: '',
         vehicleDetails: '',
+        driverName: '',
         responsibleEmployeeId: '',
         responsibleEmployeeName: '',
         status: 'PENDING', customerName: '', customerId: '', customerAddress: '', customerTelephone: '',
@@ -262,6 +263,18 @@ export default function DeliveryScheduleCard({ projectId, reloadKey }) {
                                     name="vehicleDetails"
                                     placeholder="Vehicle No / Type"
                                     value={data.vehicleDetails || ''}
+                                    onChange={handleChange}
+                                />
+                            </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                            <Form.Group>
+                                <Form.Label>Driver Name</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="driverName"
+                                    placeholder="Enter Driver Name"
+                                    value={data.driverName || ''}
                                     onChange={handleChange}
                                 />
                             </Form.Group>
