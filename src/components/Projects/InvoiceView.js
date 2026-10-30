@@ -483,6 +483,7 @@ const getStatusVariant = (status) => {
     switch (status) {
         case "PAID": return "success";
         case "PENDING": return "warning";
+        case "PARTIALLY_PAID": return "warning";
         case "CANCELLATION_PENDING": return "warning";
         case "CANCELLED": return "danger";
         default: return "secondary";
@@ -495,6 +496,7 @@ const InvoiceView = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [loading, setLoading] = useState(true);
     const [invoice, setInvoice] = useState(null);
+    const [paymentSummary, setPaymentSummary] = useState(null);
     const [project, setProject] = useState(null);
     const [customer, setCustomer] = useState(null);
     const [quotation, setQuotation] = useState(null);
@@ -563,8 +565,13 @@ const InvoiceView = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setPaymentSummary(null);
                 const invRes = await api.get(`/invoices/${id}`);
                 setInvoice(invRes.data);
+                if (invRes.data.splitInvoice) {
+                    const summaryRes = await api.get(`/invoices/${id}/payment-summary`);
+                    setPaymentSummary(summaryRes.data);
+                }
                 setPoDraft(invRes.data.poNumber || "");
                 setNotesDraft(invRes.data.notes || "");
 
@@ -888,6 +895,10 @@ const InvoiceView = () => {
         }
         setRecordingPrint(true);
         try {
+            if (invoice.splitInvoice) {
+                const summaryRes = await api.get(`/invoices/${id}/payment-summary`);
+                setPaymentSummary(summaryRes.data);
+            }
             const res = await api.post(`/invoices/${id}/print-events`, currentPrintPayload());
             setInvoice(res.data);
             applyPrintLayoutFromInvoice(res.data);
@@ -1043,6 +1054,9 @@ const InvoiceView = () => {
 
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
     if (!invoice) return <div className="text-center p-5">Invoice not found.</div>;
+    if (invoice.splitInvoice && !paymentSummary) {
+        return <div className="text-center p-5">Could not load this invoice's payment allocation. Please reload before printing.</div>;
+    }
 
     const isTaxInvoice = selectedType === DOC_TYPES.TAX;
     const availableDocTypes = getAvailableDocTypes(invoice);
@@ -1058,7 +1072,11 @@ const InvoiceView = () => {
     const invoiceNo = buildDisplayInvoiceNumber(rawDocumentNumber || fallbackDocumentNumber, selectedType);
     const inquiryRef = project?.referenceNumber || project?.inquiryNumber || project?.id || invoice.projectId || "-";
     const jobRef = project?.jobNumber || "-";
-    const totalReceived = numberValue(invoice.paidAmount);
+    const totalReceived = numberValue(invoice.splitInvoice ? paymentSummary.paidAmount : invoice.paidAmount);
+    const displayStatus = invoice.splitInvoice
+        && !["CANCELLED", "CANCELLATION_PENDING"].includes(invoice.status)
+        ? (numberValue(paymentSummary.balanceDue) === 0 ? "PAID" : totalReceived > 0 ? "PARTIALLY_PAID" : invoice.status)
+        : invoice.status;
     const sourceVatTotal = numberValue(estimation?.computedVatAmount);
     const sourceOtherTaxTotal = numberValue(estimation?.computedTaxAmount);
     const invoiceDiscountAmount = numberValue(estimation?.computedDiscountAmount);
@@ -1858,7 +1876,7 @@ const InvoiceView = () => {
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
                 <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
-                    <Badge bg={getStatusVariant(invoice.status)}>{invoice.status}</Badge>
+                    <Badge bg={getStatusVariant(displayStatus)}>{displayStatus}</Badge>
                     <Form.Select
                         size="sm"
                         className="w-auto"
