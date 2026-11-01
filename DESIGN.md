@@ -60,6 +60,8 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 ## Component inventory
 
+- TaskControlCenter
+
 - PortalDashboard
 - CustomerProjectCard
 - SupplierOrderCard
@@ -93,6 +95,10 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 - Loading state uses `aria-live`; portal shell exposes busy state.
 
 ## Last updated
+
+2026-10-19 by Codex: The Task Control Center now uses a single cross-project operations surface with Overview, List, Kanban, Gantt, Workforce, Calendar, and Reports views. Preserve the shared task model and contextual drawer; keep object-shaped API values normalized before rendering, use a dedicated Kanban drag handle, and keep filters, timeline changes, assignment planning, loading, empty, error, and reduced-motion states consistent with the existing blue operational portal.
+
+2026-10-19 by Codex: Task Control Center provides one cross-project workspace for task creation, multi-worker assignment, status movement, timeline editing, worker workload, and reports. Preserve the compact blue operational style, explicit filters, accessible status text, and responsive board-to-table collapse.
 
 2026-10-19 by Codex: Manual Purchase Order lines support direct net price, list-price-plus-discount percentage, and list-price-plus-fixed-discount amount modes. Keep the selector and calculated net rate inside each line, let pricing fields flex/wrap so large amounts remain readable, preserve the compact blue operational style, and repeat saved line-discount context in PO details and print output for auditability.
 

@@ -32,6 +32,7 @@ export const MenuConfig = [
         icon: "FaProjectDiagram",
         subItems: [
             { id: "projects.my_projects", title: "My Projects", path: "/projects/search" },
+            { id: "projects.task_control", title: "Task Control Center", path: "/projects/tasks" },
             { id: "projects.create", title: "New Project", path: "/projects/create" },
             { id: "projects.estimation", title: "Estimation", path: "/projects/estimation" },
 

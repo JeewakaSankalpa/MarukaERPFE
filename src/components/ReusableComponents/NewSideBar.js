@@ -66,6 +66,13 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
       userModules.includes("settings.roles")
     )) return true;
 
+    // The cross-project task workspace belongs to Projects. Allow existing
+    // project users to see it before a separate child permission is seeded.
+    if (item.id === "projects.task_control" && (
+      userModules.includes("projects") ||
+      userModules.includes("projects.my_projects")
+    )) return true;
+
     return false;
   };
 

@@ -100,6 +100,8 @@ import QuotationPrint from "./components/Projects/QuotationPrint";
 import InvoiceView from "./components/Projects/InvoiceView";
 import CreditNoteView from "./components/Projects/CreditNoteView";
 import AllTasksReport from "./components/Projects/Tasks/AllTasksReport";
+import TaskControlCenter from "./components/Projects/Tasks/TaskControlCenter";
+import "./components/Projects/Tasks/TaskControlCenter.css";
 // import QuotationList from "./components/Sales/QuotationList";
 // import QuotationPage from "./components/Sales/QuotationPage";
 import SettingsPage from "./components/settings/SettingsPage";
@@ -370,6 +372,7 @@ function App() {
                     <Route element={<PrivateRoute module="projects" />}>
                         <Route path="/projects/create" element={<ProjectCreate mode="create" />} />
                         <Route path="/projects/search" element={<ProjectSearch />} />
+                        <Route path="/projects/tasks" element={<TaskControlCenter />} />
                         <Route path="/projects/:id" element={<ProjectCreate mode="edit" />} />
                         <Route path="/projects/edit/:id" element={<ProjectCreate mode="edit" />} />
                         <Route path="/projects/view/:id" element={<ProjectCreate mode="view" />} />
