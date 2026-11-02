@@ -111,7 +111,7 @@ const parsePhysicalUpload = (text = "") => {
             runId: runIndex == null ? undefined : String(cells[runIndex] || "").trim(),
             rowId: rowIndex == null ? undefined : String(cells[rowIndex] || "").trim(),
             countedAt: countedAtRaw && Number.isFinite(Date.parse(countedAtRaw)) ? new Date(countedAtRaw).toISOString() : null,
-            quantity: countSheet && !quantityRaw ? null : Number.isFinite(quantity) ? quantity : 0,
+            quantity: Number.isFinite(quantity) ? quantity : 0,
             unitCost: Number.isFinite(unitCost) ? unitCost : 0,
             reorderLevel: Number.isFinite(reorderLevel) ? reorderLevel : 0,
             supplierName: proposedSupplierIndex == null ? supplierName : String(cells[proposedSupplierIndex] || "").trim(),
