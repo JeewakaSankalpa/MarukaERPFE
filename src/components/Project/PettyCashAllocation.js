@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, Button, message } from 'antd';
-import axios from 'axios';
+import api from '../../api/api';
 
 const { Option } = Select;
 
@@ -17,7 +17,7 @@ const PettyCashAllocation = ({ projectId, visible, onClose, onSuccess }) => {
 
     const fetchAccounts = async () => {
         try {
-            const res = await axios.get('http://localhost:8080/api/finance/accounts');
+            const res = await api.get('/finance/accounts');
             // Filter only Asset/Cash accounts
             setAccounts(res.data.filter(a => a.type === 'ASSET'));
         } catch (error) {
@@ -28,7 +28,7 @@ const PettyCashAllocation = ({ projectId, visible, onClose, onSuccess }) => {
     const handleAllocate = async (values) => {
         setLoading(true);
         try {
-            await axios.post(`http://localhost:8080/api/project-accounts/${projectId}/petty-cash/allocate`, {
+            await api.post(`/project-accounts/${projectId}/petty-cash/allocate`, {
                 amount: parseFloat(values.amount),
                 sourceAccountId: values.sourceAccountId
             });

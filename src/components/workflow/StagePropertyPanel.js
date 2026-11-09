@@ -3,6 +3,7 @@ import { Card, Form, Accordion, Badge, Button, Modal } from 'react-bootstrap';
 import { Trash2 } from 'lucide-react';
 import { VISIBILITY_PATH_ROWS } from '../Project/ProjectVisibilityPaths';
 import { confirmAction } from '../../utils/brandedDialogs';
+import api from '../../api/api';
 
 const ALWAYS_VISIBLE_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -117,10 +118,8 @@ export default function StagePropertyPanel({
 
     const checkUsage = async (stageVal) => {
         try {
-            const res = await fetch(`/api/workflow/usage/${stageVal}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            return res.ok ? await res.json() : 0;
+            const res = await api.get(`/workflow/usage/${encodeURIComponent(stageVal)}`);
+            return res.data ?? 0;
         } catch (e) { return 0; }
     };
 
