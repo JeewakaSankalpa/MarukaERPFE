@@ -8,11 +8,11 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
-    ResponsiveContainer,
     PieChart,
     Pie,
     Cell,
 } from "recharts";
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import { DollarSign, Users, Briefcase, Truck, ShoppingCart } from "lucide-react";
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import QuickDateRangeButtons from '../ReusableComponents/QuickDateRangeButtons';

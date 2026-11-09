@@ -5,9 +5,10 @@ import {
     CheckCircle2, CircleDollarSign, Clock3, PackagePlus, RefreshCw, Truck, WalletCards
 } from "lucide-react";
 import {
-    Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
+    Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
     Tooltip, XAxis, YAxis
 } from "recharts";
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import api from "../../api/api";
 import "./ExecutiveDashboard.css";
 

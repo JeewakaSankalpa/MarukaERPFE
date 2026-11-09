@@ -4,9 +4,10 @@ import { Container, Table, Card, Badge, Form, Row, Col, InputGroup } from 'react
 import { toast } from 'react-toastify';
 import { useNavigate,  Link } from 'react-router-dom';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
     PieChart, Pie, Cell
 } from 'recharts';
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import api from '../../api/api';
 import SafeSelect from '../ReusableComponents/SafeSelect';
 

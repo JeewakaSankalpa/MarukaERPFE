@@ -8,11 +8,11 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
-    ResponsiveContainer,
     PieChart,
     Pie,
     Cell,
 } from "recharts";
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import { Users, UserCheck, UserMinus, Clock, Briefcase } from "lucide-react";
 import SafeSelect from "../ReusableComponents/SafeSelect";
 

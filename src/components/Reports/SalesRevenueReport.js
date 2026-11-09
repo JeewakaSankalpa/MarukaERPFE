@@ -9,11 +9,11 @@ import {
     CartesianGrid,
     Cell,
     LabelList,
-    ResponsiveContainer,
     Tooltip,
     XAxis,
     YAxis
 } from "recharts";
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import api from "../../api/api";
 import ReportLayout from "../ReusableComponents/ReportLayout";
 import SafeDatePicker from "../ReusableComponents/SafeDatePicker";

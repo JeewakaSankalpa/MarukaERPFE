@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Row, Col, Card } from 'react-bootstrap';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
     BarChart, Bar, Legend, PieChart, Pie, Cell
 } from 'recharts';
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import { FaUsers, FaUserCheck, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 import api from '../../api/api';
 import LoadingState from '../ReusableComponents/LoadingState';

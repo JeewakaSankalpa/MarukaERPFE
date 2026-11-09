@@ -4,9 +4,10 @@ import { Container, Button, Table, Modal, Form, Row, Col, Card, Badge, InputGrou
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import {
-    BarChart, Bar, Tooltip, ResponsiveContainer, CartesianGrid, XAxis, YAxis,
+    BarChart, Bar, Tooltip, CartesianGrid, XAxis, YAxis,
     PieChart, Pie, Cell, Legend
 } from 'recharts';
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import api from '../../api/api';
 import GRNPaymentModal from '../GRN/GRNPaymentModal';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';

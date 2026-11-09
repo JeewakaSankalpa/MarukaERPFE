@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Table, Badge, Button, Form, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Table, Badge, Button, Form, Spinner, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { FaBoxes, FaExclamationTriangle, FaBoxOpen, FaClipboardList, FaArrowRight, FaPlus } from "react-icons/fa";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import api from "../../api/api";
 import MenuCard from "../ReusableComponents/MenuCard";
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import { toast } from "react-toastify";
 
 const StatCard = ({ title, value, icon, color, subtext }) => (
@@ -143,14 +144,19 @@ const InventoryDashboard = () => {
   }, []);
 
   const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await api.get('/inventory/dashboard-stats');
       setStats(response.data);
-      setLoading(false);
       fetchDataQualityIssues();
     } catch (err) {
       console.error("Failed to load stats", err);
-      setError("Failed to load dashboard data");
+      const unavailable = err.response?.status === 503;
+      setError(unavailable
+        ? "Inventory data is temporarily unavailable. Please try again shortly."
+        : "Failed to load dashboard data.");
+    } finally {
       setLoading(false);
     }
   };
@@ -212,6 +218,18 @@ const InventoryDashboard = () => {
 
   if (loading) return <InventoryDashboardSkeleton />;
 
+  if (error) {
+    return (
+      <Container className="py-4">
+        <Alert variant="danger" className="shadow-sm border-0">
+          <Alert.Heading>Inventory dashboard unavailable</Alert.Heading>
+          <p className="mb-3">{error}</p>
+          <Button variant="outline-danger" onClick={fetchStats}>Try again</Button>
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -257,7 +275,13 @@ const InventoryDashboard = () => {
               <h6 className="mb-0 fw-bold">Items Usage Trend (Last 6 Months)</h6>
             </Card.Header>
             <Card.Body style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%" minHeight={100} minWidth={100}>
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                minHeight={100}
+                minWidth={100}
+                initialDimension={{ width: 640, height: 250 }}
+              >
                 <BarChart data={stats?.globalUsageTrend || []}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" axisLine={false} tickLine={false} />
@@ -278,7 +302,13 @@ const InventoryDashboard = () => {
               <h6 className="mb-0 fw-bold">Top Moved Items</h6>
             </Card.Header>
             <Card.Body style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%" minHeight={100} minWidth={100}>
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                minHeight={100}
+                minWidth={100}
+                initialDimension={{ width: 360, height: 250 }}
+              >
                 <BarChart
                   layout="vertical"
                   data={stats?.topMovedItems || []}

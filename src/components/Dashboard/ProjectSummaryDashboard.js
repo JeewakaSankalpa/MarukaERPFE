@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarDays, CheckCircle2, FileClock, FileText, GitBranch, RefreshCw, Search, ShieldCheck, UserRoundCheck } from "lucide-react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, Tooltip } from "recharts";
+import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import api from "../../api/api";
 import "./ExecutiveDashboard.css";
 import "./ProjectSummaryDashboard.css";
