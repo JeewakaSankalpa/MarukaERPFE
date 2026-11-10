@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./Dashboard/dashboard-responsive.css";
 import "./Styles/DashboardStyle.css";
 // import "../styles/DashboardStyle.css";
 import {
@@ -362,6 +363,7 @@ function Dashboard({ onLogout }) {
   return (
     <Container fluid className="dashboard-container p-0">
       <div
+        className="dashboard-content"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -369,38 +371,38 @@ function Dashboard({ onLogout }) {
         }}
       >
         {/* WIDGETS SECTION (Moved to Top) */}
-        <div className="d-flex gap-4 flex-wrap mb-4">
+        <div className="dashboard-widget-grid mb-4">
           {/* My Attendance */}
           {hasAccess({ id: 'dashboard.my_attendance' }) && (
-            <div style={{ flex: 1, minWidth: '300px' }}>
+            <div className="dashboard-widget-cell">
               <MyAttendanceWidget />
             </div>
           )}
 
           {/* Tasks */}
           {hasAccess({ id: 'projects' }) && (
-            <div style={{ flex: 1, minWidth: '300px' }}>
+            <div className="dashboard-widget-cell">
               <MyTasksWidget />
             </div>
           )}
 
           {/* Pending Approvals */}
           {hasAccess({ id: 'dashboard.pending_approvals' }) && (
-            <div style={{ flex: 1, minWidth: '300px' }}>
+            <div className="dashboard-widget-cell">
               <PendingApprovalsWidget />
             </div>
           )}
 
           {/* Payables (Finance) */}
           {hasAccess({ id: 'finance' }) && (
-            <div style={{ flex: 1, minWidth: '300px' }}>
+            <div className="dashboard-widget-cell">
               <PayablesWidget />
             </div>
           )}
 
           {/* HR Widget */}
           {hasAccess({ id: 'hr' }) && (
-            <div style={{ flex: 1, minWidth: '300px' }}>
+            <div className="dashboard-widget-cell">
               <EmployeeHRWidget />
             </div>
           )}
@@ -411,7 +413,7 @@ function Dashboard({ onLogout }) {
           {/* Project Stats - Detailed List */}
           <Col lg={6} md={12}>
             <Card className="h-100 shadow-sm border-0">
-              <Card.Header className="d-flex justify-content-between align-items-center bg-white">
+              <Card.Header className="dashboard-card-header d-flex justify-content-between align-items-center bg-white">
                 <div className="d-flex align-items-center gap-3">
                   <span className="fw-bold">Ongoing Projects</span>
                   <span role="button" className="text-muted small" onClick={loadStats}>{loadingStats ? "…" : "↻"}</span>
@@ -421,7 +423,7 @@ function Dashboard({ onLogout }) {
                 {!proj?.ongoingList || proj.ongoingList.length === 0 ? (
                   <div className="text-muted small">No ongoing projects</div>
                 ) : (
-                  <Table size="sm" hover responsive className="mb-0 small">
+                  <Table size="sm" hover responsive className="mb-0 small dashboard-compact-table">
                     <thead>
                       <tr>
                         <th>Project</th>
@@ -432,9 +434,9 @@ function Dashboard({ onLogout }) {
                     <tbody>
                       {proj.ongoingList.map((p) => (
                         <tr key={p.id}>
-                          <td className="fw-semibold">{p.name}</td>
-                          <td><Badge bg="info" className="text-dark">{p.status?.replace(/_/g, " ")}</Badge></td>
-                          <td>{p.dueAt ? new Date(p.dueAt).toLocaleDateString() : "-"}</td>
+                          <td data-label="Project" className="fw-semibold">{p.name}</td>
+                          <td data-label="Stage"><Badge bg="info" className="text-dark">{p.status?.replace(/_/g, " ")}</Badge></td>
+                          <td data-label="Due">{p.dueAt ? new Date(p.dueAt).toLocaleDateString() : "-"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -452,7 +454,7 @@ function Dashboard({ onLogout }) {
                 {!acc?.projectPayables || acc.projectPayables.length === 0 ? (
                   <div className="text-muted small">No outstanding payables</div>
                 ) : (
-                  <Table size="sm" hover responsive className="mb-0 small">
+                  <Table size="sm" hover responsive className="mb-0 small dashboard-compact-table">
                     <thead>
                       <tr>
                         <th>Project</th>
@@ -462,14 +464,14 @@ function Dashboard({ onLogout }) {
                     <tbody>
                       {acc.projectPayables.map((item, idx) => (
                         <tr key={idx}>
-                          <td>{item.projectName}</td>
-                          <td className="text-end fw-bold text-danger">₹ {money(item.amount)}</td>
+                          <td data-label="Project">{item.projectName}</td>
+                          <td data-label="Outstanding" className="text-end fw-bold text-danger">₹ {money(item.amount)}</td>
                         </tr>
                       ))}
                       {/* Total Row */}
                       <tr className="table-light fw-bold">
-                        <td>Total Outstanding</td>
-                        <td className="text-end">₹ {money(acc.outstanding)}</td>
+                        <td data-label="Summary">Total Outstanding</td>
+                        <td data-label="Outstanding" className="text-end">₹ {money(acc.outstanding)}</td>
                       </tr>
                     </tbody>
                   </Table>

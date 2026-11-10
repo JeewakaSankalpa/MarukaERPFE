@@ -415,7 +415,7 @@ export default function PurchaseOrderDetails() {
         </Table>
     );
     const renderSnapshotMeta = (snapshot) => (
-        <Table size="sm" borderless className="mb-3">
+        <Table size="sm" borderless responsive className="mb-3">
             <tbody>
                 <tr><td className="text-muted">Supplier</td><td>{snapshot?.supplierNameSnapshot || snapshot?.supplierId || "-"}</td></tr>
                 <tr><td className="text-muted">Quotation</td><td>{snapshot?.quotationRef || "-"}</td></tr>
@@ -679,8 +679,8 @@ export default function PurchaseOrderDetails() {
 
                         {/* Totals Breakdown — always visible */}
                         <div className="d-flex justify-content-end">
-                            <div style={{ width: 320 }}>
-                                <Table size="sm" borderless className="mb-0">
+                            <div style={{ width: 320, maxWidth: '100%' }}>
+                                <Table size="sm" borderless responsive className="mb-0">
                                     <tbody>
                                         {(() => {
                                             const computedSubTotal = (po.subTotal && po.subTotal > 0) ? po.subTotal : (po.items || []).reduce((sum, item) => sum + (orderedQty(item) * (item.unitPrice || 0)), 0);

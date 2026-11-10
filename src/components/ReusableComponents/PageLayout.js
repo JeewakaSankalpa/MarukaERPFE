@@ -19,8 +19,8 @@ const PageLayout = ({ title, actions, breadcrumbs = [], children, fluid = false 
         >
             <Container fluid={fluid} className="py-4">
                 {/* Header Section */}
-                <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
-                    <div>
+                <div className="responsive-page-header mb-4 border-bottom pb-2">
+                    <div className="responsive-page-heading">
                         {breadcrumbs.length > 0 && (
                             <Breadcrumb className="small mb-1">
                                 {breadcrumbs.map((b, idx) => (
@@ -39,14 +39,14 @@ const PageLayout = ({ title, actions, breadcrumbs = [], children, fluid = false 
                     </div>
 
                     {actions && (
-                        <div className="d-flex gap-2">
+                        <div className="responsive-page-actions">
                             {actions}
                         </div>
                     )}
                 </div>
 
                 {/* Content Section */}
-                <div className="page-content">
+                <div className="page-layout-content">
                     {children}
                 </div>
             </Container>

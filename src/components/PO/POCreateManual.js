@@ -764,7 +764,7 @@ export default function POCreateManual({ poId, onCreated }) {
                     </div>
                     {/* Small Product List */}
                     <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
-                        <Table size="sm" hover className="mb-0 bg-white">
+                        <Table size="sm" hover responsive className="mb-0 bg-white">
                             <tbody>
                                 {(productData.content || []).map(p => (
                                     <tr key={p.id}>

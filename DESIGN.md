@@ -96,6 +96,8 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 ## Last updated
 
+2026-11-10 by Codex: added application-wide responsive foundations for 320px through large desktop layouts. Preserve local horizontal containment for dense ERP tables and workspaces, viewport-safe Bootstrap/Ant Design dialogs, wrapping page headers/actions/tabs, measurable responsive chart frames, 44px mobile controls, dynamic viewport shell sizing, reduced-motion behavior, and keyboard-operable mobile navigation without changing business workflows or permissions.
+
 2026-10-19 by Codex: The Task Control Center now uses a single cross-project operations surface with Overview, List, Kanban, Gantt, Workforce, Calendar, and Reports views. Preserve the shared task model and contextual drawer; keep object-shaped API values normalized before rendering, use a dedicated Kanban drag handle, and keep filters, timeline changes, assignment planning, loading, empty, error, and reduced-motion states consistent with the existing blue operational portal.
 
 2026-10-19 by Codex: Task Control Center provides one cross-project workspace for task creation, multi-worker assignment, status movement, timeline editing, worker workload, and reports. Preserve the compact blue operational style, explicit filters, accessible status text, and responsive board-to-table collapse.

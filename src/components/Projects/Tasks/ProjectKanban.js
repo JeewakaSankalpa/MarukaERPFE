@@ -3,6 +3,7 @@ import { DndContext, DragOverlay, useDraggable, useDroppable, closestCorners } f
 import { Badge, Spinner } from 'react-bootstrap';
 import api from '../../../api/api';
 import { toast } from 'react-toastify';
+import './ProjectResponsive.css';
 
 const COLUMNS = [
     { id: 'TODO', title: 'To Do', color: 'secondary' },
@@ -12,7 +13,7 @@ const COLUMNS = [
 ];
 
 // Draggable Task Card
-const TaskCard = ({ task, isOverlay }) => {
+const TaskCard = ({ task, isOverlay, onMove }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
         data: { task }
@@ -37,24 +38,29 @@ const TaskCard = ({ task, isOverlay }) => {
                 {task.estimatedHours && <small className="text-muted">{task.estimatedHours}h</small>}
             </div>
             {task.assigneeName && <div className="small text-primary mt-1">👤 {task.assigneeName}</div>}
+            {!isOverlay && <label className="project-kanban-move mt-2">Change status
+                <select className="form-select form-select-sm" value={task.status || 'TODO'} onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onChange={event => onMove(task.id, event.target.value)}>
+                    {COLUMNS.map(column => <option key={column.id} value={column.id}>{column.title}</option>)}
+                </select>
+            </label>}
         </div>
     );
 };
 
 // Droppable Column
-const KanbanColumn = ({ id, title, tasks, color }) => {
+const KanbanColumn = ({ id, title, tasks, color, onMove }) => {
     const { setNodeRef } = useDroppable({
         id: id
     });
 
     return (
-        <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 250, maxWidth: 350 }}>
+        <div className="project-kanban-column d-flex flex-column">
             <div className={`p-2 mb-2 bg-${color} bg-opacity-10 rounded border border-${color} text-center fw-bold`}>
                 {title} ({tasks.length})
             </div>
-            <div ref={setNodeRef} className="flex-grow-1 bg-light rounded p-2" style={{ minHeight: 400 }}>
+            <div ref={setNodeRef} className="project-kanban-dropzone flex-grow-1 bg-light rounded p-2">
                 {tasks.map(task => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={task.id} task={task} onMove={onMove} />
                 ))}
                 {tasks.length === 0 && <div className="text-center text-muted small mt-5">Drop here</div>}
             </div>
@@ -110,6 +116,21 @@ const ProjectKanban = ({ projectId, reloadKey }) => {
         setActiveId(event.active.id);
     };
 
+    const moveTask = async (taskId, newStatus) => {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task || task.status === newStatus) return;
+        const previousTasks = [...tasks];
+        setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, status: newStatus } : t)));
+        try {
+            await api.put(`/tasks/${taskId}`, { ...task, status: newStatus, projectId });
+            toast.success(`Moved to ${COLUMNS.find(c => c.id === newStatus)?.title}`);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to update status");
+            setTasks(previousTasks);
+        }
+    };
+
     const handleDragEnd = async (event) => {
         const { active, over } = event;
         setActiveId(null);
@@ -119,25 +140,7 @@ const ProjectKanban = ({ projectId, reloadKey }) => {
         const taskId = active.id;
         const newStatus = over.id; // The column ID is the status
 
-        const task = tasks.find(t => t.id === taskId);
-        if (!task || task.status === newStatus) return;
-
-        // Optimistic UI Update
-        const previousTasks = [...tasks];
-        setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, status: newStatus } : t)));
-
-        try {
-            await api.put(`/tasks/${taskId}`, {
-                ...task,
-                status: newStatus,
-                projectId // Ensure projectId is sent
-            });
-            toast.success(`Moved to ${COLUMNS.find(c => c.id === newStatus)?.title}`);
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to update status");
-            setTasks(previousTasks); // Revert
-        }
+        await moveTask(taskId, newStatus);
     };
 
     const tasksByStatus = useMemo(() => {
@@ -155,7 +158,7 @@ const ProjectKanban = ({ projectId, reloadKey }) => {
 
     return (
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
-            <div className="d-flex gap-3 overflow-auto pb-3" style={{ minHeight: 500 }}>
+            <div className="project-kanban-board d-flex gap-3 overflow-auto pb-3">
                 {COLUMNS.map(col => (
                     <KanbanColumn
                         key={col.id}
@@ -163,6 +166,7 @@ const ProjectKanban = ({ projectId, reloadKey }) => {
                         title={col.title}
                         color={col.color}
                         tasks={tasksByStatus[col.id] || []}
+                        onMove={moveTask}
                     />
                 ))}
             </div>

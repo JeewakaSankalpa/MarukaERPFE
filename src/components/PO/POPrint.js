@@ -208,7 +208,7 @@ const POPrint = () => {
                 </div>
 
                 {/* Items Table */}
-                <Table borderless className="mb-4">
+                <Table borderless responsive className="mb-4">
                     <thead style={{ backgroundColor: "#d1ecf1", color: "#0c5460" }}>
                         <tr>
                             <th style={{ padding: "8px 12px" }}>DESCRIPTION</th>

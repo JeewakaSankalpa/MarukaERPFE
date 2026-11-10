@@ -16,13 +16,13 @@ export default function PayablesWidget() {
     }, []);
 
     return (
-        <Card className="h-100 shadow-sm">
-            <Card.Header className="bg-white d-flex justify-content-between align-items-center py-3">
+        <Card className="h-100 shadow-sm dashboard-widget-card">
+            <Card.Header className="bg-white d-flex justify-content-between align-items-center py-3 dashboard-card-header">
                 <h5 className="mb-0 text-primary">Upcoming Payables</h5>
                 <Button variant="link" size="sm" onClick={() => navigate("/reports/payables")}>View All</Button>
             </Card.Header>
             <Card.Body className="p-0">
-                <Table hover responsive className="mb-0" style={{ fontSize: "0.9rem" }}>
+                <Table hover responsive className="mb-0 dashboard-compact-table" style={{ fontSize: "0.9rem" }}>
                     <thead className="bg-light">
                         <tr>
                             <th>Supplier</th>
@@ -36,11 +36,11 @@ export default function PayablesWidget() {
                         ) : (
                             payables.map((p, i) => (
                                 <tr key={i}>
-                                    <td>{p.supplierName}</td>
-                                    <td className={new Date(p.dueDate) < new Date() ? "text-danger fw-bold" : ""}>
+                                    <td data-label="Supplier">{p.supplierName}</td>
+                                    <td data-label="Due Date" className={new Date(p.dueDate) < new Date() ? "text-danger fw-bold" : ""}>
                                         {p.dueDate}
                                     </td>
-                                    <td className="text-end fw-bold">{p.balance?.toFixed(2)}</td>
+                                    <td data-label="Balance" className="text-end fw-bold">{p.balance?.toFixed(2)}</td>
                                 </tr>
                             ))
                         )}

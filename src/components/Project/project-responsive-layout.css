@@ -1,0 +1,14 @@
+.project-detail-layout { min-width: 0; max-width: 100%; }
+.project-detail-layout :where(.row, .col, .card, .card-body, .alert) { min-width: 0; }
+.project-detail-layout :where(.nav, .card-header, .alert, .d-flex) { flex-wrap: wrap; }
+.project-detail-layout :where(h1,h2,h3,h4,h5,p,.badge) { overflow-wrap: anywhere; }
+.project-file-toolbar { min-width: 0; }
+.project-file-toolbar > :where(input,select,.form-control,.form-select) { max-width: 100%; }
+.project-detail-layout :where(.table-responsive,.ant-table-content) { max-width: 100%; overflow-x: auto; }
+@media (max-width: 575.98px) {
+  .project-detail-layout { max-height: none !important; padding: .5rem !important; }
+  .project-file-toolbar > :where(.form-control,.form-select) { width: 100% !important; flex: 1 1 100%; }
+  .project-file-toolbar > .btn { min-height: 44px; }
+  .project-detail-layout .alert > .btn { margin-top: .5rem; }
+}
+@media print { .project-detail-layout { max-height: none !important; overflow: visible !important; } }

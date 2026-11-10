@@ -964,7 +964,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                                 loadProductPage({ pageToLoad: productPage + 1, append: true, searchText: q });
                                             }
                                         }}>
-                                        <Table size="sm" hover className="mb-0 align-middle">
+                                        <Table size="sm" hover responsive className="mb-0 align-middle">
                                             <thead className="table-light" style={{ position: "sticky", top: 0 }}>
                                                 <tr><th>Product</th><th>SKU</th><th>Unit</th><th></th></tr>
                                             </thead>

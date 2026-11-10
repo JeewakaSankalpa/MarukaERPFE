@@ -1,0 +1,144 @@
+/* Shared presentation rules for dense ERP screens. Preserve desktop sizing and
+   the full table data; each wide region owns its own horizontal scroll. */
+.page-content :where(.card, .card-body, .card-header, .tab-content, .tab-pane, .accordion, .accordion-body, .ant-card, .ant-card-body) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.page-content :where(.table-responsive, .ant-table-wrapper, .ant-table-container, .ant-table-content) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.page-content :where(.table-responsive, .ant-table-content) {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
+}
+
+.page-content :where(.table-responsive, .ant-table-content) table {
+    width: max-content;
+    min-width: 100%;
+}
+
+.page-content :where(.table-responsive, .ant-table-content) :where(th, td) {
+    vertical-align: middle;
+}
+
+.page-content :where(.form-control, .form-select, .ant-select, .ant-picker, .ant-input-number, .react-select__control) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.page-content :where(.form-control, .form-select, textarea),
+.modal :where(.form-control, .form-select, textarea) {
+    overflow-wrap: anywhere;
+}
+
+.page-content :where(.card-header, .card-footer, .alert, .nav, .breadcrumb) {
+    min-width: 0;
+}
+
+.page-content :where(.card-header, .card-footer) :where(h1, h2, h3, h4, h5, h6, .card-title, .badge) {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.modal :where(.modal-header, .modal-footer, .modal-body),
+.ant-modal :where(.ant-modal-header, .ant-modal-footer, .ant-modal-body) {
+    min-width: 0;
+}
+
+.modal :where(.modal-title, .modal-body),
+.ant-modal :where(.ant-modal-title, .ant-modal-body) {
+    overflow-wrap: anywhere;
+}
+
+.modal .modal-body :where(.table-responsive, .ant-table-content) {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.page-content :where(.nav-tabs, .nav-pills) {
+    gap: 0.25rem;
+}
+
+.page-content :where(.nav-tabs, .nav-pills) .nav-link {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 63.98rem) {
+    .page-content :where(.row > *, [class*="col-"]) {
+        min-width: 0;
+    }
+
+    .page-content :where(.card-header, .card-footer) {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 47.98rem) {
+    .page-content :where(.container, .container-fluid) {
+        width: 100%;
+        padding-inline: 0.5rem;
+    }
+
+    .page-content :where(.row) {
+        --bs-gutter-x: 1rem;
+        --bs-gutter-y: 0.75rem;
+    }
+
+    .page-content :where(.card-body, .card-header, .card-footer, .accordion-body) {
+        padding-inline: clamp(0.75rem, 3vw, 1rem);
+    }
+
+    .page-content :where(.d-flex.justify-content-between, .d-flex.justify-content-end) {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .page-content :where(.nav-tabs, .nav-pills) {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: thin;
+    }
+
+    .page-content :where(.nav-tabs, .nav-pills) .nav-link {
+        min-height: 2.75rem;
+        min-width: max-content;
+    }
+
+    .page-content :where(.pagination) {
+        flex-wrap: wrap;
+    }
+
+    .page-content :where(.form-control, .form-select, .ant-picker, .ant-select-selector, .ant-input-number) {
+        min-height: 2.75rem;
+    }
+
+    .modal :where(.modal-dialog, .modal-content),
+    .ant-modal :where(.ant-modal-content) {
+        max-width: calc(100vw - 1rem);
+    }
+
+    .modal :where(.modal-header, .modal-footer) {
+        flex-shrink: 0;
+    }
+
+    .modal :where(.modal-body) {
+        overflow-y: auto;
+        min-height: 0;
+    }
+}
+
+@media print {
+    .page-content :where(.table-responsive, .ant-table-content),
+    .modal .modal-body :where(.table-responsive, .ant-table-content) {
+        overflow: visible !important;
+    }
+}

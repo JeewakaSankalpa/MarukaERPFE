@@ -146,7 +146,7 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
                     <div className="mb-4">
                         <h5>Payment History</h5>
                         {history.length === 0 ? <div className="text-muted">No payments recorded.</div> :
-                            <Table size="sm" bordered>
+                            <Table size="sm" bordered responsive>
                                 <thead><tr><th>Date</th><th>Receipt</th><th className="text-end">Amount</th><th>Method</th><th>Added By</th><th>Status</th><th>Approved By</th><th>Notes</th><th>Action</th></tr></thead>
                                 <tbody>
                                     {history.map((p, i) => (
@@ -188,7 +188,7 @@ export default function GRNPaymentModal({ grn, canVerifyPayment = false, onClose
                         {(grn.approvalHistory || []).length > 0 && (
                             <div className="mt-3">
                                 <h6>Approval History</h6>
-                                <Table size="sm" bordered>
+                                <Table size="sm" bordered responsive>
                                     <thead>
                                         <tr><th>Action</th><th>Approved By</th><th>Approved At</th><th>Notes</th></tr>
                                     </thead>

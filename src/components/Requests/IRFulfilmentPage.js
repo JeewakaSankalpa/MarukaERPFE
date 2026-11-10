@@ -1143,7 +1143,7 @@ export default function IRFulfilmentPage() {
                             <button className="btn-close" onClick={() => setShowBatchModal(false)}></button>
                         </div>
                         <div className="modal-body">
-                            <Table size="sm" hover>
+                            <Table size="sm" hover responsive>
                                 <thead>
                                     <tr>
                                         <th>Batch</th>

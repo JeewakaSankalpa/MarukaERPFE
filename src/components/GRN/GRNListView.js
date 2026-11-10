@@ -315,7 +315,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                         </div>
                     </div>
 
-                    <Table bordered size="sm" className="mb-4">
+                    <Table bordered responsive size="sm" className="mb-4">
                         <tbody>
                             <tr>
                                 <th style={{ width: "20%" }}>PO Number</th>
@@ -338,7 +338,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                         </tbody>
                     </Table>
 
-                    <Table bordered hover size="sm">
+                    <Table bordered hover responsive size="sm">
                         <thead className="table-light">
                             <tr>
                                 <th>Product</th>
@@ -386,7 +386,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                     </Table>
 
                     <div className="d-flex justify-content-end mt-4">
-                        <Table borderless size="sm" style={{ width: 340 }}>
+                        <Table borderless responsive size="sm" style={{ maxWidth: '100%' }}>
                             <tbody>
                                 <tr>
                                     <td className="text-end">Goods Amount After Discount</td>
@@ -421,7 +421,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                     {(grn.paymentHistory || []).length > 0 && (
                         <>
                             <h5 className="mt-4 mb-2">Payment History</h5>
-                            <Table bordered size="sm">
+                            <Table bordered responsive size="sm">
                                 <thead className="table-light">
                                     <tr>
                                         <th>Date</th>
@@ -451,7 +451,7 @@ function GRNReportModal({ grn, canApprovePrint, onChanged, onClose }) {
                     {(grn.approvalHistory || []).length > 0 && (
                         <>
                             <h5 className="mt-4 mb-2">Approval History</h5>
-                            <Table bordered size="sm">
+                            <Table bordered responsive size="sm">
                                 <thead className="table-light">
                                     <tr>
                                         <th>Action</th>

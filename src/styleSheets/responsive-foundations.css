@@ -1,0 +1,416 @@
+:root {
+    --maruka-breakpoint-sm: 36rem;
+    --maruka-breakpoint-md: 48rem;
+    --maruka-breakpoint-lg: 64rem;
+    --maruka-page-gutter: clamp(0.75rem, 1.8vw, 1.5rem);
+    --maruka-touch-target: 2.75rem;
+    --maruka-focus-ring: rgba(59, 130, 246, 0.82);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    min-width: 0;
+    min-height: 100%;
+}
+
+body {
+    max-width: 100%;
+}
+
+img,
+svg,
+canvas,
+video,
+iframe,
+embed,
+object {
+    max-width: 100%;
+}
+
+.app-container {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    min-width: 0;
+}
+
+.main-content,
+.page-content,
+.page-content > * {
+    min-width: 0;
+}
+
+.main-content {
+    min-height: 0;
+    height: auto;
+}
+
+.page-content {
+    padding: var(--maruka-page-gutter);
+    overscroll-behavior: contain;
+}
+
+.page-layout-content {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.responsive-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.responsive-page-heading {
+    min-width: 0;
+}
+
+.responsive-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.responsive-chart-frame {
+    width: 100%;
+    height: clamp(15rem, 32vw, 18.75rem);
+    min-width: 0;
+}
+
+.responsive-chart-frame-legend {
+    overflow: visible;
+}
+
+.responsive-activity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.responsive-activity-message {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.responsive-report-container {
+    width: 100%;
+    max-width: 75rem;
+    padding-top: 1.5rem;
+}
+
+.responsive-report-surface {
+    padding: clamp(0.75rem, 2.5vw, 1.5rem);
+    min-width: 0;
+}
+
+.page-content :where(.container, .container-fluid, .row, [class*="col-"]) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.page-content :where(h1, h2, h3, h4, h5, h6, p, label, legend, .card-title, .modal-title) {
+    overflow-wrap: anywhere;
+}
+
+.page-content :where(input, select, textarea, .form-control, .form-select, .input-group, .ant-input, .ant-select, .ant-picker) {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.page-content :where(.d-flex, .btn-toolbar, .card-header, .card-footer, .modal-footer, .ant-card-head-wrapper) {
+    min-width: 0;
+}
+
+/* Dense ERP data remains readable: wide tables scroll inside their nearest
+   responsive wrapper, while legacy unwrapped tables can use the page scroller. */
+.page-content :where(.table-responsive, .table-scroll, .ant-table-content, .ant-table-body, .gantt-container, .react-flow) {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.page-content table {
+    max-width: none;
+}
+
+.page-content :where(td, th) {
+    overflow-wrap: normal;
+}
+
+.page-content :where(.recharts-responsive-container, .recharts-wrapper) {
+    min-width: 0 !important;
+    max-width: 100%;
+}
+
+.page-content :where(.nav, .nav-tabs, .nav-pills, .pagination, .breadcrumb) {
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+
+.modal-dialog,
+.ant-modal {
+    max-width: min(calc(100vw - 2rem), var(--bs-modal-width, 62rem));
+    margin-inline: auto;
+}
+
+.modal-content,
+.ant-modal-content {
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow: hidden;
+}
+
+.modal-body,
+.ant-modal-body {
+    min-width: 0;
+    max-width: 100%;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.dropdown-menu,
+.popover,
+.ant-dropdown,
+.ant-picker-dropdown,
+.ant-select-dropdown {
+    max-width: calc(100vw - 1rem);
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--maruka-focus-ring);
+    outline-offset: 2px;
+}
+
+.mobile-menu-toggle,
+.header-icon-button,
+.sidebar-collapse-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--maruka-touch-target);
+    min-height: var(--maruka-touch-target);
+    padding: 0.5rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: inherit;
+}
+
+.sidebar-collapse-button {
+    color: #fff;
+    opacity: 0.84;
+}
+
+.sidebar-collapse-button:hover,
+.sidebar-collapse-button:focus-visible,
+.mobile-menu-toggle:hover,
+.mobile-menu-toggle:focus-visible,
+.header-icon-button:hover,
+.header-icon-button:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    opacity: 1;
+}
+
+@media (max-width: 63.98rem) {
+    .page-content :where(.card-header, .card-footer, .modal-footer, .ant-card-head-wrapper) {
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .page-content :where(.btn-toolbar, .input-group) {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 47.98rem) {
+    .page-content {
+        overflow-x: hidden;
+        padding: clamp(0.625rem, 3vw, 1rem);
+    }
+
+    .app-container {
+        width: 100%;
+    }
+
+    .page-content :where(.row) {
+        margin-inline: calc(-0.5 * var(--bs-gutter-x, 1.5rem));
+    }
+
+    .page-content :where(.table-responsive, .table-scroll, .ant-table-content, .ant-table-body, .gantt-container) {
+        overflow-x: auto;
+    }
+
+    .sidebar-container {
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-width: min(86vw, 20rem);
+        overflow: hidden;
+    }
+
+    .sidebar-overlay {
+        border: 0;
+        padding: 0;
+    }
+
+    .header-logout-button span {
+        display: none;
+    }
+
+    .app-header-center {
+        display: none !important;
+    }
+
+    .app-header-left,
+    .app-header-right {
+        gap: 0.5rem !important;
+    }
+
+    .app-header-right {
+        margin-left: auto;
+    }
+
+    .responsive-page-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .responsive-page-actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .responsive-page-actions > :where(.btn, button, a) {
+        flex: 1 1 10rem;
+    }
+
+    .responsive-activity-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .responsive-chart-frame {
+        height: clamp(16rem, 82vw, 19rem);
+        padding-inline: 0.375rem;
+    }
+
+    .header-logout-button,
+    .header-icon-button {
+        min-width: var(--maruka-touch-target);
+        min-height: var(--maruka-touch-target);
+        padding: 0.625rem;
+    }
+
+    .modal-dialog,
+    .ant-modal {
+        width: calc(100vw - 1rem) !important;
+        max-width: calc(100vw - 1rem) !important;
+        margin: 0.5rem auto;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .modal-content,
+    .ant-modal-content {
+        max-height: calc(100vh - 1rem);
+        max-height: calc(100dvh - 1rem);
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer,
+    .ant-modal-header,
+    .ant-modal-body,
+    .ant-modal-footer {
+        padding-inline: 0.875rem;
+    }
+
+    .modal-footer,
+    .ant-modal-footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .modal-footer > :where(.btn, button),
+    .ant-modal-footer > button {
+        flex: 1 1 10rem;
+        min-height: var(--maruka-touch-target);
+        margin: 0;
+    }
+
+    .page-content :where(.btn, button, a.nav-link, .page-link, .form-control, .form-select, .ant-btn) {
+        min-height: var(--maruka-touch-target);
+    }
+
+    .page-content :where(.pagination, .breadcrumb) {
+        row-gap: 0.5rem;
+    }
+
+    .Toastify__toast-container {
+        inset-inline: 0.5rem;
+        width: auto;
+        max-width: calc(100vw - 1rem);
+    }
+}
+
+@media (max-width: 35.98rem) {
+    .page-content :where(.card-header, .card-footer, .modal-footer) > :where(.btn, button, .btn-group) {
+        max-width: 100%;
+    }
+
+    .page-content :where(.input-group > .form-control, .input-group > .form-select) {
+        flex: 1 1 12rem;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 31.25rem) {
+    .modal-content,
+    .ant-modal-content {
+        max-height: calc(100dvh - 0.5rem);
+    }
+
+    .modal-dialog,
+    .ant-modal {
+        margin-block: 0.25rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media print {
+    .page-content {
+        overflow: visible !important;
+    }
+
+    .table-responsive,
+    .table-scroll,
+    .ant-table-content,
+    .ant-table-body {
+        overflow: visible !important;
+    }
+}

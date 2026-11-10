@@ -1,4 +1,6 @@
 import "./components/Styles/App.css";
+import "./styleSheets/responsive-foundations.css";
+import "./styleSheets/responsive-dense.css";
 
 import React from "react";
 import {
@@ -124,6 +126,21 @@ function Layout({ children }) {
     const isPortalRoute = location.pathname.startsWith("/portal");
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
 
+    React.useEffect(() => {
+        setIsMobileSidebarOpen(false);
+    }, [location.pathname]);
+
+    React.useEffect(() => {
+        if (!isMobileSidebarOpen) return undefined;
+
+        const closeOnEscape = (event) => {
+            if (event.key === "Escape") setIsMobileSidebarOpen(false);
+        };
+
+        document.addEventListener("keydown", closeOnEscape);
+        return () => document.removeEventListener("keydown", closeOnEscape);
+    }, [isMobileSidebarOpen]);
+
     if (isLoginRoute || isPortalRoute) return <>{children}</>;
 
     return (
@@ -136,9 +153,11 @@ function Layout({ children }) {
                 />
                 {/* Mobile Overlay */}
                 {isMobileSidebarOpen && (
-                    <div
+                    <button
+                        type="button"
                         className="sidebar-overlay d-md-none"
                         onClick={() => setIsMobileSidebarOpen(false)}
+                        aria-label="Close navigation menu"
                     />
                 )}
                 <div className="page-content">

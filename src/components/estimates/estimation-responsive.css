@@ -1,0 +1,11 @@
+.project-estimation-container { min-width: 0; max-width: 100%; }
+.project-estimation-container :where(.row,.col,.card,.card-body) { min-width: 0; }
+.project-estimation-container :where(.table-responsive,.estimation-lines-virtual-scroll) { max-width: 100%; overflow-x: auto; }
+.project-estimation-container :where(.d-flex,.card-header,.card-footer,.nav) { flex-wrap: wrap; }
+.project-estimation-container :where(.form-control,.form-select,[class*='select__control']) { min-width: 0; max-width: 100%; }
+@media (max-width: 575.98px) {
+  .project-estimation-container { padding-inline: .5rem !important; }
+  .project-estimation-container :where(.btn,.form-control,.form-select) { min-height: 44px; }
+  .project-estimation-container :where(.modal-footer,.card-header) { gap: .5rem; }
+}
+@media print { .project-estimation-container :where(.table-responsive,.estimation-lines-virtual-scroll) { overflow: visible; } }

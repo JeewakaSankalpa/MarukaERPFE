@@ -89,20 +89,22 @@ const Header = ({ onToggleSidebar }) => {
       <CommandPalette /> {/* Mount Global Command Palette */}
 
       {/* Left Section - Logo */}
-      <div style={styles.leftSection}>
+      <div style={styles.leftSection} className="app-header-left">
         {/* Mobile Toggle Button */}
-        <div
-          className="d-flex d-md-none text-white me-2"
+        <button
+          type="button"
+          className="mobile-menu-toggle d-flex d-md-none text-white me-2"
           onClick={onToggleSidebar}
-          style={{ cursor: 'pointer' }}
+          aria-label="Open navigation menu"
+          aria-controls="primary-sidebar"
         >
-          <div style={{ fontSize: '24px' }}>☰</div> {/* Simple Hamburger-like character or icon */}
-        </div>
+          <span aria-hidden="true" style={{ fontSize: '24px' }}>☰</span>
+        </button>
         <img src={logo} alt="Maruka Logo" style={styles.logoImage} />
       </div>
 
       {/* Center Section - Profile Info */}
-      <div style={styles.centerSection}>
+      <div style={styles.centerSection} className="app-header-center">
         <div style={styles.profile}>
           <img
             src={`https://ui-avatars.com/api/?name=${username || "User"}&background=3b82f6&color=fff`}
@@ -123,7 +125,7 @@ const Header = ({ onToggleSidebar }) => {
       </div>
 
       {/* Right Section - Notifications & Logout */}
-      <div style={styles.rightSection}>
+      <div style={styles.rightSection} className="app-header-right">
 
         {/* Search Trigger Hint */}
         <div
@@ -134,12 +136,18 @@ const Header = ({ onToggleSidebar }) => {
           <CmdIcon size={14} className="me-1" /> <span style={{ fontSize: '12px' }}>Ctrl+K</span>
         </div>
 
-        <div style={styles.notification} onClick={() => navigate("/notifications")}>
+        <button
+          type="button"
+          className="header-icon-button"
+          style={styles.notification}
+          onClick={() => navigate("/notifications")}
+          aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        >
           <Bell size={20} color={Colors.white} />
           {unreadCount > 0 && <span style={styles.notificationCount}>{unreadCount}</span>}
-        </div>
-        <Button variant="danger" onClick={logout}>
-          <FaSignOutAlt /> Logout
+        </button>
+        <Button variant="danger" onClick={logout} className="header-logout-button">
+          <FaSignOutAlt aria-hidden="true" /> <span>Logout</span>
         </Button>
       </div>
     </header>

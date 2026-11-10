@@ -1,0 +1,19 @@
+.workflow-editor { min-width: 0; max-width: 100%; }
+.workflow-editor-toolbar { gap: .75rem; flex-wrap: wrap; min-width: 0; }
+.workflow-editor-toolbar > div { min-width: 0; flex-wrap: wrap; }
+.workflow-editor-toolbar .form-control { max-width: 100%; }
+.workflow-editor-canvas { min-width: 0; min-height: 20rem; }
+.workflow-editor-properties { max-width: min(100%, 320px); overflow-y: auto; overscroll-behavior: contain; }
+.workflow-editor .react-flow__panel { max-width: calc(100% - 1rem); flex-wrap: wrap; }
+@media (max-width: 767.98px) {
+  .workflow-editor { height: calc(100dvh - 5rem) !important; }
+  .workflow-editor-toolbar { max-height: 42dvh; overflow-y: auto; align-items: stretch !important; }
+  .workflow-editor-toolbar > div { width: 100%; }
+  .workflow-editor-toolbar .form-control { width: min(100%, 14rem) !important; flex: 1 1 8rem; }
+  .workflow-editor-toolbar .vr { display: none; }
+  .workflow-editor-properties { width: min(100%, 320px) !important; box-shadow: -4px 0 14px rgba(30,58,138,.16); }
+}
+@media (max-width: 430px) {
+  .workflow-editor-properties { width: 100% !important; max-width: 100%; }
+  .workflow-editor-toolbar .btn { min-height: 44px; }
+}

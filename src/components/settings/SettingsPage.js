@@ -90,7 +90,7 @@ export default function SettingsPage() {
 
         return (
             <div className="mt-3">
-                <Table bordered size="sm">
+                <Table bordered size="sm" responsive>
                     <thead>
                         <tr>
                             <th>Title / Label</th>

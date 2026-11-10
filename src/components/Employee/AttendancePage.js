@@ -139,7 +139,7 @@ function AttendancePage() {
             </Card>
 
             <h4>Recent Logs</h4>
-            <Table striped bordered>
+            <Table striped bordered responsive>
                 <thead>
                     <tr>
                         <th>Date</th>

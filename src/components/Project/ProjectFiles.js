@@ -3,6 +3,7 @@ import { Button, Form, Table, Badge, Modal } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import './project-responsive-layout.css';
 
 /* ---------- Helpers ---------- */
 const extractFileName = (urlOrName) => {
@@ -451,7 +452,7 @@ export default function ProjectFiles({ id, project, actions, stageObj, roleHeade
         <>
             {uploading && <UploadOverlay text={`Uploading… ${uploadPct}%`} />}
 
-            <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <div className="project-file-toolbar d-flex flex-wrap gap-2 align-items-center mb-2">
                 <SafeSelect
                     size="sm"
                     value={docType === '__custom__' || (docType && !ruleOptions.find(o => o.value === docType)) ? '__custom__' : docType}

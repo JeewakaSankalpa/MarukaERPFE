@@ -167,7 +167,7 @@ export default function FinanceReportsPage() {
                             </div>
 
                             <div className="table-responsive">
-                                <Table hover size="sm">
+                                <Table hover responsive size="sm">
                                     <thead className="table-light">
                                         <tr>
                                             <th>Account</th>
@@ -221,7 +221,7 @@ export default function FinanceReportsPage() {
                             <Row>
                                 <Col md={6}>
                                     <h5 className="text-primary border-bottom pb-2">Assets</h5>
-                                    <Table size="sm" borderless hover>
+                                    <Table size="sm" borderless hover responsive>
                                         <tbody>
                                             {bsData.assets && bsData.assets.map(a => (
                                                 <tr key={a.accountId}>
@@ -238,7 +238,7 @@ export default function FinanceReportsPage() {
                                 </Col>
                                 <Col md={6}>
                                     <h5 className="text-danger border-bottom pb-2">Liabilities</h5>
-                                    <Table size="sm" borderless hover>
+                                    <Table size="sm" borderless hover responsive>
                                         <tbody>
                                             {bsData.liabilities && bsData.liabilities.map(a => (
                                                 <tr key={a.accountId}>
@@ -254,7 +254,7 @@ export default function FinanceReportsPage() {
                                     </Table>
 
                                     <h5 className="text-info border-bottom pb-2 mt-4">Equity</h5>
-                                    <Table size="sm" borderless hover>
+                                    <Table size="sm" borderless hover responsive>
                                         <tbody>
                                             {bsData.equity && bsData.equity.map(a => (
                                                 <tr key={a.accountId}>
@@ -299,7 +299,7 @@ export default function FinanceReportsPage() {
                             )}
 
                             <div className="table-responsive">
-                                <Table bordered hover size="sm">
+                                <Table bordered hover responsive size="sm">
                                     <thead className="table-dark">
                                         <tr>
                                             <th style={{ width: '80px' }}>Code</th>

@@ -143,7 +143,7 @@ const ReceivablesReport = () => {
                         <div><strong>Due Date Filter:</strong> {startDate || "Beginning"} to {endDate || "Now"}</div>
                         <div><strong>All Amounts in LKR</strong></div>
                     </div>
-                    <Table bordered size="sm" className="aging-report-table">
+                    <Table bordered responsive size="sm" className="aging-report-table">
                         <thead className="table-light">
                             <tr>
                                 <th>Invoice #</th>

@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { COMPONENT_IDS, ProjectComponentRegistry } from './ComponentRegistry'; // Registry Import
 import ProjectLifecycle from './ProjectLifecycle';
+import './project-responsive-layout.css';
 
 // Lazy load sub-components (Some might be unused if registry handles them, 
 // but we keep imports if they are used elsewhere or in registry definition to be safe if moved)
@@ -405,7 +406,7 @@ export default function ProjectDetails() {
 
     return (
         <div
-            className="p-2"
+            className="project-detail-layout p-2"
             style={{ width: '100%', maxHeight: 'calc(100vh - 110px)', overflowY: 'auto', position: 'relative' }}
         >
             {/* Processing Overlay */}

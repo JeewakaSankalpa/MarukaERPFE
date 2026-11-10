@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Colors from "../../resources/Colors";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -21,6 +21,10 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (isMobileOpen) setCollapsed(false);
+  }, [isMobileOpen]);
 
   // Role Access
   const userRole = (localStorage.getItem("role") || "EMPLOYEE").toUpperCase();
@@ -120,7 +124,9 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
 
   return (
     <div
+      id="primary-sidebar"
       className={`sidebar-container no-print ${isMobileOpen ? 'mobile-open' : ''}`}
+      aria-label="Primary navigation"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -142,13 +148,15 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
             MARUKA <span className="text-info">ERP</span>
           </h5>
         )}
-        <div
+        <button
+          type="button"
+          className="sidebar-collapse-button"
           onClick={() => setCollapsed(!collapsed)}
-          style={{ cursor: "pointer", opacity: 0.8 }}
-          className="hover-scale"
+          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+          aria-expanded={!collapsed}
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </div>
+        </button>
       </div>
 
       {/* User / Notification Area */}

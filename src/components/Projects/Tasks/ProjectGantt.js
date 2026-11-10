@@ -5,6 +5,7 @@ import { Form, Spinner } from 'react-bootstrap';
 import api from '../../../api/api';
 import { toast } from 'react-toastify';
 import SafeSelect from '../../ReusableComponents/SafeSelect';
+import './ProjectResponsive.css';
 
 const ProjectGantt = ({ projectId, reloadKey }) => {
     const [tasks, setTasks] = useState([]);
@@ -88,8 +89,8 @@ const ProjectGantt = ({ projectId, reloadKey }) => {
     if (ganttTasks.length === 0) return <div className="text-center text-muted p-5">No tasks with timeline data found. Add tasks to see the chart.</div>;
 
     return (
-        <div className="bg-white p-3 rounded shadow-sm overflow-hidden">
-            <div className="d-flex justify-content-end mb-3 gap-2">
+        <div className="project-gantt-workspace bg-white p-3 rounded shadow-sm">
+            <div className="project-gantt-controls d-flex justify-content-end mb-3 gap-2">
                 <SafeSelect
                     style={{ width: 'auto' }}
                     value={viewMode}
@@ -102,7 +103,7 @@ const ProjectGantt = ({ projectId, reloadKey }) => {
                 </SafeSelect>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
+            <div className="project-gantt-scroll" role="region" aria-label="Project timeline" tabIndex={0}>
                 <Gantt
                     tasks={ganttTasks}
                     viewMode={viewMode}

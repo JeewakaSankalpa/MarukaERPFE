@@ -110,7 +110,7 @@ const InteractiveDashboard = () => {
                 <Col lg={8}>
                     <Card className="shadow-sm border-0 h-100">
                         <Card.Header className="bg-white fw-bold">Financial Performance (YTD)</Card.Header>
-                        <Card.Body style={{ height: 300 }}>
+                        <Card.Body className="responsive-chart-frame">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={salesData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                     <defs>
@@ -139,7 +139,7 @@ const InteractiveDashboard = () => {
                 <Col lg={4}>
                     <Card className="shadow-sm border-0 h-100">
                         <Card.Header className="bg-white fw-bold">Project Heatmap</Card.Header>
-                        <Card.Body style={{ height: 300, overflow: 'hidden' }}>
+                        <Card.Body className="responsive-chart-frame responsive-chart-frame-legend">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -170,7 +170,7 @@ const InteractiveDashboard = () => {
                 <Col lg={6}>
                     <Card className="shadow-sm border-0">
                         <Card.Header className="bg-white fw-bold">Expense Breakdown</Card.Header>
-                        <Card.Body style={{ height: 300 }}>
+                        <Card.Body className="responsive-chart-frame">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={expenseData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -195,8 +195,8 @@ const InteractiveDashboard = () => {
                                     <li className="list-group-item text-center text-muted">No recent activity</li>
                                 ) : (
                                     recentActivity.map((log, index) => (
-                                        <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                                            <div className="d-flex align-items-center">
+                                        <li key={index} className="list-group-item responsive-activity-row">
+                                            <div className="responsive-activity-message">
                                                 <ActivityIcon type={log.type} />
                                                 <span>{log.message}</span>
                                             </div>

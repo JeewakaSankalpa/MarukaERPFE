@@ -9,6 +9,7 @@ import {
     Panel
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './workflow-responsive.css';
 
 import { Button, Form, Spinner, Modal, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
@@ -560,9 +561,9 @@ export default function WorkflowBuilder() {
     if (loading) return <div className="p-5 text-center"><Spinner animation="border" /></div>;
 
     return (
-        <div style={{ width: '100%', height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+        <div className="workflow-editor" style={{ width: '100%', height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
-            <div className="bg-white border-bottom px-3 py-2 d-flex justify-content-between align-items-center">
+            <div className="workflow-editor-toolbar bg-white border-bottom px-3 py-2 d-flex justify-content-between align-items-center">
                 <div className="d-flex align-items-center gap-2">
                     <Button variant="outline-secondary" size="sm" onClick={() => navigate("/admin/workflows")}>← Back</Button>
                     <span className="fw-bold fs-5">{isNew ? "New Workflow" : id}</span>
@@ -598,7 +599,7 @@ export default function WorkflowBuilder() {
             </div>
 
             {/* Content: Canvas + Sidebar */}
-            <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+            <div className="workflow-editor-canvas" style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
                     <ReactFlow
                         nodes={nodes}
@@ -630,7 +631,7 @@ export default function WorkflowBuilder() {
 
                 {/* Sidebar Panel */}
                 {selection && selection.type === 'node' && (
-                    <div style={{ zIndex: 10, width: '320px', borderLeft: '1px solid #ddd', backgroundColor: 'white', position: 'absolute', right: 0, top: 0, bottom: 0 }}>
+                    <div className="workflow-editor-properties" style={{ zIndex: 10, width: '320px', borderLeft: '1px solid #ddd', backgroundColor: 'white', position: 'absolute', right: 0, top: 0, bottom: 0 }}>
                         <StagePropertyPanel
                             stage={selection.id}
                             flow={flow}
@@ -643,7 +644,7 @@ export default function WorkflowBuilder() {
                     </div>
                 )}
                 {selection && selection.type === 'edge' && (
-                    <div style={{ zIndex: 10, width: '320px', borderLeft: '1px solid #ddd', backgroundColor: 'white', position: 'absolute', right: 0, top: 0, bottom: 0 }}>
+                    <div className="workflow-editor-properties" style={{ zIndex: 10, width: '320px', borderLeft: '1px solid #ddd', backgroundColor: 'white', position: 'absolute', right: 0, top: 0, bottom: 0 }}>
                         <TransitionPropertyPanel
                             edgeId={selection.id}
                             flow={flow}

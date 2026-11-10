@@ -1,0 +1,92 @@
+.dashboard-container,
+.dashboard-content,
+.dashboard-widget-cell,
+.dashboard-widget-card,
+.dashboard-container .row > [class*="col-"] {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.dashboard-content {
+    width: 100%;
+    padding: clamp(0.75rem, 2vw, 1.5rem) !important;
+}
+
+.dashboard-widget-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: clamp(0.75rem, 1.6vw, 1.5rem);
+    align-items: stretch;
+}
+
+.dashboard-widget-cell > .card,
+.dashboard-container .card {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.dashboard-card-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.dashboard-card-header > *,
+.dashboard-card-header h5,
+.dashboard-card-header .fw-bold {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.dashboard-container .table-responsive,
+.dashboard-widget-card .table-responsive {
+    max-width: 100%;
+}
+
+@media (max-width: 47.98rem) {
+    .dashboard-widget-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-container .card-body {
+        min-width: 0;
+    }
+
+    .dashboard-compact-table,
+    .dashboard-compact-table tbody,
+    .dashboard-compact-table tbody tr,
+    .dashboard-compact-table tbody td {
+        display: block;
+        width: 100%;
+    }
+
+    .dashboard-compact-table thead {
+        display: none;
+    }
+
+    .dashboard-compact-table tbody tr {
+        padding: 0.65rem 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .dashboard-compact-table tbody td {
+        display: grid;
+        grid-template-columns: minmax(5.5rem, 38%) minmax(0, 1fr);
+        gap: 0.5rem;
+        border: 0;
+        padding: 0.2rem 0;
+        text-align: start !important;
+        overflow-wrap: anywhere;
+    }
+
+    .dashboard-compact-table tbody td[data-label]::before {
+        content: attr(data-label);
+        color: #526176;
+        font-weight: 600;
+    }
+
+    .dashboard-compact-table tbody td[colspan] {
+        display: block;
+    }
+}

@@ -13,6 +13,7 @@ import CompletenessModal from "../ReusableComponents/CompletenessModal";
 import { buildCompletenessIssues, hasBlockingIssues } from "../../utils/entityCompleteness";
 import { CustomerForm } from "../Customer/CustomerCreate";
 import { confirmAction } from "../../utils/brandedDialogs";
+import './estimation-responsive.css';
 
 /* ------------ API helpers ------------ */
 const getEstimation = async (projectId, estimationType) => (await api.get(`/estimations/by-project/${projectId}`, { params: { estimationType } })).data;
