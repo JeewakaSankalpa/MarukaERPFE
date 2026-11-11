@@ -6,6 +6,7 @@ import {
     FaArrowRight, FaCalendarCheck, FaCartPlus
 } from "react-icons/fa";
 import api from "../../api/api";
+import "./ProcurementDashboard.css";
 
 const StatCard = ({ title, value, icon, color, subtext, onClick }) => (
     <Card className={`h-100 shadow-sm border-0 ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick} style={onClick ? { cursor: 'pointer' } : {}}>
@@ -51,8 +52,8 @@ const ProcurementDashboard = () => {
     );
 
     return (
-        <Container className="py-4" style={{ maxWidth: 1400 }}>
-            <div className="d-flex justify-content-between align-items-center mb-4">
+        <Container className="py-4 procurement-dashboard" style={{ maxWidth: 1400 }}>
+            <div className="d-flex justify-content-between align-items-center gap-3 mb-4 procurement-dashboard-header">
                 <div>
                     <h2 className="fw-bold text-dark mb-1">Procurement Dashboard</h2>
                     <p className="text-muted mb-0">Overview of requests, shortages, and orders</p>
@@ -120,7 +121,7 @@ const ProcurementDashboard = () => {
                             {(!stats?.criticalShortages || stats.criticalShortages.length === 0) ? (
                                 <div className="text-center py-5 text-muted">No critical shortages.</div>
                             ) : (
-                                <Table hover responsive className="mb-0 align-middle">
+                                <Table hover responsive className="mb-0 align-middle procurement-dashboard-table procurement-shortages-table">
                                     <thead className="bg-light text-muted">
                                         <tr>
                                             <th className="ps-4">Product</th>
@@ -152,7 +153,7 @@ const ProcurementDashboard = () => {
                             {(!stats?.pendingDeliveries || stats.pendingDeliveries.length === 0) ? (
                                 <div className="text-center py-5 text-muted">No pending deliveries.</div>
                             ) : (
-                                <Table hover responsive className="mb-0 align-middle">
+                                <Table hover responsive className="mb-0 align-middle procurement-dashboard-table procurement-deliveries-table">
                                     <thead className="bg-light text-muted">
                                         <tr>
                                             <th className="ps-4">PO #</th>
@@ -184,7 +185,7 @@ const ProcurementDashboard = () => {
             <Row className="mt-4">
                 <Col>
                     <Alert variant="secondary" className="border-0 bg-light">
-                        <div className="d-flex align-items-center gap-2">
+                        <div className="d-flex align-items-center gap-2 procurement-process-hint">
                             <FaExclamationCircle className="text-muted" />
                             <strong>Procurement Process Hint:</strong>
                             <span className="text-muted">

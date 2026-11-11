@@ -1,0 +1,86 @@
+.procurement-dashboard {
+    width: 100%;
+    min-width: 0;
+}
+
+.procurement-dashboard :where(.row, [class*="col-"], .card, .card-body) {
+    min-width: 0;
+}
+
+.procurement-dashboard .table-responsive {
+    max-width: 100%;
+}
+
+.procurement-process-hint > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (min-width: 48rem) {
+    .page-content .procurement-dashboard .table-responsive .procurement-dashboard-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+
+    .procurement-dashboard-table :where(th, td) {
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .procurement-shortages-table :where(th, td):first-child {
+        width: 72%;
+    }
+
+    .procurement-shortages-table :where(th, td):last-child {
+        width: 28%;
+    }
+
+    .procurement-deliveries-table :where(th, td):nth-child(1) {
+        width: 18%;
+    }
+
+    .procurement-deliveries-table :where(th, td):nth-child(2) {
+        width: 34%;
+    }
+
+    .procurement-deliveries-table :where(th, td):nth-child(3) {
+        width: 26%;
+    }
+
+    .procurement-deliveries-table :where(th, td):nth-child(4) {
+        width: 22%;
+    }
+
+    .procurement-dashboard-table .badge {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 47.98rem) {
+    .procurement-dashboard-header {
+        align-items: stretch !important;
+        flex-direction: column;
+    }
+
+    .procurement-dashboard-header > .d-flex,
+    .procurement-dashboard-header .btn {
+        width: 100%;
+    }
+
+    .procurement-dashboard-header .btn {
+        justify-content: center;
+    }
+
+    .procurement-process-hint {
+        align-items: flex-start !important;
+    }
+
+    .procurement-process-hint > svg {
+        flex: 0 0 auto;
+        margin-top: 0.2rem;
+    }
+}
