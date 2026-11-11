@@ -23,6 +23,13 @@ const patchProductStatus = async (id, status) =>
 const getReorderSuggestion = async (id) => (await api.get(`/products/${id}/reorder-suggestion`)).data;
 const getSimilarProducts = async ({ name, sku, barcode }) =>
     (await api.get(`/products/similar?${qp({ name, sku, barcode, limit: 5 })}`)).data || [];
+const parseOptionalDecimal = value => {
+    if (value === "" || value === null || value === undefined) return undefined;
+    const normalized = String(value).replace(/,/g, "").trim();
+    if (!normalized) return undefined;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : undefined;
+};
 const PRODUCT_FORM_DEFAULTS = {
     sku: "", barcode: "", name: "", categoryId: "", unit: "pcs", status: "ACTIVE",
     originalCostPrice: "", defaultSellingPrice: "", reorderLevel: "", suppliers: []
@@ -260,7 +267,9 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
         e.preventDefault();
         setValidated(true);
         if (!form.sku && !isEdit) return;
-        if (!form.name || !form.defaultSellingPrice) return;
+        const originalCostPrice = parseOptionalDecimal(form.originalCostPrice);
+        const defaultSellingPrice = parseOptionalDecimal(form.defaultSellingPrice);
+        if (!form.name || defaultSellingPrice === undefined) return;
         if (!isEdit && similarProducts.length > 0 && !similarProductsReviewed) {
             toast.warn("Review similar products before creating this one.");
             return;
@@ -273,15 +282,15 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
             categoryId: form.categoryId || undefined,
             unit: form.unit || undefined,
             status: form.status,
-            originalCostPrice: form.originalCostPrice !== "" && form.originalCostPrice !== undefined ? Number(form.originalCostPrice) : undefined,
-            defaultSellingPrice: form.defaultSellingPrice,
+            originalCostPrice,
+            defaultSellingPrice,
             reorderLevel: form.reorderLevel !== "" && form.reorderLevel !== undefined ? Number(form.reorderLevel) : undefined,
             suppliers: (form.suppliers || []).map(s => ({
                 supplierId: s.supplierId,
                 supplierItemCode: s.supplierItemCode || undefined,
                 leadTimeDays: s.leadTimeDays || undefined,
                 minOrderQty: s.minOrderQty || undefined,
-                lastPurchasePrice: s.lastPurchasePrice || undefined,
+                lastPurchasePrice: parseOptionalDecimal(s.lastPurchasePrice),
                 active: s.active !== false
             }))
         };
@@ -434,7 +443,8 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                         <Col md={4}>
                             <Form.Group>
                                 <Form.Label>Default Selling Price *</Form.Label>
-                                <Form.Control required isInvalid={validated && !form.defaultSellingPrice}
+                                <Form.Control required inputMode="decimal"
+                                              isInvalid={validated && parseOptionalDecimal(form.defaultSellingPrice) === undefined}
                                               value={form.defaultSellingPrice} onChange={bind("defaultSellingPrice")} disabled={!isEditMode} />
                                 <Form.Control.Feedback type="invalid">Selling price is required.</Form.Control.Feedback>
                             </Form.Group>
