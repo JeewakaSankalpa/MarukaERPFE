@@ -6,6 +6,7 @@ import api from '../../api/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
+import './ProjectSearch.css';
 
 const inquiryTypeOptions = [
     { value: '', label: 'Inquiry Type (any)' },
@@ -119,9 +120,9 @@ function ProjectSearch() {
     };
 
     return (
-        <Container className="my-5">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className="d-flex align-items-center mb-4">
+        <Container className="my-5 project-search-page">
+            <div className="d-flex justify-content-between align-items-center gap-3 mb-4 project-search-header">
+                <div className="d-flex align-items-center">
                 <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                 <h2 className="mb-0">Projects</h2>
                         </div>
@@ -218,25 +219,25 @@ function ProjectSearch() {
             </div>
 
             <div>
-                <Table bordered hover responsive className="text-center align-middle">
+                <Table bordered hover responsive className="text-center align-middle project-search-table">
                     <thead className="table-primary">
                         <tr>
                             {columnMode !== 2 && (
-                                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('id')}>
+                                <th className="project-search-col-inquiry" style={{ cursor: 'pointer' }} onClick={() => handleSort('id')}>
                                     Inquiry # {sortField === 'id' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                                 </th>
                             )}
                             {columnMode !== 1 && (
-                                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('jobNumber')}>
+                                <th className="project-search-col-job" style={{ cursor: 'pointer' }} onClick={() => handleSort('jobNumber')}>
                                     Job Number {sortField === 'jobNumber' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                                 </th>
                             )}
-                            <th>Project Name</th>
-                            <th>Inquiry Type</th>
-                            <th>Client</th>
-                            <th>Sales Rep</th>
-                            <th>Status</th>
-                            <th style={{ width: 120 }}>Actions</th>
+                            <th className="project-search-col-name">Project Name</th>
+                            <th className="project-search-col-type">Inquiry Type</th>
+                            <th className="project-search-col-client">Client</th>
+                            <th className="project-search-col-sales">Sales Rep</th>
+                            <th className="project-search-col-status">Status</th>
+                            <th className="project-search-col-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -246,9 +247,9 @@ function ProjectSearch() {
                             <tr><td colSpan={8}>No projects found</td></tr>
                         ) : sortedRows.map(r => (
                             <tr key={r.id}>
-                                {columnMode !== 2 && <td><small className="text-muted">{r.id}</small></td>}
+                                {columnMode !== 2 && <td className="project-search-col-inquiry"><small className="text-muted">{r.id}</small></td>}
                                 {columnMode !== 1 && (
-                                    <td>
+                                    <td className="project-search-col-job">
                                         {r.jobNumber ? (
                                             <Badge bg="success" style={{ fontSize: '0.9rem' }}>{r.jobNumber}</Badge>
                                         ) : (
@@ -256,21 +257,21 @@ function ProjectSearch() {
                                         )}
                                     </td>
                                 )}
-                                <td>{r.projectName || '-'}</td>
-                                <td>
+                                <td className="project-search-col-name">{r.projectName || '-'}</td>
+                                <td className="project-search-col-type">
                                     <Badge bg={inquiryTypeBadge[r.inquiryType || 'JOB'] || 'secondary'} pill>
                                         {inquiryTypeLabels[r.inquiryType || 'JOB'] || r.inquiryType || 'Job Inquiry'}
                                     </Badge>
                                 </td>
-                                <td>{r.customerName || '-'}</td>
-                                <td>{r.salesRepName || '-'}</td>
-                                <td>
+                                <td className="project-search-col-client">{r.customerName || '-'}</td>
+                                <td className="project-search-col-sales">{r.salesRepName || '-'}</td>
+                                <td className="project-search-col-status">
                                     <Badge bg={r.status === 'COMPLETED' ? 'success' : 'info'} pill>
                                         {r.status}
                                     </Badge>
                                 </td>
 
-                                <td>
+                                <td className="project-search-col-actions">
                                     <Button size="sm" variant="outline-primary" onClick={() => navigate(`/projects/manage/${r.id}`)}>
                                         Manage
                                     </Button>

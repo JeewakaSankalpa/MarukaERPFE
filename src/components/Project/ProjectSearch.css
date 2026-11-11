@@ -1,0 +1,73 @@
+.project-search-page {
+    width: 100%;
+    max-width: 100%;
+}
+
+.project-search-page .table-responsive {
+    max-width: 100%;
+}
+
+@media (min-width: 62rem) {
+    .page-content .project-search-page .table-responsive .project-search-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+
+    .project-search-table :where(th, td) {
+        min-width: 0;
+        padding-inline: clamp(0.35rem, 0.65vw, 0.75rem);
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+
+    .project-search-table .project-search-col-inquiry {
+        width: 9%;
+    }
+
+    .project-search-table .project-search-col-job {
+        width: 11%;
+    }
+
+    .project-search-table .project-search-col-name {
+        width: 25%;
+    }
+
+    .project-search-table .project-search-col-type {
+        width: 11%;
+    }
+
+    .project-search-table .project-search-col-client {
+        width: 14%;
+    }
+
+    .project-search-table .project-search-col-sales {
+        width: 12%;
+    }
+
+    .project-search-table .project-search-col-status {
+        width: 10%;
+    }
+
+    .project-search-table .project-search-col-actions {
+        width: 8%;
+    }
+
+    .project-search-table .badge,
+    .project-search-table .btn {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 47.98rem) {
+    .project-search-header {
+        align-items: stretch !important;
+    }
+
+    .project-search-header > .btn {
+        width: 100%;
+    }
+}
