@@ -11,6 +11,7 @@ import { buildCompletenessIssues, hasBlockingIssues } from '../../utils/entityCo
 import { ProductForm } from '../Inventory/ProductPage';
 import { SupplierForm } from '../Supplier/SupplierPage';
 import { quantityCents, quantityValue } from '../Requests/decimalQuantity';
+import './PendingToPOPage.css';
 
 /* ========== INLINE API HELPERS ========== */
 const getPendingPlans = async (sort) => (await api.get(`/stores/pending-purchase`, { params: { sort } })).data;
@@ -397,13 +398,13 @@ export default function PendingToPOPage() {
     };
 
     if (!hasLoadedPending) return (
-        <Container style={{ width:"80vw", maxWidth:1000, paddingTop:24 }}>
+        <Container className="pending-to-po-page" style={{ paddingTop:24 }}>
             <div className="bg-white shadow rounded p-4">Loading…</div>
         </Container>
     );
 
     if (!plan) return (
-        <Container style={{ width:"80vw", maxWidth:1000, paddingTop:24 }}>
+        <Container className="pending-to-po-page" style={{ paddingTop:24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex align-items-center mb-3">
                     <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
@@ -416,7 +417,7 @@ export default function PendingToPOPage() {
     );
 
     return (
-        <Container style={{ width:"80vw", maxWidth:1000, paddingTop:24 }}>
+        <Container className="pending-to-po-page" style={{ paddingTop:24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                     <div className="d-flex align-items-center mb-4">
@@ -440,7 +441,7 @@ export default function PendingToPOPage() {
                                 New Draft
                             </Button>
                         </div>
-                        <Table responsive hover size="sm" className="mb-0">
+                        <Table responsive hover size="sm" className="mb-0 pending-to-po-drafts-table">
                             <thead>
                                 <tr>
                                     <th>Draft</th>
@@ -534,7 +535,7 @@ export default function PendingToPOPage() {
                         {filteredLines.length} of {(plan.lines || []).length} pending item(s)
                     </div>
                 </div>
-                <Table hover responsive>
+                <Table hover responsive className="pending-to-po-lines-table">
                     <thead>
                     <tr>
                         <th>Product</th>

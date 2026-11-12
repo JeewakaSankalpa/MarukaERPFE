@@ -1,0 +1,71 @@
+.pending-to-po-page {
+    width: 100%;
+    max-width: 1000px;
+    min-width: 0;
+    padding-inline: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+.pending-to-po-page .bg-white {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.pending-to-po-page .table-responsive {
+    max-width: 100%;
+}
+
+.pending-to-po-page :where(.form-group, .form-control, .form-select, .pending-to-po-lines-table, .pending-to-po-drafts-table) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (min-width: 48rem) {
+    .page-content .pending-to-po-page .table-responsive :where(.pending-to-po-lines-table, .pending-to-po-drafts-table) {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+
+    .pending-to-po-page :where(.pending-to-po-lines-table, .pending-to-po-drafts-table) :where(th, td) {
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        vertical-align: middle;
+    }
+
+    .pending-to-po-lines-table :where(th, td):nth-child(1) { width: 18%; }
+    .pending-to-po-lines-table :where(th, td):nth-child(2) { width: 15%; }
+    .pending-to-po-lines-table :where(th, td):nth-child(3) { width: 8%; }
+    .pending-to-po-lines-table :where(th, td):nth-child(4) { width: 20%; }
+    .pending-to-po-lines-table :where(th, td):nth-child(5) { width: 14%; }
+    .pending-to-po-lines-table :where(th, td):nth-child(6) { width: 10%; }
+    .pending-to-po-lines-table :where(th, td):nth-child(7) { width: 8%; }
+    .pending-to-po-lines-table :where(th, td):nth-child(8) { width: 7%; }
+
+    .pending-to-po-drafts-table :where(th, td):nth-child(1) { width: 20%; }
+    .pending-to-po-drafts-table :where(th, td):nth-child(2) { width: 12%; }
+    .pending-to-po-drafts-table :where(th, td):nth-child(3) { width: 10%; }
+    .pending-to-po-drafts-table :where(th, td):nth-child(4) { width: 28%; }
+    .pending-to-po-drafts-table :where(th, td):nth-child(5) { width: 30%; }
+
+    .pending-to-po-lines-table .form-control,
+    .pending-to-po-lines-table .form-select {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 47.98rem) {
+    .pending-to-po-page {
+        padding-inline: 0.5rem;
+    }
+
+    .pending-to-po-page > .bg-white {
+        padding: 1rem !important;
+    }
+
+    .pending-to-po-page .d-flex.justify-content-between {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
