@@ -7,6 +7,14 @@
     box-shadow: 0 14px 34px rgba(30, 58, 138, 0.08) !important;
 }
 
+.ir-master-pane,
+.ir-detail-pane,
+.ir-request-panel,
+.ir-detail-panel {
+    min-width: 0;
+    max-width: 100%;
+}
+
 .ir-filter-section {
     padding: 12px;
     border: 1px solid rgba(162, 178, 207, 0.28);
@@ -75,6 +83,69 @@
     background: #f8fbff;
 }
 
+.ir-request-table tbody tr:focus-visible {
+    outline: 3px solid rgba(30, 58, 138, 0.55);
+    outline-offset: -3px;
+}
+
+.ir-request-table.ir-request-table--search {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100%;
+    table-layout: fixed;
+}
+
+.ir-request-table.ir-request-table--search :where(th, td) {
+    min-width: 0;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+}
+
+.ir-request-table--search :where(th, td):nth-child(1) { width: 20%; }
+.ir-request-table--search :where(th, td):nth-child(2) { width: 25%; }
+.ir-request-table--search :where(th, td):nth-child(3) { width: 25%; }
+.ir-request-table--search :where(th, td):nth-child(4) { width: 30%; }
+
+.ir-request-table--search tbody td {
+    vertical-align: top;
+}
+
+.ir-detail-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100%;
+    table-layout: fixed;
+}
+
+.ir-detail-table :where(th, td) {
+    min-width: 0 !important;
+    padding-inline: 0.35rem;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.ir-detail-table :where(th, td):nth-child(1) { width: 23%; }
+.ir-detail-table :where(th, td):nth-child(2) { width: 10%; }
+.ir-detail-table :where(th, td):nth-child(3) { width: 6%; }
+.ir-detail-table :where(th, td):nth-child(4) { width: 6%; }
+.ir-detail-table :where(th, td):nth-child(5) { width: 8%; }
+.ir-detail-table :where(th, td):nth-child(6) { width: 6%; }
+.ir-detail-table :where(th, td):nth-child(7) { width: 13%; }
+.ir-detail-table :where(th, td):nth-child(8) { width: 16%; }
+.ir-detail-table :where(th, td):nth-child(9) { width: 12%; }
+
+.ir-detail-table .form-control {
+    width: 100%;
+    min-width: 0;
+}
+
+.ir-detail-actions .btn {
+    width: 100%;
+    margin: 0.125rem 0 !important;
+    white-space: normal;
+}
+
 .ir-matched-item:not(:last-child) {
     border-bottom: 1px solid rgba(162, 178, 207, 0.24);
     padding-bottom: 6px;
@@ -114,5 +185,14 @@
 
     .ir-clear-filters {
         min-width: 44px;
+    }
+
+    .ir-pagination {
+        flex-wrap: wrap;
+    }
+
+    .ir-detail-table {
+        min-width: 52rem !important;
+        table-layout: auto;
     }
 }

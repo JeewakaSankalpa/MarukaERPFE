@@ -1,0 +1,27 @@
+.purchase-order-list-page { width: 100%; max-width: none; min-width: 0; padding-inline: clamp(0.75rem, 2vw, 1.5rem); }
+.purchase-order-list-surface { min-width: 0; max-width: 100%; }
+.purchase-order-list-header { display: grid; gap: 1rem; }
+.purchase-order-list-filters { display: grid; grid-template-columns: repeat(2, minmax(10rem, 0.85fr)) minmax(12rem, 1fr) minmax(14rem, 1.25fr) auto; gap: 0.5rem; align-items: stretch; }
+.purchase-order-list-filters > * { width: 100%; min-width: 0; max-width: none !important; }
+.purchase-order-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.purchase-order-table-scroll:focus-visible { outline: 3px solid rgba(30, 58, 138, 0.45); outline-offset: 2px; }
+.purchase-order-table { width: 100%; min-width: 64rem; table-layout: fixed; }
+.purchase-order-table :where(th, td) { min-width: 0; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
+.purchase-order-table :where(th, td):nth-child(1) { width: 8%; }
+.purchase-order-table :where(th, td):nth-child(2) { width: 11%; }
+.purchase-order-table :where(th, td):nth-child(3) { width: 9%; }
+.purchase-order-table :where(th, td):nth-child(4) { width: 13%; }
+.purchase-order-table :where(th, td):nth-child(5) { width: 9%; }
+.purchase-order-table :where(th, td):nth-child(6) { width: 8%; }
+.purchase-order-table :where(th, td):nth-child(7) { width: 10%; }
+.purchase-order-table :where(th, td):nth-child(8) { width: 9%; }
+.purchase-order-table :where(th, td):nth-child(9) { width: 7%; }
+.purchase-order-table :where(th, td):nth-child(10) { width: 16%; }
+.purchase-order-actions { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+@media (max-width: 61.98rem) { .purchase-order-list-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 47.98rem) {
+    .purchase-order-list-page { padding-inline: 0.5rem; }
+    .purchase-order-list-surface { padding: 1rem !important; }
+    .purchase-order-list-filters { grid-template-columns: 1fr; }
+    .purchase-order-pager { flex-wrap: wrap; gap: 0.5rem; }
+}

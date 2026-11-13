@@ -1,6 +1,6 @@
 .pending-to-po-page {
     width: 100%;
-    max-width: 1000px;
+    max-width: none;
     min-width: 0;
     padding-inline: clamp(0.75rem, 2vw, 1.5rem);
 }
@@ -22,25 +22,24 @@
 @media (min-width: 48rem) {
     .page-content .pending-to-po-page .table-responsive :where(.pending-to-po-lines-table, .pending-to-po-drafts-table) {
         width: 100%;
-        min-width: 0;
-        table-layout: fixed;
+        table-layout: auto;
     }
 
     .pending-to-po-page :where(.pending-to-po-lines-table, .pending-to-po-drafts-table) :where(th, td) {
-        min-width: 0;
         white-space: normal;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
         vertical-align: middle;
     }
 
-    .pending-to-po-lines-table :where(th, td):nth-child(1) { width: 18%; }
-    .pending-to-po-lines-table :where(th, td):nth-child(2) { width: 15%; }
-    .pending-to-po-lines-table :where(th, td):nth-child(3) { width: 8%; }
-    .pending-to-po-lines-table :where(th, td):nth-child(4) { width: 20%; }
-    .pending-to-po-lines-table :where(th, td):nth-child(5) { width: 14%; }
-    .pending-to-po-lines-table :where(th, td):nth-child(6) { width: 10%; }
-    .pending-to-po-lines-table :where(th, td):nth-child(7) { width: 8%; }
-    .pending-to-po-lines-table :where(th, td):nth-child(8) { width: 7%; }
+    .pending-to-po-lines-table { min-width: 64.5rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(1) { min-width: 10rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(2) { min-width: 8.75rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(3) { min-width: 5rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(4) { min-width: 13.25rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(5) { min-width: 8.75rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(6) { min-width: 6.25rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(7) { min-width: 6.875rem; }
+    .pending-to-po-lines-table :where(th, td):nth-child(8) { min-width: 5.625rem; }
 
     .pending-to-po-drafts-table :where(th, td):nth-child(1) { width: 20%; }
     .pending-to-po-drafts-table :where(th, td):nth-child(2) { width: 12%; }
@@ -55,6 +54,26 @@
     }
 }
 
+.pending-to-po-filters {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    align-items: end;
+}
+
+.pending-to-po-filters > * {
+    min-width: 0 !important;
+    max-width: none !important;
+}
+
+.pending-to-po-filters .pending-to-po-result-count {
+    justify-self: end;
+    align-self: center;
+}
+
+.pending-to-po-actions {
+    flex-wrap: wrap;
+}
+
 @media (max-width: 47.98rem) {
     .pending-to-po-page {
         padding-inline: 0.5rem;
@@ -67,5 +86,13 @@
     .pending-to-po-page .d-flex.justify-content-between {
         flex-wrap: wrap;
         gap: 0.5rem;
+    }
+
+    .pending-to-po-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .pending-to-po-filters .pending-to-po-result-count {
+        justify-self: start;
     }
 }

@@ -7,6 +7,7 @@ import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import { getPurchaseForSources, formatSourceRef, getGrnProgress, orderedQty, formatQty } from "./poDisplay";
+import "./POListView.css";
 
 /* ========== INLINE API HELPERS ========== */
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
@@ -106,15 +107,15 @@ export default function POListView({ onOpenGRN }) {
     };
 
     return (
-        <Container className="py-4">
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="d-flex align-items-center mb-4">
+        <Container fluid className="purchase-order-list-page operational-workspace py-4">
+            <div className="purchase-order-list-surface operational-workspace-surface bg-white shadow rounded p-4">
+                <div className="purchase-order-list-header mb-3">
+                    <div className="d-flex align-items-center">
                         <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                         <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Purchase Orders</h2>
                     </div>
-                    <div className="d-flex gap-2">
-                        <SafeSelect value={status} onChange={e => { setStatus(e.target.value); setPage(0); }} style={{ maxWidth: 190 }}>
+                    <div className="purchase-order-list-filters">
+                        <SafeSelect aria-label="Filter by PO status" value={status} onChange={e => { setStatus(e.target.value); setPage(0); }}>
                             <option value="">All PO Statuses</option>
                             <option value="CREATED">CREATED</option>
                             <option value="SENT_TO_SUPPLIER">SENT_TO_SUPPLIER</option>
@@ -123,7 +124,7 @@ export default function POListView({ onOpenGRN }) {
                             <option value="CONFIRMED">CONFIRMED</option>
                             <option value="CANCELLED">CANCELLED</option>
                         </SafeSelect>
-                        <SafeSelect value={grnStatus} onChange={e => { setGrnStatus(e.target.value); setPage(0); }} style={{ maxWidth: 190 }}>
+                        <SafeSelect aria-label="Filter by GRN status" value={grnStatus} onChange={e => { setGrnStatus(e.target.value); setPage(0); }}>
                             <option value="">All GRN Statuses</option>
                             <option value="NOT_RECEIVED">No GRN</option>
                             <option value="PARTIALLY_RECEIVED">Partial GRN</option>
@@ -133,14 +134,15 @@ export default function POListView({ onOpenGRN }) {
                             placeholder="Project number / MJN"
                             value={projectNumber}
                             onChange={e => { setProjectNumber(e.target.value); setPage(0); }}
-                            style={{ maxWidth: 210 }}
+                            aria-label="Filter by project number"
                         />
-                        <Form.Control placeholder="Search PO# / Supplier" value={q} onChange={e => { setQ(e.target.value); setPage(0); }} style={{ maxWidth: 260 }} />
+                        <Form.Control aria-label="Search purchase orders" placeholder="Search PO# / Supplier" value={q} onChange={e => { setQ(e.target.value); setPage(0); }} />
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>
                 </div>
 
-                <Table hover responsive>
+                <div className="purchase-order-table-scroll" role="region" aria-label="Purchase orders table" tabIndex="0">
+                <Table hover className="purchase-order-table mb-0">
                     <thead>
                         <tr>
                             <th>PO No</th>
@@ -193,7 +195,7 @@ export default function POListView({ onOpenGRN }) {
                                         {po.grandTotal ? po.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
                                     </td>
                                     <td>{po.etaDate || "-"}</td>
-                                    <td className="d-flex gap-1 flex-wrap">
+                                    <td><div className="purchase-order-actions">
                                         <Button
                                             size="sm"
                                             variant="info"
@@ -227,14 +229,15 @@ export default function POListView({ onOpenGRN }) {
                                         >
                                             Receive (GRN)
                                         </Button>
-                                    </td>
+                                    </div></td>
                                 </tr>
                             );
                         })}
                     </tbody>
                 </Table>
+                </div>
 
-                <div className="d-flex justify-content-between align-items-center">
+                <div className="purchase-order-pager d-flex justify-content-between align-items-center mt-3">
                     <div>Page {page + 1} / {Math.max(1, data.totalPages || 1)}</div>
                     <div className="d-flex gap-2">
                         <Button disabled={page === 0} onClick={() => setPage(p => p - 1)} variant="outline-secondary">Prev</Button>

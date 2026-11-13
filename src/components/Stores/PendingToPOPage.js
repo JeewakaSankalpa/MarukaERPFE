@@ -398,16 +398,16 @@ export default function PendingToPOPage() {
     };
 
     if (!hasLoadedPending) return (
-        <Container className="pending-to-po-page" style={{ paddingTop:24 }}>
+        <Container fluid className="pending-to-po-page operational-workspace" style={{ paddingTop:24 }}>
             <div className="bg-white shadow rounded p-4">Loading…</div>
         </Container>
     );
 
     if (!plan) return (
-        <Container className="pending-to-po-page" style={{ paddingTop:24 }}>
+        <Container fluid className="pending-to-po-page operational-workspace" style={{ paddingTop:24 }}>
             <div className="bg-white shadow rounded p-4">
                 <div className="d-flex align-items-center mb-3">
-                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                    <button type="button" className="btn btn-light me-3" aria-label="Back" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                     <h2 className="mb-0" style={{ fontSize:"1.5rem" }}>Pending Purchases</h2>
                 </div>
                 <div className="text-muted">No pending purchases found.</div>
@@ -417,11 +417,11 @@ export default function PendingToPOPage() {
     );
 
     return (
-        <Container className="pending-to-po-page" style={{ paddingTop:24 }}>
-            <div className="bg-white shadow rounded p-4">
+        <Container fluid className="pending-to-po-page operational-workspace" style={{ paddingTop:24 }}>
+            <div className="bg-white shadow rounded p-4 operational-workspace-surface">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                     <div className="d-flex align-items-center mb-4">
-                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                        <button type="button" className="btn btn-light me-3" aria-label="Back" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
                         <h2 className="mb-0" style={{ fontSize:"1.5rem" }}>Pending Purchases → Create POs</h2>
                     </div>
                 </div>
@@ -480,8 +480,8 @@ export default function PendingToPOPage() {
                         </Table>
                     </div>
                 )}
-                <div className="d-flex flex-wrap align-items-end gap-2 mb-3">
-                    <Form.Group style={{ minWidth: 260, maxWidth: 360 }}>
+                <div className="pending-to-po-filters gap-2 mb-3">
+                    <Form.Group controlId="pending-po-source-filter" style={{ minWidth: 260, maxWidth: 360 }}>
                         <Form.Label className="small fw-bold">Filter by Source / Job No.</Form.Label>
                         <Form.Control
                             value={projectFilter}
@@ -489,7 +489,7 @@ export default function PendingToPOPage() {
                             onChange={e => setProjectFilter(e.target.value)}
                         />
                     </Form.Group>
-                    <Form.Group style={{ minWidth: 260, maxWidth: 360 }}>
+                    <Form.Group controlId="pending-po-product-filter" style={{ minWidth: 260, maxWidth: 360 }}>
                         <Form.Label className="small fw-bold">Filter by Product Name</Form.Label>
                         <Form.Control
                             value={productFilter}
@@ -497,7 +497,7 @@ export default function PendingToPOPage() {
                             onChange={e => setProductFilter(e.target.value)}
                         />
                     </Form.Group>
-                    <Form.Group style={{ minWidth: 220, maxWidth: 300 }}>
+                    <Form.Group controlId="pending-po-request-filter" style={{ minWidth: 220, maxWidth: 300 }}>
                         <Form.Label className="small fw-bold">Filter by IR No.</Form.Label>
                         <Form.Control
                             value={itemRequestFilter}
@@ -505,16 +505,16 @@ export default function PendingToPOPage() {
                             onChange={e => setItemRequestFilter(e.target.value)}
                         />
                     </Form.Group>
-                    <Form.Group style={{ minWidth: 220 }}>
+                    <Form.Group controlId="pending-po-sort">
                         <Form.Label className="small fw-bold">Sort Pending Purchases</Form.Label>
-                        <SafeSelect value={pendingSort} onChange={e => setPendingSort(e.target.value)}>
+                        <SafeSelect inputId="pending-po-sort" value={pendingSort} onChange={e => setPendingSort(e.target.value)}>
                             <option value="updatedAtDesc">Newest updated first</option>
                             <option value="updatedAtAsc">Oldest updated first</option>
                         </SafeSelect>
                     </Form.Group>
-                    <Form.Group style={{ minWidth: 260, maxWidth: 360 }}>
+                    <Form.Group controlId="pending-po-plan">
                         <Form.Label className="small fw-bold">Pending Purchase</Form.Label>
-                        <SafeSelect value={selectedPlanId} onChange={e => handlePlanChange(e.target.value)}>
+                        <SafeSelect inputId="pending-po-plan" value={selectedPlanId} onChange={e => handlePlanChange(e.target.value)}>
                             {plans.map(p => (
                                 <option key={p.id} value={p.id}>
                                     {p.planNumber || p.id} - {formatPlanUpdatedAt(p)}
@@ -531,7 +531,7 @@ export default function PendingToPOPage() {
                             Clear
                         </Button>
                     )}
-                    <div className="ms-auto text-muted small pb-2">
+                    <div className="pending-to-po-result-count text-muted small pb-2">
                         {filteredLines.length} of {(plan.lines || []).length} pending item(s)
                     </div>
                 </div>
@@ -542,10 +542,10 @@ export default function PendingToPOPage() {
                         <th>Source</th>
                         <th className="text-end">Shortage</th>
                         <th>Supplier</th>
-                        <th style={{width:160}}>Quotation No</th>
-                        <th style={{width:120}}>Qty</th>
-                        <th style={{width:130}}>Unit Price</th>
-                        <th style={{width:120}}>Tax %</th>
+                        <th>Quotation No</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Tax %</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -568,6 +568,7 @@ export default function PendingToPOPage() {
                                 <td className="text-end">{shortage(l)}</td>
                                 <td>
                                     <SafeSelect
+                                        aria-label={`Supplier for ${l.productNameSnapshot}`}
                                         value={c.supplierId || ""}
                                         placeholder="No supplier"
                                         showBlankOption
@@ -584,6 +585,7 @@ export default function PendingToPOPage() {
                                 </td>
                                 <td>
                                     <Form.Control
+                                        aria-label={`Quotation number for ${l.productNameSnapshot}`}
                                         value={c.supplierId ? quotationRefs[c.supplierId] || "" : ""}
                                         placeholder="Quotation no"
                                         disabled={!c.supplierId}
@@ -595,6 +597,7 @@ export default function PendingToPOPage() {
                                 </td>
                                 <td>
                                     <Form.Control
+                                        aria-label={`Quantity for ${l.productNameSnapshot}`}
                                         type="number"
                                         step="0.01"
                                         min="0"
@@ -605,11 +608,11 @@ export default function PendingToPOPage() {
                                     <div className="text-muted" style={{fontSize:12}}>Max {shortage(l)}</div>
                                 </td>
                                 <td>
-                                    <Form.Control value={c.unitPrice||""}
+                                    <Form.Control aria-label={`Unit price for ${l.productNameSnapshot}`} value={c.unitPrice||""}
                                                   onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, unitPrice: e.target.value } }))} />
                                 </td>
                                 <td>
-                                    <Form.Control value={c.taxPercent||""}
+                                    <Form.Control aria-label={`Tax percent for ${l.productNameSnapshot}`} value={c.taxPercent||""}
                                                   onChange={e=>setChoices(s=>({ ...s, [key]: { ...c, taxPercent: e.target.value } }))} />
                                 </td>
                             </tr>
@@ -625,7 +628,7 @@ export default function PendingToPOPage() {
                     </tbody>
                 </Table>
 
-                <div className="d-flex justify-content-end gap-2">
+                <div className="pending-to-po-actions d-flex justify-content-end gap-2">
                     <Button variant="outline-primary" onClick={saveDraft} disabled={isSavingDraft || isSubmitting}>
                         {isSavingDraft ? 'Saving Draft...' : 'Save Draft'}
                     </Button>

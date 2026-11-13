@@ -1,5 +1,5 @@
 // src/components/Stores/IRFulfilmentPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container, Row, Col, Spinner, Button, Form, Table, Badge, Modal } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import { FaDownload, FaFilePdf, FaPrint, FaSearch, FaTimes } from "react-icons/fa";
@@ -9,6 +9,7 @@ import api from "../../api/api";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import "./IRFulfilmentPage.css";
 import { normalizeItemRequest, quantityCents, quantityValue, roundQuantity } from "./decimalQuantity";
+import { createLatestRequestGate, matchedItemLinesForSearch } from "./irFulfilmentViewModel";
 
 const fetchMainAvail = async () => {
     const res = await api.get("/inventory/available-quantities");
@@ -33,7 +34,7 @@ const fetchMainAvailForProduct = async (productId) => {
     };
 };
 
-const listIRs = async (page, size, status, filters = {}) => {
+const listIRs = async (page, size, status, filters = {}, signal) => {
     const params = { page, size, sort: "createdAt,desc" };
     const actionableStatuses = status?.length
         ? status
@@ -43,7 +44,7 @@ const listIRs = async (page, size, status, filters = {}) => {
     if (filters.projectNumber?.trim()) params.projectNumber = filters.projectNumber.trim();
     if (filters.requester?.trim()) params.requester = filters.requester.trim();
     if (filters.itemSearch?.trim()) params.itemSearch = filters.itemSearch.trim();
-    const data = (await api.get("/item-requests/fulfilment", { params })).data;
+    const data = (await api.get("/item-requests/fulfilment", { params, signal })).data;
     return { ...data, content: (data.content || []).map(normalizeItemRequest) };
 };
 
@@ -109,6 +110,10 @@ export default function IRFulfilmentPage() {
     const [isAddingShortages, setIsAddingShortages] = useState(false);
     const [isIssuing, setIsIssuing] = useState(false);
     const [shortageReport, setShortageReport] = useState(null);
+    const listRequestGateRef = useRef(null);
+    if (listRequestGateRef.current === null) {
+        listRequestGateRef.current = createLatestRequestGate();
+    }
 
     useEffect(() => {
         return () => {
@@ -168,13 +173,26 @@ export default function IRFulfilmentPage() {
 
     // Load List
     useEffect(() => {
+        const gate = listRequestGateRef.current;
+        const requestId = gate.begin();
+        const controller = new AbortController();
         (async () => {
             setLoadingList(true);
+            setIrs(current => ({ ...current, content: [] }));
+            setSelected(null);
             try {
-                setIrs(await listIRs(page, 20, activeStatuses, requestFilters));
-            } catch { toast.error("Failed to load requests"); }
-            setLoadingList(false);
+                const nextIrs = await listIRs(page, 20, activeStatuses, requestFilters, controller.signal);
+                if (gate.isCurrent(requestId)) setIrs(nextIrs);
+            } catch {
+                if (gate.isCurrent(requestId)) toast.error("Failed to load requests");
+            } finally {
+                if (gate.isCurrent(requestId)) setLoadingList(false);
+            }
         })();
+        return () => {
+            gate.invalidate(requestId);
+            controller.abort();
+        };
     }, [page, activeStatuses, requestFilters, reloadToken]);
 
     const cancelRequestLine = async () => {
@@ -734,21 +752,9 @@ export default function IRFulfilmentPage() {
         });
     }, [irs, fProjectName, fProjectNumber, fRequester, projMap]);
 
-    const itemMatchesSearch = (item) => {
-        const search = fItemSearch.trim().toLowerCase();
-        if (!search) return false;
-        return [
-            item.productNameSnapshot,
-            item.sku,
-            item.productId,
-            item.unit
-        ].filter(Boolean).some(value => String(value).toLowerCase().includes(search));
-    };
-
     const matchedItemLines = (ir) => {
         if (!hasItemSearch) return [];
-        const directMatches = (ir.items || []).filter(itemMatchesSearch);
-        return directMatches.length > 0 ? directMatches : (ir.items || []);
+        return matchedItemLinesForSearch(ir.items, fItemSearch);
     };
 
     const clearFilters = () => {
@@ -765,7 +771,7 @@ export default function IRFulfilmentPage() {
         <Container fluid className="ir-fulfilment-page" style={{ maxWidth: 1600, paddingTop: 24, paddingLeft: 24, paddingRight: 24 }}>
             <Row className="g-3">
                 {/* -------- Left: List & Filters -------- */}
-                <Col md={5}>
+                <Col xxl={5} className="ir-master-pane">
                     <div className="ir-request-panel bg-white shadow-sm rounded p-3">
                         <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                             <div>
@@ -791,7 +797,7 @@ export default function IRFulfilmentPage() {
                                 <Form.Label className="small fw-bold">Filter by Status</Form.Label>
                                 <SafeSelect
                                     value={statusFilter}
-                                    onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                                    onChange={(e) => { setStatusFilter(e.target.value); setSelected(null); setPage(0); }}
                                 >
                                     <option value="ACTIONABLE">All Submitted Requests</option>
                                     <option value="SUBMITTED">Submitted</option>
@@ -808,7 +814,7 @@ export default function IRFulfilmentPage() {
                                     <Form.Control
                                         placeholder="Project name..."
                                         value={fProjectName}
-                                        onChange={(e) => { setFProjectName(e.target.value); setPage(0); }}
+                                        onChange={(e) => { setFProjectName(e.target.value); setSelected(null); setPage(0); }}
                                     />
                                 </Form.Group>
                             </Col>
@@ -818,7 +824,7 @@ export default function IRFulfilmentPage() {
                                     <Form.Control
                                         placeholder="MJN, MIN, project no..."
                                         value={fProjectNumber}
-                                        onChange={(e) => { setFProjectNumber(e.target.value); setPage(0); }}
+                                        onChange={(e) => { setFProjectNumber(e.target.value); setSelected(null); setPage(0); }}
                                     />
                                 </Form.Group>
                             </Col>
@@ -828,7 +834,7 @@ export default function IRFulfilmentPage() {
                                     <Form.Control
                                         placeholder="Requester name..."
                                         value={fRequester}
-                                        onChange={(e) => { setFRequester(e.target.value); setPage(0); }}
+                                        onChange={(e) => { setFRequester(e.target.value); setSelected(null); setPage(0); }}
                                     />
                                 </Form.Group>
                             </Col>
@@ -845,6 +851,14 @@ export default function IRFulfilmentPage() {
                                                 setFItemSearch(e.target.value);
                                                 setSelected(null);
                                                 setPage(0);
+                                            }}
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter") {
+                                                    event.preventDefault();
+                                                    setSelected(null);
+                                                    setPage(0);
+                                                    setReloadToken(token => token + 1);
+                                                }
                                             }}
                                             placeholder="Type item name, SKU, barcode, or product ID..."
                                             aria-label="Search item used in requests"
@@ -872,26 +886,45 @@ export default function IRFulfilmentPage() {
                             </Col>
                         </Row>
 
-                        <Table hover size="sm" responsive className="ir-request-table mb-2 align-middle">
+                        <Table hover size="sm" responsive className={`ir-request-table mb-2 align-middle${hasItemSearch ? " ir-request-table--search" : ""}`}>
                             <thead>
                                 <tr>
                                     <th>IR #</th>
                                     <th>Status</th>
-                                    <th>Department</th>
                                     <th>Project</th>
                                     {hasItemSearch && <th>Matched Item / Components</th>}
-                                    <th>Requester</th>
-                                    <th>Created</th>
+                                    {!hasItemSearch && <th>Department</th>}
+                                    {!hasItemSearch && <th>Requester</th>}
+                                    {!hasItemSearch && <th>Created</th>}
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredIRs.map((ir) => {
+                                {loadingList && (
+                                    <tr>
+                                        <td colSpan={hasItemSearch ? 4 : 6} className="ir-empty-cell text-center">
+                                            <Spinner animation="border" size="sm" className="me-2" />
+                                            Loading matching item requests...
+                                        </td>
+                                    </tr>
+                                )}
+                                {!loadingList && filteredIRs.map((ir) => {
                                     const itemLines = matchedItemLines(ir);
                                     return (
-                                        <tr key={ir.id} onClick={() => openIR(ir.id)} style={{ cursor: "pointer" }}>
+                                        <tr
+                                            key={ir.id}
+                                            onClick={() => openIR(ir.id)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter" || event.key === " ") {
+                                                    event.preventDefault();
+                                                    openIR(ir.id);
+                                                }
+                                            }}
+                                            tabIndex={0}
+                                            aria-label={`Open item request ${ir.irNumber || ir.id}`}
+                                            style={{ cursor: "pointer" }}
+                                        >
                                             <td>{ir.irNumber}</td>
                                             <td><Badge bg={ir.status === "CANCELLED" ? "danger" : ir.status === "SUBMITTED" ? "secondary" : ir.status === "PARTIALLY_FULFILLED" ? "info" : "success"}>{ir.status}</Badge></td>
-                                            <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>
                                             <td>
                                                 <div>{projectLabel(ir.projectId)}</div>
                                                 <small className="text-muted">{projMap[ir.projectId]?.name || ""}</small>
@@ -920,14 +953,15 @@ export default function IRFulfilmentPage() {
                                                     )}
                                                 </td>
                                             )}
-                                            <td>{ir.createdBy || "-"}</td>
-                                            <td>{ir.createdAt ? new Date(ir.createdAt).toLocaleString() : "-"}</td>
+                                            {!hasItemSearch && <td>{deptMap[ir.departmentId] || ir.departmentId || "-"}</td>}
+                                            {!hasItemSearch && <td>{ir.createdBy || "-"}</td>}
+                                            {!hasItemSearch && <td>{ir.createdAt ? new Date(ir.createdAt).toLocaleString() : "-"}</td>}
                                         </tr>
                                     );
                                 })}
-                                {filteredIRs.length === 0 && (
+                                {!loadingList && filteredIRs.length === 0 && (
                                     <tr>
-                                        <td colSpan={hasItemSearch ? 7 : 6} className="ir-empty-cell text-center">
+                                        <td colSpan={hasItemSearch ? 4 : 6} className="ir-empty-cell text-center">
                                             <div className="fw-semibold">No matching item requests</div>
                                             <div className="small text-muted">Check the item text or clear filters to widen the list.</div>
                                         </td>
@@ -936,7 +970,7 @@ export default function IRFulfilmentPage() {
                             </tbody>
                         </Table>
 
-                        <div className="d-flex justify-content-between">
+                        <div className="ir-pagination d-flex justify-content-between align-items-center gap-2">
                             <Button size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Prev</Button>
                             <span>Page {page + 1} / {irs.totalPages || 1}</span>
                             <Button size="sm" disabled={page + 1 >= (irs.totalPages || 1)} onClick={() => setPage((p) => p + 1)}>Next</Button>
@@ -945,8 +979,8 @@ export default function IRFulfilmentPage() {
                 </Col>
 
                 {/* -------- Right: Detail & Issue -------- */}
-                <Col md={7}>
-                    <div className="bg-white shadow rounded p-3">
+                <Col xxl={7} className="ir-detail-pane">
+                    <div className="ir-detail-panel bg-white shadow rounded p-3">
                         <div className="d-flex justify-content-between align-items-center mb-3">
                             <h5 className="mb-0">IR Details</h5>
                             {loadingDetail && <Spinner animation="border" size="sm" />}
@@ -986,7 +1020,7 @@ export default function IRFulfilmentPage() {
                                     <div className="form-text small">Scan item QR to auto-allocate batch and increment quantity.</div>
                                 </div>
 
-                                <Table hover size="sm" responsive>
+                                <Table hover size="sm" responsive className="ir-detail-table">
                                     <thead>
                                         <tr>
                                             <th>Product</th>
@@ -1082,7 +1116,7 @@ export default function IRFulfilmentPage() {
                                                             />
                                                         )}
                                                     </td>
-                                                    <td>
+                                                    <td className="ir-detail-actions">
                                                         <Button size="sm" variant={isCancelled ? "outline-danger" : "outline-dark"} disabled={isCancelled} onClick={() => openBatchModal(it)}>
                                                             Batches
                                                         </Button>
