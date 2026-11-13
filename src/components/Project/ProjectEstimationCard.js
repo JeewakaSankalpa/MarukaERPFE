@@ -80,6 +80,7 @@ export default function ProjectEstimationCard({ project, projectId, onOpen, read
     const componentQuantity = (component) => Math.max(1, val(component?.quantity) || 1);
     const componentTotals = (component) => {
         const qty = componentQuantity(component);
+        const savedSubtotalWithMargin = component?.subtotalWithMargin;
         const itemsSubtotal = (component?.items || []).reduce(
             (sum, item) => decimalTotal([sum, val(item?.estUnitCost) * val(item?.quantity) * qty]),
             0
@@ -92,7 +93,9 @@ export default function ProjectEstimationCard({ project, projectId, onOpen, read
             const freight = est?.includeFreight !== false ? roundMoney(val(component?.freightCost) * qty) : 0;
             return {
                 itemsSubtotal,
-                subtotalWithMargin: decimalTotal([baseForMargin, marginAmount]),
+                subtotalWithMargin: savedSubtotalWithMargin != null
+                    ? val(savedSubtotalWithMargin)
+                    : decimalTotal([baseForMargin, marginAmount]),
                 delivery,
                 deliveryTaxable: component?.deliveryTaxable === true,
                 freight,
@@ -163,6 +166,15 @@ export default function ProjectEstimationCard({ project, projectId, onOpen, read
     // If computed fields are present (new format), use the authoritative saved total.
     const hasComputed = est?.computedGrandTotal != null;
     const grandTotal = hasComputed ? val(est.computedGrandTotal) : displayTotals.grandTotal;
+    const discountAmount = est?.computedDiscountAmount != null
+        ? val(est.computedDiscountAmount)
+        : displayTotals.discountAmount;
+    const vatAmount = est?.computedVatAmount != null
+        ? val(est.computedVatAmount)
+        : displayTotals.vatAmount;
+    const taxAmount = est?.computedTaxAmount != null
+        ? val(est.computedTaxAmount)
+        : displayTotals.taxAmount;
 
     const renderRows = () => {
         if (!hasComputed) {
@@ -217,18 +229,18 @@ export default function ProjectEstimationCard({ project, projectId, onOpen, read
                     </tr>
                 )}
 
-                {displayTotals.discountAmount > 0 && (
+                {discountAmount > 0 && (
                     <tr className="text-danger">
                         <td>Discount</td>
-                        <td className="text-end">-{currency} {money(displayTotals.discountAmount)}</td>
+                        <td className="text-end">-{currency} {money(discountAmount)}</td>
                     </tr>
                 )}
 
-                {(displayTotals.vatAmount > 0 || displayTotals.taxAmount > 0) && (
+                {(vatAmount > 0 || taxAmount > 0) && (
                     <tr>
                         <td>Taxes (VAT/Other)</td>
                         <td className="text-end">
-                            {currency} {money(displayTotals.vatAmount + displayTotals.taxAmount)}
+                            {currency} {money(vatAmount + taxAmount)}
                         </td>
                     </tr>
                 )}
