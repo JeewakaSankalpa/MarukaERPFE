@@ -544,6 +544,15 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
         selectedComponents: { ...row.selectedComponents, [activeComponent]: checked }
     }));
 
+    const setAllComponentSelections = (checked) => setRows(previous => previous.map(row =>
+        Object.prototype.hasOwnProperty.call(row.quantities, activeComponent)
+            ? {
+                ...row,
+                selectedComponents: { ...row.selectedComponents, [activeComponent]: checked }
+            }
+            : row
+    ));
+
     const removeFromComponent = (productId) => setRows(previous => previous.flatMap(row => {
         if (row.productId !== productId) return [row];
         const quantities = { ...row.quantities };
@@ -988,9 +997,21 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                 </>
                             )}
 
-                            <div className="d-flex justify-content-between align-items-center mb-2">
+                            <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                                 <h5 className="mb-0">{activeComponent} Items</h5>
-                                <Badge bg="light" text="dark">{componentSelectedCount(activeComponent)} selected for this request</Badge>
+                                <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                                    <Badge bg="light" text="dark">{componentSelectedCount(activeComponent)} selected for this request</Badge>
+                                    {canEditActiveComponent && activeRows.length > 0 && (
+                                        <div className="d-flex gap-2" role="group" aria-label={`${activeComponent} item selection controls`}>
+                                            <Button size="sm" variant="outline-primary" onClick={() => setAllComponentSelections(true)}>
+                                                Select all
+                                            </Button>
+                                            <Button size="sm" variant="outline-secondary" onClick={() => setAllComponentSelections(false)}>
+                                                Unselect all
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <Table hover responsive className="align-middle mb-0">
                                 <thead>
