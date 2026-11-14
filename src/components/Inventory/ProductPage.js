@@ -57,7 +57,10 @@ function ProductList({ onOpen }) {
     };
     useEffect(() => { load(); /* eslint-disable-next-line */ }, [page, status]);
 
-    const onSearch = () => { setPage(0); load(); };
+    const onSearch = () => {
+        if (page === 0) load();
+        else setPage(0);
+    };
     const toggleStatus = async (row) => {
         try {
             const next = row.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
@@ -78,7 +81,17 @@ function ProductList({ onOpen }) {
                 </div>
 
                 <div className="d-flex gap-2 mb-3">
-                    <Form.Control placeholder="Search name/SKU/barcode" value={q} onChange={e => setQ(e.target.value)} />
+                    <Form.Control
+                        placeholder="Search name/SKU/barcode"
+                        value={q}
+                        onChange={e => setQ(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                onSearch();
+                            }
+                        }}
+                    />
                     <Select
                         options={[
                             { value: '', label: 'All' },
