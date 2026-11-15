@@ -1,10 +1,11 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, PackageOpen, Plus, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Button, Form, Table, Badge, Row, Col, Tabs, Tab, Spinner, Alert } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import Select from "react-select";
 import api from "../../api/api";
+import "./ProductPage.css";
 import "react-toastify/dist/ReactToastify.css";
 
 /* ================== Inline API helpers (same file) ================== */
@@ -46,13 +47,20 @@ function ProductList({ onOpen }) {
     const [page, setPage] = useState(0);
     const [size] = useState(10);
     const [data, setData] = useState({ content: [], totalPages: 0 });
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
 
     const load = async () => {
+        setLoading(true);
+        setLoadError("");
         try {
             const res = await listProducts({ q, status, page, size, sort: "name,asc" });
             setData(res);
         } catch {
+            setLoadError("Products could not be loaded. Check your connection and try again.");
             toast.error("Failed to load products");
+        } finally {
+            setLoading(false);
         }
     };
     useEffect(() => { load(); /* eslint-disable-next-line */ }, [page, status]);
@@ -70,80 +78,125 @@ function ProductList({ onOpen }) {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 900, paddingTop: 24 }}>
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Products</h2>
+        <Container fluid className="products-page operational-workspace">
+            <section className="products-workspace operational-workspace-surface" aria-labelledby="products-heading">
+                <header className="products-header">
+                    <div className="products-heading-group">
+                        <button type="button" className="products-back-button" onClick={() => navigate(-1)} aria-label="Go back">
+                            <ArrowLeft size={19} aria-hidden="true" />
+                        </button>
+                        <div>
+                            <h1 id="products-heading">Products</h1>
+                            <p>Manage product details, pricing, suppliers, and availability.</p>
                         </div>
-<Button onClick={() => onOpen(null)}>+ New Product</Button>
+                    </div>
+                    <Button className="products-primary-action" onClick={() => onOpen(null)}>
+                        <Plus size={18} aria-hidden="true" />
+                        New Product
+                    </Button>
+                </header>
+
+                <div className="products-filter-bar" role="search" aria-label="Product filters">
+                    <Form.Group className="products-search-field" controlId="product-search">
+                        <Form.Label>Search products</Form.Label>
+                        <div className="products-search-control">
+                            <Search size={18} aria-hidden="true" />
+                            <Form.Control
+                                placeholder="Name, SKU, or barcode"
+                                value={q}
+                                onChange={e => setQ(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        onSearch();
+                                    }
+                                }}
+                            />
+                        </div>
+                    </Form.Group>
+                    <Form.Group className="products-status-field">
+                        <Form.Label id="product-status-label">Status</Form.Label>
+                        <Select
+                            inputId="product-status"
+                            aria-labelledby="product-status-label"
+                            options={[
+                                { value: '', label: 'All statuses' },
+                                { value: 'ACTIVE', label: 'Active' },
+                                { value: 'INACTIVE', label: 'Inactive' }
+                            ]}
+                            value={[
+                                { value: '', label: 'All statuses' },
+                                { value: 'ACTIVE', label: 'Active' },
+                                { value: 'INACTIVE', label: 'Inactive' }
+                            ].find(o => o.value === status) || { value: '', label: 'All statuses' }}
+                            onChange={opt => setStatus(opt ? opt.value : '')}
+                            isSearchable
+                            className="modern-select-container products-status-select"
+                            classNamePrefix="modern-select"
+                        />
+                    </Form.Group>
+                    <Button className="products-search-button" variant="outline-primary" onClick={onSearch} disabled={loading}>
+                        <Search size={17} aria-hidden="true" />
+                        Search
+                    </Button>
                 </div>
 
-                <div className="d-flex gap-2 mb-3">
-                    <Form.Control
-                        placeholder="Search name/SKU/barcode"
-                        value={q}
-                        onChange={e => setQ(e.target.value)}
-                        onKeyDown={e => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                onSearch();
-                            }
-                        }}
-                    />
-                    <Select
-                        options={[
-                            { value: '', label: 'All' },
-                            { value: 'ACTIVE', label: 'Active' },
-                            { value: 'INACTIVE', label: 'Inactive' }
-                        ]}
-                        value={[
-                            { value: '', label: 'All' },
-                            { value: 'ACTIVE', label: 'Active' },
-                            { value: 'INACTIVE', label: 'Inactive' }
-                        ].find(o => o.value === status) || { value: '', label: 'All' }}
-                        onChange={opt => setStatus(opt ? opt.value : '')}
-                        isSearchable
-                        className="modern-select-container"
-                        classNamePrefix="modern-select"
-                        styles={{ container: base => ({ ...base, width: 200 }) }}
-                    />
-                    <Button variant="outline-secondary" onClick={onSearch}>Search</Button>
-                </div>
-
-                <Table hover responsive>
+                <div className="products-table-region" aria-live="polite" aria-busy={loading}>
+                {loadError && (
+                    <div className="products-error" role="alert">
+                        <span>{loadError}</span>
+                        <Button size="sm" variant="outline-danger" onClick={load}>Try again</Button>
+                    </div>
+                )}
+                <div className="products-table-scroll" tabIndex={0} aria-label="Products table">
+                <Table hover className="products-table mb-0">
                     <thead>
                     <tr>
                         <th>Name</th><th>SKU</th><th>Unit</th><th>Selling</th><th>Status</th><th></th>
                     </tr>
                     </thead>
                     <tbody>
-                    {(data.content || []).map(row => (
+                    {loading && [0, 1, 2].map(index => (
+                        <tr className="products-skeleton-row" key={`product-skeleton-${index}`} aria-hidden="true">
+                            {[0, 1, 2, 3, 4, 5].map(cell => <td key={cell}><span /></td>)}
+                        </tr>
+                    ))}
+                    {!loading && (data.content || []).map(row => (
                         <tr key={row.id}>
-                            <td><Button variant="link" onClick={() => onOpen(row.id)}>{row.name}</Button></td>
-                            <td>{row.sku}</td>
-                            <td>{row.unit || "-"}</td>
-                            <td>{row.defaultSellingPrice || "-"}</td>
-                            <td><Badge bg={row.status === "ACTIVE" ? "success" : "danger"}>{row.status}</Badge></td>
-                            <td>
-                                <Button size="sm" variant="link" onClick={() => toggleStatus(row)}>
+                            <td data-label="Name"><Button className="products-name-link" variant="link" onClick={() => onOpen(row.id)}>{row.name}</Button></td>
+                            <td data-label="SKU"><span className="products-sku">{row.sku}</span></td>
+                            <td data-label="Unit">{row.unit || "-"}</td>
+                            <td data-label="Selling" className="products-price">{row.defaultSellingPrice || "-"}</td>
+                            <td data-label="Status"><Badge bg={row.status === "ACTIVE" ? "success" : "secondary"}>{row.status}</Badge></td>
+                            <td data-label="Action" className="products-row-action">
+                                <Button size="sm" variant="outline-secondary" onClick={() => toggleStatus(row)}>
                                     {row.status === "ACTIVE" ? "Deactivate" : "Activate"}
                                 </Button>
                             </td>
                         </tr>
                     ))}
+                    {!loading && !loadError && (data.content || []).length === 0 && (
+                        <tr className="products-empty-row">
+                            <td colSpan={6}>
+                                <PackageOpen size={28} aria-hidden="true" />
+                                <strong>No products found</strong>
+                                <span>Try a different search term or status filter.</span>
+                            </td>
+                        </tr>
+                    )}
                     </tbody>
                 </Table>
+                </div>
 
-                <div className="d-flex justify-content-between align-items-center">
-                    <div>Page {page + 1} / {Math.max(1, data.totalPages || 1)}</div>
-                    <div className="d-flex gap-2">
+                <footer className="products-pagination">
+                    <div className="products-page-count">Page <strong>{page + 1}</strong> of <strong>{Math.max(1, data.totalPages || 1)}</strong></div>
+                    <div className="products-page-actions">
                         <Button disabled={page === 0} onClick={() => setPage(p => p - 1)} variant="outline-secondary">Prev</Button>
                         <Button disabled={page + 1 >= (data.totalPages || 1)} onClick={() => setPage(p => p + 1)} variant="outline-secondary">Next</Button>
                     </div>
+                </footer>
                 </div>
-            </div>
+            </section>
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );
@@ -328,14 +381,14 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
     };
 
     return (
-        <Container style={{ width: compact ? "100%" : "80vw", maxWidth: 900, paddingTop: compact ? 0 : 24, paddingLeft: compact ? 0 : undefined, paddingRight: compact ? 0 : undefined }}>
-            <div className={compact ? "bg-white" : "bg-white shadow rounded p-4"}>
-                <div className="d-flex justify-content-between align-items-center">
+        <Container fluid={!compact} className={compact ? "product-form-compact" : "products-page product-form-page operational-workspace"}>
+            <div className={compact ? "bg-white" : "product-form-workspace operational-workspace-surface"}>
+                <div className="product-form-header">
                     <div className="d-flex align-items-center">
-                        <button type="button" className="btn btn-light me-3" onClick={onClose}><ArrowLeft size={18} /></button>
-                        <h2 style={{ fontSize: "1.5rem" }} className="mb-0">
+                        <button type="button" className="products-back-button me-3" onClick={onClose} aria-label="Back to products"><ArrowLeft size={19} aria-hidden="true" /></button>
+                        <h1 className="mb-0">
                             {id ? (isEditMode ? "Edit Product" : "View Product") : "Create Product"}
-                        </h2>
+                        </h1>
                     </div>
                     {id && (
                         <Button size="sm" variant={isEditMode ? "secondary" : "primary"} onClick={() => setIsEditMode(v => !v)}>
@@ -348,7 +401,7 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                     <Tab eventKey="details" title="View Product details">
                         <Form noValidate validated={validated} onSubmit={save}>
                             {!isEdit && (
-                                <Form.Group className="mb-3">
+                                <Form.Group className="mb-3" controlId="product-sku">
                             <Form.Label>SKU *</Form.Label>
                             <Form.Control required isInvalid={validated && !form.sku}
                                           value={form.sku} onChange={bind("sku")} disabled={!isEditMode} />
@@ -358,15 +411,16 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
 
                     <Row className="g-3">
                         <Col md={6}>
-                            <Form.Group>
+                            <Form.Group controlId="product-barcode">
                                 <Form.Label>Barcode</Form.Label>
                                 <Form.Control value={form.barcode} onChange={bind("barcode")} disabled={!isEditMode} />
                             </Form.Group>
                         </Col>
                         <Col md={6}>
                             <Form.Group>
-                                <Form.Label>Status</Form.Label>
+                                <Form.Label htmlFor="product-form-status">Status</Form.Label>
                                 <Select
+                                    inputId="product-form-status"
                                     options={[
                                         { value: 'ACTIVE', label: 'ACTIVE' },
                                         { value: 'INACTIVE', label: 'INACTIVE' }
@@ -382,7 +436,7 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                         </Col>
                     </Row>
 
-                    <Form.Group className="mb-3 mt-3">
+                    <Form.Group className="mb-3 mt-3" controlId="product-name">
                         <Form.Label>Name *</Form.Label>
                         <Form.Control required isInvalid={validated && !form.name}
                                       value={form.name} onChange={bind("name")} disabled={!isEditMode} />
@@ -432,13 +486,13 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
 
                     <Row className="g-3">
                         <Col md={6}>
-                            <Form.Group>
+                            <Form.Group controlId="product-category">
                                 <Form.Label>Category</Form.Label>
                                 <Form.Control value={form.categoryId} onChange={bind("categoryId")} disabled={!isEditMode} />
                             </Form.Group>
                         </Col>
                         <Col md={6}>
-                            <Form.Group>
+                            <Form.Group controlId="product-unit">
                                 <Form.Label>Unit</Form.Label>
                                 <Form.Control value={form.unit} onChange={bind("unit")} disabled={!isEditMode} />
                             </Form.Group>
@@ -447,14 +501,14 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
 
                     <Row className="g-3 mt-1">
                         <Col md={4}>
-                            <Form.Group>
+                            <Form.Group controlId="product-original-cost">
                                 <Form.Label>Original Cost Price</Form.Label>
                                 <Form.Control type="number" min="0" step="0.01"
                                               value={form.originalCostPrice} onChange={bind("originalCostPrice")} disabled={!isEditMode} />
                             </Form.Group>
                         </Col>
                         <Col md={4}>
-                            <Form.Group>
+                            <Form.Group controlId="product-selling-price">
                                 <Form.Label>Default Selling Price *</Form.Label>
                                 <Form.Control required inputMode="decimal"
                                               isInvalid={validated && parseOptionalDecimal(form.defaultSellingPrice) === undefined}
@@ -463,7 +517,7 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                             </Form.Group>
                         </Col>
                         <Col md={4}>
-                            <Form.Group>
+                            <Form.Group controlId="product-reorder-level">
                                 <Form.Label>Reorder Level (Low Stock Alert)</Form.Label>
                                 <Form.Control type="number" min="0" value={form.reorderLevel} onChange={bind("reorderLevel")} disabled={!isEditMode} />
                                 <Form.Text className="text-muted">Triggers alert when stock drops below this.</Form.Text>
@@ -549,8 +603,9 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                             <Row className="g-3 align-items-end">
                                 <Col xs={12} lg={4}>
                                     <Form.Group>
-                                        <Form.Label>Supplier *</Form.Label>
+                                        <Form.Label htmlFor={`product-supplier-${i}`}>Supplier *</Form.Label>
                                         <Select
+                                            inputId={`product-supplier-${i}`}
                                             options={[
                                                 { value: '', label: 'Select…' },
                                                 ...supplierOptions.map(s => ({ value: s.id, label: s.name }))
@@ -576,25 +631,25 @@ export function ProductForm({ id, onClose, onSaved, startEditing = false, compac
                                     </Form.Group>
                                 </Col>
                                 <Col xs={12} sm={6} lg={2}>
-                                    <Form.Group>
+                                    <Form.Group controlId={`product-supplier-code-${i}`}>
                                         <Form.Label>Item Code</Form.Label>
                                         <Form.Control value={sl.supplierItemCode || ""} onChange={updSupplierLink(i, "supplierItemCode")} disabled={!isEditMode} />
                                     </Form.Group>
                                 </Col>
                                 <Col xs={6} sm={3} lg={1}>
-                                    <Form.Group>
+                                    <Form.Group controlId={`product-supplier-lead-${i}`}>
                                         <Form.Label>Lead Time</Form.Label>
                                         <Form.Control type="number" min="0" value={sl.leadTimeDays || ""} onChange={updSupplierLink(i, "leadTimeDays")} disabled={!isEditMode} />
                                     </Form.Group>
                                 </Col>
                                 <Col xs={6} sm={3} lg={1}>
-                                    <Form.Group>
+                                    <Form.Group controlId={`product-supplier-moq-${i}`}>
                                         <Form.Label>MOQ</Form.Label>
                                         <Form.Control type="number" min="0" value={sl.minOrderQty || ""} onChange={updSupplierLink(i, "minOrderQty")} disabled={!isEditMode} />
                                     </Form.Group>
                                 </Col>
                                 <Col xs={12} sm={6} lg={2}>
-                                    <Form.Group>
+                                    <Form.Group controlId={`product-supplier-price-${i}`}>
                                         <Form.Label>Last Price</Form.Label>
                                         <Form.Control type="number" min="0" step="0.01" value={sl.lastPurchasePrice || ""} onChange={updSupplierLink(i, "lastPurchasePrice")} disabled={!isEditMode} />
                                     </Form.Group>

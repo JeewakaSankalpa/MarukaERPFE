@@ -96,6 +96,8 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 ## Last updated
 
+2026-11-14 by Codex: Inventory Products now uses a full-width operational workspace with a compact labeled filter bar, scan-friendly desktop table, stacked mobile product rows, explicit loading/empty/error states, and fully associated product-form labels. Preserve document-level overflow containment, 44px mobile actions, Enter-key search, and the existing blue ERP palette.
+
 2026-11-10 by Codex: added application-wide responsive foundations for 320px through large desktop layouts. Preserve local horizontal containment for dense ERP tables and workspaces, viewport-safe Bootstrap/Ant Design dialogs, wrapping page headers/actions/tabs, measurable responsive chart frames, 44px mobile controls, dynamic viewport shell sizing, reduced-motion behavior, and keyboard-operable mobile navigation without changing business workflows or permissions.
 
 2026-10-19 by Codex: The Task Control Center now uses a single cross-project operations surface with Overview, List, Kanban, Gantt, Workforce, Calendar, and Reports views. Preserve the shared task model and contextual drawer; keep object-shaped API values normalized before rendering, use a dedicated Kanban drag handle, and keep filters, timeline changes, assignment planning, loading, empty, error, and reduced-motion states consistent with the existing blue operational portal.
