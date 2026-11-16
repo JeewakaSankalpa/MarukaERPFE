@@ -1,0 +1,78 @@
+.grn-receive-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: clamp(.75rem, 1.7vw, 1.5rem) 0 2.5rem;
+  color: #172033;
+}
+
+.grn-receive-workspace {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dce5ef;
+  border-radius: .8rem;
+  background: #fbfdff;
+  box-shadow: 0 .75rem 2rem -1.5rem rgba(30, 58, 138, .3);
+}
+
+.grn-receive-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border-bottom: 1px solid #dce5ef;
+}
+
+.grn-receive-heading { display: flex; align-items: flex-start; gap: .85rem; min-width: 0; }
+.grn-receive-heading h1 { margin: .2rem 0 .25rem; font-size: clamp(1.35rem, 2.2vw, 1.8rem); font-weight: 750; letter-spacing: -.02em; }
+.grn-receive-heading p { margin: 0; color: #526176; font-size: .875rem; line-height: 1.45; }
+.grn-receive-eyebrow { color: #42618d; font-size: .68rem; font-weight: 800; letter-spacing: .12em; }
+.grn-receive-back { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 2.75rem; height: 2.75rem; border: 1px solid #dce5ef; border-radius: .55rem; background: #f5f8fc; color: #29415f; }
+.grn-receive-po-search { display: flex; align-items: center; gap: .5rem; flex: 0 1 28rem; min-width: min(100%, 18rem); }
+.grn-receive-po-search .form-control { min-width: 0; }
+.grn-receive-details { padding: 1rem clamp(1rem, 2vw, 1.5rem) 0; }
+.grn-receive-payment-note { min-height: 2.5rem; padding-top: .35rem; line-height: 1.45; }
+.grn-receive-po-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; min-height: 2.5rem; padding-top: .25rem; }
+.grn-receive-payable { margin: 1rem clamp(1rem, 2vw, 1.5rem); padding: 1rem; border: 1px solid #dce5ef; border-radius: .65rem; background: #f3f7fb; }
+.grn-receive-payable .text-danger { color: #a33b3b !important; }
+.grn-receive-payable .text-primary { color: #1f4f8f !important; }
+.grn-receive-table-scroll { width: 100%; min-width: 0; overflow-x: auto; padding: 0 clamp(1rem, 2vw, 1.5rem); }
+.grn-receive-table-scroll:focus-visible { outline: 2px solid rgba(59, 130, 246, .82); outline-offset: -2px; }
+.grn-receive-table { min-width: 74rem; margin-bottom: 0; table-layout: fixed; }
+.grn-receive-table :where(th, td) { vertical-align: top; overflow-wrap: anywhere; }
+.grn-receive-table th { background: #eef4fa; color: #43546b; font-size: .72rem; text-transform: uppercase; white-space: nowrap; }
+.grn-receive-table th:nth-child(1) { width: 19%; }
+.grn-receive-table th:nth-child(2) { width: 18%; }
+.grn-receive-table th:nth-child(3) { width: 9%; }
+.grn-receive-table th:nth-child(4), .grn-receive-table th:nth-child(5), .grn-receive-table th:nth-child(6) { width: 9%; }
+.grn-receive-table th:nth-child(7) { width: 10%; }
+.grn-receive-table th:nth-child(8) { width: 25%; }
+.grn-receive-table .form-control { min-width: 0; }
+.grn-receive-post-button { display: block; width: calc(100% - clamp(2rem, 4vw, 3rem)); margin: 1rem clamp(1rem, 2vw, 1.5rem) 0; }
+.grn-receive-page :where(button, input, select, textarea):focus-visible { outline: 2px solid rgba(59, 130, 246, .82); outline-offset: 2px; }
+
+@media (max-width: 991.98px) {
+  .grn-receive-header { flex-direction: column; }
+  .grn-receive-po-search { width: 100%; max-width: 34rem; }
+}
+
+@media (max-width: 575.98px) {
+  .grn-receive-page { padding-top: .5rem; }
+  .grn-receive-heading p { font-size: .8rem; }
+  .grn-receive-po-search { flex-direction: column; align-items: stretch; max-width: none; }
+  .grn-receive-po-search .btn { width: 100%; }
+  .grn-receive-details { padding-top: .75rem; }
+  .grn-receive-payable { margin-inline: .75rem; }
+  .grn-receive-table-scroll { padding-inline: .75rem; }
+  .grn-receive-post-button { width: calc(100% - 1.5rem); margin-inline: .75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grn-receive-page *, .grn-receive-page *::before, .grn-receive-page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+@media print {
+  .grn-receive-page { padding: 0; }
+}

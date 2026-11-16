@@ -116,7 +116,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 | Route | Component | Nested states | Coverage | Priority | Modernization | Assessment |
 |---|---|---:|---|---|---|---|
-| `/grn` | GRNRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
+| `/grn` | GRNRouteWrapper | 0 | MOCK-VERIFIED | HIGH | MODERNIZED | Receive GRN full-width receiving workspace, responsive batch table, scoped payable summary, and accessible receipt controls |
 | `/grns` | GRNListView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | GRN History operational workspace redesigned |
 | `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/pos` | POListRouteWrapper | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Previously modernized PO list |

@@ -9,11 +9,11 @@ This dashboard distinguishes route/state coverage from component and interaction
 | Declared routes | 114 |
 | Unique declared paths | 112 |
 | Route/state combinations | 239 |
-| MOCK-VERIFIED | 36 |
+| MOCK-VERIFIED | 37 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 202 |
+| NOT TESTED | 201 |
 
 ## Sidebar-section modernization breakdown
 
@@ -25,7 +25,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | Sales User Dashboard (Executive Dashboard) | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Project Summary Dashboard | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Projects | 13 | 2 | 0 | 11 | 18 | 11 | 20 | 15.4% | 35.5% |
-| Inventory & Procurement | 31 | 11 | 3 | 17 | 44 | 23 | 52 | 45.2% | 30.7% |
+| Inventory & Procurement | 31 | 12 | 3 | 16 | 44 | 24 | 51 | 48.4% | 32.0% |
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
 | Reports | 10 | 0 | 0 | 10 | 13 | 0 | 23 | 0.0% | 0.0% |
@@ -43,6 +43,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - Departments: populated first page.
 - Task Control Center: overview, list, Kanban, Gantt, workforce, calendar, reports, and the read-only task-detail drawer at desktop, laptop, and mobile widths.
 - Project Manage: dashboard, persisted estimation summary, email-modal opening, and revisions at desktop, laptop, and mobile widths.
+- Receive GRN: PO loading, receipt details, batch-entry interaction, local table scrolling, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 
 ## Shared components
 

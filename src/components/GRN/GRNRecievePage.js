@@ -7,6 +7,7 @@ import api from "../../api/api";
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import { quantityCents, quantityValue } from '../Requests/decimalQuantity';
+import './GRNReceivePage.css';
 
 /* ========== INLINE API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -329,70 +330,75 @@ export default function GRNReceivePage({ poId: initialPoId }) {
     }).filter(entry => entry.extraCents > 0);
 
     return (
-        <Container className="py-4">
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="d-flex align-items-center mb-4">
-                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Receive (GRN)</h2>
+        <Container fluid className="grn-receive-page operational-workspace">
+            <div className="grn-receive-workspace operational-workspace-surface">
+                <header className="grn-receive-header">
+                    <div className="grn-receive-heading">
+                        <button type="button" className="grn-receive-back" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={18} aria-hidden="true" /></button>
+                        <div>
+                            <span className="grn-receive-eyebrow">PROCUREMENT · RECEIVING</span>
+                            <h1>Receive goods received note</h1>
+                            <p>Load a purchase order, record the delivered batches, and review the payable before posting.</p>
+                        </div>
                     </div>
-                    <div className="d-flex gap-2">
+                    <div className="grn-receive-po-search" role="search" aria-label="Load purchase order">
                         <Form.Control
-                            placeholder="PO Number"
+                            placeholder="PO number or job number"
+                            aria-label="Purchase order or job number"
                             value={poInput}
                             onChange={e => setPoInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') setPoId(poInput.trim()); }}
-                            style={{ maxWidth: 200 }}
                         />
-                        <Button variant="outline-primary" onClick={() => setPoId(poInput.trim())}>Load</Button>
+                        <Button variant="primary" onClick={() => setPoId(poInput.trim())}>Load PO</Button>
                     </div>
-                </div>
+                </header>
 
-                <Row className="g-3 mb-3">
+                <section className="grn-receive-details" aria-label="Receipt details">
+                <Row className="g-3">
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Receive to Location</Form.Label>
-                            <Form.Control value={locationId} onChange={e => setLocationId(e.target.value)} />
+                            <Form.Control id="grn-receive-location" aria-label="Receive to location" value={locationId} onChange={e => setLocationId(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Supplier Invoice No</Form.Label>
-                            <Form.Control value={supplierInvoiceNo} onChange={e => setSupplierInvoiceNo(e.target.value)} />
+                            <Form.Control id="grn-supplier-invoice-number" aria-label="Supplier invoice number" value={supplierInvoiceNo} onChange={e => setSupplierInvoiceNo(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Invoice Date</Form.Label>
-                            <SafeDatePicker name="supplierInvoiceDate" value={supplierInvoiceDate} onChange={e => setSupplierInvoiceDate(e.target.value)} />
+                            <SafeDatePicker name="supplierInvoiceDate" aria-label="Supplier invoice date" value={supplierInvoiceDate} onChange={e => setSupplierInvoiceDate(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Credit Period (Days)</Form.Label>
-                            <Form.Control type="number" value={creditPeriodDays} onChange={e => setCreditPeriodDays(e.target.value)} />
+                            <Form.Control id="grn-credit-period-days" aria-label="Credit period in days" type="number" value={creditPeriodDays} onChange={e => setCreditPeriodDays(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={6}>
-                        <div className="text-muted small mt-4">
+                            <div className="text-muted small grn-receive-payment-note">
                             Supplier payments can be added only after this GRN is posted and accepted from GRN History. Each payment is verified separately after it is added.
                         </div>
                     </Col>
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>VAT Amount</Form.Label>
-                            <Form.Control type="number" value={vatAmount} onChange={e => setVatAmount(e.target.value)} />
+                            <Form.Control id="grn-vat-amount" aria-label="VAT amount" type="number" value={vatAmount} onChange={e => setVatAmount(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Seller Discount</Form.Label>
                             <div className="d-flex gap-2">
-                                <Form.Select value={discountType} onChange={e => setDiscountType(e.target.value)}>
+                                <Form.Select id="grn-discount-type" aria-label="Seller discount type" value={discountType} onChange={e => setDiscountType(e.target.value)}>
                                     <option value="AMOUNT">Amount (Rs.)</option>
                                     <option value="PERCENTAGE">Percentage (%)</option>
                                 </Form.Select>
-                                <Form.Control type="number" min="0" max={discountType === "PERCENTAGE" ? "100" : undefined} step="0.01" value={discountValue} onChange={e => setDiscountValue(e.target.value)} placeholder="0" />
+                                <Form.Control id="grn-discount-value" aria-label="Seller discount value" type="number" min="0" max={discountType === "PERCENTAGE" ? "100" : undefined} step="0.01" value={discountValue} onChange={e => setDiscountValue(e.target.value)} placeholder="0" />
                             </div>
                             <Form.Text>Applied discount: Rs. {Number(discountAmount || 0).toFixed(2)}</Form.Text>
                         </Form.Group>
@@ -400,12 +406,12 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                     <Col md={3}>
                         <Form.Group>
                             <Form.Label>Delivery Charge</Form.Label>
-                            <Form.Control type="number" value={deliveryCharge} onChange={e => setDeliveryCharge(e.target.value)} />
+                            <Form.Control id="grn-delivery-charge" aria-label="Delivery charge" type="number" value={deliveryCharge} onChange={e => setDeliveryCharge(e.target.value)} />
                         </Form.Group>
                     </Col>
                     <Col md={3}>
                         {po && (
-                            <div className="d-flex gap-3 align-items-center mt-4">
+                            <div className="grn-receive-po-meta">
                                 <Badge bg="light" text="dark">PO: {po.poNumber}</Badge>
                                 <Badge bg="light" text="dark">Supplier: {po.supplierNameSnapshot || po.supplierName}</Badge>
                                 <Badge bg={po.status === "FULLY_RECEIVED" ? "success" : po.status === "PARTIALLY_RECEIVED" ? "info" : "secondary"}>{po.status}</Badge>
@@ -414,9 +420,10 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                         )}
                     </Col>
                 </Row>
+                </section>
 
                 {po && (
-                    <div className="border rounded bg-light p-3 mb-3" aria-label="GRN payable calculation">
+                    <div className="grn-receive-payable" aria-label="GRN payable calculation">
                         <div className="fw-semibold mb-2">Payable calculation</div>
                         <Row className="g-2 small">
                             <Col md={2}><span className="text-muted">Gross received goods</span><div>Rs. {money(grossReceivedGoods)}</div></Col>
@@ -433,13 +440,14 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                 {!po
                     ? <div className="text-muted">Enter and load a PO to proceed.</div>
                     : (
-                        <>
-                            <Table hover responsive>
+                         <>
+                             <div className="grn-receive-table-scroll" tabIndex="0" aria-label="Goods received quantities and batches table">
+                             <Table hover className="grn-receive-table">
                                 <thead>
                                     <tr>
-                                        <th>Exact PO line / source</th><th>Product</th><th>SKU</th>
-                                        <th className="text-end">Ordered</th><th className="text-end">Previously received</th>
-                                        <th className="text-end">Remaining</th><th style={{ width: 100 }}>Receiving now</th><th>Batches</th>
+                                        <th scope="col">Exact PO line / source</th><th scope="col">Product</th><th scope="col">SKU</th>
+                                        <th scope="col" className="text-end">Ordered</th><th scope="col" className="text-end">Previously received</th>
+                                        <th scope="col" className="text-end">Remaining</th><th scope="col" style={{ width: 100 }}>Receiving now</th><th scope="col">Batches</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -477,7 +485,7 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                 <td className="text-end">{r.previouslyReceivedQty}</td>
                                                 <td className="text-end fw-semibold">{Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0))}</td>
                                                 <td>
-                                                    <Form.Control type="number" readOnly value={totalQty} style={{ backgroundColor: '#e9ecef' }} />
+                                                    <Form.Control aria-label={`Receiving quantity total for ${r.productName}`} type="number" readOnly value={totalQty} style={{ backgroundColor: '#e9ecef' }} />
                                                 </td>
                                                 <td>
                                                     <div className="d-flex flex-column gap-2">
@@ -485,30 +493,34 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                                             <div key={bi} className="border p-2 rounded">
                                                                 <div className="d-flex gap-2">
                                                                     <Form.Control
-                                                                        placeholder="Batch No"
+                                                                         aria-label={`Batch number for ${r.productName}`}
+                                                                         placeholder="Batch No"
                                                                         value={b.batchNo}
                                                                         onChange={e => setBatch(i, bi, "batchNo", e.target.value)}
                                                                         style={{ maxWidth: 160 }}
                                                                     />
                                                                     <SafeDatePicker
-                                                                        name="expiryDate"
+                                                                         name={`expiryDate-${r.productId}-${bi}`}
+                                                                         aria-label={`Expiry date for ${r.productName}`}
                                                                         value={b.expiryDate}
                                                                         onChange={e => setBatch(i, bi, "expiryDate", e.target.value)}
                                                                         style={{ maxWidth: 150 }}
                                                                     />
                                                                     <Form.Control
-                                                                        type="number" min="0" step="0.01" max={Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0))} placeholder="Qty"
+                                                                         aria-label={`Received quantity for ${r.productName}`}
+                                                                         type="number" min="0" step="0.01" max={Math.max(0, Number(r.orderedQty || 0) - Number(r.previouslyReceivedQty || 0))} placeholder="Qty"
                                                                         value={b.qty}
                                                                         onChange={e => setBatch(i, bi, "qty", e.target.value)}
                                                                         style={{ maxWidth: 80 }}
                                                                     />
                                                                     <Form.Control
-                                                                        type="number" min="0" step="0.01" placeholder="Unit Cost *"
+                                                                         aria-label={`Unit cost for ${r.productName}`}
+                                                                         type="number" min="0" step="0.01" placeholder="Unit Cost *"
                                                                         value={b.unitCost}
                                                                         onChange={e => setBatch(i, bi, "unitCost", e.target.value)}
                                                                         style={{ maxWidth: 110, borderColor: (!b.unitCost && b.qty > 0) ? 'red' : undefined }}
                                                                     />
-                                                                    <Button size="sm" variant="outline-danger" onClick={() => rmBatch(i, bi)}>✕</Button>
+                                                                     <Button size="sm" variant="outline-danger" aria-label={`Remove batch ${bi + 1} for ${r.productName}`} onClick={() => rmBatch(i, bi)}>✕</Button>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -526,7 +538,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                         );
                                     })}
                                 </tbody>
-                            </Table>
+                             </Table>
+                             </div>
 
                             {stockOverridePreview.length > 0 && (
                                 <div className="border border-warning rounded p-3 mb-3">
@@ -548,8 +561,8 @@ export default function GRNReceivePage({ poId: initialPoId }) {
                                 </div>
                             )}
 
-                            <Button
-                                className="w-100 mt-2"
+                             <Button
+                                 className="grn-receive-post-button"
                                 onClick={save}
                                 disabled={posting || po.status === 'FULLY_RECEIVED'}
                             >
@@ -565,11 +578,11 @@ export default function GRNReceivePage({ poId: initialPoId }) {
             {/* QR Codes Modal */}
             {showQrModal && (
                 <div className="modal show d-block bg-dark bg-opacity-50" tabIndex="-1">
-                    <div className="modal-dialog modal-xl">
-                        <div className="modal-content">
+                <div className="modal-dialog modal-xl">
+                        <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="grn-qr-modal-title">
                             <div className="modal-header">
-                                <h5 className="modal-title">GRN Successful — Generated Batches</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowQrModal(false)}></button>
+                                <h5 className="modal-title" id="grn-qr-modal-title">GRN Successful — Generated Batches</h5>
+                                <button type="button" className="btn-close" aria-label="Close generated batch QR codes" onClick={() => setShowQrModal(false)}></button>
                             </div>
                             <div className="modal-body">
                                 <p className="text-muted">Scan these QR codes for inventory tracking.</p>
