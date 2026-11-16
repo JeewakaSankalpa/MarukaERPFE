@@ -8,7 +8,7 @@ This dashboard distinguishes route/state coverage from component and interaction
 |---|---:|
 | Declared routes | 114 |
 | Unique declared paths | 112 |
-| Route/state combinations | 240 |
+| Route/state combinations | 239 |
 | MOCK-VERIFIED | 41 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
