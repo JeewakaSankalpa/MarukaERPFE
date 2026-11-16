@@ -1,18 +1,18 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `3e24def0e4267eb1981831716939917c4efb0662`.
+Generated from `src/App.js` at revision `6ee59ec8d7ef09843109bf943bbaabbfedd7ebb7`.
 
 - Route declarations: 114
 - Unique declared paths: 112
-- Coverage rows including nested states: 242
-- Status counts: `MOCK-VERIFIED` 49, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 192
+- Coverage rows including nested states: 246
+- Status counts: `MOCK-VERIFIED` 54, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 191
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
 | ROUTE-login-initial-route-state | `/login` | Login | initial route state | public/unknown | MOCK-VERIFIED |
 | ROUTE-root-initial-route-state | `/` | Navigate | initial route state | public/unknown | MOCK-VERIFIED |
 | ROUTE-portal-customer-initial-route-state | `/portal/customer` | PortalDashboard | initial route state | CUSTOMER, CUSTOMER_PORTAL | MOCK-VERIFIED |
-| ROUTE-portal-customer-overview-tab | `/portal/customer` | PortalDashboard | overview tab | CUSTOMER, CUSTOMER_PORTAL | NOT TESTED |
+| ROUTE-portal-customer-overview-tab | `/portal/customer` | PortalDashboard | overview tab | CUSTOMER, CUSTOMER_PORTAL | MOCK-VERIFIED |
 | ROUTE-portal-customer-communications-tab | `/portal/customer` | PortalDashboard | communications tab | CUSTOMER, CUSTOMER_PORTAL | NOT TESTED |
 | ROUTE-portal-customer-visibility-dependent-tab | `/portal/customer` | PortalDashboard | visibility-dependent tab | CUSTOMER, CUSTOMER_PORTAL | NOT TESTED |
 | ROUTE-portal-supplier-initial-route-state | `/portal/supplier` | PortalDashboard | initial route state | SUPPLIER, SUPPLIER_PORTAL | NOT TESTED |
@@ -130,6 +130,10 @@ Generated from `src/App.js` at revision `3e24def0e4267eb1981831716939917c4efb066
 | ROUTE-stores-pending-to-po-supplier-and-quotation-interaction | `/stores/pending-to-po` | PendingToPOPage | supplier and quotation interaction | procurement | MOCK-VERIFIED |
 | ROUTE-stores-pending-to-po-300-row-performance-baseline | `/stores/pending-to-po` | PendingToPOPage | 300-row performance baseline | procurement | MOCK-VERIFIED |
 | ROUTE-transfers-inbox-initial-route-state | `/transfers/inbox` | TransfersInbox | initial route state | procurement | NOT TESTED |
+| ROUTE-transfers-inbox-populated-queue | `/transfers/inbox` | TransfersInbox | populated queue | procurement | MOCK-VERIFIED |
+| ROUTE-transfers-inbox-searched-queue | `/transfers/inbox` | TransfersInbox | searched queue | procurement | MOCK-VERIFIED |
+| ROUTE-transfers-inbox-expanded-transfer-details | `/transfers/inbox` | TransfersInbox | expanded transfer details | procurement | MOCK-VERIFIED |
+| ROUTE-transfers-inbox-verified-batch-scan | `/transfers/inbox` | TransfersInbox | verified batch scan | procurement | MOCK-VERIFIED |
 | ROUTE-pos-initial-route-state | `/pos` | POListRouteWrapper | initial route state | procurement | MOCK-VERIFIED |
 | ROUTE-pos-create-initial-route-state | `/pos/create` | POCreateManualRouteWrapper | initial route state | procurement | NOT TESTED |
 | ROUTE-pos-id-print-initial-route-state | `/pos/:id/print` | POPrint | initial route state | procurement | NOT TESTED |

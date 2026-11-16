@@ -18,6 +18,7 @@ module.exports = {
     QuotationPrint: ['quotation state', 'invoices state'],
     SupplierReturnApprovals: ['pending state', 'approved state', 'rejected state'],
     ProcurementDashboard: ['populated overview', 'searched activity', 'status-filtered deliveries'],
+    TransfersInbox: ['populated queue', 'searched queue', 'expanded transfer details', 'verified batch scan'],
     StockControlCenter: ['overview tab', 'locations tab', 'products tab', 'movements tab', 'exceptions tab', 'stock-breakdown drawer'],
     TaskControlCenter: ['overview tab', 'list tab', 'board tab', 'gantt tab', 'workforce tab', 'calendar tab', 'reports tab', 'task create drawer', 'task edit drawer'],
     AllTasksReport: ['tasks tab', 'workers tab'],

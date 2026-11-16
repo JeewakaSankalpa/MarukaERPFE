@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-16T16:59:12.752Z",
-  "sourceRevision": "3e24def0e4267eb1981831716939917c4efb0662",
+  "generatedAt": "2026-11-16T17:17:47.029Z",
+  "sourceRevision": "6ee59ec8d7ef09843109bf943bbaabbfedd7ebb7",
   "schemaVersion": 1,
   "allowedStatuses": [
     "MOCK-VERIFIED",
@@ -22,7 +22,7 @@
         "declarations": 2
       }
     ],
-    "coverageRows": 242,
+    "coverageRows": 246,
     "navigationTargetsWithoutExactRoute": 4
   },
   "rows": [
@@ -247,13 +247,15 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": [
+          "tests/audit/transfers-inbox-modernization.audit.spec.js"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },
@@ -3504,8 +3506,8 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll", ".supplier-settlement-table-scroll"],
-        "keyboardChecks": ["status tabs", "search input", "settlement modal close"],
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
@@ -3563,8 +3565,8 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll"],
-        "keyboardChecks": ["status tabs", "search input"],
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
@@ -3622,8 +3624,8 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll", ".supplier-settlement-table-scroll"],
-        "keyboardChecks": ["status tabs", "settlement modal close"],
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
@@ -3681,8 +3683,8 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll"],
-        "keyboardChecks": ["status tabs"],
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
@@ -5773,10 +5775,10 @@
         "error": true
       },
       "expectations": {
-        "identity": "Procurement Dashboard",
+        "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [".procurement-table-scroll"],
-        "keyboardChecks": ["native KPI and workflow buttons", "labelled search and status controls", "focusable local table regions"],
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
@@ -6991,12 +6993,12 @@
         "mutationAllowed": false
       },
       "surfaces": {
-        "forms": false,
+        "forms": true,
         "tables": true,
         "modals": false,
         "drawers": false,
         "dropdowns": false,
-        "loading": false,
+        "loading": true,
         "empty": false,
         "error": true
       },
@@ -7015,6 +7017,242 @@
         "evidence": [],
         "blocker": null,
         "verifiedAt": null
+      },
+      "notes": []
+    },
+    {
+      "id": "ROUTE-transfers-inbox-populated-queue",
+      "path": "/transfers/inbox",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 368,
+        "duplicateIndex": 1
+      },
+      "component": "TransfersInbox",
+      "componentSource": "./components/Transfers/TransferInbox",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "procurement"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "populated queue",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": null,
+        "evidence": [
+          "tests/audit/transfers-inbox-modernization.audit.spec.js"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-16"
+      },
+      "notes": []
+    },
+    {
+      "id": "ROUTE-transfers-inbox-searched-queue",
+      "path": "/transfers/inbox",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 368,
+        "duplicateIndex": 1
+      },
+      "component": "TransfersInbox",
+      "componentSource": "./components/Transfers/TransferInbox",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "procurement"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "searched queue",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": null,
+        "evidence": [
+          "tests/audit/transfers-inbox-modernization.audit.spec.js"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-16"
+      },
+      "notes": []
+    },
+    {
+      "id": "ROUTE-transfers-inbox-expanded-transfer-details",
+      "path": "/transfers/inbox",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 368,
+        "duplicateIndex": 1
+      },
+      "component": "TransfersInbox",
+      "componentSource": "./components/Transfers/TransferInbox",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "procurement"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "expanded transfer details",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": null,
+        "evidence": [
+          "tests/audit/transfers-inbox-modernization.audit.spec.js"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-16"
+      },
+      "notes": []
+    },
+    {
+      "id": "ROUTE-transfers-inbox-verified-batch-scan",
+      "path": "/transfers/inbox",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 368,
+        "duplicateIndex": 1
+      },
+      "component": "TransfersInbox",
+      "componentSource": "./components/Transfers/TransferInbox",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "procurement"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "verified batch scan",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": null,
+        "evidence": [
+          "tests/audit/transfers-inbox-modernization.audit.spec.js"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },

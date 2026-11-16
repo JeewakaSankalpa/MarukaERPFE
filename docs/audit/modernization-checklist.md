@@ -3,8 +3,8 @@
 Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nested-state metadata. It tracks modernization separately from browser coverage; a loaded route is never automatically modernized or verified.
 
 - Unique declared paths: 112
-- Route/state combinations: 242
-- Generated: 2026-11-16T16:59:13.787Z
+- Route/state combinations: 246
+- Generated: 2026-11-16T17:17:48.144Z
 
 ## Status vocabulary
 
@@ -127,7 +127,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/procurement/dashboard` | ProcurementDashboard | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Procurement operational dashboard redesigned |
 | `/stores/pending-to-po` | PendingToPOPage | 11 | FAILED | MONITOR | IMPROVED | Shared workspace repair complete |
 | `/stores/planning` | StoresPlanningPage | 4 | NOT TESTED | MONITOR | MODERNIZED | Products-benchmark operational redesign complete |
-| `/transfers/inbox` | TransfersInbox | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/transfers/inbox` | TransfersInbox | 4 | MOCK-VERIFIED (5/5 states) | MONITOR | MODERNIZED | Full-width transfer review workspace, visible source/destination routing, decimal quantities, responsive item details, filtering, and accessible batch verification |
 
 ## Projects
 

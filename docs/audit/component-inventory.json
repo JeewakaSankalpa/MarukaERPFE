@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-15T07:11:18.128Z",
-  "sourceRevision": "31f557f4432f6aa4a5093415581726e9113290b2",
+  "generatedAt": "2026-11-16T17:17:47.136Z",
+  "sourceRevision": "6ee59ec8d7ef09843109bf943bbaabbfedd7ebb7",
   "scope": "All component source files. Runtime reachability and descendant relationships require browser verification.",
   "files": [
     {
@@ -1134,11 +1134,11 @@
     {
       "source": "src/components/GRN/ProcurementDashboard.js",
       "surfaces": {
-        "forms": false,
+        "forms": true,
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "tabs": false,
         "loading": true,
         "empty": false,
@@ -1306,7 +1306,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "tabs": false,
         "loading": true,
         "empty": false,
@@ -1450,7 +1450,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "tabs": false,
         "loading": true,
         "empty": true,
@@ -1619,7 +1619,7 @@
         "modals": true,
         "drawers": false,
         "dropdowns": true,
-        "tabs": true,
+        "tabs": false,
         "loading": true,
         "empty": false,
         "error": true
@@ -3798,13 +3798,13 @@
     {
       "source": "src/components/Transfers/TransferInbox.js",
       "surfaces": {
-        "forms": false,
+        "forms": true,
         "tables": true,
         "modals": false,
         "drawers": false,
         "dropdowns": false,
         "tabs": false,
-        "loading": false,
+        "loading": true,
         "empty": false,
         "error": true
       },

@@ -3,7 +3,7 @@ const path = require('path');
 const { test: auditTest, expect } = require('./audit-test');
 const { departmentsPage, pendingPurchasePlans, planningRows, productsPage, projectsPage } = require('../fixtures/mock-data');
 
-const mockApiOrigin = 'http://127.0.0.1:3999';
+const mockApiOrigin = new URL(process.env.MARUKA_AUDIT_API_URL || 'http://127.0.0.1:3999/api').origin;
 const projectRoot = path.resolve(__dirname, '../../..');
 
 const test = auditTest.extend({
@@ -35,6 +35,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/user/search') return json(route, stockTakingApprovers);
             if (url.pathname === '/api/inventory/dashboard-stats') return json(route, inventoryDashboardStats);
             if (url.pathname === '/api/procurement/dashboard-stats') return json(route, procurementDashboardStats);
+            if (url.pathname === '/api/transfers') return json(route, pendingTransfers);
             if (url.pathname === '/api/inventory/data-quality-issues') return json(route, inventoryDataQualityIssues);
             if (url.pathname === '/api/store/all') return json(route, [{ id: 'LOC_STORES_MAIN', name: 'Main Store' }]);
             if (url.pathname === '/api/inventory/products/product-copper/breakdown') return json(route, inventoryBreakdown);
@@ -146,6 +147,21 @@ const procurementDashboardStats = {
         { poNumber: 'PO-2026-004', supplierName: 'Colombo Industrial Supplies', expectedDate: '-', status: 'SENT_TO_SUPPLIER' },
     ],
 };
+const pendingTransfers = [
+    {
+        id: 'transfer-001', trNumber: 'TR-2026-11-0042', fromLocationId: 'LOC_STORES_MAIN', toLocationId: 'LOC_PROJECT_OR_DEPT',
+        sourceItemRequestNumber: 'IR-2026-11-6749', status: 'PENDING_ACCEPTANCE',
+        items: [
+            { productId: 'product-copper', productNameSnapshot: 'Copper Cable 10mm — high-temperature insulated run', sku: 'CBL-10', unit: 'm', qty: 1250, qtyDecimal: 1250.75, reservations: [{ batchId: 'batch-copper-001', batchNumber: 'B-CP-001', reservedQty: 1250, reservedQtyDecimal: 1250.75, serials: [] }] },
+            { productId: 'product-motor', productNameSnapshot: 'Servo Motor Assembly', sku: 'SRV-MTR', unit: 'pcs', qty: 2, qtyDecimal: 2, reservations: [{ batchId: 'batch-motor-008', batchNumber: 'B-SM-008', reservedQty: 2, reservedQtyDecimal: 2, serials: ['SM-008-01', 'SM-008-02'] }] },
+        ],
+    },
+    {
+        id: 'transfer-002', trNumber: 'TR-2026-11-0043', fromLocationId: 'LOC_SECONDARY_STORE_WITH_LONG_NAME', toLocationId: 'LOC_PROJECT_OR_DEPT',
+        sourceItemRequestNumber: 'IR-2026-11-6751', status: 'PENDING_ACCEPTANCE',
+        items: [{ productId: 'product-earth', productNameSnapshot: '1.5MM Earth Cable', sku: 'EARTH-15', unit: 'm', qty: 30, qtyDecimal: 30.5, reservations: [{ batchId: 'batch-earth-001', batchNumber: 'B-ER-001', reservedQty: 30, reservedQtyDecimal: 30.5, serials: [] }] }],
+    },
+];
 const inventoryDataQualityIssues = [{ source: 'Stock Batch', recordId: 'B-CP-001', reference: 'GRN-2026-001', productName: 'Copper Cable 10mm', productId: 'product-copper', issue: 'Missing expiry reference', impact: 'Excluded from expiry reporting' }];
 const stockTakingBatches = [
     { id: 'batch-copper-001', product: { id: 'product-copper', name: 'Copper Cable 10mm — high-temperature insulated run' }, batchNumber: 'B-CP-001', batchNo: 'B-CP-001', locationId: 'LOC_STORES_MAIN', expiryDate: '2028-11-01', quantity: 840.5 },
