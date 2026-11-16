@@ -1,17 +1,17 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b2`.
+Generated from `src/App.js` at revision `3e24def0e4267eb1981831716939917c4efb0662`.
 
 - Route declarations: 114
 - Unique declared paths: 112
-- Coverage rows including nested states: 239
-- Status counts: `MOCK-VERIFIED` 16, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 1, `NOT TESTED` 221
+- Coverage rows including nested states: 242
+- Status counts: `MOCK-VERIFIED` 49, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 192
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
-| ROUTE-login-initial-route-state | `/login` | Login | initial route state | public/unknown | NOT TESTED |
-| ROUTE-root-initial-route-state | `/` | Navigate | initial route state | public/unknown | NOT TESTED |
-| ROUTE-portal-customer-initial-route-state | `/portal/customer` | PortalDashboard | initial route state | CUSTOMER, CUSTOMER_PORTAL | NOT TESTED |
+| ROUTE-login-initial-route-state | `/login` | Login | initial route state | public/unknown | MOCK-VERIFIED |
+| ROUTE-root-initial-route-state | `/` | Navigate | initial route state | public/unknown | MOCK-VERIFIED |
+| ROUTE-portal-customer-initial-route-state | `/portal/customer` | PortalDashboard | initial route state | CUSTOMER, CUSTOMER_PORTAL | MOCK-VERIFIED |
 | ROUTE-portal-customer-overview-tab | `/portal/customer` | PortalDashboard | overview tab | CUSTOMER, CUSTOMER_PORTAL | NOT TESTED |
 | ROUTE-portal-customer-communications-tab | `/portal/customer` | PortalDashboard | communications tab | CUSTOMER, CUSTOMER_PORTAL | NOT TESTED |
 | ROUTE-portal-customer-visibility-dependent-tab | `/portal/customer` | PortalDashboard | visibility-dependent tab | CUSTOMER, CUSTOMER_PORTAL | NOT TESTED |
@@ -60,8 +60,8 @@ Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b
 | ROUTE-leave-approvals-tab | `/leave` | LeaveRequestPage | approvals tab | hr | NOT TESTED |
 | ROUTE-attendance-initial-route-state | `/attendance` | AttendancePage | initial route state | hr | NOT TESTED |
 | ROUTE-reports-leave-initial-route-state | `/reports/leave` | LeaveUtilizationReport | initial route state | hr | NOT TESTED |
-| ROUTE-inventory-initial-route-state | `/inventory` | InventoryDashboard | initial route state | inventory | NOT TESTED |
-| ROUTE-inventory-dashboard-initial-route-state | `/inventory/dashboard` | InventoryDashboard | initial route state | inventory | NOT TESTED |
+| ROUTE-inventory-initial-route-state | `/inventory` | InventoryDashboard | initial route state | inventory | MOCK-VERIFIED |
+| ROUTE-inventory-dashboard-initial-route-state | `/inventory/dashboard` | InventoryDashboard | initial route state | inventory | MOCK-VERIFIED |
 | ROUTE-inventory-add-initial-route-state | `/inventory/add` | InventoryAdd | initial route state | inventory | NOT TESTED |
 | ROUTE-item-add-initial-route-state | `/item/add` | ItemAdd | initial route state | inventory | NOT TESTED |
 | ROUTE-inventory-search-initial-route-state | `/inventory/search` | InventoryView | initial route state | inventory | MOCK-VERIFIED |
@@ -80,11 +80,11 @@ Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b
 | ROUTE-product-create-initial-route-state | `/product/create` | ProductCreate | initial route state | inventory | NOT TESTED |
 | ROUTE-product-create-details-tab | `/product/create` | ProductCreate | details tab | inventory | NOT TESTED |
 | ROUTE-product-create-stock-tab | `/product/create` | ProductCreate | stock tab | inventory | NOT TESTED |
-| ROUTE-inventory-pr-initial-route-state | `/inventory/pr` | PurchaseRequestPage | initial route state | inventory | NOT TESTED |
+| ROUTE-inventory-pr-initial-route-state | `/inventory/pr` | PurchaseRequestPage | initial route state | inventory | MOCK-VERIFIED |
 | ROUTE-inventory-pr-empty-product-list | `/inventory/pr` | PurchaseRequestPage | empty product list | inventory | MOCK-VERIFIED |
-| ROUTE-inventory-pr-populated-product-list | `/inventory/pr` | PurchaseRequestPage | populated product list | inventory | BLOCKED |
+| ROUTE-inventory-pr-populated-product-list | `/inventory/pr` | PurchaseRequestPage | populated product list | inventory | MOCK-VERIFIED |
 | ROUTE-inventory-pr-saved-drafts-table | `/inventory/pr` | PurchaseRequestPage | saved drafts table | inventory | NOT TESTED |
-| ROUTE-inventory-pr-filtered-products | `/inventory/pr` | PurchaseRequestPage | filtered products | inventory | NOT TESTED |
+| ROUTE-inventory-pr-filtered-products | `/inventory/pr` | PurchaseRequestPage | filtered products | inventory | MOCK-VERIFIED |
 | ROUTE-inventory-pr-loading-products | `/inventory/pr` | PurchaseRequestPage | loading products | inventory | NOT TESTED |
 | ROUTE-inventory-pr-api-error-state | `/inventory/pr` | PurchaseRequestPage | API error state | inventory | NOT TESTED |
 | ROUTE-item-requests-initial-route-state | `/item/requests` | ItemRequestForm | initial route state | inventory | NOT TESTED |
@@ -108,7 +108,10 @@ Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b
 | ROUTE-item-my-requests-initial-route-state | `/item/my-requests` | MyRequestList | initial route state | inventory | MOCK-VERIFIED |
 | ROUTE-stores-fulfil-requests-initial-route-state | `/stores/fulfil-requests` | IRFulfilmentPage | initial route state | inventory | MOCK-VERIFIED |
 | ROUTE-reports-stock-initial-route-state | `/reports/stock` | StockValuationReport | initial route state | inventory | NOT TESTED |
-| ROUTE-procurement-dashboard-initial-route-state | `/procurement/dashboard` | ProcurementDashboard | initial route state | procurement | NOT TESTED |
+| ROUTE-procurement-dashboard-initial-route-state | `/procurement/dashboard` | ProcurementDashboard | initial route state | procurement | MOCK-VERIFIED |
+| ROUTE-procurement-dashboard-populated-overview | `/procurement/dashboard` | ProcurementDashboard | populated overview | procurement | MOCK-VERIFIED |
+| ROUTE-procurement-dashboard-searched-activity | `/procurement/dashboard` | ProcurementDashboard | searched activity | procurement | MOCK-VERIFIED |
+| ROUTE-procurement-dashboard-status-filtered-deliveries | `/procurement/dashboard` | ProcurementDashboard | status-filtered deliveries | procurement | MOCK-VERIFIED |
 | ROUTE-stores-planning-initial-route-state | `/stores/planning` | StoresPlanningPage | initial route state | procurement | NOT TESTED |
 | ROUTE-stores-planning-populated-shortages | `/stores/planning` | StoresPlanningPage | populated shortages | procurement | MOCK-VERIFIED |
 | ROUTE-stores-planning-empty-shortages | `/stores/planning` | StoresPlanningPage | empty shortages | procurement | NOT TESTED |
@@ -127,14 +130,14 @@ Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b
 | ROUTE-stores-pending-to-po-supplier-and-quotation-interaction | `/stores/pending-to-po` | PendingToPOPage | supplier and quotation interaction | procurement | MOCK-VERIFIED |
 | ROUTE-stores-pending-to-po-300-row-performance-baseline | `/stores/pending-to-po` | PendingToPOPage | 300-row performance baseline | procurement | MOCK-VERIFIED |
 | ROUTE-transfers-inbox-initial-route-state | `/transfers/inbox` | TransfersInbox | initial route state | procurement | NOT TESTED |
-| ROUTE-pos-initial-route-state | `/pos` | POListRouteWrapper | initial route state | procurement | NOT TESTED |
+| ROUTE-pos-initial-route-state | `/pos` | POListRouteWrapper | initial route state | procurement | MOCK-VERIFIED |
 | ROUTE-pos-create-initial-route-state | `/pos/create` | POCreateManualRouteWrapper | initial route state | procurement | NOT TESTED |
 | ROUTE-pos-id-print-initial-route-state | `/pos/:id/print` | POPrint | initial route state | procurement | NOT TESTED |
 | ROUTE-pos-id-edit-initial-route-state | `/pos/:id/edit` | POEditManualRouteWrapper | initial route state | procurement | NOT TESTED |
-| ROUTE-pos-id-initial-route-state | `/pos/:id` | PurchaseOrderDetails | initial route state | procurement | NOT TESTED |
-| ROUTE-grn-initial-route-state | `/grn` | GRNRouteWrapper | initial route state | procurement | MOCK-VERIFIED |
-| ROUTE-grns-initial-route-state | `/grns` | GRNListView | initial route state | procurement | NOT TESTED |
-| ROUTE-grns-grnid-rate-correction-initial-route-state | `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | initial route state | procurement | MOCK-VERIFIED |
+| ROUTE-pos-id-initial-route-state | `/pos/:id` | PurchaseOrderDetails | initial route state | procurement | MOCK-VERIFIED |
+| ROUTE-grn-initial-route-state | `/grn` | GRNRouteWrapper | initial route state | procurement | NOT TESTED |
+| ROUTE-grns-initial-route-state | `/grns` | GRNListView | initial route state | procurement | MOCK-VERIFIED |
+| ROUTE-grns-grnid-rate-correction-initial-route-state | `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | initial route state | procurement | NOT TESTED |
 | ROUTE-partners-dashboard-initial-route-state | `/partners/dashboard` | SupplierCustomerDashboard | initial route state | partners | NOT TESTED |
 | ROUTE-partners-dashboard-customers-tab | `/partners/dashboard` | SupplierCustomerDashboard | customers tab | partners | NOT TESTED |
 | ROUTE-partners-dashboard-suppliers-tab | `/partners/dashboard` | SupplierCustomerDashboard | suppliers tab | partners | NOT TESTED |
@@ -145,22 +148,22 @@ Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b
 | ROUTE-supplier-search-initial-route-state | `/supplier/search` | SupplierCreate | initial route state | partners | NOT TESTED |
 | ROUTE-projects-create-initial-route-state | `/projects/create` | ProjectCreate | initial route state | projects | NOT TESTED |
 | ROUTE-projects-search-initial-route-state | `/projects/search` | ProjectSearch | initial route state | projects | NOT TESTED |
-| ROUTE-projects-tasks-initial-route-state | `/projects/tasks` | TaskControlCenter | initial route state | projects | NOT TESTED |
-| ROUTE-projects-tasks-overview-tab | `/projects/tasks` | TaskControlCenter | overview tab | projects | NOT TESTED |
-| ROUTE-projects-tasks-list-tab | `/projects/tasks` | TaskControlCenter | list tab | projects | NOT TESTED |
-| ROUTE-projects-tasks-board-tab | `/projects/tasks` | TaskControlCenter | board tab | projects | NOT TESTED |
-| ROUTE-projects-tasks-gantt-tab | `/projects/tasks` | TaskControlCenter | gantt tab | projects | NOT TESTED |
-| ROUTE-projects-tasks-workforce-tab | `/projects/tasks` | TaskControlCenter | workforce tab | projects | NOT TESTED |
-| ROUTE-projects-tasks-calendar-tab | `/projects/tasks` | TaskControlCenter | calendar tab | projects | NOT TESTED |
-| ROUTE-projects-tasks-reports-tab | `/projects/tasks` | TaskControlCenter | reports tab | projects | NOT TESTED |
+| ROUTE-projects-tasks-initial-route-state | `/projects/tasks` | TaskControlCenter | initial route state | projects | MOCK-VERIFIED |
+| ROUTE-projects-tasks-overview-tab | `/projects/tasks` | TaskControlCenter | overview tab | projects | MOCK-VERIFIED |
+| ROUTE-projects-tasks-list-tab | `/projects/tasks` | TaskControlCenter | list tab | projects | MOCK-VERIFIED |
+| ROUTE-projects-tasks-board-tab | `/projects/tasks` | TaskControlCenter | board tab | projects | MOCK-VERIFIED |
+| ROUTE-projects-tasks-gantt-tab | `/projects/tasks` | TaskControlCenter | gantt tab | projects | MOCK-VERIFIED |
+| ROUTE-projects-tasks-workforce-tab | `/projects/tasks` | TaskControlCenter | workforce tab | projects | MOCK-VERIFIED |
+| ROUTE-projects-tasks-calendar-tab | `/projects/tasks` | TaskControlCenter | calendar tab | projects | MOCK-VERIFIED |
+| ROUTE-projects-tasks-reports-tab | `/projects/tasks` | TaskControlCenter | reports tab | projects | MOCK-VERIFIED |
 | ROUTE-projects-tasks-task-create-drawer | `/projects/tasks` | TaskControlCenter | task create drawer | projects | NOT TESTED |
-| ROUTE-projects-tasks-task-edit-drawer | `/projects/tasks` | TaskControlCenter | task edit drawer | projects | NOT TESTED |
+| ROUTE-projects-tasks-task-edit-drawer | `/projects/tasks` | TaskControlCenter | task edit drawer | projects | MOCK-VERIFIED |
 | ROUTE-projects-id-initial-route-state | `/projects/:id` | ProjectCreate | initial route state | projects | NOT TESTED |
 | ROUTE-projects-edit-id-initial-route-state | `/projects/edit/:id` | ProjectCreate | initial route state | projects | NOT TESTED |
 | ROUTE-projects-view-id-initial-route-state | `/projects/view/:id` | ProjectCreate | initial route state | projects | NOT TESTED |
 | ROUTE-projects-manage-id-initial-route-state | `/projects/manage/:id` | ProjectDetails | initial route state | projects | NOT TESTED |
-| ROUTE-projects-manage-id-dashboard-tab | `/projects/manage/:id` | ProjectDetails | dashboard tab | projects | NOT TESTED |
-| ROUTE-projects-manage-id-revisions-tab | `/projects/manage/:id` | ProjectDetails | revisions tab | projects | NOT TESTED |
+| ROUTE-projects-manage-id-dashboard-tab | `/projects/manage/:id` | ProjectDetails | dashboard tab | projects | MOCK-VERIFIED |
+| ROUTE-projects-manage-id-revisions-tab | `/projects/manage/:id` | ProjectDetails | revisions tab | projects | MOCK-VERIFIED |
 | ROUTE-projects-manage-id-inventory-tab | `/projects/manage/:id` | ProjectDetails | inventory tab | projects | NOT TESTED |
 | ROUTE-projects-manage-id-tasks-tab | `/projects/manage/:id` | ProjectDetails | tasks tab | projects | NOT TESTED |
 | ROUTE-projects-manage-id-communication-tab | `/projects/manage/:id` | ProjectDetails | communication tab | projects | NOT TESTED |

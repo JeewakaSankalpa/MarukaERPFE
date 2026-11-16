@@ -34,6 +34,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/inventory/returns/supplier') return json(route, supplierReturns[url.searchParams.get('status')] || []);
             if (url.pathname === '/api/user/search') return json(route, stockTakingApprovers);
             if (url.pathname === '/api/inventory/dashboard-stats') return json(route, inventoryDashboardStats);
+            if (url.pathname === '/api/procurement/dashboard-stats') return json(route, procurementDashboardStats);
             if (url.pathname === '/api/inventory/data-quality-issues') return json(route, inventoryDataQualityIssues);
             if (url.pathname === '/api/store/all') return json(route, [{ id: 'LOC_STORES_MAIN', name: 'Main Store' }]);
             if (url.pathname === '/api/inventory/products/product-copper/breakdown') return json(route, inventoryBreakdown);
@@ -125,6 +126,24 @@ const inventoryDashboardStats = {
     lowStockItems: [
         { productId: 'product-cap', productName: '10 Colour Cap Black', currentQty: 48, reorderLevel: 120 },
         { productId: 'product-motor', productName: 'Servo Motor Assembly — long description for resilient data cells', currentQty: 2, reorderLevel: 8 },
+    ],
+};
+const procurementDashboardStats = {
+    pendingRequestsCount: 18,
+    itemsInShortageCount: 7,
+    activePOsCount: 4,
+    pendingGRNsCount: 3,
+    totalPendingPOValue: 643500.75,
+    criticalShortages: [
+        { productId: 'product-copper', productName: 'Copper Cable 10mm — high-temperature insulated run', shortageQty: 1250, shortageQtyDecimal: 1250.75 },
+        { productId: 'product-motor', productName: 'Servo Motor Assembly', shortageQty: 8, shortageQtyDecimal: 8 },
+        { productId: 'product-cap', productName: '10 Colour Cap Black', shortageQty: 72, shortageQtyDecimal: 72.5 },
+    ],
+    pendingDeliveries: [
+        { poNumber: 'PO-2026-001', supplierName: 'Colombo Industrial Supplies', expectedDate: '2026-11-20', status: 'SENT_TO_SUPPLIER' },
+        { poNumber: 'PO-2026-002', supplierName: 'Precision Motion Lanka', expectedDate: '2026-11-22', status: 'CONFIRMED' },
+        { poNumber: 'PO-2026-003', supplierName: 'Island Electrical & Engineering Supplies', expectedDate: '2026-11-24', status: 'PARTIALLY_RECEIVED' },
+        { poNumber: 'PO-2026-004', supplierName: 'Colombo Industrial Supplies', expectedDate: '-', status: 'SENT_TO_SUPPLIER' },
     ],
 };
 const inventoryDataQualityIssues = [{ source: 'Stock Batch', recordId: 'B-CP-001', reference: 'GRN-2026-001', productName: 'Copper Cable 10mm', productId: 'product-copper', issue: 'Missing expiry reference', impact: 'Excluded from expiry reporting' }];

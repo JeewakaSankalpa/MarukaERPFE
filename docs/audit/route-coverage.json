@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-15T07:11:17.995Z",
-  "sourceRevision": "31f557f4432f6aa4a5093415581726e9113290b2",
+  "generatedAt": "2026-11-16T16:59:12.752Z",
+  "sourceRevision": "3e24def0e4267eb1981831716939917c4efb0662",
   "schemaVersion": 1,
   "allowedStatuses": [
     "MOCK-VERIFIED",
@@ -22,7 +22,7 @@
         "declarations": 2
       }
     ],
-    "coverageRows": 239,
+    "coverageRows": 242,
     "navigationTargetsWithoutExactRoute": 4
   },
   "rows": [
@@ -2975,7 +2975,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": false,
         "error": true
@@ -3034,7 +3034,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": false,
         "error": true
@@ -3513,7 +3513,9 @@
         "browser": "Chromium",
         "viewport": "1440x900, 1024x768, 390x844",
         "zoom": "100%",
-        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
+        "evidence": [
+          "tests/audit/supplier-return-approvals-modernization.audit.spec.js"
+        ],
         "blocker": null,
         "verifiedAt": "2026-11-16"
       },
@@ -3570,7 +3572,9 @@
         "browser": "Chromium",
         "viewport": "1440x900, 1024x768, 390x844",
         "zoom": "100%",
-        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
+        "evidence": [
+          "tests/audit/supplier-return-approvals-modernization.audit.spec.js"
+        ],
         "blocker": null,
         "verifiedAt": "2026-11-16"
       },
@@ -3627,7 +3631,9 @@
         "browser": "Chromium",
         "viewport": "1440x900, 1024x768, 390x844",
         "zoom": "100%",
-        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
+        "evidence": [
+          "tests/audit/supplier-return-approvals-modernization.audit.spec.js"
+        ],
         "blocker": null,
         "verifiedAt": "2026-11-16"
       },
@@ -3684,7 +3690,9 @@
         "browser": "Chromium",
         "viewport": "1440x900, 1024x768, 390x844",
         "zoom": "100%",
-        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
+        "evidence": [
+          "tests/audit/supplier-return-approvals-modernization.audit.spec.js"
+        ],
         "blocker": null,
         "verifiedAt": "2026-11-16"
       },
@@ -3741,7 +3749,9 @@
         "browser": "chromium",
         "viewport": "1440,1024,390",
         "zoom": "100%",
-        "evidence": ["tests/audit/stock-taking-modernization.audit.spec.js"],
+        "evidence": [
+          "tests/audit/stock-taking-modernization.audit.spec.js"
+        ],
         "blocker": null,
         "verifiedAt": "2026-11-16"
       },
@@ -3798,7 +3808,9 @@
         "browser": "chromium",
         "viewport": "1440,1024,390",
         "zoom": "100%",
-        "evidence": ["tests/audit/stock-taking-modernization.audit.spec.js"],
+        "evidence": [
+          "tests/audit/stock-taking-modernization.audit.spec.js"
+        ],
         "blocker": null,
         "verifiedAt": "2026-11-16"
       },
@@ -3855,7 +3867,9 @@
         "browser": "chromium",
         "viewport": "1440,1024,390",
         "zoom": "100%",
-        "evidence": ["tests/audit/stock-taking-modernization.audit.spec.js"],
+        "evidence": [
+          "tests/audit/stock-taking-modernization.audit.spec.js"
+        ],
         "blocker": null,
         "verifiedAt": "2026-11-16"
       },
@@ -4123,7 +4137,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": true,
         "error": true
@@ -4182,7 +4196,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": true,
         "error": true
@@ -4241,7 +4255,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": true,
         "error": true
@@ -4300,7 +4314,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": true,
         "error": true
@@ -4357,7 +4371,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": true,
         "error": true
@@ -4416,7 +4430,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": true,
         "error": true
@@ -4473,7 +4487,7 @@
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
         "loading": true,
         "empty": true,
         "error": true
@@ -5749,11 +5763,71 @@
         "mutationAllowed": false
       },
       "surfaces": {
-        "forms": false,
+        "forms": true,
         "tables": true,
         "modals": false,
         "drawers": false,
-        "dropdowns": false,
+        "dropdowns": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": "Procurement Dashboard",
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [".procurement-table-scroll"],
+        "keyboardChecks": ["native KPI and workflow buttons", "labelled search and status controls", "focusable local table regions"],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/procurement-dashboard-modernization.audit.spec.js",
+          "KPI hierarchy, status distribution, shortages, deliveries, geometry, and serious/critical axe checks passed"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-16"
+      },
+      "notes": []
+    },
+    {
+      "id": "ROUTE-procurement-dashboard-populated-overview",
+      "path": "/procurement/dashboard",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 365,
+        "duplicateIndex": 1
+      },
+      "component": "ProcurementDashboard",
+      "componentSource": "./components/GRN/ProcurementDashboard",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "procurement"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "populated overview",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
         "loading": true,
         "empty": false,
         "error": true
@@ -5766,13 +5840,136 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/procurement-dashboard-modernization.audit.spec.js",
+          "Populated procurement overview and decimal shortage quantities verified"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
+      },
+      "notes": []
+    },
+    {
+      "id": "ROUTE-procurement-dashboard-searched-activity",
+      "path": "/procurement/dashboard",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 365,
+        "duplicateIndex": 1
+      },
+      "component": "ProcurementDashboard",
+      "componentSource": "./components/GRN/ProcurementDashboard",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "procurement"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "searched activity",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/procurement-dashboard-modernization.audit.spec.js",
+          "Read-only supplier search filtered expected deliveries"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-16"
+      },
+      "notes": []
+    },
+    {
+      "id": "ROUTE-procurement-dashboard-status-filtered-deliveries",
+      "path": "/procurement/dashboard",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 365,
+        "duplicateIndex": 1
+      },
+      "component": "ProcurementDashboard",
+      "componentSource": "./components/GRN/ProcurementDashboard",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "procurement"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "status-filtered deliveries",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/procurement-dashboard-modernization.audit.spec.js",
+          "Read-only PO status filter isolated partially received deliveries"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },

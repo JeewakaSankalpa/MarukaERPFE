@@ -8,12 +8,12 @@ This dashboard distinguishes route/state coverage from component and interaction
 |---|---:|
 | Declared routes | 114 |
 | Unique declared paths | 112 |
-| Route/state combinations | 239 |
-| MOCK-VERIFIED | 45 |
+| Route/state combinations | 242 |
+| MOCK-VERIFIED | 49 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 193 |
+| NOT TESTED | 192 |
 
 ## Sidebar-section modernization breakdown
 
@@ -25,7 +25,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | Sales User Dashboard (Executive Dashboard) | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Project Summary Dashboard | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Projects | 13 | 2 | 0 | 11 | 18 | 11 | 20 | 15.4% | 35.5% |
-| Inventory & Procurement | 31 | 15 | 3 | 13 | 44 | 32 | 43 | 58.1% | 42.7% |
+| Inventory & Procurement | 31 | 16 | 3 | 12 | 47 | 36 | 42 | 61.3% | 46.2% |
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
 | Reports | 10 | 0 | 0 | 10 | 13 | 0 | 23 | 0.0% | 0.0% |
@@ -47,6 +47,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - GRN Rate Correction: selected-batch review, VAT/rate validation, read-only impact analysis, financial hierarchy, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 - Stock Taking: All Batches and Changed Items states, physical quantity discrepancy review, local table scrolling, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 - Supplier Return Approvals: pending, approved, rejected, search-filtered, and settlement-history states; responsive geometry and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without executing mutations.
+- Procurement Dashboard: populated KPI and PO-status overview, decimal shortage quantities, supplier search, and PO-status filtering; responsive geometry, local table scrolling, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths.
 
 ## Shared components
 
@@ -71,8 +72,8 @@ The Project Stores component has no application route, import, or menu entry. Th
 
 ## Browser regression matrix
 
-- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches.
-- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches.
+- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Procurement Dashboard.
+- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Procurement Dashboard.
 - Pending Purchases state and interaction checks: empty, loading, draft, supplier/quotation, and 300-row baseline passed; API error behavior is an expected failure.
 - Firefox/WebKit coverage for the new operational batch remains pending.
 

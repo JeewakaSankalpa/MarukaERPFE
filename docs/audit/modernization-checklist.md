@@ -3,8 +3,8 @@
 Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nested-state metadata. It tracks modernization separately from browser coverage; a loaded route is never automatically modernized or verified.
 
 - Unique declared paths: 112
-- Route/state combinations: 239
-- Generated: 2026-11-15T16:33:13.796Z
+- Route/state combinations: 242
+- Generated: 2026-11-16T16:59:13.787Z
 
 ## Status vocabulary
 
@@ -124,7 +124,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/pos/:id/edit` | POEditManualRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/pos/:id/print` | POPrint | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/pos/create` | POCreateManualRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/procurement/dashboard` | ProcurementDashboard | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/procurement/dashboard` | ProcurementDashboard | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Procurement operational dashboard redesigned |
 | `/stores/pending-to-po` | PendingToPOPage | 11 | FAILED | MONITOR | IMPROVED | Shared workspace repair complete |
 | `/stores/planning` | StoresPlanningPage | 4 | NOT TESTED | MONITOR | MODERNIZED | Products-benchmark operational redesign complete |
 | `/transfers/inbox` | TransfersInbox | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
