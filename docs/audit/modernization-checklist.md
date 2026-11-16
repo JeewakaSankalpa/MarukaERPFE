@@ -90,7 +90,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/inventory/return-to-inventory` | ReturnToInventory | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/inventory/returns/approvals` | InternalReturnApprovals | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/inventory/search` | InventoryView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Products-benchmark inventory workspace redesign complete |
-| `/inventory/stock-taking` | StockTakingPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/inventory/stock-taking` | StockTakingPage | 2 | MOCK-VERIFIED (3/3 states) | HIGH | MODERNIZED | Full-width stock count workspace, discrepancy tabs, responsive batch table, and accessible quantity controls |
 | `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | 3 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/inventory/view` | InventoryView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Shared InventoryView modernized |
 | `/item/add` | ItemAdd | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |

@@ -3737,13 +3737,13 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "chromium",
+        "viewport": "1440,1024,390",
+        "zoom": "100%",
+        "evidence": ["tests/audit/stock-taking-modernization.audit.spec.js"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },
@@ -3794,13 +3794,13 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "chromium",
+        "viewport": "1440,1024,390",
+        "zoom": "100%",
+        "evidence": ["tests/audit/stock-taking-modernization.audit.spec.js"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },
@@ -3851,13 +3851,13 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "chromium",
+        "viewport": "1440,1024,390",
+        "zoom": "100%",
+        "evidence": ["tests/audit/stock-taking-modernization.audit.spec.js"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },

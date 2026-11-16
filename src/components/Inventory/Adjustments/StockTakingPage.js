@@ -17,6 +17,7 @@ import {
 import { toast, ToastContainer } from 'react-toastify';
 import Select from 'react-select';
 import 'react-toastify/dist/ReactToastify.css';
+import './StockTakingPage.css';
 
 const StockTakingPage = () => {
     const navigate = useNavigate();
@@ -141,21 +142,26 @@ const StockTakingPage = () => {
         return matchSearch;
     });
 
-    if (loading) return <div className="d-flex justify-content-center p-5"><Spinner animation="border" /></div>;
+    if (loading) return <main className="stock-taking-page" aria-busy="true"><div className="stock-taking-loading" role="status"><Spinner animation="border" /> <span>Loading stock batches…</span></div></main>;
 
     return (
-        <Container fluid className="p-4">
-            <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h3 className="mb-0">Manual Stock Taking</h3>
-                        </div>
-<Card className="mb-4 shadow-sm">
+        <Container fluid className="stock-taking-page operational-workspace">
+            <header className="stock-taking-header">
+                <div className="stock-taking-heading">
+                    <button type="button" className="stock-taking-back" aria-label="Go back" onClick={() => navigate(-1)}><ArrowLeft size={18} aria-hidden="true" /></button>
+                    <div><span className="stock-taking-eyebrow">INVENTORY · CONTROLLED COUNT</span><h1>Manual stock taking</h1><p>Record physical quantities against system batches and submit only reviewed discrepancies for approval.</p></div>
+                </div>
+                <div className="stock-taking-count" aria-live="polite"><strong>{getAdjustedBatches().length}</strong><span>changed items</span></div>
+            </header>
+            <section className="stock-taking-workspace" aria-label="Stock audit setup">
+                <Card className="stock-taking-card">
                 <Card.Body>
                     <Row className="align-items-center g-3">
                         <Col md={3}>
                             <Form.Group>
                                 <Form.Label>Audit Reference / Title</Form.Label>
-                                <Form.Control
+                                    <Form.Control
+                                    aria-label="Audit reference or title"
                                     type="text"
                                     value={auditTitle}
                                     onChange={(e) => setAuditTitle(e.target.value)}
@@ -167,6 +173,8 @@ const StockTakingPage = () => {
                             <Form.Group>
                                 <Form.Label>Assign Approver (Optional)</Form.Label>
                                 <Select
+                                    inputId="stock-taking-approver"
+                                    aria-label="Assign approver"
                                     options={[
                                         { value: '', label: 'Auto-Assign (Workflow)' },
                                         ...approvers.map(u => ({ value: u.id, label: `${u.firstName} ${u.lastName} (${u.accessLevel})` }))
@@ -186,9 +194,7 @@ const StockTakingPage = () => {
                                 </Form.Text>
                             </Form.Group>
                         </Col>
-                        <Col md={4} className="text-secondary">
-                            Changes: {getAdjustedBatches().length} items
-                        </Col>
+                        <Col md={4} className="text-secondary stock-taking-change-summary">Changes: {getAdjustedBatches().length} items</Col>
                         <Col md={2}>
                             <Button
                                 variant="primary"
@@ -201,46 +207,43 @@ const StockTakingPage = () => {
                         </Col>
                     </Row>
                 </Card.Body>
-            </Card>
+                </Card>
+            </section>
 
-            <Card className="mb-4 shadow-sm p-3 bg-light">
+            <section className="stock-taking-filters" aria-label="Stock batch filters">
                 <Row className="align-items-center g-3">
                     <Col md={6}>
                         <Form.Control
+                            aria-label="Search product or batch"
                             type="text"
                             placeholder="Search Product or Batch"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </Col>
-                    <Col md={6} className="d-flex gap-2">
+                    <Col md={6} className="stock-taking-tabs" role="tablist" aria-label="Stock batch views">
                         <Button
                             variant={activeTab === 'ALL' ? "secondary" : "outline-secondary"}
-                            onClick={() => setActiveTab('ALL')}
+                            role="tab" aria-selected={activeTab === 'ALL'} onClick={() => setActiveTab('ALL')}
                         >
                             All Batches
                         </Button>
                         <Button
                             variant={activeTab === 'CHANGED' ? "secondary" : "outline-secondary"}
-                            onClick={() => setActiveTab('CHANGED')}
+                            role="tab" aria-selected={activeTab === 'CHANGED'} onClick={() => setActiveTab('CHANGED')}
                         >
                             Show Changes Only
                         </Button>
                     </Col>
                 </Row>
-            </Card>
+            </section>
 
-            <div style={{ maxHeight: '60vh', overflowY: 'auto' }} className="border rounded">
-                <Table striped hover responsive className="mb-0">
+            <div className="stock-taking-table-scroll" tabIndex="0" aria-label="Stock taking batches table">
+                <Table striped hover className="stock-taking-table mb-0">
                     <thead className="bg-light sticky-top" style={{ top: 0, zIndex: 1 }}>
                         <tr>
-                            <th>Product Name</th>
-                            <th>Batch No</th>
-                            <th>Location</th>
-                            <th>Expiry</th>
-                            <th className="text-end">System Qty</th>
-                            <th className="text-center" style={{ width: '150px' }}>Physical Qty</th>
-                            <th className="text-end">Difference</th>
+                            <th scope="col">Product Name</th><th scope="col">Batch No</th><th scope="col">Location</th><th scope="col">Expiry</th>
+                            <th scope="col" className="text-end">System Qty</th><th scope="col" className="text-center" style={{ width: '150px' }}>Physical Qty</th><th scope="col" className="text-end">Difference</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -264,6 +267,7 @@ const StockTakingPage = () => {
                                     <td className="text-end">{batch.quantity}</td>
                                     <td className="text-center">
                                         <Form.Control
+                                            aria-label={`Physical quantity for ${batch.product.name}`}
                                             type="number"
                                             min="0"
                                             step="0.01"

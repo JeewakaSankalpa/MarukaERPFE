@@ -73,9 +73,9 @@ Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b
 | ROUTE-inventory-supplier-returns-approvals-pending-state | `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | pending state | inventory | NOT TESTED |
 | ROUTE-inventory-supplier-returns-approvals-approved-state | `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | approved state | inventory | NOT TESTED |
 | ROUTE-inventory-supplier-returns-approvals-rejected-state | `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | rejected state | inventory | NOT TESTED |
-| ROUTE-inventory-stock-taking-initial-route-state | `/inventory/stock-taking` | StockTakingPage | initial route state | inventory | NOT TESTED |
-| ROUTE-inventory-stock-taking-all-items-state | `/inventory/stock-taking` | StockTakingPage | all items state | inventory | NOT TESTED |
-| ROUTE-inventory-stock-taking-changed-items-state | `/inventory/stock-taking` | StockTakingPage | changed items state | inventory | NOT TESTED |
+| ROUTE-inventory-stock-taking-initial-route-state | `/inventory/stock-taking` | StockTakingPage | initial route state | inventory | MOCK-VERIFIED |
+| ROUTE-inventory-stock-taking-all-items-state | `/inventory/stock-taking` | StockTakingPage | all items state | inventory | MOCK-VERIFIED |
+| ROUTE-inventory-stock-taking-changed-items-state | `/inventory/stock-taking` | StockTakingPage | changed items state | inventory | MOCK-VERIFIED |
 | ROUTE-inventory-audit-approvals-initial-route-state | `/inventory/audit-approvals` | StockAuditApprovalsPage | initial route state | inventory | NOT TESTED |
 | ROUTE-product-create-initial-route-state | `/product/create` | ProductCreate | initial route state | inventory | NOT TESTED |
 | ROUTE-product-create-details-tab | `/product/create` | ProductCreate | details tab | inventory | NOT TESTED |

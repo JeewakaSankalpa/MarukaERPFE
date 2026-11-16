@@ -30,6 +30,8 @@ const test = auditTest.extend({
             if (url.pathname === '/api/stores/requests/aggregate') return json(route, planningRows);
             if (url.pathname === '/api/products') return json(route, productsPage);
             if (url.pathname === '/api/inventory/available-summary') return json(route, inventorySummary);
+            if (url.pathname === '/api/inventory/adjustments/batches') return json(route, stockTakingBatches);
+            if (url.pathname === '/api/user/search') return json(route, stockTakingApprovers);
             if (url.pathname === '/api/inventory/dashboard-stats') return json(route, inventoryDashboardStats);
             if (url.pathname === '/api/inventory/data-quality-issues') return json(route, inventoryDataQualityIssues);
             if (url.pathname === '/api/store/all') return json(route, [{ id: 'LOC_STORES_MAIN', name: 'Main Store' }]);
@@ -125,6 +127,11 @@ const inventoryDashboardStats = {
     ],
 };
 const inventoryDataQualityIssues = [{ source: 'Stock Batch', recordId: 'B-CP-001', reference: 'GRN-2026-001', productName: 'Copper Cable 10mm', productId: 'product-copper', issue: 'Missing expiry reference', impact: 'Excluded from expiry reporting' }];
+const stockTakingBatches = [
+    { id: 'batch-copper-001', product: { id: 'product-copper', name: 'Copper Cable 10mm — high-temperature insulated run' }, batchNumber: 'B-CP-001', batchNo: 'B-CP-001', locationId: 'LOC_STORES_MAIN', expiryDate: '2028-11-01', quantity: 840.5 },
+    { id: 'batch-earth-001', product: { id: 'product-earth', name: '1.5MM Earth Cable' }, batchNumber: 'B-ER-001', batchNo: 'B-ER-001', locationId: 'PROJECT-001', expiryDate: '2027-06-30', quantity: 360 },
+];
+const stockTakingApprovers = [{ id: 'employee-manager-001', firstName: 'Amara', lastName: 'Perera', accessLevel: 'MANAGER' }];
 const inventoryProductSummaries = [
     { productId: 'product-001', totalQtyDecimal: 1250.75, serialTracked: false, serialCount: 0 },
     { productId: 'product-002', totalQtyDecimal: 360, serialTracked: false, serialCount: 0 },
