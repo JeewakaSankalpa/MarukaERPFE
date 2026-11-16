@@ -3504,18 +3504,18 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll", ".supplier-settlement-table-scroll"],
+        "keyboardChecks": ["status tabs", "search input", "settlement modal close"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },
@@ -3561,18 +3561,18 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll"],
+        "keyboardChecks": ["status tabs", "search input"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },
@@ -3618,18 +3618,18 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll", ".supplier-settlement-table-scroll"],
+        "keyboardChecks": ["status tabs", "settlement modal close"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },
@@ -3675,18 +3675,18 @@
       "expectations": {
         "identity": null,
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [".supplier-returns-tabs", ".supplier-returns-table-scroll"],
+        "keyboardChecks": ["status tabs"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": ["tests/audit/supplier-return-approvals-modernization.audit.spec.js"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-16"
       },
       "notes": []
     },

@@ -9,11 +9,11 @@ This dashboard distinguishes route/state coverage from component and interaction
 | Declared routes | 114 |
 | Unique declared paths | 112 |
 | Route/state combinations | 239 |
-| MOCK-VERIFIED | 41 |
+| MOCK-VERIFIED | 45 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 197 |
+| NOT TESTED | 193 |
 
 ## Sidebar-section modernization breakdown
 
@@ -25,7 +25,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | Sales User Dashboard (Executive Dashboard) | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Project Summary Dashboard | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Projects | 13 | 2 | 0 | 11 | 18 | 11 | 20 | 15.4% | 35.5% |
-| Inventory & Procurement | 31 | 14 | 3 | 14 | 44 | 28 | 47 | 54.8% | 37.3% |
+| Inventory & Procurement | 31 | 15 | 3 | 13 | 44 | 32 | 43 | 58.1% | 42.7% |
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
 | Reports | 10 | 0 | 0 | 10 | 13 | 0 | 23 | 0.0% | 0.0% |
@@ -46,6 +46,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - Receive GRN: PO loading, receipt details, batch-entry interaction, local table scrolling, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 - GRN Rate Correction: selected-batch review, VAT/rate validation, read-only impact analysis, financial hierarchy, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 - Stock Taking: All Batches and Changed Items states, physical quantity discrepancy review, local table scrolling, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
+- Supplier Return Approvals: pending, approved, rejected, search-filtered, and settlement-history states; responsive geometry and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without executing mutations.
 
 ## Shared components
 

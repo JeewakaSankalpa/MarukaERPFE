@@ -31,6 +31,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/products') return json(route, productsPage);
             if (url.pathname === '/api/inventory/available-summary') return json(route, inventorySummary);
             if (url.pathname === '/api/inventory/adjustments/batches') return json(route, stockTakingBatches);
+            if (url.pathname === '/api/inventory/returns/supplier') return json(route, supplierReturns[url.searchParams.get('status')] || []);
             if (url.pathname === '/api/user/search') return json(route, stockTakingApprovers);
             if (url.pathname === '/api/inventory/dashboard-stats') return json(route, inventoryDashboardStats);
             if (url.pathname === '/api/inventory/data-quality-issues') return json(route, inventoryDataQualityIssues);
@@ -132,6 +133,11 @@ const stockTakingBatches = [
     { id: 'batch-earth-001', product: { id: 'product-earth', name: '1.5MM Earth Cable' }, batchNumber: 'B-ER-001', batchNo: 'B-ER-001', locationId: 'PROJECT-001', expiryDate: '2027-06-30', quantity: 360 },
 ];
 const stockTakingApprovers = [{ id: 'employee-manager-001', firstName: 'Amara', lastName: 'Perera', accessLevel: 'MANAGER' }];
+const supplierReturns = {
+    PENDING: [{ id:'supplier-return-001', returnNumber:'SR-2026-0041', supplierNameSnapshot:'Colombo Industrial Supplies', productName:'Copper Cable 10mm — high-temperature insulated run', batchNumber:'B-CP-001', quantityDecimal:'1250.75', unitCost:185.5, reason:'Outer insulation did not match the approved technical specification.', status:'PENDING', createdAt:'2026-11-14T09:00:00Z', settlements:[] }],
+    APPROVED: [{ id:'supplier-return-002', returnNumber:'SR-2026-0038', supplierNameSnapshot:'Precision Motion Lanka', productName:'Servo Motor Assembly', batchNumber:'B-SM-008', quantityDecimal:'2', unitCost:49250, reason:'Incorrect shaft specification supplied.', status:'APPROVED', settlementStatus:'PARTIAL', createdAt:'2026-11-10T09:00:00Z', settlements:[{ type:'CREDIT_NOTE', quantitySettledDecimal:'1', amountSettled:49250, referenceId:'CN-8842', notes:'Credit note received for one unit.', createdAt:'2026-11-13T09:00:00Z' }] }],
+    REJECTED: [{ id:'supplier-return-003', returnNumber:'SR-2026-0034', supplierNameSnapshot:'Lanka Electrical Traders', productName:'1.5MM Earth Cable', batchNumber:'B-ER-001', quantityDecimal:'30', unitCost:122.5, reason:'Inspection confirmed the supplied cable was within specification.', status:'REJECTED', createdAt:'2026-11-06T09:00:00Z', settlements:[] }],
+};
 const inventoryProductSummaries = [
     { productId: 'product-001', totalQtyDecimal: 1250.75, serialTracked: false, serialCount: 0 },
     { productId: 'product-002', totalQtyDecimal: 360, serialTracked: false, serialCount: 0 },

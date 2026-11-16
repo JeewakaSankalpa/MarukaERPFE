@@ -91,7 +91,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/inventory/returns/approvals` | InternalReturnApprovals | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/inventory/search` | InventoryView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Products-benchmark inventory workspace redesign complete |
 | `/inventory/stock-taking` | StockTakingPage | 2 | MOCK-VERIFIED (3/3 states) | HIGH | MODERNIZED | Full-width stock count workspace, discrepancy tabs, responsive batch table, and accessible quantity controls |
-| `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | 3 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | 3 | MOCK-VERIFIED (4/4 states) | MONITOR | MODERNIZED | Full-width approval queues, readable quantity and financial review, responsive return cards, filtering, and accessible settlement history |
 | `/inventory/view` | InventoryView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Shared InventoryView modernized |
 | `/item/add` | ItemAdd | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/item/my-requests` | MyRequestList | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Products-benchmark request workspace redesign complete |
