@@ -1,11 +1,11 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `6ee59ec8d7ef09843109bf943bbaabbfedd7ebb7`.
+Generated from `src/App.js` at revision `20e3a0e42f3607d7ee6bb428ad602f4ae3b43414`.
 
 - Route declarations: 114
 - Unique declared paths: 112
 - Coverage rows including nested states: 246
-- Status counts: `MOCK-VERIFIED` 54, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 191
+- Status counts: `MOCK-VERIFIED` 57, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 188
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -187,9 +187,9 @@ Generated from `src/App.js` at revision `6ee59ec8d7ef09843109bf943bbaabbfedd7ebb
 | ROUTE-finance-accounts-general-accounts-tab | `/finance/accounts` | AccountsPage | General Accounts tab | finance | NOT TESTED |
 | ROUTE-finance-accounts-project-accounts-tab | `/finance/accounts` | AccountsPage | Project Accounts tab | finance | NOT TESTED |
 | ROUTE-finance-journals-initial-route-state | `/finance/journals` | JournalEntryList | initial route state | finance | NOT TESTED |
-| ROUTE-finance-expenses-initial-route-state | `/finance/expenses` | ExpensesPage | initial route state | finance | NOT TESTED |
-| ROUTE-finance-expenses-category-tab | `/finance/expenses` | ExpensesPage | category tab | finance | NOT TESTED |
-| ROUTE-finance-expenses-method-tab | `/finance/expenses` | ExpensesPage | method tab | finance | NOT TESTED |
+| ROUTE-finance-expenses-initial-route-state | `/finance/expenses` | ExpensesPage | initial route state | finance | MOCK-VERIFIED |
+| ROUTE-finance-expenses-category-tab | `/finance/expenses` | ExpensesPage | category tab | finance | MOCK-VERIFIED |
+| ROUTE-finance-expenses-method-tab | `/finance/expenses` | ExpensesPage | method tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-tax-initial-route-state | `/finance/tax` | TaxPage | initial route state | finance | NOT TESTED |
 | ROUTE-finance-loans-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | NOT TESTED |
 | ROUTE-finance-loans-duplicate-2-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | NOT TESTED |

@@ -36,6 +36,10 @@ const test = auditTest.extend({
             if (url.pathname === '/api/inventory/dashboard-stats') return json(route, inventoryDashboardStats);
             if (url.pathname === '/api/procurement/dashboard-stats') return json(route, procurementDashboardStats);
             if (url.pathname === '/api/transfers') return json(route, pendingTransfers);
+            if (url.pathname === '/api/finance/expenses') return json(route, financeExpenses);
+            if (url.pathname === '/api/finance/accounts/payment-accounts') return json(route, financePaymentAccounts);
+            if (url.pathname === '/api/assets') return json(route, financeAssets);
+            if (url.pathname === '/api/finance/loans') return json(route, financeLoans);
             if (url.pathname === '/api/inventory/data-quality-issues') return json(route, inventoryDataQualityIssues);
             if (url.pathname === '/api/store/all') return json(route, [{ id: 'LOC_STORES_MAIN', name: 'Main Store' }]);
             if (url.pathname === '/api/inventory/products/product-copper/breakdown') return json(route, inventoryBreakdown);
@@ -162,6 +166,15 @@ const pendingTransfers = [
         items: [{ productId: 'product-earth', productNameSnapshot: '1.5MM Earth Cable', sku: 'EARTH-15', unit: 'm', qty: 30, qtyDecimal: 30.5, reservations: [{ batchId: 'batch-earth-001', batchNumber: 'B-ER-001', reservedQty: 30, reservedQtyDecimal: 30.5, serials: [] }] }],
     },
 ];
+const financeExpenses = [
+    { id:'expense-001', title:'Colombo site generator service', description:'Preventive maintenance and oil replacement', category:'MAINTENANCE', amount:48650.75, expenseDate:'2026-11-12', status:'PAID', paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' },
+    { id:'expense-002', title:'November office electricity', description:'Head office utility invoice', category:'UTILITIES', amount:127840.5, expenseDate:'2026-11-08', status:'PENDING', paymentMethod:'CHEQUE', paymentAccountType:'BANK' },
+    { id:'expense-003', title:'Supplier payment · GRN-2026-001', description:'Copper cable delivery settlement', category:'SUPPLIER_PAYMENT', amount:245000, expenseDate:'2026-11-14', status:'PAID', paymentMethod:'CARD', paymentAccountType:'CREDIT_CARD', projectId:'grn-001' },
+    { id:'expense-004', title:'Workshop rental', description:'Monthly workshop premises rent', category:'RENT', amount:185000, expenseDate:'2026-10-02', status:'PAID', paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' },
+];
+const financePaymentAccounts = [{ id:'account-bank-001', name:'Primary operating account', paymentAccountType:'BANK', balance:850000, hasSubAccounts:false }];
+const financeAssets = [{ id:'asset-001', purchaseDate:'2026-11-03', purchaseCost:650000, paidAmount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK', paymentHistory:[{ amount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' }] }];
+const financeLoans = [{ id:'loan-001', startDate:'2026-11-01', status:'ACTIVE', totalRepaid:95000, outstandingBalance:405000, repaymentHistory:[{ amount:95000, paymentMethod:'CHEQUE', paymentAccountType:'BANK' }] }];
 const inventoryDataQualityIssues = [{ source: 'Stock Batch', recordId: 'B-CP-001', reference: 'GRN-2026-001', productName: 'Copper Cable 10mm', productId: 'product-copper', issue: 'Missing expiry reference', impact: 'Excluded from expiry reporting' }];
 const stockTakingBatches = [
     { id: 'batch-copper-001', product: { id: 'product-copper', name: 'Copper Cable 10mm — high-temperature insulated run' }, batchNumber: 'B-CP-001', batchNo: 'B-CP-001', locationId: 'LOC_STORES_MAIN', expiryDate: '2028-11-01', quantity: 840.5 },

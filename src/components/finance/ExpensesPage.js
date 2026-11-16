@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, Search } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Button, Table, Modal, Form, Row, Col, Card, Badge, InputGroup, Tabs, Tab } from 'react-bootstrap';
 import { toast } from 'react-toastify';
@@ -14,6 +14,7 @@ import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 import OverdraftConfirmModal from '../ReusableComponents/OverdraftConfirmModal';
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import './ExpensesPage.css';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF6666'];
 
@@ -282,32 +283,39 @@ export default function ExpensesPage() {
     };
 
     return (
-        <Container fluid className="py-4">
+        <Container fluid className="expenses-page">
             {/* Page Header */}
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className="d-flex align-items-center">
-                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                    <h2 className="mb-0">Expense Management</h2>
+            <div className="expenses-header">
+                <div className="expenses-heading-group">
+                    <button type="button" className="expenses-back-button" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={18} aria-hidden="true" /></button>
+                    <div>
+                        <span className="expenses-eyebrow">Sales &amp; Finance</span>
+                        <h1>Expense management</h1>
+                        <p>Review paid outflows, upcoming payables, and manual expense records.</p>
+                    </div>
                 </div>
-                <Button variant="primary" onClick={() => setShowModal(true)}>+ New Expense</Button>
+                <Button variant="primary" className="expenses-primary-action" onClick={() => setShowModal(true)}><Plus size={18} aria-hidden="true" /> New expense</Button>
             </div>
 
             {/* Global Filter Bar */}
-            <Card className="shadow-sm border-0 mb-4 bg-light">
+            <Card className="expenses-filter-panel">
                 <Card.Body className="py-3">
                     <Row className="g-3 align-items-center">
-                        <Col md={12} className="text-muted small fw-bold text-uppercase">Page Filters</Col>
+                        <Col md={12} className="expenses-filter-heading">Filters <small>{filterMonth ? `Showing ${filterMonth}` : 'Showing all time'}</small></Col>
                         <Col md={3}>
-                            <InputGroup>
-                                <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
-                                <Form.Control placeholder="Search descriptions..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                            <Form.Label htmlFor="expense-search">Search records</Form.Label>
+                            <InputGroup className="expenses-search-control">
+                                <InputGroup.Text><Search size={17} aria-hidden="true" /></InputGroup.Text>
+                                <Form.Control id="expense-search" aria-label="Search expense records" placeholder="Title or description" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                             </InputGroup>
                         </Col>
                         <Col md={3}>
-                            <Form.Control type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} title="Filter ALL modules by Month" />
+                            <Form.Label htmlFor="expense-month">Accounting month</Form.Label>
+                            <Form.Control id="expense-month" aria-label="Filter expenses by month" type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} title="Filter all modules by month" />
                         </Col>
                         <Col md={3}>
-                            <SafeSelect value={filterCategory} onChange={e => setFilterCategory(e.target.value)} title="Filter the Manual Expenses list">
+                            <Form.Label htmlFor="expense-category">Manual expense category</Form.Label>
+                            <SafeSelect id="expense-category" aria-label="Filter manual expenses by category" value={filterCategory} onChange={e => setFilterCategory(e.target.value)} title="Filter the manual expenses list">
                                 <option value="ALL">All Categories</option>
                                 <option value="OPERATIONAL">Operational</option>
                                 <option value="UTILITIES">Utilities</option>
@@ -327,29 +335,32 @@ export default function ExpensesPage() {
             </Card>
 
             {/* ═══════════════════ SECTION 1 — OUTFLOW BREAKDOWN ═══════════════════ */}
-            <Card className="shadow-sm border-0 mb-4">
-                <Card.Header className="bg-white border-bottom py-3">
-                    <span className="fw-bold fs-5">💰 Expense &amp; Outflow Breakdown</span>
+            <Card className="expenses-panel expenses-outflow-panel">
+                <Card.Header className="expenses-section-heading">
+                    <span>Expense &amp; outflow breakdown</span><small>Paid and outstanding commitments across finance modules</small>
                 </Card.Header>
                 <Card.Body>
                     {/* 3 Summary Stat Boxes */}
-                    <Row className="g-3 mb-4">
+                    <Row className="g-3 mb-4 expenses-summary-grid">
                         <Col md={4}>
-                            <div className="rounded p-3 h-100" style={{ background: '#19875415', borderLeft: '4px solid #198754' }}>
-                                <div className="text-muted small mb-1">✅ Paid Out</div>
-                                <div className="fw-bold fs-4" style={{ color: '#198754' }}>Rs. {fmt(totalPaidOut)}</div>
+                            <div className="expenses-summary expenses-summary-paid">
+                                <div className="expenses-summary-label">Paid out</div>
+                                <div className="expenses-summary-value">Rs. {fmt(totalPaidOut)}</div>
+                                <small>Funds already disbursed</small>
                             </div>
                         </Col>
                         <Col md={4}>
-                            <div className="rounded p-3 h-100" style={{ background: '#dc354515', borderLeft: '4px solid #dc3545' }}>
-                                <div className="text-muted small mb-1">⏳ Payables</div>
-                                <div className="fw-bold fs-4" style={{ color: '#dc3545' }}>Rs. {fmt(totalPayable)}</div>
+                            <div className="expenses-summary expenses-summary-payable">
+                                <div className="expenses-summary-label">Payables</div>
+                                <div className="expenses-summary-value">Rs. {fmt(totalPayable)}</div>
+                                <small>Outstanding obligations</small>
                             </div>
                         </Col>
                         <Col md={4}>
-                            <div className="rounded p-3 h-100" style={{ background: '#0d6efd15', borderLeft: '4px solid #0d6efd' }}>
-                                <div className="text-muted small mb-1">📊 Total Committed</div>
-                                <div className="fw-bold fs-4" style={{ color: '#0d6efd' }}>Rs. {fmt(totalCommitted)}</div>
+                            <div className="expenses-summary expenses-summary-total">
+                                <div className="expenses-summary-label">Total committed</div>
+                                <div className="expenses-summary-value">Rs. {fmt(totalCommitted)}</div>
+                                <small>Paid plus payable</small>
                             </div>
                         </Col>
                     </Row>
@@ -358,7 +369,7 @@ export default function ExpensesPage() {
                     <Tabs
                         activeKey={activeTab}
                         onSelect={(k) => setActiveTab(k)}
-                        className="mb-4"
+                        className="expenses-breakdown-tabs"
                         variant="pills"
                     >
                         <Tab eventKey="category" title="By Expense Category">
@@ -389,7 +400,7 @@ export default function ExpensesPage() {
                                         <div className="text-muted small fw-bold text-uppercase mb-2">Category Breakdown</div>
                                         <div className="d-flex flex-column gap-2 flex-grow-1 h-100">
                                             {outflowCategories.map((c, idx) => (
-                                                <div key={idx} className="d-flex align-items-center justify-content-between p-3 border rounded shadow-sm bg-white" style={{ borderLeft: `6px solid ${c.color}` }}>
+                                                <div key={idx} className="expenses-breakdown-row" style={{ borderLeftColor: c.color }}>
                                                     <div className="d-flex align-items-center gap-3">
                                                         <div className="fs-3">{c.icon}</div>
                                                         <div>
@@ -436,7 +447,7 @@ export default function ExpensesPage() {
                                         <div className="text-muted small fw-bold text-uppercase mb-2">Method Breakdown (Paid Only)</div>
                                         <div className="d-flex flex-column gap-2 flex-grow-1 h-100">
                                             {methodCategories.map((c, idx) => (
-                                                <div key={idx} className="d-flex align-items-center justify-content-between p-3 border rounded shadow-sm bg-white" style={{ borderLeft: `6px solid ${c.color}` }}>
+                                                <div key={idx} className="expenses-breakdown-row" style={{ borderLeftColor: c.color }}>
                                                     <div className="d-flex align-items-center gap-3">
                                                         <div className="fs-3">{c.icon}</div>
                                                         <div>
@@ -458,9 +469,9 @@ export default function ExpensesPage() {
             </Card>
 
             {/* ═══════════════════ SECTION 2 — MONTHLY TREND ═══════════════════ */}
-            <Card className="shadow-sm border-0 mb-4">
+            <Card className="expenses-panel expenses-trend-panel">
                 <Card.Body>
-                    <div className="text-muted small fw-semibold mb-3">📈 Monthly Expense Trend (All Categories)</div>
+                    <div className="expenses-trend-heading"><span>Monthly expense trend</span><small>Manual expense records across the selected period</small></div>
                     <ResponsiveContainer width="100%" height={220}>
                         <BarChart data={barChartData}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -480,7 +491,7 @@ export default function ExpensesPage() {
             </Card>
 
             {/* ═══════════════════ SECTION 3 — EXPENSE TABLE ═══════════════════ */}
-            <Card className="shadow-sm border-0">
+            <Card className="expenses-panel expenses-records-panel">
                 <Card.Header className="bg-white py-3 border-bottom-0">
                     <div className="d-flex justify-content-between align-items-center">
                         <span className="fw-bold">Manual Expense Records</span>
@@ -491,7 +502,8 @@ export default function ExpensesPage() {
                     </div>
                 </Card.Header>
                 <Card.Body className="p-0">
-                    <Table hover responsive striped className="mb-0">
+                    <div className="expenses-table-scroll" tabIndex="0" aria-label="Manual expense records table, horizontally scrollable on smaller screens">
+                    <Table hover className="expenses-table mb-0">
                         <thead className="bg-light">
                             <tr>
                                 <th className="ps-4">Date</th>
@@ -504,25 +516,26 @@ export default function ExpensesPage() {
                         </thead>
                         <tbody>
                             {filteredExpenses.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center text-muted py-4">No expenses recorded.</td></tr>
+                                <tr className="expenses-empty-row"><td colSpan="6"><strong>No matching expenses</strong><span>Adjust the search, month, or category filters.</span></td></tr>
                             ) : filteredExpenses.map(e => (
                                 <tr key={e.id}>
-                                    <td className="ps-4">{e.expenseDate}</td>
-                                    <td>
+                                    <td data-label="Date" className="expenses-date">{e.expenseDate}</td>
+                                    <td data-label="Category">
                                         {e.category === 'SUPPLIER_PAYMENT'
                                             ? <Badge bg="warning" text="dark">Supplier Payment</Badge>
                                             : <Badge bg="secondary">{e.category}</Badge>}
                                     </td>
-                                    <td>
+                                    <td data-label="Title / description" className="expenses-title-cell">
                                         {e.category === 'SUPPLIER_PAYMENT' && e.projectId ? (
-                                            <span role="button" className="fw-bold text-dark" style={{ cursor: 'pointer' }} onClick={() => handleGRNClick(e.projectId)}>
+                                            <button type="button" className="expenses-record-link" onClick={() => handleGRNClick(e.projectId)} aria-label={`Open supplier expense ${e.title}`}>
                                                 {e.title} <i className="bi bi-box-arrow-up-right ms-1 small text-primary"></i>
-                                            </span>
+                                            </button>
                                         ) : <span className="fw-medium">{e.title}</span>}
+                                        {e.description && <small>{e.description}</small>}
                                     </td>
-                                    <td className="text-end">{fmt(e.amount)}</td>
-                                    <td>{e.status}</td>
-                                    <td>
+                                    <td data-label="Amount" className="expenses-amount">Rs. {fmt(e.amount)}</td>
+                                    <td data-label="Status">{e.status}</td>
+                                    <td data-label="Method">
                                         {e.paymentMethod === 'CARD'
                                             ? <Badge style={{ background: '#AF19FF' }}>💳 Card</Badge>
                                             : e.paymentMethod}
@@ -531,15 +544,16 @@ export default function ExpensesPage() {
                             ))}
                         </tbody>
                     </Table>
+                    </div>
                 </Card.Body>
             </Card>
 
             {/* Create Modal */}
-            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
-                <Modal.Header closeButton><Modal.Title>Record New Expense</Modal.Title></Modal.Header>
+            <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered dialogClassName="expense-entry-modal">
+                <Modal.Header closeButton><div><Modal.Title>Record new expense</Modal.Title><p className="mb-0">Enter the transaction details and funding account.</p></div></Modal.Header>
                 <Modal.Body>
                     <Row className="g-3">
-                        <Col md={6}><Form.Group><Form.Label>Title *</Form.Label><Form.Control value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} /></Form.Group></Col>
+                        <Col md={6}><Form.Group><Form.Label htmlFor="new-expense-title">Title *</Form.Label><Form.Control id="new-expense-title" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} /></Form.Group></Col>
                         <Col md={6}><Form.Group><Form.Label>Category</Form.Label>
                             <SafeSelect value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
                                 <option value="OPERATIONAL">Operational</option>
@@ -549,7 +563,7 @@ export default function ExpensesPage() {
                                 <option value="OTHER">Other</option>
                             </SafeSelect>
                         </Form.Group></Col>
-                        <Col md={6}><Form.Group><Form.Label>Amount *</Form.Label><Form.Control type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} /></Form.Group></Col>
+                        <Col md={6}><Form.Group><Form.Label htmlFor="new-expense-amount">Amount (LKR) *</Form.Label><Form.Control id="new-expense-amount" type="number" min="0" step="0.01" inputMode="decimal" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} /></Form.Group></Col>
                         <Col md={6}><Form.Group><Form.Label>Date</Form.Label><SafeDatePicker name="expenseDate" value={formData.expenseDate} onChange={e => setFormData({ ...formData, expenseDate: e.target.value })} /></Form.Group></Col>
                         <Col md={12}>
                             <PaymentAccountPicker 

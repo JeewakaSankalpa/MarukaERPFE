@@ -4,7 +4,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 - Unique declared paths: 112
 - Route/state combinations: 246
-- Generated: 2026-11-16T17:17:48.144Z
+- Generated: 2026-11-16T17:39:48.089Z
 
 ## Status vocabulary
 
@@ -49,7 +49,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/assets` | AssetRegister | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/accounts` | AccountsPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/dashboard` | FinanceDashboard | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/finance/expenses` | ExpensesPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/finance/expenses` | ExpensesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width expense review workspace modernized |
 | `/finance/income` | IncomePage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/journals` | JournalEntryList | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/loans` | LoanManagement | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
