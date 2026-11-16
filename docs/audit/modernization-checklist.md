@@ -118,7 +118,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 |---|---|---:|---|---|---|---|
 | `/grn` | GRNRouteWrapper | 0 | MOCK-VERIFIED | HIGH | MODERNIZED | Receive GRN full-width receiving workspace, responsive batch table, scoped payable summary, and accessible receipt controls |
 | `/grns` | GRNListView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | GRN History operational workspace redesigned |
-| `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | 0 | MOCK-VERIFIED | HIGH | MODERNIZED | Full-width correction workspace, readable financial review, responsive impact sections, and accessible admin controls; apply workflows remain integration-only |
 | `/pos` | POListRouteWrapper | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Previously modernized PO list |
 | `/pos/:id` | PurchaseOrderDetails | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | PO Detail workspace redesigned |
 | `/pos/:id/edit` | POEditManualRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |

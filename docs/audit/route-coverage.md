@@ -134,7 +134,7 @@ Generated from `src/App.js` at revision `31f557f4432f6aa4a5093415581726e9113290b
 | ROUTE-pos-id-initial-route-state | `/pos/:id` | PurchaseOrderDetails | initial route state | procurement | NOT TESTED |
 | ROUTE-grn-initial-route-state | `/grn` | GRNRouteWrapper | initial route state | procurement | MOCK-VERIFIED |
 | ROUTE-grns-initial-route-state | `/grns` | GRNListView | initial route state | procurement | NOT TESTED |
-| ROUTE-grns-grnid-rate-correction-initial-route-state | `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | initial route state | procurement | NOT TESTED |
+| ROUTE-grns-grnid-rate-correction-initial-route-state | `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | initial route state | procurement | MOCK-VERIFIED |
 | ROUTE-partners-dashboard-initial-route-state | `/partners/dashboard` | SupplierCustomerDashboard | initial route state | partners | NOT TESTED |
 | ROUTE-partners-dashboard-customers-tab | `/partners/dashboard` | SupplierCustomerDashboard | customers tab | partners | NOT TESTED |
 | ROUTE-partners-dashboard-suppliers-tab | `/partners/dashboard` | SupplierCustomerDashboard | suppliers tab | partners | NOT TESTED |

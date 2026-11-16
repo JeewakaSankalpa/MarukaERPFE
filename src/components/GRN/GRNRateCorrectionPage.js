@@ -199,13 +199,13 @@ export default function GRNRateCorrectionPage() {
     if (!authorized) return <main className="grnc-page"><div className="grnc-shell"><div className="grnc-notice grnc-notice--danger">Admin access is required.</div></div></main>;
 
     return <main className="grnc-page"><div className="grnc-shell">
-        <button type="button" className="grnc-back" onClick={() => navigate("/grns")}><ArrowLeft size={16} /> GRN history</button>
+        <button type="button" className="grnc-back" aria-label="Back to GRN history" onClick={() => navigate("/grns")}><ArrowLeft size={16} aria-hidden="true" /> GRN history</button>
         <header className="grnc-header">
             <div><span className="grnc-eyebrow"><ShieldCheck size={15} /> ADMIN CORRECTION · UNIT RATE</span>
                 <h1>Correct a received rate</h1>
                 <p>Choose the exact receipt batch, enter the corrected rate and VAT, then review the new total before saving.</p>
             </div>
-            <button type="button" className="grnc-refresh" onClick={load} disabled={loading}><RefreshCw size={16} /> Refresh</button>
+            <button type="button" className="grnc-refresh" aria-label="Refresh GRN correction data" onClick={load} disabled={loading}><RefreshCw size={16} aria-hidden="true" /> Refresh</button>
         </header>
         {loading && <div className="grnc-notice" role="status">Loading the GRN and its received batches…</div>}
         {loadError && <div className="grnc-notice grnc-notice--danger" role="alert">{loadError}<button type="button" onClick={load}>Retry</button></div>}

@@ -53,6 +53,9 @@ const test = auditTest.extend({
             if (url.pathname === '/api/pos') return json(route, purchaseOrdersPage);
             if (url.pathname === '/api/pos/po-001') return json(route, poDetail);
             if (url.pathname === '/api/grns') return json(route, grnsPage);
+            if (url.pathname === '/api/grns/grn-001') return json(route, grnRateDetail);
+            if (url.pathname === '/api/grns/grn-001/rate-corrections') return json(route, grnRateCandidates);
+            if (url.pathname === '/api/grns/grn-001/rate-corrections/review') return json(route, grnRateImpact);
             if (url.pathname === '/api/workflow') return json(route, {});
             if (url.pathname === '/api/employee/all') return json(route, taskEmployees);
             if (url.pathname === '/api/addresses') return json(route, []);
@@ -100,6 +103,9 @@ const purchaseOrdersPage = {
 };
 const poDetail = { ...purchaseOrdersPage.content[0], supplierId: 'supplier-001', subTotal: 245000, grandTotal: 245000, approvalStatus: 'APPROVED', items: [{ productId:'product-copper', productNameSnapshot:'Copper Cable 10mm — high-temperature insulated run', sku:'CBL-10', unit:'m', orderedQty:1250.75, receivedQty:0, unitPrice:185.5 }] };
 const grnsPage = { content: [{ id:'grn-001', grnNumber:'GRN-2026-001', poNumber:'PO-2026-001', supplierNameSnapshot:'Colombo Industrial Supplies', createdAt:'2026-11-14T09:00:00Z', invoiceAmount:245000, vatAmount:0, deliveryCharge:0, totalPaid:0, paymentStatus:'UNPAID', status:'PENDING', dueDate:'2026-12-14' }], totalPages:1 };
+const grnRateDetail = { ...grnsPage.content[0], items: [{ productId: 'product-copper', productNameSnapshot: 'Copper Cable 10mm', quantity: 1250.75, unitCost: 185.5 }], postReceiptDiscountAmount: 0, rateCorrections: [], discountCorrections: [] };
+const grnRateCandidates = [{ batchId: 'batch-copper-001', productId: 'product-copper', productName: 'Copper Cable 10mm', batchNo: 'B-CP-001', quantity: 840.5, unitCost: 185.5, eligible: true }];
+const grnRateImpact = { approvalToken: 'mock-approval-token', canApply: false, oldSubtotal: 155612.75, newSubtotal: 159816.25, oldInventoryValue: 155612.75, newInventoryValue: 159816.25, oldConsumptionValue: 0, newConsumptionValue: 0, oldGross: 245000, newGross: 249203.5, currentRate: 185.5, proposedRate: 190.5, currentGross: 245000, proposedGross: 249203.5, risks: [{ code: 'ACCOUNTING_RECONCILIATION', status: 'ACTION_REQUIRED', summary: 'Accounting review required', resolution: 'Finance must confirm the adjustment journal before applying.' }], impacts: [{ kind: 'STOCK_BATCH', id: 'batch-copper-001', batchId: 'batch-copper-001', status: 'TRACED', quantity: 840.5, currentRate: 185.5, proposedRate: 190.5, currentValue: 155612.75, proposedValue: 159816.25, note: 'Mock traced receipt batch.' }], issues: [], impact: { displayNames: {}, currentRate: 185.5, proposedRate: 190.5, currentGross: 245000, proposedGross: 249203.5, risks: [], impacts: [{ kind: 'STOCK_BATCH', id: 'batch-copper-001', batchId: 'batch-copper-001', status: 'TRACED', quantity: 840.5, currentRate: 185.5, proposedRate: 190.5, currentValue: 155612.75, proposedValue: 159816.25, note: 'Mock traced receipt batch.' }], issues: [] } };
 const inventoryDashboardStats = {
     totalStockQty: 1658.75,
     totalUniqueItems: 342,
