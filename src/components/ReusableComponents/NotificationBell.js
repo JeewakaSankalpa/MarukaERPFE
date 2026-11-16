@@ -154,7 +154,7 @@ export default function NotificationBell() {
 
     return (
         <OverlayTrigger trigger="click" placement="bottom" overlay={popover} rootClose onToggle={handleToggle}>
-            <Button variant="link" className="position-relative text-white p-0 me-3">
+            <Button variant="link" className="position-relative text-white p-0 me-3" aria-label={`Notifications${count > 0 ? `, ${count} unread` : ''}`}>
                 <Bell size={20} />
                 {count > 0 && (
                     <Badge

@@ -44,32 +44,33 @@ export default function DepartmentList({ onOpenForm }) {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 1100, paddingTop: 24 }}>
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
+        <Container fluid className="operational-workspace" style={{ paddingTop: 24 }}>
+            <div className="bg-white shadow rounded p-4 operational-workspace-surface">
+                <div className="operational-toolbar mb-3">
                     <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={18} /></button>
                 <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Departments</h2>
                         </div>
-<div className="d-flex gap-2">
-                        <SafeSelect value={status} onChange={e=>{ setStatus(e.target.value); setPage(0); }} style={{ maxWidth: 200 }}>
+<div className="operational-filter-row">
+                        <SafeSelect aria-label="Filter departments by status" value={status} onChange={e=>{ setStatus(e.target.value); setPage(0); }} style={{ maxWidth: 200 }}>
                             <option value="">All</option>
                             <option value="ACTIVE">ACTIVE</option>
                             <option value="INACTIVE">INACTIVE</option>
                         </SafeSelect>
-                        <Form.Control placeholder="Search name/description" value={q} onChange={e=>setQ(e.target.value)} style={{ maxWidth: 260 }} />
+                        <Form.Control aria-label="Search departments" placeholder="Search name/description" value={q} onChange={e=>setQ(e.target.value)} style={{ maxWidth: 260 }} />
                         <Button variant="outline-secondary" onClick={()=>{ setPage(0); load(); }}>Search</Button>
                         <Button onClick={()=>onOpenForm?.()}>+ New Department</Button>
                     </div>
                 </div>
 
-                <Table hover responsive>
+                <div className="table-responsive" tabIndex={0} aria-label="Departments table">
+                <Table hover className="department-list-table">
                     <thead>
                     <tr>
                         <th>Name</th>
                         <th>Description</th>
                         <th>Status</th>
-                        <th style={{ width: 220 }}></th>
+                        <th><span className="visually-hidden">Actions</span></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -80,17 +81,20 @@ export default function DepartmentList({ onOpenForm }) {
                             <td>
                                 <Badge bg={row.status === "ACTIVE" ? "success" : "secondary"}>{row.status}</Badge>
                             </td>
-                            <td className="d-flex gap-2">
-                                <Button size="sm" variant="outline-primary" onClick={()=>onOpenForm?.(row.id)}>Edit</Button>
-                                <Button size="sm" variant={row.status==="ACTIVE"?"outline-warning":"outline-success"} onClick={()=>toggleStatus(row)}>
-                                    {row.status==="ACTIVE" ? "Deactivate" : "Activate"}
-                                </Button>
-                                <Button size="sm" variant="outline-secondary" onClick={()=>openDetail(row.id)}>View</Button>
+                            <td>
+                                <div className="d-flex gap-2 flex-wrap justify-content-end">
+                                    <Button size="sm" variant="outline-primary" onClick={()=>onOpenForm?.(row.id)}>Edit</Button>
+                                    <Button size="sm" variant={row.status==="ACTIVE"?"warning":"outline-success"} onClick={()=>toggleStatus(row)}>
+                                        {row.status==="ACTIVE" ? "Deactivate" : "Activate"}
+                                    </Button>
+                                    <Button size="sm" variant="outline-secondary" onClick={()=>openDetail(row.id)}>View</Button>
+                                </div>
                             </td>
                         </tr>
                     ))}
                     </tbody>
                 </Table>
+                </div>
 
                 <div className="d-flex justify-content-between align-items-center">
                     <div>Page {page + 1} / {Math.max(1, data.totalPages || 1)}</div>

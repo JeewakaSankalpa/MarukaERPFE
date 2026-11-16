@@ -18,9 +18,9 @@ export const OverviewCard = ({ id, project, stageObj, viewVersion, navigate, ope
     const p = project || {};
 
     return (
-        <Card className="h-100">
+        <Card className="project-summary-card h-100">
             <Card.Header className="d-flex justify-content-between align-items-center">
-                <span>Project Overview</span>
+                <span>Project overview</span>
                 <div className="d-flex gap-2">
                     <Button size="sm" variant="outline-dark" onClick={openEmailModal} disabled={!id || !!viewVersion}>Email</Button>
                     <Button
@@ -33,18 +33,18 @@ export const OverviewCard = ({ id, project, stageObj, viewVersion, navigate, ope
                     </Button>
                 </div>
             </Card.Header>
-            <Card.Body style={{ overflowY: 'auto' }}>
-                <div><strong>Inquiry ID:</strong> {id || '-'}</div>
-                {p.jobNumber && <div><strong>Job ID:</strong> <Badge bg="success">{p.jobNumber}</Badge></div>}
-                <div>
-                    <strong>Inquiry Type:</strong>{' '}
+            <Card.Body>
+                <dl className="project-summary-list">
+                    <div><dt>Inquiry ID</dt><dd>{id || '-'}</dd></div>
+                    {p.jobNumber && <div><dt>Job ID</dt><dd><Badge bg="success">{p.jobNumber}</Badge></dd></div>}
+                    <div><dt>Inquiry type</dt><dd>
                     <Badge bg={inquiryTypeBadge[p.inquiryType || 'JOB'] || 'secondary'}>
                         {inquiryTypeLabels[p.inquiryType || 'JOB'] || p.inquiryType || 'Job Inquiry'}
                     </Badge>
-                </div>
-                <div><strong>Name:</strong> {p.projectName || '-'}</div>
-                <div><strong>Client:</strong> {p.customerName || p.customerId || '-'}</div>
-                <div><strong>Sales Rep:</strong> {p.salesRepName || p.salesRep || '-'}</div>
+                    </dd></div>
+                    <div><dt>Client</dt><dd>{p.customerName || p.customerId || '-'}</dd></div>
+                    <div><dt>Sales rep</dt><dd>{p.salesRepName || p.salesRep || '-'}</dd></div>
+                </dl>
 
                 <div className="mt-2">
                     <strong>Status:</strong>{' '}
@@ -77,9 +77,9 @@ export const OverviewCard = ({ id, project, stageObj, viewVersion, navigate, ope
 export const StatusCard = ({ id, project, stageObj, effectiveActions }) => {
 
     return (
-        <Card className="h-100 border-0 shadow-sm">
-            <Card.Header className="bg-white fw-bold">Current Status & Actions</Card.Header>
-            <Card.Body style={{ overflowY: 'auto' }}>
+        <Card className="project-status-card h-100 border-0 shadow-sm">
+            <Card.Header className="bg-white fw-bold">Current status &amp; actions</Card.Header>
+            <Card.Body>
                 <div className="mb-3">
                     <strong>Current Stage:</strong> <Badge bg="primary">{stageObj?.stageType || '-'}</Badge>
                 </div>

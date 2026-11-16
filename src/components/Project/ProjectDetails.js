@@ -406,8 +406,7 @@ export default function ProjectDetails() {
 
     return (
         <div
-            className="project-detail-layout p-2"
-            style={{ width: '100%', maxHeight: 'calc(100vh - 110px)', overflowY: 'auto', position: 'relative' }}
+            className="project-detail-layout"
         >
             {/* Processing Overlay */}
             {(moving || approving || processingMessage) && (
@@ -448,10 +447,21 @@ export default function ProjectDetails() {
                 </div>
             )}
 
-            <div className="d-flex align-items-center justify-content-between mb-2">
-                <Button variant="light" size="sm" onClick={() => navigate('/projects/search')}>
-                    ← Back to Projects
-                </Button>
+            <div className="project-detail-heading">
+                <div className="project-detail-heading-copy">
+                    <Button variant="link" className="project-detail-back" onClick={() => navigate('/projects/search')}>
+                        ← All projects
+                    </Button>
+                    <div>
+                        <span className="project-detail-eyebrow">PROJECT WORKSPACE</span>
+                        <h1>{p.projectName || 'Project details'}</h1>
+                        <p>{p.customerName || p.customerId || 'Project information, delivery progress, and commercial context.'}</p>
+                    </div>
+                </div>
+                <div className="project-detail-heading-meta">
+                    {p.jobNumber && <Badge bg="success">{p.jobNumber}</Badge>}
+                    <Badge bg="light" text="dark">{stageObj.stageType || p.status || 'Active project'}</Badge>
+                </div>
             </div>
 
             {viewVersion && (
@@ -475,7 +485,7 @@ export default function ProjectDetails() {
 
             {/* Smart Action Bar */}
             {effectiveActions && (effectiveActions.canApprove || effectiveActions.canReject || (effectiveActions.canMove && effectiveActions.canMove.length > 0)) && (
-                <Card className="mb-3 border-primary shadow-sm" style={{ borderLeft: '5px solid #0d6efd' }}>
+                <Card className="project-detail-action-card mb-3 border-primary shadow-sm">
                     <Card.Body className="d-flex flex-wrap align-items-center justify-content-between p-3">
                         <div>
                             <h5 className="m-0 text-primary">
@@ -546,8 +556,8 @@ export default function ProjectDetails() {
             )}
 
             {/* --- TABS NAVIGATION --- */}
-            <div className="mb-3">
-                <ul className="nav nav-tabs">
+            <div className="project-detail-tabs" role="region" tabIndex={0} aria-label="Project workspace sections">
+                <ul className="nav nav-tabs flex-nowrap">
                     {/* Dynamic Tabs from Registry */}
                     {ProjectComponentRegistry.getByZone('TAB').map(comp => {
                         if (!isVisible(comp.id)) return null;
@@ -557,6 +567,7 @@ export default function ProjectDetails() {
                                 <button
                                     className={`nav-link ${activeTab === comp.id ? 'active' : ''}`}
                                     onClick={() => handleTabChange(comp.id)}
+                                    aria-current={activeTab === comp.id ? 'page' : undefined}
                                 >
                                     {comp.label}
                                     {comp.id === 'COMMUNICATION' && partnerUnread > 0 && (

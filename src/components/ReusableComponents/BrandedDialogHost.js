@@ -27,6 +27,7 @@ export default function BrandedDialogHost() {
     const inputValueRef = useRef("");
     const confirmButtonRef = useRef(null);
     const inputRef = useRef(null);
+    const dialogRef = useRef(null);
     const activeElementRef = useRef(null);
 
     useEffect(() => {
@@ -77,6 +78,19 @@ export default function BrandedDialogHost() {
 
         const handleKeyDown = (event) => {
             if (event.key === "Escape") closeDialog(false);
+            if (event.key !== "Tab") return;
+            const focusable = [...dialogRef.current.querySelectorAll('button, input, textarea, select, [tabindex]:not([tabindex="-1"])')]
+                .filter(element => !element.disabled && element.getAttribute("aria-hidden") !== "true");
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
         };
 
         window.addEventListener("keydown", handleKeyDown);
@@ -97,6 +111,7 @@ export default function BrandedDialogHost() {
     return (
         <div className="maruka-dialog-layer" role="presentation" onMouseDown={() => closeDialog(false)}>
             <section
+                ref={dialogRef}
                 className={`maruka-dialog ${config.className}`}
                 role="dialog"
                 aria-modal="true"

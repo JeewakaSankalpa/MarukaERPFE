@@ -131,6 +131,7 @@ export default function SafeSelect({
                 menuPlacement="auto"
                 styles={{
                     menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                    placeholder: (base) => ({ ...base, color: '#5b6573' }),
                     // Prevent horizontal scroll: menu expands to fit text
                     menu: (base) => ({
                         ...base,

@@ -726,11 +726,11 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
     }
 
     return (
-        <Container fluid style={{ width: "100%", maxWidth: 1180, paddingTop: 24, paddingBottom: 40 }}>
-            <div className="bg-white shadow-sm rounded border p-4">
+        <Container fluid className="operational-workspace" style={{ paddingTop: 24, paddingBottom: 40 }}>
+            <div className="bg-white shadow-sm rounded border p-4 operational-workspace-surface">
                 <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
                     <div className="d-flex align-items-center gap-2">
-                        <Button variant="light" onClick={() => navigate(-1)} title="Go back">
+                        <Button variant="light" onClick={() => navigate(-1)} title="Go back" aria-label="Go back">
                             <ArrowLeft size={20} />
                         </Button>
                         <div>
@@ -754,9 +754,9 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                 <Form noValidate validated={validated} className="mt-4">
                     <Row className="g-3">
                         <Col md={6}>
-                            <Form.Group>
+                            <Form.Group controlId="item-request-department">
                                 <Form.Label>Department</Form.Label>
-                                <SafeSelect value={departmentId} onChange={event => setDepartmentId(event.target.value)}
+                                <SafeSelect inputId="item-request-department" value={departmentId} onChange={event => setDepartmentId(event.target.value)}
                                     disabled={!isEditable || Boolean(urlProjectId)}>
                                     <option value="">Select Department</option>
                                     {departments.map(department => (
@@ -766,9 +766,9 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                             </Form.Group>
                         </Col>
                         <Col md={6}>
-                            <Form.Group>
+                            <Form.Group controlId="item-request-project">
                                 <Form.Label>Project</Form.Label>
-                                <SafeSelect value={projectId} onChange={event => setProjectId(event.target.value)}
+                                <SafeSelect inputId="item-request-project" value={projectId} onChange={event => setProjectId(event.target.value)}
                                     disabled={!isEditable || Boolean(urlProjectId)}>
                                     <option value="">Select Project</option>
                                     {projects.map(project => (
@@ -781,7 +781,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                         </Col>
                     </Row>
 
-                    <Form.Group className="mt-3">
+                    <Form.Group className="mt-3" controlId="item-request-comment">
                         <Form.Label>Comment</Form.Label>
                         <Form.Control as="textarea" rows={2} value={comment}
                             onChange={event => setComment(event.target.value)} disabled={!isEditable} />
@@ -886,7 +886,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                             Continue Draft
                                         </Button>
                                     </div>
-                                    <Table size="sm" responsive className="mb-0 align-middle bg-white">
+                                    <Table size="sm" responsive className="mb-0 align-middle bg-white" tabIndex={0} aria-label="Saved draft items">
                                         <thead>
                                             <tr>
                                                 <th>Product</th>
@@ -919,7 +919,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                         </div>
                                         <Badge bg="success">{activeHistory.length} item lines</Badge>
                                     </div>
-                                    <Table size="sm" responsive className="mb-0 align-middle">
+                                    <Table size="sm" responsive className="mb-0 align-middle" tabIndex={0} aria-label="Previously requested items">
                                         <thead>
                                             <tr>
                                                 <th>Request</th>
@@ -973,7 +973,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                                 loadProductPage({ pageToLoad: productPage + 1, append: true, searchText: q });
                                             }
                                         }}>
-                                        <Table size="sm" hover responsive className="mb-0 align-middle">
+                                        <Table size="sm" hover responsive className="mb-0 align-middle" tabIndex={0} aria-label="Product search results">
                                             <thead className="table-light" style={{ position: "sticky", top: 0 }}>
                                                 <tr><th>Product</th><th>SKU</th><th>Unit</th><th></th></tr>
                                             </thead>
@@ -1013,7 +1013,7 @@ export default function ItemRequestForm({ irId, defaultDepartmentId, defaultProj
                                     )}
                                 </div>
                             </div>
-                            <Table hover responsive className="align-middle mb-0">
+                            <Table hover responsive className="align-middle mb-0" tabIndex={0} aria-label={`${activeComponent} request items`}>
                                 <thead>
                                     <tr>
                                         <th style={{ width: 54 }}>Use</th>

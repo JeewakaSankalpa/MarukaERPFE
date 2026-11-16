@@ -127,14 +127,26 @@ const Header = ({ onToggleSidebar }) => {
       {/* Right Section - Notifications & Logout */}
       <div style={styles.rightSection} className="app-header-right">
 
+        <button
+          type="button"
+          aria-label="Open command search"
+          className="d-flex d-md-none align-items-center justify-content-center text-white border border-light rounded p-1"
+          style={{ cursor: 'pointer', background: 'transparent', minWidth: '32px', minHeight: '32px' }}
+          onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+        >
+          <CmdIcon size={15} aria-hidden="true" />
+        </button>
+
         {/* Search Trigger Hint */}
-        <div
-          className="d-none d-md-flex align-items-center text-white-50 small border border-secondary rounded px-2 py-1"
-          style={{ cursor: 'pointer' }}
+        <button
+          type="button"
+          aria-label="Open command search"
+          className="d-none d-md-flex align-items-center text-white small border border-light rounded px-2 py-1"
+          style={{ cursor: 'pointer', background: 'transparent' }}
           onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
         >
           <CmdIcon size={14} className="me-1" /> <span style={{ fontSize: '12px' }}>Ctrl+K</span>
-        </div>
+        </button>
 
         <button
           type="button"
@@ -146,7 +158,7 @@ const Header = ({ onToggleSidebar }) => {
           <Bell size={20} color={Colors.white} />
           {unreadCount > 0 && <span style={styles.notificationCount}>{unreadCount}</span>}
         </button>
-        <Button variant="danger" onClick={logout} className="header-logout-button">
+        <Button variant="danger" onClick={logout} className="header-logout-button" aria-label="Logout">
           <FaSignOutAlt aria-hidden="true" /> <span>Logout</span>
         </Button>
       </div>

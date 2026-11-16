@@ -1,0 +1,108 @@
+[
+  {
+    "id": "LAY-RSP-001",
+    "route": "/stores/pending-to-po",
+    "state": "populated allocation table",
+    "persona": "test-only SUPER_ADMIN mock persona",
+    "browser": "Chromium",
+    "viewport": "1440x900, 1280x800, 1024x768, 768x1024, 390x844, 360x800; 640x720 reflow proxy",
+    "zoom": "200% reflow proxy at 640 CSS px",
+    "reproduction": [
+      "Open Pending Purchases with the deterministic three-row fixture.",
+      "Compare the operational workspace bounds with the available page-content bounds.",
+      "Inspect table headers, supplier selectors, numeric controls, and document-level overflow."
+    ],
+    "expected": "The operational screen uses available desktop space, keeps important controls readable, and confines unavoidable narrow-screen table scrolling locally.",
+    "actual": "Before repair, a 1000px centered maximum width used only 83.3% of the desktop content area and compressed headers and controls despite unused space.",
+    "evidence": [
+      "output/playwright/evidence/before-pending-purchases-populated-chromium-desktop-1440.png",
+      "output/playwright/evidence/after-pending-purchases-populated-chromium-desktop-1440.png",
+      "output/playwright/evidence/after-workspace-measurements-chromium-desktop-1440.json"
+    ],
+    "rootCause": "A page-specific max-width: 1000px paper panel, fixed table layout, percentage columns, and overflow-wrap:anywhere forced an operational table into an unnecessarily narrow centered surface.",
+    "severity": "high",
+    "status": "MOCK-VERIFIED",
+    "independentVerification": {
+      "reviewer": "independent_regression agent",
+      "result": "MOCK-VERIFIED",
+      "evidence": [
+        "output/playwright/evidence/after-workspace-measurements-chromium-desktop-1440.json",
+        "output/playwright/evidence/after-workspace-measurements-firefox-desktop-1440.json",
+        "output/playwright/evidence/after-workspace-measurements-webkit-desktop-1440.json"
+      ]
+    }
+  },
+  {
+    "id": "A11Y-SEM-001",
+    "route": "/stores/pending-to-po",
+    "state": "populated allocation table and shared header",
+    "persona": "test-only SUPER_ADMIN mock persona",
+    "browser": "Chromium",
+    "viewport": "1440x900 through 360x800",
+    "zoom": null,
+    "reproduction": [
+      "Run the mock route audit with axe-core serious and critical impacts enabled.",
+      "Inspect filter/select associations and icon-only shared-header controls at compact widths."
+    ],
+    "expected": "Filters and icon-only controls expose stable accessible names at every responsive breakpoint.",
+    "actual": "The filters lacked explicit control associations, and compact icon-only notification/logout states exposed unnamed buttons.",
+    "evidence": [
+      "output/playwright/results.json",
+      "output/playwright/evidence/after-pending-purchases-populated-chromium-mobile-390.png"
+    ],
+    "rootCause": "Form groups did not set matching control IDs, while responsive CSS hid the only visible logout text and the notification control lacked an aria-label.",
+    "severity": "high",
+    "status": "MOCK-VERIFIED",
+    "independentVerification": {
+      "reviewer": "independent_regression agent",
+      "result": "MOCK-VERIFIED",
+      "evidence": [
+        "output/playwright/results.json"
+      ]
+    }
+  },
+  {
+    "id": "TBL-001",
+    "route": "/stores/pending-to-po",
+    "state": "large populated dataset",
+    "persona": null,
+    "browser": "Not yet executed",
+    "viewport": "desktop and laptop",
+    "zoom": null,
+    "reproduction": [
+      "Load a fixture large enough to exercise table pagination or virtualization.",
+      "Measure render time, interaction latency, and navigation through the dataset."
+    ],
+    "expected": "Large operational datasets remain responsive and offer usable pagination or another bounded rendering strategy.",
+    "actual": "The component currently renders all rows and this batch intentionally used only three representative rows; large-data behavior is unverified.",
+    "evidence": [
+      "src/components/Stores/PendingToPOPage.js"
+    ],
+    "rootCause": "No pagination or windowing strategy is present in the current table implementation.",
+    "severity": "medium",
+    "status": "NOT TESTED",
+    "independentVerification": null
+  },
+  {
+    "id": "CONS-001",
+    "route": "multiple operational modules",
+    "state": "desktop workspace utilization inventory",
+    "persona": null,
+    "browser": "Static inventory only",
+    "viewport": "desktop",
+    "zoom": null,
+    "reproduction": [
+      "Review operational pages for fixed max-width containers and centered paper-like surfaces.",
+      "Browser-verify each candidate before applying the shared operational-workspace primitive."
+    ],
+    "expected": "Operational ERP screens use available workspace while focused forms and print previews remain intentionally constrained.",
+    "actual": "StoresPlanning, ProjectStores, PurchaseRequest, ItemRequestForm, and DepartmentList contain comparable 980px-1180px caps and still require route-specific browser verification.",
+    "evidence": [
+      "docs/audit/component-inventory.md"
+    ],
+    "rootCause": "Operational and document-like layout intents are not consistently distinguished by a shared page-width contract.",
+    "severity": "medium",
+    "status": "NOT TESTED",
+    "independentVerification": null
+  }
+]

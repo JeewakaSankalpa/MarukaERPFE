@@ -9,6 +9,7 @@ import GRNPaymentModal from "./GRNPaymentModal";
 import GRNReturnModal from "./GRNReturnModal";
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { confirmAction, promptAction } from "../../utils/brandedDialogs";
+import "./GRNListView.css";
 
 const qp = (o = {}) => { const u = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v || v === 0) && v !== "" && u.set(k, v)); return u.toString(); };
 const listGRNs = async ({ q, page = 0, size = 10, paymentStatus }) => (await api.get(`/grns?${qp({ q, page, size, sort: "createdAt,desc", paymentStatus: paymentStatus || undefined })}`)).data;
@@ -110,25 +111,25 @@ export default function GRNListView() {
     };
 
     return (
-        <Container className="py-4">
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                    <div className="d-flex align-items-center mb-4">
-                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Goods Received Notes (GRN)</h2>
+        <Container fluid className="grn-list-page operational-workspace">
+            <section className="grn-list-workspace operational-workspace-surface" aria-labelledby="grn-list-heading">
+                <header className="grn-list-header">
+                    <div className="grn-list-heading-group">
+                        <button type="button" className="grn-list-back-button" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={18} aria-hidden="true" /></button>
+                        <div><h1 id="grn-list-heading">Goods Received Notes</h1><p>Review receipt, payment, return, and supplier invoice progress.</p></div>
                     </div>
-                    <div className="d-flex gap-2 align-items-center flex-wrap">
+                    <div className="grn-list-filters" role="search" aria-label="GRN filters">
                         <Form.Control
                             placeholder="Search GRN / PO Number / Supplier"
+                            aria-label="Search GRN, PO number, or supplier"
                             value={q}
                             onChange={e => setQ(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') { setPage(0); load(); } }}
-                            style={{ maxWidth: 260 }}
                         />
                         <SafeSelect
+                            aria-label="Filter GRNs by payment status"
                             value={statusFilter}
                             onChange={e => { setStatusFilter(e.target.value); setPage(0); }}
-                            style={{ maxWidth: 180 }}
                         >
                             <option value="">All Statuses</option>
                             <option value="UNPAID">Unpaid</option>
@@ -138,9 +139,9 @@ export default function GRNListView() {
                         </SafeSelect>
                         <Button variant="outline-secondary" onClick={() => { setPage(0); load(); }}>Search</Button>
                     </div>
-                </div>
+                </header>
 
-                <Table hover responsive>
+                <div className="grn-list-table-scroll" tabIndex="0" aria-label="Goods received notes table"><Table hover className="grn-list-table mb-0">
                     <thead>
                         <tr>
                             <th>GRN No</th><th>PO No</th><th>Supplier</th><th>Date</th>
@@ -181,13 +182,13 @@ export default function GRNListView() {
                                     <Button size="sm" variant="outline-success" className="me-2" onClick={() => setSelectedGRN(g)}>Payments</Button>
                                     <Button size="sm" variant="outline-dark" className="me-2" onClick={() => setSelectedGRNItems(g)}>Items</Button>
                                     <Button size="sm" variant="outline-primary" className="me-2" onClick={() => setSelectedGRNReport(g)}>Report</Button>
-                                    {canCorrectRate && <Button size="sm" variant="outline-warning" className="me-2" onClick={() => navigate(`/grns/${g.id}/rate-correction`)}>Correct Rate</Button>}
+                                    {canCorrectRate && <Button size="sm" variant="outline-warning" className="me-2 grn-list-correct-rate" onClick={() => navigate(`/grns/${g.id}/rate-correction`)}>Correct Rate</Button>}
                                     <Button size="sm" variant="outline-danger" onClick={() => setSelectedGRNReturn(g)}>Return</Button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
-                </Table>
+                </Table></div>
 
                 <div className="d-flex justify-content-between align-items-center">
                     <div>Page {page + 1} / {Math.max(1, data.totalPages || 1)}</div>
@@ -196,7 +197,7 @@ export default function GRNListView() {
                         <Button disabled={page + 1 >= (data.totalPages || 1)} onClick={() => setPage(p => p + 1)} variant="outline-secondary">Next</Button>
                     </div>
                 </div>
-            </div>
+            </section>
 
             {selectedGRN && <GRNPaymentModal grn={selectedGRN} canVerifyPayment={canVerifyGRNPayment} onClose={() => { setSelectedGRN(null); load(); }} />}
             {selectedGRNReturn && <GRNReturnModal grn={selectedGRNReturn} onClose={() => { setSelectedGRNReturn(null); load(); }} />}

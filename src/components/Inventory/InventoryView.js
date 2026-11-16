@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Printer, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Table, Container, Form, Button, Row, Col, Modal } from 'react-bootstrap';
@@ -8,6 +8,7 @@ import 'jspdf-autotable';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
+import './InventoryView.css';
 
 function InventoryView() {
     const navigate = useNavigate();
@@ -334,48 +335,38 @@ function InventoryView() {
     );
 
     return (
-        <Container className="my-5">
-            <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0 mb-0 text-center mb-0">Inventory Summary</h2>
-                        </div>
-<Form className="mb-4">
-                <Row>
+        <Container fluid className="inventory-view-page operational-workspace">
+            <section className="inventory-view-workspace operational-workspace-surface" aria-labelledby="inventory-view-heading">
+            <header className="inventory-view-header">
+                <div className="inventory-view-heading-group">
+                    <button type="button" className="inventory-view-back-button" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={19} aria-hidden="true" /></button>
+                    <div><h1 id="inventory-view-heading">Inventory Summary</h1><p>Search current stock, then open a product to inspect locations, batches, and movement history.</p></div>
+                </div>
+                <Button className="inventory-view-print" variant="outline-secondary" onClick={generatePDF}><Printer size={17} aria-hidden="true" />Print view</Button>
+            </header>
+            <Form className="inventory-view-filters" role="search" aria-label="Inventory filters" onSubmit={(event) => { event.preventDefault(); applyFilters(); }}>
+                <Row className="g-3">
                     {/* Simplified Filters - Removed Location/Expiry/Supplier for Summary View stability */}
-                    <Col md={6}>
+                    <Col lg={7}>
                         <Form.Group controlId="genericNameFilter">
-                            <Form.Label>Product Name Search</Form.Label>
-                            <Form.Control
-                                type="text"
-                                value={genericNameFilter}
-                                onChange={(e) => setGenericNameFilter(e.target.value)}
-                                placeholder="Enter product name..."
-                            />
+                            <Form.Label>Search inventory</Form.Label>
+                            <div className="inventory-view-search-control"><Search size={18} aria-hidden="true" /><Form.Control type="text" value={genericNameFilter} onChange={(e) => setGenericNameFilter(e.target.value)} placeholder="Product name" /></div>
                         </Form.Group>
                     </Col>
-                    <Col md={6} className="d-flex align-items-end">
+                    <Col lg={5} className="d-flex align-items-end">
                         <div className="text-muted small">
-                            Note: For detailed batch/expiry/supplier info and specific location quantities, click on a product row.
+                            Select a product for batch, location, expiry, and supplier-return details.
                         </div>
                     </Col>
                 </Row>
-                <div className="d-flex justify-content-between mt-3">
-                    <div className="d-flex gap-2">
-                        <Button variant="primary" onClick={applyFilters}>
-                            Filter
-                        </Button>
-                        <Button variant="outline-primary" onClick={fetchInventory} disabled={loadingInventory}>
-                            {loadingInventory ? 'Refreshing…' : 'Refresh Stock'}
-                        </Button>
-                    </div>
-                    <Button variant="secondary" onClick={generatePDF}>
-                        Print View
-                    </Button>
+                <div className="inventory-view-filter-actions">
+                    <Button type="submit" variant="primary"><Search size={17} aria-hidden="true" />Search</Button>
+                    <Button type="button" variant="outline-primary" onClick={fetchInventory} disabled={loadingInventory}><RefreshCw size={17} aria-hidden="true" />{loadingInventory ? 'Refreshing…' : 'Refresh stock'}</Button>
                 </div>
             </Form>
-
-            <Table bordered hover responsive className="text-center">
-                <thead className="table-primary">
+            <div className="inventory-view-table-scroll" tabIndex={0} aria-label="Inventory summary table">
+            <Table hover className="inventory-view-table mb-0 align-middle">
+                <thead>
                     <tr>
                         <th>Product Name</th>
                         <th>Total Quantity (All)</th>
@@ -390,13 +381,13 @@ function InventoryView() {
                             onClick={() => handleProductClick(item)}
                             style={{ cursor: 'pointer' }}
                         >
-                            <td>{item.productName}</td>
-                            <td>{formatQuantity(item.totalQuantity)}</td>
-                            <td>{formatQuantity(item.mainStoreQuantity)}</td>
+                            <td data-label="Product"><span className="inventory-view-product-name">{item.productName}</span></td>
+                            <td data-label="Total quantity">{formatQuantity(item.totalQuantity)}</td>
+                            <td data-label="Main store">{formatQuantity(item.mainStoreQuantity)}</td>
                             {selectedLocations.length > 0 && (
                                 <td className="fw-bold text-success">{formatQuantity(getFilteredQty(item))}</td>
                             )}
-                            <td>
+                            <td data-label="Action" className="inventory-view-row-action">
                                 <Button size="sm" variant="info" onClick={(e) => { e.stopPropagation(); handleProductClick(item); }}>
                                     View Details
                                 </Button>
@@ -412,8 +403,9 @@ function InventoryView() {
                     )}
                 </tbody>
             </Table>
+            </div>
 
-            <Modal show={showModal} onHide={() => setShowModal(false)} size="xl">
+            <Modal show={showModal} onHide={() => setShowModal(false)} size="xl" dialogClassName="inventory-view-details-modal">
                 <Modal.Header closeButton>
                     <Modal.Title>Details: {selectedProduct?.productName}</Modal.Title>
                 </Modal.Header>
@@ -630,6 +622,7 @@ function InventoryView() {
                 </Modal.Footer>
             </Modal>
 
+            </section>
         </Container>
     );
 }

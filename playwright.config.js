@@ -3,6 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
     testDir: './tests/e2e',
+    globalSetup: require.resolve('./tests/e2e/safety.global-setup'),
     timeout: 60 * 1000,
     expect: {
         timeout: 10000
@@ -13,7 +14,7 @@ module.exports = defineConfig({
     workers: 1, // Sequential execution to maintain state
     reporter: 'html',
     use: {
-        baseURL: 'http://localhost:3000',
+        baseURL: process.env.MARUKA_WORKFLOW_BASE_URL || 'http://unsafe-target.invalid',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',

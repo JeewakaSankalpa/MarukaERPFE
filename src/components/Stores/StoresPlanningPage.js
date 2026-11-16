@@ -1,10 +1,11 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, PackageOpen, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 // src/components/Stores/StoresPlanningPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Container, Button, Form, Table, Spinner } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
+import "./StoresPlanningPage.css";
 import "react-toastify/dist/ReactToastify.css";
 
 const fetchAggregate = async () => (await api.get(`/stores/requests/aggregate`)).data;
@@ -16,9 +17,11 @@ export default function StoresPlanningPage() {
     const [selection, setSelection] = useState({}); // productId -> user-entered qty
     const [loading, setLoading] = useState(false);
     const [posting, setPosting] = useState(false);
+    const [loadError, setLoadError] = useState("");
 
     const load = async () => {
         setLoading(true);
+        setLoadError("");
         try {
             const data = await fetchAggregate();
             const safe = Array.isArray(data) ? data : [];
@@ -33,7 +36,9 @@ export default function StoresPlanningPage() {
                 safe.map(r => [r.productId, Math.max(0, (Number(r.needQty)||0) - (Number(r.availableQty)||0))])
             ));
         } catch (e) {
-            toast.error(e?.response?.data?.message || "Failed to load stores planning data");
+            const message = e?.response?.data?.message || "Stores planning data could not be loaded.";
+            setLoadError(message);
+            toast.error(message);
             setRows([]);
             setSelection({});
         } finally {
@@ -67,6 +72,14 @@ export default function StoresPlanningPage() {
         return out;
     }, [rows, selection, maxShortageByProduct]);
 
+    const totals = useMemo(() => rows.reduce((summary, row) => {
+        const shortage = maxShortageByProduct[row.productId] || 0;
+        summary.products += 1;
+        summary.shortage += shortage;
+        if (shortage > 0) summary.actionable += 1;
+        return summary;
+    }, { products: 0, shortage: 0, actionable: 0 }), [rows, maxShortageByProduct]);
+
     const doPendingPurchase = async () => {
         const count = Object.keys(shortagesPayload).length;
         if (count === 0) { toast.info("No shortages to plan"); return; }
@@ -91,22 +104,31 @@ export default function StoresPlanningPage() {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 1000, paddingTop: 24 }}>
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex justify-content-between align-items-start mb-4">
-                    <div className="d-flex align-items-center">
-                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Stores Planning (Procurement)</h2>
-                        {loading && <div className="ms-3 d-flex align-items-center gap-2"><Spinner size="sm" animation="border" /> <span className="text-muted small">Loading…</span></div>}
+        <Container fluid className="stores-planning-page operational-workspace">
+            <section className="stores-planning-workspace operational-workspace-surface" aria-labelledby="stores-planning-heading">
+                <header className="stores-planning-header">
+                    <div className="stores-planning-heading-group">
+                        <button type="button" className="stores-planning-back-button" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={19} aria-hidden="true" /></button>
+                        <div>
+                            <h1 id="stores-planning-heading">Stores Planning (Procurement)</h1>
+                            <p>Review shortages, adjust planned quantities, and send only confirmed gaps to Pending Purchases.</p>
+                        </div>
                     </div>
-                    <div className="d-flex gap-2 justify-content-end">
-                        <Button variant="primary" onClick={doPendingPurchase} disabled={posting || loading}>
-                            {posting ? (<><Spinner size="sm" animation="border" className="me-2" />Adding…</>) : "Add Shortages to Pending Purchase"}
-                        </Button>
-                    </div>
+                    <Button className="stores-planning-primary-action" variant="primary" onClick={doPendingPurchase} disabled={posting || loading}>
+                        <ShoppingCart size={18} aria-hidden="true" />
+                        {posting ? (<><Spinner size="sm" animation="border" />Adding…</>) : "Add shortages to Pending Purchase"}
+                    </Button>
+                </header>
+
+                <div className="stores-planning-summary" aria-live="polite" aria-busy={loading}>
+                    <div><span>Products reviewed</span><strong>{totals.products}</strong></div>
+                    <div><span>Actionable shortages</span><strong>{totals.actionable}</strong></div>
+                    <div><span>Total shortage</span><strong>{totals.shortage.toLocaleString()}</strong></div>
                 </div>
 
-                <Table hover responsive>
+                {loadError && <div className="stores-planning-error" role="alert"><span>{loadError}</span><Button size="sm" variant="outline-danger" onClick={load}>Try again</Button></div>}
+                <div className="stores-planning-table-scroll" tabIndex={0} aria-label="Stores planning table">
+                <Table hover className="stores-planning-table mb-0">
                     <thead>
                     <tr>
                         <th>Product</th>
@@ -116,23 +138,27 @@ export default function StoresPlanningPage() {
                     </tr>
                     </thead>
                     <tbody>
-                    {(!rows || rows.length === 0) ? (
-                        <tr><td colSpan={4} className="text-center text-muted">{loading ? "Loading…" : "No rows"}</td></tr>
+                    {loading && [0, 1, 2].map(index => (
+                        <tr className="stores-planning-skeleton-row" key={`planning-skeleton-${index}`} aria-hidden="true"><td><span /></td><td><span /></td><td><span /></td><td><span /></td></tr>
+                    ))}
+                    {!loading && (!rows || rows.length === 0) ? (
+                        <tr className="stores-planning-empty-row"><td colSpan={4}><PackageOpen size={28} aria-hidden="true" /><strong>No shortages to plan</strong><span>{loadError ? "Restore the connection and try again." : "All currently reviewed stock requirements are covered."}</span></td></tr>
                     ) : rows.map(r => {
                         const pid = r.productId;
                         const maxShort = maxShortageByProduct[pid] ?? 0;
                         return (
                             <tr key={pid}>
-                                <td>{r.productName || pid}</td>
-                                <td className="text-end">{r.needQty}</td>
-                                <td className="text-end">{r.availableQty}</td>
-                                <td>
+                                <td data-label="Product"><strong>{r.productName || pid}</strong><span className="stores-planning-product-id">{pid}</span></td>
+                                <td data-label="Need" className="text-end stores-planning-number">{Number(r.needQty || 0).toLocaleString()}</td>
+                                <td data-label="Available" className="text-end stores-planning-number">{Number(r.availableQty || 0).toLocaleString()}</td>
+                                <td data-label="Shortage to plan">
                                     <Form.Control
                                         type="number"
                                         min="0"
                                         value={selection[pid] ?? 0}
                                         onChange={e => setQty(pid, e.target.value)}
                                         disabled={posting}
+                                        aria-label={`Shortage to plan for ${r.productName || pid}`}
                                     />
                                     {maxShort === 0 && <div className="small text-muted">No shortage</div>}
                                 </td>
@@ -141,8 +167,8 @@ export default function StoresPlanningPage() {
                     })}
                     </tbody>
                 </Table>
-
-            </div>
+                </div>
+            </section>
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>
     );

@@ -72,3 +72,17 @@ test('does not replace saved component, discount, or tax values with premature l
   expect(screen.getByText('LKR 17.41')).toBeInTheDocument();
   expect(screen.getByText('LKR 114.11')).toBeInTheDocument();
 });
+
+test('keeps persisted VAT and other-tax amounts distinct in the project summary', async () => {
+  await renderSavedEstimation({
+    computedVatAmount: 17.41,
+    computedTaxAmount: 0.73,
+    computedGrandTotal: 114.84,
+  });
+
+  expect(screen.getByText('VAT')).toBeInTheDocument();
+  expect(screen.getByText('Other tax')).toBeInTheDocument();
+  expect(screen.getByText('LKR 17.41')).toBeInTheDocument();
+  expect(screen.getByText('LKR 0.73')).toBeInTheDocument();
+  expect(screen.getByText('LKR 114.84')).toBeInTheDocument();
+});

@@ -1,0 +1,166 @@
+{
+  "capturedAt": "2026-11-12T03:10:29.172Z",
+  "revision": "75c1d0155d86fc9abd1d31354cedd2214267b939",
+  "node": "v22.23.2",
+  "notes": [
+    "Build completed with existing ESLint warnings.",
+    "The main bundle is eager-loaded; async chunks originate from project-detail component boundaries.",
+    "This file contains asset measurements only and no environment URLs or credentials."
+  ],
+  "totals": {
+    "javascript": {
+      "files": 17,
+      "bytes": 5452349,
+      "gzipBytes": 1534019,
+      "asyncChunks": 16
+    },
+    "css": {
+      "files": 3,
+      "bytes": 420137,
+      "gzipBytes": 66942,
+      "asyncChunks": 2
+    }
+  },
+  "assets": [
+    {
+      "type": "js",
+      "name": "main.1d7a830e.js",
+      "bytes": 4926631,
+      "gzipBytes": 1382527,
+      "asyncChunk": false
+    },
+    {
+      "type": "css",
+      "name": "main.e2e82cdf.css",
+      "bytes": 418259,
+      "gzipBytes": 66084,
+      "asyncChunk": false
+    },
+    {
+      "type": "js",
+      "name": "239.ebc514c0.chunk.js",
+      "bytes": 203177,
+      "gzipBytes": 46618,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "455.82f3fe78.chunk.js",
+      "bytes": 138188,
+      "gzipBytes": 42955,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "120.f33337dc.chunk.js",
+      "bytes": 56403,
+      "gzipBytes": 18075,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "977.1d3b4d4e.chunk.js",
+      "bytes": 22117,
+      "gzipBytes": 8527,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "934.301b3ec4.chunk.js",
+      "bytes": 18555,
+      "gzipBytes": 5505,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "783.a8c66c21.chunk.js",
+      "bytes": 15598,
+      "gzipBytes": 5108,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "760.7019c740.chunk.js",
+      "bytes": 11925,
+      "gzipBytes": 3583,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "540.4e401b6e.chunk.js",
+      "bytes": 11530,
+      "gzipBytes": 3271,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "571.53eb2fa2.chunk.js",
+      "bytes": 10240,
+      "gzipBytes": 2969,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "270.4cfbf8ae.chunk.js",
+      "bytes": 7842,
+      "gzipBytes": 2511,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "162.db572ffb.chunk.js",
+      "bytes": 6870,
+      "gzipBytes": 2488,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "743.0f0d96ca.chunk.js",
+      "bytes": 5829,
+      "gzipBytes": 2282,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "124.697d6f20.chunk.js",
+      "bytes": 5751,
+      "gzipBytes": 2321,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "932.5c68c8c4.chunk.js",
+      "bytes": 5063,
+      "gzipBytes": 2051,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "451.599233d2.chunk.js",
+      "bytes": 4241,
+      "gzipBytes": 1955,
+      "asyncChunk": true
+    },
+    {
+      "type": "js",
+      "name": "872.fa67ef9a.chunk.js",
+      "bytes": 2389,
+      "gzipBytes": 1273,
+      "asyncChunk": true
+    },
+    {
+      "type": "css",
+      "name": "451.67a7da04.chunk.css",
+      "bytes": 939,
+      "gzipBytes": 429,
+      "asyncChunk": true
+    },
+    {
+      "type": "css",
+      "name": "872.67a7da04.chunk.css",
+      "bytes": 939,
+      "gzipBytes": 429,
+      "asyncChunk": true
+    }
+  ]
+}

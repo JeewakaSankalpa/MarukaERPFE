@@ -43,6 +43,16 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:e2e": "playwright test",
+    "test:e2e:legacy-mutating": "playwright test --config=playwright.config.js",
+    "audit:manifest": "node scripts/audit/generate-route-manifest.js",
+    "audit:baseline": "node scripts/audit/capture-build-baseline.js",
+    "audit:unit": "node --test tests/audit/support/*.node.test.js",
+    "audit:list": "playwright test --config=playwright.audit.config.js --list",
+    "audit:smoke": "playwright test --config=playwright.audit.config.js --grep @smoke",
+    "audit:layout": "playwright test --config=playwright.audit.config.js --grep @layout",
+    "audit:a11y": "playwright test --config=playwright.audit.config.js --grep @a11y",
+    "audit:read-only": "playwright test --config=playwright.audit.config.js",
+    "audit:verify-browser": "node scripts/audit/verify-browser-launch.js",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -64,7 +74,8 @@
     ]
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
+    "@axe-core/playwright": "4.11.0",
+    "@playwright/test": "1.65.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^16.3.0",
     "tailwindcss": "^4.1.11"

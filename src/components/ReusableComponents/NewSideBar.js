@@ -123,7 +123,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
   };
 
   return (
-    <div
+    <nav
       id="primary-sidebar"
       className={`sidebar-container no-print ${isMobileOpen ? 'mobile-open' : ''}`}
       aria-label="Primary navigation"
@@ -163,10 +163,12 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
       {!collapsed && (
         <div className="px-3 py-3 border-bottom border-secondary bg-opacity-10 bg-black mb-2">
           <div className="d-flex align-items-center justify-content-between">
-            <div
-              className="d-flex align-items-center cursor-pointer hover-opacity-80"
+            <button
+              type="button"
+              className="sidebar-navigation-button d-flex align-items-center cursor-pointer hover-opacity-80"
               onClick={() => navigate('/employee/profile')}
               title="Go to My Profile"
+              aria-label="View my profile"
               style={{ cursor: 'pointer' }}
             >
               <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-bold text-white shadow-sm"
@@ -177,7 +179,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
                 <div className="fw-semibold small text-light">{userRole}</div>
                 <div className="text-muted" style={{ fontSize: '10px' }}>View Profile</div>
               </div>
-            </div>
+            </button>
             <NotificationBell />
           </div>
         </div>
@@ -196,8 +198,10 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
               onMouseLeave={() => setHoveredMenu(null)}
             >
               {/* Main Menu Item */}
-              <div
-                className={`d-flex align-items-center px-3 py-2 rounded-3 cursor-pointer ${isActiveGroup ? 'bg-primary bg-opacity-25 text-white' : 'text-white-50 hover-bg-white-10'}`}
+              <button
+                type="button"
+                className={`sidebar-navigation-button d-flex align-items-center px-3 py-2 rounded-3 cursor-pointer ${isActiveGroup ? 'bg-primary bg-opacity-25 text-white' : 'text-white-50 hover-bg-white-10'}`}
+                aria-expanded={menu.submenus.length ? isActiveGroup : undefined}
                 style={{
                   transition: 'all 0.2s',
                   backgroundColor: isActiveGroup ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
@@ -215,7 +219,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
                 {!collapsed && (
                   <span className="ms-3 fw-medium small" style={{ flex: 1 }}>{menu.title}</span>
                 )}
-              </div>
+              </button>
 
               {/* Submenus (Expanded Mode) */}
               {!collapsed && isActiveGroup && (
@@ -223,9 +227,11 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
                   {menu.submenus.map((sub, sIdx) => {
                     const isSubActive = location.pathname === sub.path;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={sIdx}
-                        className={`py-1 px-2 rounded small cursor-pointer mb-1 ${isSubActive ? 'text-white fw-bold bg-white bg-opacity-10' : 'text-white-50'}`}
+                        className={`sidebar-navigation-button py-1 px-2 rounded small cursor-pointer mb-1 ${isSubActive ? 'text-white fw-bold bg-white bg-opacity-10' : 'text-white-50'}`}
+                        aria-current={isSubActive ? 'page' : undefined}
                         onClick={(e) => { e.stopPropagation(); handleMobileNav(sub.path); }}
                         style={{
                           transition: '0.2s',
@@ -233,7 +239,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
                         }}
                       >
                         {sub.name}
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -258,13 +264,14 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
                     {menu.title}
                   </div>
                   {menu.submenus.map((sub, sIdx) => (
-                    <div
+                    <button
+                      type="button"
                       key={sIdx}
-                      className="px-3 py-2 text-white-50 hover-text-white cursor-pointer small"
+                      className="sidebar-navigation-button px-3 py-2 text-white-50 hover-text-white cursor-pointer small"
                       onClick={() => handleMobileNav(sub.path)}
                     >
                       {sub.name}
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -279,7 +286,7 @@ function NewSideBar({ isMobileOpen = false, onClose }) {
           © 2024 Maruka ERP
         </div>
       )}
-    </div>
+    </nav>
   );
 }
 

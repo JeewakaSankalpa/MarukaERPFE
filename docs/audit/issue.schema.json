@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Maruka frontend audit issue",
+  "type": "object",
+  "required": ["id", "route", "state", "browser", "viewport", "reproduction", "expected", "actual", "evidence", "rootCause", "severity", "status"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^(LAY-OVF|LAY-RSP|NAV|TBL|MOD|A11Y-KBD|A11Y-SEM|A11Y-VIS|STATE|PERF|FUNC|CONS)-[0-9]{3,}$" },
+    "route": { "type": "string" },
+    "state": { "type": "string" },
+    "persona": { "type": ["string", "null"] },
+    "browser": { "type": "string" },
+    "viewport": { "type": "string" },
+    "zoom": { "type": ["string", "null"] },
+    "reproduction": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "expected": { "type": "string" },
+    "actual": { "type": "string" },
+    "evidence": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "rootCause": { "type": "string" },
+    "severity": { "enum": ["critical", "high", "medium", "low"] },
+    "status": { "enum": ["MOCK-VERIFIED", "STAGING-VERIFIED", "FAILED", "BLOCKED", "NOT TESTED"] },
+    "independentVerification": {
+      "type": ["object", "null"],
+      "properties": {
+        "reviewer": { "type": "string" },
+        "result": { "enum": ["MOCK-VERIFIED", "STAGING-VERIFIED", "FAILED", "BLOCKED"] },
+        "evidence": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["reviewer", "result", "evidence"]
+    }
+  },
+  "additionalProperties": false
+}

@@ -8,6 +8,7 @@ import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import { getPurchaseForSources, formatSourceRef, orderedQty, receivedQty, allocationQty, formatQty, getDisplayPOItems } from "./poDisplay";
+import "./PurchaseOrderDetails.css";
 
 /* ========== API HELPERS ========== */
 const getPO = async (id) => (await api.get(`/pos/${id}`)).data;
@@ -147,6 +148,18 @@ export default function PurchaseOrderDetails() {
         if (id) loadData();
         // eslint-disable-next-line
     }, [id]);
+
+    useEffect(() => {
+        if (!po) return;
+        const labelScrollers = () => document.querySelectorAll('.table-responsive').forEach((scroller) => {
+            scroller.tabIndex = 0;
+            scroller.setAttribute('aria-label', 'Purchase order detail table');
+        });
+        labelScrollers();
+        const observer = new MutationObserver(labelScrollers);
+        observer.observe(document.body, { childList: true, subtree: true });
+        return () => observer.disconnect();
+    }, [po]);
 
     const isApprover = useMemo(() => {
         if (!po || !po.approverIds) return false;
@@ -432,10 +445,11 @@ export default function PurchaseOrderDetails() {
     );
 
     return (
-        <Container className="py-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
+        <Container fluid className="purchase-order-details-page operational-workspace">
+            <section className="purchase-order-details-workspace operational-workspace-surface" aria-labelledby="purchase-order-details-heading">
+            <header className="purchase-order-details-header">
                 <div className="d-flex gap-2 align-items-center">
-                    <button type="button" className="btn btn-light me-1" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                    <button type="button" className="btn btn-light me-1" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={18} aria-hidden="true" /></button>
                     <Button variant="outline-secondary" onClick={() => navigate(backToListPath)}>&larr; Back to List</Button>
                     <Button
                         variant="info"
@@ -446,7 +460,7 @@ export default function PurchaseOrderDetails() {
                         Print View
                     </Button>
                 </div>
-                <div className="d-flex gap-2">
+                <div className="purchase-order-details-actions">
                     {isDraft && (
                         <>
                             <Button variant="outline-primary" onClick={() => navigate(`/pos/${id}/edit`)}>
@@ -520,14 +534,14 @@ export default function PurchaseOrderDetails() {
                         </Button>
                     )}
                 </div>
-            </div>
+            </header>
 
-            <Row>
+            <Row className="purchase-order-details-content g-3">
                 <Col md={8}>
-                    <div className="bg-white shadow rounded p-4 mb-4">
+                    <div className="purchase-order-details-primary bg-white shadow rounded p-4 mb-4">
                         <div className="d-flex justify-content-between align-items-start mb-4">
                             <div>
-                                <h3 className="mb-1">Purchase Order: {po.poNumber}</h3>
+                                <h1 id="purchase-order-details-heading" className="mb-1">Purchase Order: {po.poNumber}</h1>
                                 <div className="text-muted">Supplier: <strong>{po.supplierNameSnapshot}</strong></div>
                                 <div className="text-muted">Quotation No: <strong>{po.quotationRef || "-"}</strong></div>
                                 <div className="mt-2">
@@ -589,7 +603,7 @@ export default function PurchaseOrderDetails() {
                             </div>
                         )}
 
-                        <Table hover responsive bordered>
+                        <div className="purchase-order-details-table-scroll" tabIndex="0" aria-label="Purchase order line items"><Table hover bordered className="purchase-order-details-table">
                             <thead className="bg-light">
                                 <tr>
                                     <th>Product</th>
@@ -675,7 +689,7 @@ export default function PurchaseOrderDetails() {
                                     );
                                 })}
                             </tbody>
-                        </Table>
+                        </Table></div>
 
                         {/* Totals Breakdown — always visible */}
                         <div className="d-flex justify-content-end">
@@ -1192,6 +1206,7 @@ export default function PurchaseOrderDetails() {
             </Modal>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
+            </section>
         </Container>
     );
 }

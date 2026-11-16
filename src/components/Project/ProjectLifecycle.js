@@ -8,7 +8,7 @@ export default function ProjectLifecycle({ stages = [], currentStage, status }) 
 
     // Fallback if no stages provided (e.g. loading or legacy)
     const activeStages = (stages && stages.length > 0)
-        ? stages
+        ? stages.map((stage) => typeof stage === 'object' ? stage?.stageType : stage).filter(Boolean)
         : ["INQUIRY", "ESTIMATION", "QUOTATION", "PRODUCTION", "DELIVERY", "COMPLETION"];
 
     // Find index of current stage

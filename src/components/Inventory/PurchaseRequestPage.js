@@ -8,6 +8,7 @@ import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
+import "./PurchaseRequestPage.css";
 
 /* ================== Inline API helpers ================== */
 const qp = (o = {}) => {
@@ -313,22 +314,25 @@ function PRForm({ onSaved }) {
     };
 
     return (
-        <Container style={{ width: "80vw", maxWidth: 980, paddingTop: 24 }}>
-            <div className="bg-white shadow rounded p-4">
-                <div className="d-flex align-items-center mb-4">
-                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+        <Container fluid className="purchase-request-page operational-workspace">
+            <main className="purchase-request-workspace operational-workspace-surface" aria-labelledby="purchase-request-heading">
+                <header className="purchase-request-header">
+                    <button type="button" className="purchase-request-back-button" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={18} aria-hidden="true" /></button>
                     <div>
-                        <h2 className="mb-0" style={{ fontSize: "1.5rem" }}>Create Purchase Request</h2>
-                        {activeDraftId && <small className="text-muted">Editing saved draft</small>}
+                        <p className="purchase-request-eyebrow">Procurement</p>
+                        <h1 id="purchase-request-heading">Create Purchase Request</h1>
+                        <p className="purchase-request-subtitle">Select stock items, set requested quantities, and retain a draft before submission.</p>
+                        {activeDraftId && <Badge bg="primary" className="mt-2">Editing saved draft</Badge>}
                     </div>
-                </div>
+                </header>
                 {drafts.length > 0 && (
-                    <div className="border rounded p-3 mb-4">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                            <h5 className="mb-0">Created Drafts</h5>
+                    <section className="purchase-request-drafts mb-4" aria-labelledby="purchase-request-drafts-heading">
+                        <div className="purchase-request-section-heading d-flex justify-content-between align-items-center gap-3">
+                            <div><h2 id="purchase-request-drafts-heading">Created Drafts</h2><p>Resume a saved request without losing its selected lines.</p></div>
                             <Button size="sm" variant="outline-secondary" onClick={resetForm}>New Draft</Button>
                         </div>
-                        <Table responsive hover size="sm" className="mb-0">
+                        <div className="purchase-request-table-scroll" role="region" tabIndex={0} aria-label="Created purchase request drafts">
+                        <Table hover size="sm" className="purchase-request-table mb-0">
                             <thead>
                                 <tr>
                                     <th>Draft</th>
@@ -358,28 +362,30 @@ function PRForm({ onSaved }) {
                                 ))}
                             </tbody>
                         </Table>
-                    </div>
+                        </div>
+                    </section>
                 )}
-                <Form noValidate validated={validated} onSubmit={save} className="mt-3">
+                <Form noValidate validated={validated} onSubmit={save} className="purchase-request-form">
                     <Row className="g-3">
                         <Col md={12}>
                             <Form.Group>
                                 <Form.Label>Comment</Form.Label>
-                                <Form.Control as="textarea" rows={1} value={comment} onChange={(e) => setComment(e.target.value)} />
+                                <Form.Control aria-label="Purchase request comment" as="textarea" rows={1} value={comment} onChange={(e) => setComment(e.target.value)} />
                             </Form.Group>
                         </Col>
                     </Row>
 
-                    <div className="mt-4">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                            <h5 className="mb-0">Items ({fmtNum(totalLines)})</h5>
+                    <section className="purchase-request-items" aria-labelledby="purchase-request-items-heading">
+                        <div className="purchase-request-section-heading d-flex justify-content-between align-items-center gap-3">
+                            <div><h2 id="purchase-request-items-heading">Items <span>({fmtNum(totalLines)} selected)</span></h2><p>Enter quantities only for items required by this request.</p></div>
                             <div className="d-flex align-items-center gap-2">
-                                {loadingProducts && <Badge bg="info">Loading products...</Badge>}
+                                {loadingProducts && <Badge bg="info" text="dark">Loading products...</Badge>}
                             </div>
                         </div>
-                        <div className="d-flex gap-2 mb-2">
+                        <div className="purchase-request-search mb-3" role="search">
                             <Form.Control
                                 placeholder="Search item names or SKU"
+                                aria-label="Search item names or SKU"
                                 value={itemSearch}
                                 onChange={(e) => setItemSearch(e.target.value)}
                                 onKeyDown={(e) => {
@@ -394,9 +400,9 @@ function PRForm({ onSaved }) {
                             </Button>
                         </div>
 
-                        <div className="border rounded" style={{ maxHeight: 360, overflowY: "auto" }} onScroll={handleProductsScroll}>
-                            <Table hover responsive size="sm" className="mb-0">
-                                <thead className="table-light" style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                        <div className="purchase-request-table-scroll" role="region" tabIndex={0} aria-label="Purchase request products" onScroll={handleProductsScroll}>
+                            <Table hover size="sm" className="purchase-request-table mb-0">
+                                <thead>
                                 <tr>
                                     <th style={{ minWidth: 180 }}>Product</th>
                                     <th>SKU</th>
@@ -434,6 +440,7 @@ function PRForm({ onSaved }) {
                                                         step="0.01"
                                                         inputMode="decimal"
                                                         value={r.qty}
+                                                        aria-label={`Requested quantity for ${r.name}`}
                                                         onChange={(e) => setRow(i, "qty", e.target.value)}
                                                     />
                                                     <InputGroup.Text>{safe(r.unit)}</InputGroup.Text>
@@ -442,6 +449,7 @@ function PRForm({ onSaved }) {
                                             <td>
                                                 <Form.Control
                                                     value={r.note}
+                                                    aria-label={`Note for ${r.name}`}
                                                     onChange={(e) => setRow(i, "note", e.target.value)}
                                                     placeholder="optional"
                                                 />
@@ -472,18 +480,18 @@ function PRForm({ onSaved }) {
                         <div className="small text-muted mt-1">
                             {hasMoreProducts ? `Showing ${rows.length} items. Scroll down to load more.` : `Showing ${rows.length} items.`}
                         </div>
-                    </div>
+                    </section>
 
-                    <div className="d-flex gap-2 mt-3">
-                        <Button type="button" variant="outline-primary" className="w-50" onClick={saveDraft} disabled={savingDraft || submitting}>
+                    <div className="purchase-request-actions">
+                        <Button type="button" variant="outline-primary" onClick={saveDraft} disabled={savingDraft || submitting}>
                             {savingDraft ? "Saving Draft..." : "Save Draft"}
                         </Button>
-                        <Button type="submit" className="w-50" disabled={savingDraft || submitting}>
+                        <Button type="submit" disabled={savingDraft || submitting}>
                             {submitting ? "Submitting..." : "Submit Purchase Request"}
                         </Button>
                     </div>
                 </Form>
-            </div>
+            </main>
 
             <ToastContainer position="top-right" autoClose={2500} hideProgressBar newestOnTop />
         </Container>

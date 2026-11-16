@@ -236,11 +236,20 @@ export default function ProjectEstimationCard({ project, projectId, onOpen, read
                     </tr>
                 )}
 
-                {(vatAmount > 0 || taxAmount > 0) && (
+                {vatAmount > 0 && (
                     <tr>
-                        <td>Taxes (VAT/Other)</td>
+                        <td>VAT</td>
                         <td className="text-end">
-                            {currency} {money(vatAmount + taxAmount)}
+                            {currency} {money(vatAmount)}
+                        </td>
+                    </tr>
+                )}
+
+                {taxAmount > 0 && (
+                    <tr>
+                        <td>Other tax</td>
+                        <td className="text-end">
+                            {currency} {money(taxAmount)}
                         </td>
                     </tr>
                 )}

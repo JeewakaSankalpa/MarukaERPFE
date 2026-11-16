@@ -4,29 +4,21 @@ import { useNavigate } from "react-router-dom";
 import { FaBoxes, FaExclamationTriangle, FaBoxOpen, FaClipboardList, FaArrowRight, FaPlus } from "react-icons/fa";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import api from "../../api/api";
-import MenuCard from "../ReusableComponents/MenuCard";
 import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import { toast } from "react-toastify";
+import "./InventoryDashboard.css";
 
 const StatCard = ({ title, value, icon, color, subtext }) => (
-  <Card className="h-100 shadow-sm border-0">
+  <Card className="inventory-dashboard-kpi h-100 border-0">
     <Card.Body className="d-flex align-items-center justify-content-between gap-3">
       <div className="min-w-0 flex-grow-1">
-        <h6 className="text-muted text-uppercase mb-2" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>{title}</h6>
-        <h2
-          className="mb-0 fw-bold"
-          style={{
-            fontSize: 'clamp(1.65rem, 3vw, 2.25rem)',
-            lineHeight: 1.15,
-            overflowWrap: 'anywhere',
-            wordBreak: 'break-word'
-          }}
-        >
+        <h6 className="inventory-dashboard-kpi-label mb-2">{title}</h6>
+        <h2 className="inventory-dashboard-kpi-value mb-0 fw-bold">
           {value}
         </h2>
         {subtext && <small className="text-muted">{subtext}</small>}
       </div>
-      <div className={`p-3 rounded-circle bg-${color} bg-opacity-10 text-${color} flex-shrink-0`}>
+      <div className={`inventory-dashboard-kpi-icon bg-${color} bg-opacity-10 text-${color} flex-shrink-0`} aria-hidden="true">
         {icon}
       </div>
     </Card.Body>
@@ -46,7 +38,7 @@ const SkeletonBlock = ({ height = 24, width = '100%' }) => (
 );
 
 const InventoryDashboardSkeleton = () => (
-  <Container className="py-4">
+  <Container fluid className="inventory-dashboard-page operational-workspace" aria-busy="true">
     <div className="d-flex justify-content-between align-items-center mb-4">
       <SkeletonBlock width="260px" height={34} />
     </div>
@@ -220,8 +212,8 @@ const InventoryDashboard = () => {
 
   if (error) {
     return (
-      <Container className="py-4">
-        <Alert variant="danger" className="shadow-sm border-0">
+  <Container fluid className="inventory-dashboard-page operational-workspace">
+        <Alert variant="danger" className="inventory-dashboard-alert border-0" role="alert">
           <Alert.Heading>Inventory dashboard unavailable</Alert.Heading>
           <p className="mb-3">{error}</p>
           <Button variant="outline-danger" onClick={fetchStats}>Try again</Button>
@@ -231,10 +223,18 @@ const InventoryDashboard = () => {
   }
 
   return (
-    <Container className="py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-bold text-dark">Inventory Overview</h2>
-      </div>
+    <Container fluid className="inventory-dashboard-page operational-workspace">
+      <main className="inventory-dashboard-workspace" aria-labelledby="inventory-dashboard-heading">
+        <header className="inventory-dashboard-header">
+          <div>
+            <p className="inventory-dashboard-eyebrow">Inventory control</p>
+            <h1 id="inventory-dashboard-heading">Inventory Overview</h1>
+            <p className="inventory-dashboard-subtitle">Monitor stock health, movement, and replenishment priorities across operations.</p>
+          </div>
+          <Button variant="outline-primary" className="inventory-dashboard-header-action" onClick={() => navigate('/inventory/view')}>
+            View inventory <FaArrowRight aria-hidden="true" />
+          </Button>
+        </header>
 
       {/* KPI Cards */}
       <Row className="g-3 mb-4">
@@ -270,11 +270,11 @@ const InventoryDashboard = () => {
       {/* Charts Section */}
       <Row className="g-4 mb-4">
         <Col lg={8}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-white border-bottom-0 py-3">
+          <Card className="inventory-dashboard-panel h-100 border-0">
+            <Card.Header className="inventory-dashboard-panel-header">
               <h6 className="mb-0 fw-bold">Items Usage Trend (Last 6 Months)</h6>
             </Card.Header>
-            <Card.Body style={{ height: 300 }}>
+            <Card.Body className="inventory-dashboard-chart-body">
               <ResponsiveContainer
                 width="100%"
                 height="100%"
@@ -297,11 +297,11 @@ const InventoryDashboard = () => {
           </Card>
         </Col>
         <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-white border-bottom-0 py-3">
+          <Card className="inventory-dashboard-panel h-100 border-0">
+            <Card.Header className="inventory-dashboard-panel-header">
               <h6 className="mb-0 fw-bold">Top Moved Items</h6>
             </Card.Header>
-            <Card.Body style={{ height: 300 }}>
+            <Card.Body className="inventory-dashboard-chart-body">
               <ResponsiveContainer
                 width="100%"
                 height="100%"
@@ -335,8 +335,8 @@ const InventoryDashboard = () => {
       <Row className="g-4">
         {/* Low Stock Table */}
         <Col lg={8}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
+          <Card className="inventory-dashboard-panel h-100 border-0">
+            <Card.Header className="inventory-dashboard-panel-header d-flex justify-content-between align-items-center gap-3">
               <h5 className="mb-0 fw-bold text-danger">Low Stock Alerts</h5>
               {selectedItems.length > 0 && (
                 <Button variant="primary" size="sm" onClick={handleCreatePO} disabled={isSubmitting}>
@@ -344,20 +344,21 @@ const InventoryDashboard = () => {
                 </Button>
               )}
             </Card.Header>
-            <Card.Body className="p-0" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <Card.Body className="inventory-dashboard-table-scroll p-0" role="region" tabIndex="0" aria-label="Low stock alerts table">
               {stats?.lowStockItems?.length === 0 ? (
                 <div className="text-center py-5 text-muted">
                   <FaClipboardList size={48} className="mb-3 opacity-25" />
                   <p>No low stock items found. Great job!</p>
                 </div>
               ) : (
-                <Table hover responsive className="mb-0 align-middle">
+                <Table hover className="inventory-dashboard-table mb-0 align-middle">
                   <thead className="bg-light text-muted" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                     <tr>
                       <th style={{ width: '40px' }} className="ps-4">
                         <Form.Check 
                           type="checkbox" 
-                          onChange={handleSelectAll} 
+                          onChange={handleSelectAll}
+                          aria-label="Select all low stock items"
                           checked={stats?.lowStockItems?.length > 0 && selectedItems.length === stats?.lowStockItems?.length} 
                         />
                       </th>
@@ -373,7 +374,8 @@ const InventoryDashboard = () => {
                         <td className="ps-4" onClick={(e) => e.stopPropagation()}>
                           <Form.Check 
                             type="checkbox" 
-                            onChange={() => handleSelectItem(item)} 
+                            onChange={() => handleSelectItem(item)}
+                            aria-label={`Select ${item.productName}`}
                             checked={selectedItems.some(i => i.productId === item.productId)} 
                           />
                         </td>
@@ -394,12 +396,12 @@ const InventoryDashboard = () => {
 
         {/* Quick Actions / Menu */}
         <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-white border-bottom-0 py-3">
+          <Card className="inventory-dashboard-panel h-100 border-0">
+            <Card.Header className="inventory-dashboard-panel-header">
               <h5 className="mb-0 fw-bold">Quick Actions</h5>
             </Card.Header>
-            <Card.Body className="d-flex flex-column gap-3">
-              <Button variant="light" className="d-flex align-items-center justify-content-between p-3 border" onClick={() => navigate('/inventory/view')}>
+            <Card.Body className="inventory-dashboard-actions d-flex flex-column gap-3">
+              <Button variant="light" className="inventory-dashboard-action d-flex align-items-center justify-content-between p-3" onClick={() => navigate('/inventory/view')}>
                 <div className="d-flex align-items-center gap-3">
                   <div className="bg-primary bg-opacity-10 p-2 rounded text-primary">
                     <FaClipboardList />
@@ -412,7 +414,7 @@ const InventoryDashboard = () => {
                 <FaArrowRight className="text-muted" />
               </Button>
 
-              <Button variant="light" className="d-flex align-items-center justify-content-between p-3 border" onClick={() => navigate('/reports/project-material')}>
+              <Button variant="light" className="inventory-dashboard-action d-flex align-items-center justify-content-between p-3" onClick={() => navigate('/reports/project-material')}>
                 <div className="d-flex align-items-center gap-3">
                   <div className="bg-success bg-opacity-10 p-2 rounded text-success">
                     <FaBoxes />
@@ -425,7 +427,7 @@ const InventoryDashboard = () => {
                 <FaArrowRight className="text-muted" />
               </Button>
 
-              <Button variant="light" className="d-flex align-items-center justify-content-between p-3 border" onClick={() => navigate('/inventory/reports')}>
+              <Button variant="light" className="inventory-dashboard-action d-flex align-items-center justify-content-between p-3" onClick={() => navigate('/inventory/reports')}>
                 <div className="d-flex align-items-center gap-3">
                   <div className="bg-warning bg-opacity-10 p-2 rounded text-warning">
                     <FaClipboardList />
@@ -443,10 +445,10 @@ const InventoryDashboard = () => {
       </Row>
 
       {(issuesLoading || issuesError || dataQualityIssues.length > 0) && (
-        <Card className="shadow-sm border-0 mt-4">
-          <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
+        <Card className="inventory-dashboard-panel border-0 mt-4">
+          <Card.Header className="inventory-dashboard-panel-header d-flex justify-content-between align-items-center">
             <div>
-              <h5 className="mb-0 fw-bold text-warning">Inventory Data Issues</h5>
+              <h5 className="inventory-dashboard-warning-heading mb-0 fw-bold">Inventory Data Issues</h5>
               <small className="text-muted">Rows skipped or repaired while calculating inventory views</small>
             </div>
             {issuesLoading ? (
@@ -457,13 +459,13 @@ const InventoryDashboard = () => {
               </Badge>
             )}
           </Card.Header>
-          <Card.Body className="p-0" style={{ maxHeight: '320px', overflowY: 'auto' }}>
+          <Card.Body className="inventory-dashboard-table-scroll p-0" role="region" tabIndex="0" aria-label="Inventory data issues table">
             {issuesLoading ? (
               <div className="text-center py-4 text-muted">Checking inventory data...</div>
             ) : issuesError ? (
               <div className="text-center py-4 text-danger">{issuesError}</div>
             ) : (
-              <Table hover responsive className="mb-0 align-middle">
+              <Table hover className="inventory-dashboard-table mb-0 align-middle">
                 <thead className="bg-light text-muted" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr>
                     <th className="ps-4">Source</th>
@@ -489,7 +491,7 @@ const InventoryDashboard = () => {
                         <div className="fw-medium">{item.productName || 'Unknown product'}</div>
                         <div className="small text-muted">{item.productId || '-'}</div>
                       </td>
-                      <td className="text-warning fw-medium">{item.issue}</td>
+                      <td className="inventory-dashboard-warning-text fw-medium">{item.issue}</td>
                       <td className="small text-muted">{item.impact}</td>
                     </tr>
                   ))}
@@ -499,6 +501,7 @@ const InventoryDashboard = () => {
           </Card.Body>
         </Card>
       )}
+      </main>
     </Container>
   );
 };

@@ -1,0 +1,4015 @@
+{
+  "generatedAt": "2026-11-15T07:11:18.128Z",
+  "sourceRevision": "31f557f4432f6aa4a5093415581726e9113290b2",
+  "scope": "All component source files. Runtime reachability and descendant relationships require browser verification.",
+  "files": [
+    {
+      "source": "src/components/admin/ItemRequestTraceAdminPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/admin/SuperAdminPage.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/AdminDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Assets/AssetRegister.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Customer/CustomerCreate.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Customer/CustomerDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Customer/CustomerView.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/EmployeeHRWidget.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/ExecutiveDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/InteractiveDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/MyAttendanceWidget.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/PayablesWidget.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/PendingApprovalsWidget.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/ProjectSummaryDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard/SupplierCustomerDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Dashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Departments/DepartmentForm.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Departments/DepartmentList.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/AttendancePage.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/EmployeeCreate.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/EmployeeDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/EmployeeList.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/EmployeeProfile.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/EmployeeSearch.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/LeaveRequestPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/Reports/LeaveUtilizationReport.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/Reports/SalaryReport.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/SalaryBatchPrint.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Employee/SalaryManagement.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/estimates/ProjectEstimationPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/AccountLedgerModal.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/AccountsPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/ExpensesPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/FinanceDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/FinanceReportsPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/IncomePage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/JournalEntryList.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/LoanManagement.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/MigrationPayablesPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/PettyCashApprovalPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/ProjectFinancialReport.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/finance/TaxPage.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/GRN/GRNListView.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/GRN/GRNPaymentModal.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/GRN/GRNRateCorrectionPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/GRN/GRNRecievePage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/GRN/GRNReturnModal.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/GRN/ProcurementDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/HumanResources/HRConfiguration.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/HumanResources/HRStatsDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/Adjustments/StockAuditApprovalsPage.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/Adjustments/StockTakingPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/InternalReturnApprovals.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/InventoryAdd.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/InventoryDashboard.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/InventoryReturn.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/InventoryView.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/ItemAdd.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/ProductPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/ProjectReturn.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/PurchaseRequestPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/Reports/PayablesReport.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/Reports/ProjectMaterialReport.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/Reports/ReceivablesReport.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/Reports/StockControlCenter.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": true,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/Reports/StockValuationReport.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/SupplierReturn.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Inventory/SupplierReturnApprovals.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Login.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/PO/POCreateManual.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/PO/poDisplay.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/PO/POListView.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/PO/POPrint.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/PO/PurchaseOrderDetails.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Portal/PartnerConversation.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Portal/PortalDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ComponentRegistry.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": true,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/DeliveryScheduleCard.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/PettyCashAllocation.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectComments.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectCreate.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectDetails.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectEstimationCard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectFiles.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectFinanceTab.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectInventoryCard.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectLifecycle.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectPaymentsCard.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectQuotationCard.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectRevisions.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectSearch.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectVisibilityPaths.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ProjectWorkflowTab.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/ReturnToInventory.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/Structure/DefaultComponents.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": true,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/Structure/ProjectComponentRegistry.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": true,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/Structure/ProjectConstants.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/Structure/StandardCards.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/Structure/TasksContainer.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": true,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Project/TimelineCard.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/CreditNoteView.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/InvoiceView.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/QuotationPrint.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/AllTasksReport.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/MyTasksWidget.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/ProjectGantt.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/ProjectKanban.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/ProjectTaskReport.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/ProjectTasks.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/TaskControlCenter.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": true,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Projects/Tasks/WorkerSummaryReport.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Reports/ReportsPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Reports/SalesRevenueReport.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Requests/decimalQuantity.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Requests/IRFulfilmentPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Requests/irFulfilmentViewModel.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Requests/ItemRequestForm.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Requests/MyRequestList.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/BoqEditor.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/BrandedDialogHost.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/CommandPalette.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": false,
+        "empty": true,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/CompletenessModal.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/EmptyState.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": true,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/Header.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/LoadingState.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/MenuCard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/NewSideBar.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/NotificationBell.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/NotificationsPage.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/OverdraftConfirmModal.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/PageLayout.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/PaymentAccountPicker.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/ProjectCard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/QuickDateRangeButtons.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/ReportLayout.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/SafeDatePicker.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/SafeResponsiveContainer.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/SafeSelect.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/SideBar.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/ReusableComponents/SideBarForDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/routes/guards.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/routes/PrivateRoute.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Sales/QuotationList.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Sales/QuotationPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Sales/TermsSelector.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/settings/MyNotificationsPage.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/settings/NotificationRulesPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/settings/NotificationSettings.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/settings/PortalDashboardSettings.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/settings/RoleManagement.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/settings/SettingsPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": true,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/settings/StockVerificationPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Stores/PendingToPOPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Stores/ProjectStores.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Stores/StoresPlanningPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Supplier/SupplierDashboard.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Supplier/SupplierPage.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/SystemConfiguration.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": true,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Transfers/TransferInbox.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/types/workflow.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Users/UserCreate.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/Users/UserSearch.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/workflow/StageNode.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/workflow/StagePropertyPanel.js",
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/workflow/TransitionPropertyPanel.js",
+      "surfaces": {
+        "forms": false,
+        "tables": false,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": false,
+        "empty": false,
+        "error": false
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/workflow/WorkflowBuilder.js",
+      "surfaces": {
+        "forms": true,
+        "tables": false,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    },
+    {
+      "source": "src/components/workflow/WorkflowList.js",
+      "surfaces": {
+        "forms": false,
+        "tables": true,
+        "modals": false,
+        "drawers": false,
+        "dropdowns": false,
+        "tabs": false,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "dynamicRegistration": false,
+      "coverage": {
+        "status": "NOT TESTED",
+        "browser": null,
+        "viewport": null,
+        "zoom": null,
+        "evidence": [],
+        "blocker": null,
+        "verifiedAt": null
+      }
+    }
+  ]
+}

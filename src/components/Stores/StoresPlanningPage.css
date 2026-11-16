@@ -1,0 +1,38 @@
+.stores-planning-page {
+    --planning-ink: #172033;
+    --planning-muted: #526176;
+    --planning-border: #dce5ef;
+    --planning-soft: #f5f8fc;
+    padding: clamp(.75rem, 1.7vw, 1.5rem) 0 0;
+    color: var(--planning-ink);
+}
+
+.stores-planning-workspace {
+    overflow: hidden;
+    border: 1px solid var(--planning-border);
+    border-radius: .75rem;
+    background: #fbfdff;
+    box-shadow: 0 .75rem 2rem -1.5rem rgba(30, 58, 138, .3);
+}
+
+.stores-planning-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:clamp(1rem,2vw,1.5rem); border-bottom:1px solid var(--planning-border); }
+.stores-planning-heading-group { display:flex; align-items:center; gap:.875rem; min-width:0; }
+.stores-planning-heading-group h1 { margin:0; font-size:clamp(1.25rem,2vw,1.55rem); font-weight:700; line-height:1.25; }
+.stores-planning-heading-group p { max-width:68ch; margin:.25rem 0 0; color:var(--planning-muted); font-size:.875rem; }
+.stores-planning-back-button { display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; width:2.75rem; height:2.75rem; border:1px solid var(--planning-border); border-radius:.55rem; background:var(--planning-soft); color:#29415f; }
+.stores-planning-primary-action { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; min-height:2.75rem; white-space:nowrap; }
+.stores-planning-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-bottom:1px solid var(--planning-border); background:var(--planning-soft); }
+.stores-planning-summary > div { padding:.75rem clamp(1rem,2vw,1.5rem); border-right:1px solid var(--planning-border); }
+.stores-planning-summary > div:last-child { border-right:0; }
+.stores-planning-summary span { display:block; color:var(--planning-muted); font-size:.75rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; }
+.stores-planning-summary strong { display:block; margin-top:.2rem; font-variant-numeric:tabular-nums; font-size:1.05rem; }
+.stores-planning-error { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.75rem clamp(1rem,2vw,1.5rem); border-bottom:1px solid #efc9cd; background:#fff5f6; color:#7f1d1d; }
+.stores-planning-table-scroll { width:100%; overflow-x:auto; background:#fbfdff; }
+.page-content .stores-planning-table-scroll > .stores-planning-table { width:100%; min-width:48rem; table-layout:fixed; }
+.stores-planning-table th { padding:.75rem 1rem; border-bottom-color:#cbd8e7; background:#eef4fa; color:#43546b; font-size:.75rem; font-weight:700; letter-spacing:.035em; text-transform:uppercase; }
+.stores-planning-table td { padding:.85rem 1rem; border-bottom-color:#e6edf5; vertical-align:middle; overflow-wrap:anywhere; }
+.stores-planning-table th:nth-child(1) { width:42%; }.stores-planning-table th:nth-child(2),.stores-planning-table th:nth-child(3) { width:19%; }.stores-planning-table th:nth-child(4) { width:20%; }
+.stores-planning-product-id { display:block; margin-top:.2rem; color:var(--planning-muted); font-size:.75rem; font-variant-numeric:tabular-nums; }.stores-planning-number { font-variant-numeric:tabular-nums; }
+.stores-planning-skeleton-row td > span { display:block; width:min(100%,9rem); height:.85rem; border-radius:.3rem; background:#dfe8f2; animation:stores-planning-pulse 1.4s ease-in-out infinite alternate; }@keyframes stores-planning-pulse { from{opacity:.55}to{opacity:1} }
+.stores-planning-empty-row td { padding:3rem 1rem; color:var(--planning-muted); text-align:center; }.stores-planning-empty-row td > * { display:block; margin-inline:auto; }.stores-planning-empty-row strong { margin-top:.65rem; color:var(--planning-ink); }.stores-planning-empty-row span { margin-top:.2rem; font-size:.875rem; }
+@media (max-width:47.98rem) { .stores-planning-header { align-items:stretch; flex-direction:column; }.stores-planning-primary-action { width:100%; min-height:2.9rem; }.stores-planning-summary { grid-template-columns:1fr; }.stores-planning-summary > div { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; border-right:0; border-bottom:1px solid var(--planning-border); }.stores-planning-summary > div:last-child { border-bottom:0; }.stores-planning-summary strong { margin:0; }.stores-planning-table-scroll { overflow:visible; }.page-content .stores-planning-table-scroll > .stores-planning-table { min-width:0; }.stores-planning-table thead { display:none; }.stores-planning-table,.stores-planning-table tbody,.stores-planning-table tr,.stores-planning-table td { display:block; width:100%; }.stores-planning-table tr { padding:.8rem 1rem; border-bottom:1px solid #e6edf5; }.stores-planning-table td { display:grid; grid-template-columns:minmax(7rem,.8fr) minmax(0,1.2fr); gap:.75rem; padding:.35rem 0; border:0; text-align:left !important; }.stores-planning-table td::before { content:attr(data-label); color:var(--planning-muted); font-size:.75rem; font-weight:700; text-transform:uppercase; }.stores-planning-table td:first-child { display:block; padding-bottom:.65rem; }.stores-planning-table td:first-child::before { display:none; }.stores-planning-table .form-control { min-height:2.75rem; }.stores-planning-skeleton-row,.stores-planning-empty-row { display:table-row !important; padding:0 !important; }.stores-planning-skeleton-row td,.stores-planning-empty-row td { display:table-cell !important; } }

@@ -63,6 +63,75 @@ object {
     max-width: 100%;
 }
 
+/* Wide operational ERP workspaces use the available content area. Apply this
+   deliberately to data-heavy screens; focused forms and print surfaces stay narrow. */
+.operational-workspace {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-inline: 0;
+}
+
+.operational-workspace-surface {
+    width: 100%;
+    min-width: 0;
+}
+
+.operational-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.operational-toolbar > * { min-width: 0; }
+
+.operational-filter-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: .5rem;
+    min-width: 0;
+}
+
+.sidebar-navigation-button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    font: inherit;
+}
+
+.sidebar-navigation-button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+@media (min-width: 48rem) {
+    .page-content .table-responsive > .department-list-table {
+        width: 100%;
+        max-width: 100%;
+        min-width: 52rem;
+        table-layout: fixed;
+    }
+
+    .department-list-table :where(th, td) { overflow-wrap: anywhere; }
+    .department-list-table :where(th, td):nth-child(1) { width: 24%; }
+    .department-list-table :where(th, td):nth-child(2) { width: 40%; }
+    .department-list-table :where(th, td):nth-child(3) { width: 12%; }
+    .department-list-table :where(th, td):nth-child(4) { width: 24%; }
+}
+
+@media (max-width: 47.98rem) {
+    .operational-toolbar,
+    .operational-filter-row { align-items: stretch; }
+    .operational-filter-row > * { width: 100%; max-width: none !important; }
+}
+
 .responsive-page-header {
     display: flex;
     align-items: flex-end;

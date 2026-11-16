@@ -8,6 +8,14 @@
 # testing
 /coverage
 
+# Playwright audit output and sensitive authentication state
+/output/playwright/
+/playwright/.auth/
+/playwright-report/
+/test-results/
+/blob-report/
+*.trace.zip
+
 # production
 /build
 
@@ -40,6 +48,7 @@ installers/
 # Excessive Logging
 *_test_log*.txt
 debug_log*.txt
+debug.log
 all_tests.txt
 test_logs.txt
 
