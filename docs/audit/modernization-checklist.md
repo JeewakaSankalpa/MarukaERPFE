@@ -56,7 +56,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/finance/migration` | MigrationPayablesPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/migration-payables` | MigrationPayablesPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/petty-cash-approvals` | PettyCashApprovalPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
-| `/finance/reports` | FinanceReportsPage | 3 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/finance/reports` | FinanceReportsPage | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width financial statements workspace modernized |
 | `/finance/tax` | TaxPage | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/reports/payables` | PayablesReport | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/reports/receivables` | ReceivablesReport | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |

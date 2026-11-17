@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-17T07:21:22.994Z",
-  "sourceRevision": "c25878a9f555c9262328101ac83eb3b3a613f192",
+  "generatedAt": "2026-11-17T08:43:00.035Z",
+  "sourceRevision": "245df3d7734206481e3ab104e0b0a250787d1a96",
   "schemaVersion": 1,
   "allowedStatuses": [
     "MOCK-VERIFIED",
@@ -10964,13 +10964,15 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900; 1024x768; 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": [
+          "tests/audit/finance-reports-modernization.audit.spec.js"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
       "notes": []
     },
@@ -11021,13 +11023,15 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900; 1024x768; 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": [
+          "tests/audit/finance-reports-modernization.audit.spec.js"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
       "notes": []
     },
@@ -11078,13 +11082,15 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900; 1024x768; 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": [
+          "tests/audit/finance-reports-modernization.audit.spec.js"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
       "notes": []
     },
@@ -11135,13 +11141,15 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900; 1024x768; 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": [
+          "tests/audit/finance-reports-modernization.audit.spec.js"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
       "notes": []
     },

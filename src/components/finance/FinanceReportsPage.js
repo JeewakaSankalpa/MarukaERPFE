@@ -1,387 +1,60 @@
-import { ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Printer, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
-import { Container, Tabs, Tab, Table, Card, Form, Button, Row, Col, Alert, Spinner } from 'react-bootstrap';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Button, Form, Table } from 'react-bootstrap';
 import api from '../../api/api';
-import { toast } from 'react-toastify';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import QuickDateRangeButtons from '../ReusableComponents/QuickDateRangeButtons';
+import './FinanceReportsPage.css';
+
+const REPORTS = { PL: ['Income statement', 'Revenue, expenses and net income'], BS: ['Balance sheet', 'Assets, liabilities and equity'], TB: ['Trial balance', 'Debit and credit control totals'] };
+const money = value => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const Heading = ({ kicker, title, period }) => <header className="fr-statement-heading"><span>{kicker}</span><h2>{title}</h2><p>{period}</p></header>;
+const Empty = ({ children }) => <div className="fr-empty"><strong>No report lines</strong><span>{children}</span></div>;
 
 export default function FinanceReportsPage() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('PL');
-
-    // Filters
-    const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)); // Start of this month
-    const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10)); // Today
-    const [asOfDate, setAsOfDate] = useState(new Date().toISOString().slice(0, 10)); // Today
-
+    const today = new Date().toISOString().slice(0, 10);
+    const [tab, setTab] = useState('PL');
+    const [start, setStart] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+    const [end, setEnd] = useState(today);
+    const [asOf, setAsOf] = useState(today);
+    const [data, setData] = useState({});
     const [loading, setLoading] = useState(false);
-    const [plData, setPlData] = useState(null);
-    const [bsData, setBsData] = useState(null);
-    const [tbData, setTbData] = useState(null);
+    const [error, setError] = useState('');
 
-    useEffect(() => {
-        loadData();
-    }, [activeTab]); // Load when tab changes. Filters handled by "Apply" button? Or auto? Auto is better UX for date changes.
-
-    // Effect for filter changes within tab
-    useEffect(() => {
-        if (activeTab === 'PL') loadPL();
-        if (activeTab === 'BS') loadBS();
-        if (activeTab === 'TB') loadTB();
-    }, [startDate, endDate, asOfDate]);
-
-    const loadData = () => {
-        if (activeTab === 'PL') loadPL();
-        if (activeTab === 'BS') loadBS();
-        if (activeTab === 'TB') loadTB();
-    };
-
-    const loadPL = async () => {
-        setLoading(true);
+    const load = useCallback(async () => {
+        setLoading(true); setError('');
         try {
-            const res = await api.get(`/finance/reports/income-statement?start=${startDate}&end=${endDate}`);
-            setPlData(res.data);
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to load Income Statement");
-        } finally {
-            setLoading(false);
-        }
-    };
+            const url = tab === 'PL' ? `/finance/reports/income-statement?start=${start}&end=${end}` : tab === 'BS' ? `/finance/reports/balance-sheet?asOfDate=${asOf}` : `/finance/reports/trial-balance?start=${start}&end=${end}`;
+            const response = await api.get(url);
+            setData(current => ({ ...current, [tab]: response.data }));
+        } catch (requestError) {
+            console.error(requestError);
+            setError(`We couldn't load the ${REPORTS[tab][0].toLowerCase()}. Check the connection and try again.`);
+        } finally { setLoading(false); }
+    }, [asOf, end, start, tab]);
+    useEffect(() => { load(); }, [load]);
+    const quickRange = range => { setStart(range.startDate); setEnd(range.endDate); setAsOf(range.endDate); };
+    const report = data[tab];
 
-    const loadBS = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get(`/finance/reports/balance-sheet?asOfDate=${asOfDate}`);
-            setBsData(res.data);
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to load Balance Sheet");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadTB = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get(`/finance/reports/trial-balance?start=${startDate}&end=${endDate}`);
-            setTbData(res.data);
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to load Trial Balance");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const formatCurrency = (val) => val?.toLocaleString(undefined, { minimumFractionDigits: 2 });
-
-    const print = () => window.print();
-
-    const applyQuickRange = (range) => {
-        setStartDate(range.startDate);
-        setEndDate(range.endDate);
-        setAsOfDate(range.endDate);
-    };
-
-    return (
-        <Container className="py-4">
-            <div className="d-flex justify-content-between align-items-center mb-4 noprint">
-                <div className="d-flex align-items-center mb-4">
-                    <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                    <h2 className="mb-0">Financial Reports</h2>
-                </div>
-                <div className="d-flex gap-2">
-                    <Button variant="outline-dark" onClick={print}>Print Report</Button>
-                </div>
-            </div>
-
-            <Card className="mb-4 noprint">
-                <Card.Body>
-                    <Row className="align-items-end">
-                        <Col md={12}>
-                            {activeTab === 'PL' && (
-                                <div className="d-flex gap-3 align-items-end flex-wrap">
-                                    <Form.Group>
-                                        <Form.Label>From</Form.Label>
-                                        <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                                    </Form.Group>
-                                    <Form.Group>
-                                        <Form.Label>To</Form.Label>
-                                        <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
-                                    </Form.Group>
-                                    <div className="pb-1">
-                                        <QuickDateRangeButtons onSelect={applyQuickRange} />
-                                    </div>
-                                </div>
-                            )}
-                            {activeTab === 'BS' && (
-                                <div className="d-flex gap-3 align-items-end flex-wrap">
-                                    <Form.Group>
-                                        <Form.Label>As of Date</Form.Label>
-                                        <SafeDatePicker name="asOfDate" value={asOfDate} onChange={e => setAsOfDate(e.target.value)} />
-                                    </Form.Group>
-                                    <div className="pb-1">
-                                        <QuickDateRangeButtons onSelect={applyQuickRange} />
-                                    </div>
-                                </div>
-                            )}
-                            {activeTab === 'TB' && (
-                                <div className="d-flex gap-3 align-items-end flex-wrap">
-                                    <Form.Group>
-                                        <Form.Label>From</Form.Label>
-                                        <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                                    </Form.Group>
-                                    <Form.Group>
-                                        <Form.Label>To</Form.Label>
-                                        <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
-                                    </Form.Group>
-                                    <div className="pb-1">
-                                        <QuickDateRangeButtons onSelect={applyQuickRange} />
-                                    </div>
-                                </div>
-                            )}
-                        </Col>
-                    </Row>
-                </Card.Body>
-            </Card>
-
-            <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k)} className="mb-4 noprint">
-                <Tab eventKey="PL" title="Income Statement (P&L)" />
-                <Tab eventKey="BS" title="Balance Sheet" />
-                <Tab eventKey="TB" title="Trial Balance" />
-            </Tabs>
-
-            {loading && <div className="text-center py-5"><Spinner animation="border" /> Loading...</div>}
-
-            <div id="printable-area">
-                {!loading && activeTab === 'PL' && plData && (
-                    <Card className="shadow-sm print-border">
-                        <Card.Body>
-                            <div className="text-center mb-4">
-                                <h4>Income Statement</h4>
-                                <p className="text-muted">For the period {plData.startDate} to {plData.endDate}</p>
-                            </div>
-
-                            <div className="table-responsive">
-                                <Table hover responsive size="sm">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th>Account</th>
-                                            <th className="text-end" style={{ width: '200px' }}>Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr className="table-success fw-bold"><td colSpan="2">Revenue</td></tr>
-                                        {plData.revenue && plData.revenue.map(r => (
-                                            <tr key={r.accountId}>
-                                                <td className="ps-4">{r.accountName} <small className="text-muted">({r.code})</small></td>
-                                                <td className="text-end">{formatCurrency(r.balance)}</td>
-                                            </tr>
-                                        ))}
-                                        <tr className="fw-bold border-top">
-                                            <td className="ps-4">Total Revenue</td>
-                                            <td className="text-end text-success">{formatCurrency(plData.totalRevenue)}</td>
-                                        </tr>
-
-                                        <tr className="table-danger fw-bold mt-4"><td colSpan="2">Expenses</td></tr>
-                                        {plData.expenses && plData.expenses.map(r => (
-                                            <tr key={r.accountId}>
-                                                <td className="ps-4">{r.accountName} <small className="text-muted">({r.code})</small></td>
-                                                <td className="text-end">{formatCurrency(r.balance)}</td>
-                                            </tr>
-                                        ))}
-                                        <tr className="fw-bold border-top">
-                                            <td className="ps-4">Total Expenses</td>
-                                            <td className="text-end text-danger">{formatCurrency(plData.totalExpenses)}</td>
-                                        </tr>
-
-                                        <tr className="table-primary fw-bold fs-5">
-                                            <td>Net Income</td>
-                                            <td className="text-end">{formatCurrency(plData.netIncome)}</td>
-                                        </tr>
-                                    </tbody>
-                                </Table>
-                            </div>
-                        </Card.Body>
-                    </Card>
-                )}
-
-                {!loading && activeTab === 'BS' && bsData && (
-                    <Card className="shadow-sm print-border">
-                        <Card.Body>
-                            <div className="text-center mb-4">
-                                <h4>Balance Sheet</h4>
-                                <p className="text-muted">As of {bsData.asOfDate}</p>
-                            </div>
-
-                            <Row>
-                                <Col md={6}>
-                                    <h5 className="text-primary border-bottom pb-2">Assets</h5>
-                                    <Table size="sm" borderless hover responsive>
-                                        <tbody>
-                                            {bsData.assets && bsData.assets.map(a => (
-                                                <tr key={a.accountId}>
-                                                    <td>{a.accountName} <small className="text-muted">({a.code})</small></td>
-                                                    <td className="text-end">{formatCurrency(a.balance)}</td>
-                                                </tr>
-                                            ))}
-                                            <tr className="border-top fw-bold fs-6">
-                                                <td>Total Assets</td>
-                                                <td className="text-end">{formatCurrency(bsData.totalAssets)}</td>
-                                            </tr>
-                                        </tbody>
-                                    </Table>
-                                </Col>
-                                <Col md={6}>
-                                    <h5 className="text-danger border-bottom pb-2">Liabilities</h5>
-                                    <Table size="sm" borderless hover responsive>
-                                        <tbody>
-                                            {bsData.liabilities && bsData.liabilities.map(a => (
-                                                <tr key={a.accountId}>
-                                                    <td>{a.accountName} <small className="text-muted">({a.code})</small></td>
-                                                    <td className="text-end">{formatCurrency(a.balance)}</td>
-                                                </tr>
-                                            ))}
-                                            <tr className="border-top fw-bold">
-                                                <td>Total Liabilities</td>
-                                                <td className="text-end">{formatCurrency(bsData.totalLiabilities)}</td>
-                                            </tr>
-                                        </tbody>
-                                    </Table>
-
-                                    <h5 className="text-info border-bottom pb-2 mt-4">Equity</h5>
-                                    <Table size="sm" borderless hover responsive>
-                                        <tbody>
-                                            {bsData.equity && bsData.equity.map(a => (
-                                                <tr key={a.accountId}>
-                                                    <td>{a.accountName} <small className="text-muted">({a.code})</small></td>
-                                                    <td className="text-end">{formatCurrency(a.balance)}</td>
-                                                </tr>
-                                            ))}
-                                            <tr className="border-top fw-bold">
-                                                <td>Total Equity</td>
-                                                <td className="text-end">{formatCurrency(bsData.totalEquity)}</td>
-                                            </tr>
-                                        </tbody>
-                                    </Table>
-
-                                    <div className="mt-3 p-2 bg-light border rounded d-flex justify-content-between fw-bold">
-                                        <span>Total Liabilities + Equity</span>
-                                        <span>{formatCurrency(bsData.totalLiabilities + bsData.totalEquity)}</span>
-                                    </div>
-                                </Col>
-                            </Row>
-                        </Card.Body>
-                    </Card>
-                )}
-
-                {!loading && activeTab === 'TB' && tbData && (
-                    <Card className="shadow-sm print-border">
-                        <Card.Body>
-                            <div className="text-center mb-4">
-                                <h4>Trial Balance</h4>
-                                <p className="text-muted">For the period {tbData.startDate} to {tbData.endDate}</p>
-                            </div>
-
-                            {tbData.isBalanced === false && (
-                                <Alert variant="danger" className="noprint">
-                                    ⚠️ <strong>Out of Balance!</strong> Total Debits do not equal Total Credits. Please review unposted or incomplete journal entries.
-                                </Alert>
-                            )}
-                            {tbData.isBalanced === true && (
-                                <Alert variant="success" className="noprint">
-                                    ✅ Trial Balance is <strong>balanced</strong>. Total Debits = Total Credits.
-                                </Alert>
-                            )}
-
-                            <div className="table-responsive">
-                                <Table bordered hover responsive size="sm">
-                                    <thead className="table-dark">
-                                        <tr>
-                                            <th style={{ width: '80px' }}>Code</th>
-                                            <th>Account Name</th>
-                                            <th style={{ width: '110px' }}>Type</th>
-                                            <th className="text-end" style={{ width: '160px' }}>Total Debit</th>
-                                            <th className="text-end" style={{ width: '160px' }}>Total Credit</th>
-                                            <th className="text-end" style={{ width: '170px' }}>Closing Balance</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(!tbData.lines || tbData.lines.length === 0) ? (
-                                            <tr><td colSpan="6" className="text-center text-muted py-4">No transactions found for the selected period.</td></tr>
-                                        ) : (
-                                            tbData.lines.map((row, i) => {
-                                                const typeBadgeMap = {
-                                                    ASSET: 'primary',
-                                                    LIABILITY: 'warning',
-                                                    EQUITY: 'info',
-                                                    REVENUE: 'success',
-                                                    EXPENSE: 'danger',
-                                                };
-                                                const variant = typeBadgeMap[row.accountType] || 'secondary';
-                                                return (
-                                                    <tr key={row.accountId || i}>
-                                                        <td className="text-muted">{row.code}</td>
-                                                        <td>{row.accountName}</td>
-                                                        <td><span className={`badge bg-${variant}`}>{row.accountType}</span></td>
-                                                        <td className="text-end">{row.totalDebit > 0 ? formatCurrency(row.totalDebit) : '—'}</td>
-                                                        <td className="text-end">{row.totalCredit > 0 ? formatCurrency(row.totalCredit) : '—'}</td>
-                                                        <td className={`text-end fw-semibold ${row.closingBalance < 0 ? 'text-danger' : ''}`}>
-                                                            {formatCurrency(Math.abs(row.closingBalance))}
-                                                            {row.closingBalance < 0 ? ' (Cr)' : ' (Dr)'}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
-                                    </tbody>
-                                    <tfoot className="table-secondary fw-bold">
-                                        <tr>
-                                            <td colSpan="3" className="text-end">GRAND TOTAL</td>
-                                            <td className="text-end text-primary fs-6">{formatCurrency(tbData.totalDebit)}</td>
-                                            <td className="text-end text-primary fs-6">{formatCurrency(tbData.totalCredit)}</td>
-                                            <td className="text-end">
-                                                {tbData.isBalanced
-                                                    ? <span className="text-success">✓ Balanced</span>
-                                                    : <span className="text-danger">✗ Unbalanced</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    </tfoot>
-                                </Table>
-                            </div>
-                        </Card.Body>
-                    </Card>
-                )}
-            </div>
-
-            <style>
-                {`
-                    @media print {
-                        body * {
-                            visibility: hidden;
-                        }
-                        #printable-area, #printable-area * {
-                            visibility: visible;
-                        }
-                        #printable-area {
-                            position: absolute;
-                            left: 0;
-                            top: 0;
-                            width: 100%;
-                            padding: 20px;
-                        }
-                        .noprint { display: none !important; }
-                        .print-border { border: none !important; box-shadow: none !important; }
-                        @page { size: auto; margin: 1cm; }
-                        .table-responsive { overflow: visible !important; }
-                    }
-                `}
-            </style>
-        </Container>
-    );
+    return <main className="finance-reports-page">
+        <header className="fr-header noprint"><div className="fr-heading"><button type="button" className="fr-back" onClick={() => navigate(-1)} aria-label="Back to previous page"><ArrowLeft size={18} /></button><div><span className="fr-eyebrow">Sales &amp; Finance</span><h1>Financial statements</h1><p>Review period performance, financial position, and ledger control totals.</p></div></div><Button variant="outline-primary" className="fr-print" onClick={() => window.print()}><Printer size={16} />Print {REPORTS[tab][0]}</Button></header>
+        <nav className="fr-tabs noprint" role="tablist" aria-label="Financial statement views">{Object.entries(REPORTS).map(([id, value]) => <button key={id} type="button" role="tab" aria-selected={tab === id} aria-controls="finance-report-panel" className={tab === id ? 'active' : ''} onClick={() => setTab(id)}><span>{value[0]}</span><small>{value[1]}</small></button>)}</nav>
+        <section className="fr-filters noprint" aria-labelledby="report-period-heading"><div><span id="report-period-heading">Reporting period</span><small>{tab === 'BS' ? 'Choose the statement date.' : 'Choose a start and end date.'}</small></div><div className="fr-filter-controls">{tab !== 'BS' && <Form.Group><Form.Label>From</Form.Label><SafeDatePicker name="startDate" value={start} onChange={e => setStart(e.target.value)} /></Form.Group>}<Form.Group><Form.Label>{tab === 'BS' ? 'As of date' : 'To'}</Form.Label><SafeDatePicker name={tab === 'BS' ? 'asOfDate' : 'endDate'} value={tab === 'BS' ? asOf : end} onChange={e => tab === 'BS' ? setAsOf(e.target.value) : setEnd(e.target.value)} /></Form.Group><div className="fr-quick"><span>Quick range</span><QuickDateRangeButtons onSelect={quickRange} /></div></div></section>
+        {error && <Alert variant="danger" className="fr-error noprint" role="alert"><AlertCircle size={18} /><div><strong>Report unavailable</strong><span>{error}</span></div><Button variant="outline-danger" size="sm" onClick={load}><RefreshCw size={14} />Retry</Button></Alert>}
+        <section id="finance-report-panel" role="tabpanel" className="fr-paper" aria-busy={loading}>
+            {loading && <div className="fr-loading" role="status"><div /><div /><div className="table-skeleton" /><span>Preparing {REPORTS[tab][0].toLowerCase()}…</span></div>}
+            {!loading && !error && tab === 'PL' && report && <IncomeStatement data={report} />}
+            {!loading && !error && tab === 'BS' && report && <BalanceSheet data={report} />}
+            {!loading && !error && tab === 'TB' && report && <TrialBalance data={report} />}
+        </section>
+    </main>;
 }
+
+function Summary({ items }) { return <div className="fr-summary">{items.map((item, index) => <div key={item[0]} className={index === items.length - 1 ? 'primary' : ''}><span>{item[0]}</span><strong>{money(item[1])}</strong></div>)}</div>; }
+function IncomeStatement({ data }) { return <><Heading kicker="Performance" title="Income statement" period={`For the period ${data.startDate} to ${data.endDate}`} /><Summary items={[["Total revenue",data.totalRevenue],["Total expenses",data.totalExpenses],["Net income",data.netIncome]]} /><div className="fr-table-scroll" tabIndex="0" role="region" aria-label="Income statement table"><Table className="fr-table" hover><thead><tr><th>Account</th><th className="money">Amount (LKR)</th></tr></thead><tbody><Rows title="Revenue" rows={data.revenue} /><tr className="total"><td>Total revenue</td><td className="money">{money(data.totalRevenue)}</td></tr><Rows title="Expenses" rows={data.expenses} /><tr className="total"><td>Total expenses</td><td className="money">{money(data.totalExpenses)}</td></tr><tr className="grand"><td>Net income</td><td className="money">{money(data.netIncome)}</td></tr></tbody></Table></div>{!(data.revenue?.length || data.expenses?.length) && <Empty>No revenue or expense accounts have activity in this period.</Empty>}</>; }
+function Rows({ title, rows = [] }) { return <><tr className={`section ${title.toLowerCase()}`}><td colSpan="2">{title}</td></tr>{rows.map(row => <tr key={row.accountId}><td data-label="Account"><strong>{row.accountName}</strong><small>{row.code}</small></td><td data-label="Amount (LKR)" className="money">{money(row.balance)}</td></tr>)}</>; }
+function BalanceSheet({ data }) { return <><Heading kicker="Financial position" title="Balance sheet" period={`As of ${data.asOfDate}`} /><Summary items={[["Total assets",data.totalAssets],["Total liabilities",data.totalLiabilities],["Total equity",data.totalEquity]]} /><div className="fr-balance-grid"><BalanceGroup title="Assets" rows={data.assets} total={data.totalAssets} /><div><BalanceGroup title="Liabilities" rows={data.liabilities} total={data.totalLiabilities} /><BalanceGroup title="Equity" rows={data.equity} total={data.totalEquity} /><div className="fr-equation"><span>Total liabilities + equity</span><strong>{money(data.totalLiabilities + data.totalEquity)}</strong></div></div></div></>; }
+function BalanceGroup({ title, rows = [], total }) { return <section className="fr-balance-group"><h3>{title}</h3>{rows.map(row => <div key={row.accountId}><span><strong>{row.accountName}</strong><small>{row.code}</small></span><b>{money(row.balance)}</b></div>)}{!rows.length && <p>No {title.toLowerCase()} accounts to report.</p>}<div className="total"><span>Total {title.toLowerCase()}</span><b>{money(total)}</b></div></section>; }
+function TrialBalance({ data }) { return <><Heading kicker="Ledger control" title="Trial balance" period={`For the period ${data.startDate} to ${data.endDate}`} /><div className={`fr-status ${data.isBalanced ? 'balanced' : 'unbalanced'}`}>{data.isBalanced ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<div><strong>{data.isBalanced ? 'Debits and credits are balanced' : 'Debits and credits are out of balance'}</strong><span>{data.isBalanced ? 'Control totals agree for the selected period.' : 'Review unposted or incomplete journal entries.'}</span></div></div><div className="fr-table-scroll" tabIndex="0" role="region" aria-label="Trial balance table"><Table className="fr-table trial" hover><thead><tr><th>Code</th><th>Account name</th><th>Type</th><th className="money">Total debit</th><th className="money">Total credit</th><th className="money">Closing balance</th></tr></thead><tbody>{(data.lines || []).map((row,index) => <tr key={row.accountId || index}><td>{row.code}</td><td><strong>{row.accountName}</strong></td><td><span className={`fr-type type-${String(row.accountType).toLowerCase()}`}>{row.accountType}</span></td><td className="money">{row.totalDebit > 0 ? money(row.totalDebit) : '—'}</td><td className="money">{row.totalCredit > 0 ? money(row.totalCredit) : '—'}</td><td className="money">{money(Math.abs(row.closingBalance))} {row.closingBalance < 0 ? 'Cr' : 'Dr'}</td></tr>)}</tbody><tfoot><tr><td colSpan="3">Grand total</td><td className="money">{money(data.totalDebit)}</td><td className="money">{money(data.totalCredit)}</td><td className="money">{data.isBalanced ? 'Balanced' : 'Unbalanced'}</td></tr></tfoot></Table></div>{!data.lines?.length && <Empty>No ledger movements were found for the selected period.</Empty>}</>; }

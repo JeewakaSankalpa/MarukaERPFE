@@ -1,11 +1,11 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `c25878a9f555c9262328101ac83eb3b3a613f192`.
+Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a96`.
 
 - Route declarations: 114
 - Unique declared paths: 112
 - Coverage rows including nested states: 248
-- Status counts: `MOCK-VERIFIED` 63, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 184
+- Status counts: `MOCK-VERIFIED` 67, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 180
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -196,10 +196,10 @@ Generated from `src/App.js` at revision `c25878a9f555c9262328101ac83eb3b3a613f19
 | ROUTE-finance-loans-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | NOT TESTED |
 | ROUTE-finance-loans-duplicate-2-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | NOT TESTED |
 | ROUTE-finance-income-initial-route-state | `/finance/income` | IncomePage | initial route state | finance | NOT TESTED |
-| ROUTE-finance-reports-initial-route-state | `/finance/reports` | FinanceReportsPage | initial route state | finance | NOT TESTED |
-| ROUTE-finance-reports-profit-and-loss-tab | `/finance/reports` | FinanceReportsPage | profit and loss tab | finance | NOT TESTED |
-| ROUTE-finance-reports-balance-sheet-tab | `/finance/reports` | FinanceReportsPage | balance sheet tab | finance | NOT TESTED |
-| ROUTE-finance-reports-trial-balance-tab | `/finance/reports` | FinanceReportsPage | trial balance tab | finance | NOT TESTED |
+| ROUTE-finance-reports-initial-route-state | `/finance/reports` | FinanceReportsPage | initial route state | finance | MOCK-VERIFIED |
+| ROUTE-finance-reports-profit-and-loss-tab | `/finance/reports` | FinanceReportsPage | profit and loss tab | finance | MOCK-VERIFIED |
+| ROUTE-finance-reports-balance-sheet-tab | `/finance/reports` | FinanceReportsPage | balance sheet tab | finance | MOCK-VERIFIED |
+| ROUTE-finance-reports-trial-balance-tab | `/finance/reports` | FinanceReportsPage | trial balance tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-migration-initial-route-state | `/finance/migration` | MigrationPayablesPage | initial route state | finance | NOT TESTED |
 | ROUTE-finance-migration-payables-tab | `/finance/migration` | MigrationPayablesPage | payables tab | finance | NOT TESTED |
 | ROUTE-finance-migration-receivables-tab | `/finance/migration` | MigrationPayablesPage | receivables tab | finance | NOT TESTED |
