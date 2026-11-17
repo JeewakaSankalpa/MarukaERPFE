@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
+import { AlertCircle, ArrowDownRight, ArrowLeft, ArrowUpRight, Banknote, Building2, CreditCard, Landmark, RefreshCw, Scale, Users } from 'lucide-react';
+import { Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
-import { toast } from 'react-toastify';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import './FinanceDashboard.css';
+
+const money = value => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function FinanceDashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     const [range, setRange] = useState({
         start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
         end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
@@ -15,131 +19,41 @@ export default function FinanceDashboard() {
     const [data, setData] = useState(null);
 
     const loadData = useCallback(async () => {
+        setLoading(true); setError('');
         try {
-            setLoading(true);
             const res = await api.get(`/finance/reports/summary?start=${range.start}&end=${range.end}`);
             setData(res.data);
-        } catch (e) {
-            console.error("Finance summary load error:", e);
-            if (e.response && e.response.status !== 404) {
-                toast.error("Failed to load finance data. Please check if report dates are valid.");
-            }
-        } finally {
-            setLoading(false);
-        }
-    }, [range]);
+        } catch (requestError) {
+            console.error('Finance summary load error:', requestError);
+            setError("We couldn't load the finance summary. Check the reporting period and try again.");
+        } finally { setLoading(false); }
+    }, [range.end, range.start]);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    useEffect(() => { loadData(); }, [loadData]);
 
-    return (
-        <Container className="py-4">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Finance Dashboard</h2>
-                <div className="d-flex gap-2">
-                    <SafeDatePicker name="start" value={range.start} onChange={e => setRange({ ...range, start: e.target.value })} />
-                    <span className="align-self-center">to</span>
-                    <SafeDatePicker name="end" value={range.end} onChange={e => setRange({ ...range, end: e.target.value })} />
-                    <Button onClick={loadData} disabled={loading}>{loading ? '...' : 'Refresh'}</Button>
-                </div>
-            </div>
+    const primaryMetrics = data ? [
+        { label: 'Total inflow', value: data.totalInflow, detail: 'Cash received in the period', icon: ArrowDownRight, tone: 'positive' },
+        { label: 'Total outflow', value: data.grandTotalOutflow, detail: 'Cash paid in the period', icon: ArrowUpRight, tone: 'negative' },
+        { label: 'Net cash flow', value: data.netCashFlow, detail: Number(data.netCashFlow || 0) >= 0 ? 'Positive movement' : 'Negative movement', icon: Scale, tone: Number(data.netCashFlow || 0) >= 0 ? 'balance' : 'negative' }
+    ] : [];
+    const outflows = data ? [
+        ['Operational expenses', data.totalOperationalExpenses, Building2], ['Payroll paid', data.totalPayroll, Users],
+        ['Supplier payments', data.totalSupplierPayments, CreditCard], ['Asset purchases', data.totalAssetPayments, Landmark],
+        ['Loan repayments', data.totalLoanRepayments, Banknote]
+    ] : [];
+    const actions = [
+        ['Expenses', 'Review operating expenses', '/finance/expenses'], ['Migration', 'Manage opening balances', '/finance/migration'],
+        ['Chart of accounts', 'Review account balances', '/finance/accounts'], ['Petty cash approvals', 'Review pending requests', '/finance/petty-cash-approvals'],
+        ['Payroll', 'Open salary workspace', '/salary'], ['Assets', 'Review the asset register', '/assets'],
+        ['Loan management', 'Review borrowing and lending', '/finance/loans']
+    ];
 
-            {data && (
-                <>
-                    <Row className="mb-4">
-                        <Col md={4}>
-                            <Card className="text-center shadow-sm border-success h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted">Total Inflow</h6>
-                                    <h3 className="fw-bold text-success">{data.totalInflow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
-                                    <div className="small text-muted mt-2">
-                                        Projects: {data.incomeProjects?.toLocaleString()}<br />
-                                        Loans: {data.incomeLoans?.toLocaleString()}
-                                    </div>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={4}>
-                            <Card className="text-center shadow-sm border-danger h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted">Total Outflow</h6>
-                                    <h3 className="fw-bold text-danger">{data.grandTotalOutflow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={4}>
-                            <Card className="text-center shadow-sm border-info h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted">Net Cash Flow</h6>
-                                    <h3 className={`fw-bold ${data.netCashFlow >= 0 ? 'text-primary' : 'text-danger'}`}>{data.netCashFlow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    </Row>
-
-                    <h5 className="mb-3">Expense & Outflow Breakdown</h5>
-                    <Row className="mb-4">
-                        <Col md={2}>
-                            <Card className="text-center shadow-sm h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted small">Operational Ops</h6>
-                                    <h5>{data.totalOperationalExpenses?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h5>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={2}>
-                            <Card className="text-center shadow-sm h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted small">Payroll (Paid)</h6>
-                                    <h5>{data.totalPayroll?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h5>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={2}>
-                            <Card className="text-center shadow-sm h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted small">Suppliers</h6>
-                                    <h5>{data.totalSupplierPayments?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h5>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={3}>
-                            <Card className="text-center shadow-sm h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted small">Asset Purchases</h6>
-                                    <h5>{data.totalAssetPayments?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h5>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                        <Col md={3}>
-                            <Card className="text-center shadow-sm h-100">
-                                <Card.Body>
-                                    <h6 className="text-muted small">Loan Repayments</h6>
-                                    <h5>{data.totalLoanRepayments?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h5>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    </Row>
-
-                    <Row>
-                        <Col>
-                            <Card className="shadow-sm">
-                                <Card.Header>Quick Actions</Card.Header>
-                                <Card.Body className="d-flex gap-3 flex-wrap">
-                                    <Button variant="outline-primary" onClick={() => navigate('/finance/expenses')}>Go to Expenses</Button>
-                                    <Button variant="outline-primary" onClick={() => navigate('/finance/migration')}>Migration</Button>
-                                    <Button variant="outline-primary" onClick={() => navigate('/finance/accounts')}>Chart of Accounts</Button>
-                                    <Button variant="outline-warning" onClick={() => navigate('/finance/petty-cash-approvals')}>Petty Cash Approvals</Button>
-                                    <Button variant="outline-primary" onClick={() => navigate('/salary')}>Go to Payroll</Button>
-                                    <Button variant="outline-primary" onClick={() => navigate('/assets')}>Go to Assets</Button>
-                                    <Button variant="outline-primary" onClick={() => navigate('/finance/loans')}>Loan Management</Button>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    </Row>
-                </>
-            )}
-        </Container>
-    );
+    return <main className="finance-dashboard-page">
+        <header className="fd-header"><div className="fd-heading-group"><button type="button" className="fd-back" onClick={() => navigate(-1)} aria-label="Back to previous page"><ArrowLeft size={18} /></button><div><span className="fd-eyebrow">Sales &amp; Finance</span><h1>Finance dashboard</h1><p>Monitor cash movement and move quickly into the finance workspaces that need attention.</p></div></div><Button variant="outline-primary" onClick={loadData} disabled={loading}><RefreshCw size={16} className={loading ? 'fd-spin' : ''} />{loading ? 'Refreshing' : 'Refresh'}</Button></header>
+        <section className="fd-period" aria-labelledby="fd-period-heading"><div><strong id="fd-period-heading">Reporting period</strong><span>Summary values follow the selected dates.</span></div><div className="fd-date-controls"><Form.Group><Form.Label>From</Form.Label><SafeDatePicker name="start" value={range.start} onChange={event => setRange(current => ({ ...current, start: event.target.value }))} /></Form.Group><span className="fd-date-separator" aria-hidden="true">to</span><Form.Group><Form.Label>To</Form.Label><SafeDatePicker name="end" value={range.end} onChange={event => setRange(current => ({ ...current, end: event.target.value }))} /></Form.Group></div></section>
+        {error && <div className="fd-error" role="alert"><AlertCircle size={20} /><div><strong>Finance summary unavailable</strong><span>{error}</span></div><Button variant="outline-danger" size="sm" onClick={loadData}>Retry</Button></div>}
+        {loading && !data && <section className="fd-loading" aria-label="Loading finance summary" role="status"><div /><div /><div /><span>Loading finance summary…</span></section>}
+        {data && <><section className="fd-metrics" aria-label="Cash flow summary" aria-busy={loading}>{primaryMetrics.map(({ label, value, detail, icon: Icon, tone }) => <article className={`fd-metric fd-metric--${tone}`} key={label}><div className="fd-metric-label"><span>{label}</span><Icon size={19} /></div><strong>{money(value)}</strong><small>{detail}</small></article>)}</section><div className="fd-workspace-grid"><section className="fd-panel" aria-labelledby="fd-outflows-heading"><header><div><span className="fd-section-kicker">Cash out</span><h2 id="fd-outflows-heading">Outflow breakdown</h2></div><strong>{money(data.grandTotalOutflow)}</strong></header><div className="fd-outflow-list">{outflows.map(([label, value, Icon]) => <div key={label}><span className="fd-outflow-icon"><Icon size={17} /></span><span><strong>{label}</strong><small>Selected period</small></span><b>{money(value)}</b></div>)}</div></section><aside className="fd-panel fd-inflow-panel" aria-labelledby="fd-inflow-heading"><header><div><span className="fd-section-kicker">Cash in</span><h2 id="fd-inflow-heading">Inflow sources</h2></div></header><div className="fd-inflow-row"><span>Project income</span><strong>{money(data.incomeProjects)}</strong></div><div className="fd-inflow-row"><span>Loan proceeds</span><strong>{money(data.incomeLoans)}</strong></div><div className="fd-inflow-total"><span>Total inflow</span><strong>{money(data.totalInflow)}</strong></div></aside></div></>}
+        <nav className="fd-actions" aria-labelledby="fd-actions-heading"><header><span className="fd-section-kicker">Workspace links</span><h2 id="fd-actions-heading">Continue in Finance</h2></header><div>{actions.map(([label, detail, path]) => <button type="button" key={path} onClick={() => navigate(path)}><span><strong>{label}</strong><small>{detail}</small></span><ArrowUpRight size={17} /></button>)}</div></nav>
+    </main>;
 }

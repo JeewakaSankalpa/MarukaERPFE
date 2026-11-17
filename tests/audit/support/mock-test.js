@@ -37,6 +37,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/procurement/dashboard-stats') return json(route, procurementDashboardStats);
             if (url.pathname === '/api/transfers') return json(route, pendingTransfers);
             if (url.pathname === '/api/finance/expenses') return json(route, financeExpenses);
+            if (url.pathname === '/api/finance/reports/summary') return json(route, financeDashboardSummary);
             if (url.pathname === '/api/finance/accounts') return json(route, financeAccounts);
             if (url.pathname === '/api/finance/journals') return json(route, financeJournals);
             if (url.pathname === '/api/finance/reports/income-statement') return json(route, financeIncomeStatement);
@@ -189,6 +190,18 @@ const financeExpenses = [
     { id:'expense-003', title:'Supplier payment · GRN-2026-001', description:'Copper cable delivery settlement', category:'SUPPLIER_PAYMENT', amount:245000, expenseDate:'2026-11-14', status:'PAID', paymentMethod:'CARD', paymentAccountType:'CREDIT_CARD', projectId:'grn-001' },
     { id:'expense-004', title:'Workshop rental', description:'Monthly workshop premises rent', category:'RENT', amount:185000, expenseDate:'2026-10-02', status:'PAID', paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' },
 ];
+const financeDashboardSummary = {
+    totalInflow: 2980740.75,
+    incomeProjects: 2730740.75,
+    incomeLoans: 250000,
+    grandTotalOutflow: 1326941.25,
+    netCashFlow: 1653799.5,
+    totalOperationalExpenses: 362491.25,
+    totalPayroll: 418500,
+    totalSupplierPayments: 327450,
+    totalAssetPayments: 128500,
+    totalLoanRepayments: 90000,
+};
 const financeJournals = { content: [
     { id:'journal-001', date:'2026-11-15', reference:'PAY-2026-0921', description:'Supplier settlement for copper cable delivery', status:'POSTED', lines:[
         { accountId:'account-payable-001', accountName:'Trade accounts payable', description:'Clear supplier liability', debit:125000, credit:0 },

@@ -10090,7 +10090,7 @@
         "mutationAllowed": false
       },
       "surfaces": {
-        "forms": false,
+        "forms": true,
         "tables": false,
         "modals": false,
         "drawers": false,
@@ -10107,13 +10107,16 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": [
+          "tests/audit/finance-dashboard-modernization.audit.spec.js",
+          "output/playwright/results.json"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00Z"
       },
       "notes": []
     },

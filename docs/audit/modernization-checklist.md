@@ -48,7 +48,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 |---|---|---:|---|---|---|---|
 | `/assets` | AssetRegister | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width fixed asset portfolio with financial summaries, accessible search, responsive register, and guarded mutation workflows |
 | `/finance/accounts` | AccountsPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width account directory, five-category balance summary, nested ledger review, filters, responsive tables, and accessible financial presentation |
-| `/finance/dashboard` | FinanceDashboard | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
+| `/finance/dashboard` | FinanceDashboard | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width finance cash-flow dashboard modernized |
 | `/finance/expenses` | ExpensesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width expense review workspace modernized |
 | `/finance/income` | IncomePage | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width income and receivables review with financial hierarchy, responsive charts and register, accessible filtering, and guarded loading/error presentation |
 | `/finance/journals` | JournalEntryList | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width journal register, balanced debit/credit summaries, responsive line details, filters, and accessible posting form |

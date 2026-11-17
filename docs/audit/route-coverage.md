@@ -1,11 +1,11 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a96`.
+Generated from `src/App.js` at revision `0d788e9f15799046dae7e9ac795e1245bd160e93`.
 
 - Route declarations: 114
 - Unique declared paths: 112
 - Coverage rows including nested states: 248
-- Status counts: `MOCK-VERIFIED` 80, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 167
+- Status counts: `MOCK-VERIFIED` 81, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 166
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -182,7 +182,7 @@ Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a9
 | ROUTE-invoices-id-initial-route-state | `/invoices/:id` | InvoiceView | initial route state | projects | NOT TESTED |
 | ROUTE-invoices-id-credit-note-initial-route-state | `/invoices/:id/credit-note` | CreditNoteView | initial route state | projects | NOT TESTED |
 | ROUTE-reports-project-material-initial-route-state | `/reports/project-material` | ProjectMaterialReport | initial route state | projects | NOT TESTED |
-| ROUTE-finance-dashboard-initial-route-state | `/finance/dashboard` | FinanceDashboard | initial route state | finance | NOT TESTED |
+| ROUTE-finance-dashboard-initial-route-state | `/finance/dashboard` | FinanceDashboard | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-accounts-initial-route-state | `/finance/accounts` | AccountsPage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-accounts-general-accounts-tab | `/finance/accounts` | AccountsPage | General Accounts tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-accounts-project-accounts-tab | `/finance/accounts` | AccountsPage | Project Accounts tab | finance | MOCK-VERIFIED |
