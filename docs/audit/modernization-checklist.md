@@ -47,7 +47,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | Route | Component | Nested states | Coverage | Priority | Modernization | Assessment |
 |---|---|---:|---|---|---|---|
 | `/assets` | AssetRegister | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
-| `/finance/accounts` | AccountsPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/finance/accounts` | AccountsPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width account directory, five-category balance summary, nested ledger review, filters, responsive tables, and accessible financial presentation |
 | `/finance/dashboard` | FinanceDashboard | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/finance/expenses` | ExpensesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width expense review workspace modernized |
 | `/finance/income` | IncomePage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |

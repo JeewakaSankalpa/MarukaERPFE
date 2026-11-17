@@ -37,6 +37,9 @@ const test = auditTest.extend({
             if (url.pathname === '/api/procurement/dashboard-stats') return json(route, procurementDashboardStats);
             if (url.pathname === '/api/transfers') return json(route, pendingTransfers);
             if (url.pathname === '/api/finance/expenses') return json(route, financeExpenses);
+            if (url.pathname === '/api/finance/accounts') return json(route, financeAccounts);
+            if (url.pathname === '/api/finance/accounts/account-bank-parent/subaccounts') return json(route, financeAccounts.filter(account => account.parentAccountId === 'account-bank-parent'));
+            if (url.pathname === '/api/finance/reports/accounts/account-bank-001/ledger') return json(route, financeAccountLedger);
             if (url.pathname === '/api/finance/accounts/payment-accounts') return json(route, financePaymentAccounts);
             if (url.pathname === '/api/assets') return json(route, financeAssets);
             if (url.pathname === '/api/finance/loans') return json(route, financeLoans);
@@ -173,6 +176,21 @@ const financeExpenses = [
     { id:'expense-004', title:'Workshop rental', description:'Monthly workshop premises rent', category:'RENT', amount:185000, expenseDate:'2026-10-02', status:'PAID', paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' },
 ];
 const financePaymentAccounts = [{ id:'account-bank-001', name:'Primary operating account', paymentAccountType:'BANK', balance:850000, hasSubAccounts:false }];
+const financeAccounts = [
+    { id:'account-bank-parent', code:'1100', name:'Bank and cash accounts', type:'ASSET', currency:'LKR', balance:1250800.75, hasSubAccounts:true, isActive:true, lastTransactionDate:'2026-11-15T08:30:00Z' },
+    { id:'account-bank-001', parentAccountId:'account-bank-parent', code:'1101', name:'Primary operating account', type:'ASSET', currency:'LKR', balance:850000.5, hasSubAccounts:false, isActive:true, lastTransactionDate:'2026-11-15T08:30:00Z' },
+    { id:'account-cash-001', parentAccountId:'account-bank-parent', code:'1102', name:'Head office petty cash', type:'ASSET', currency:'LKR', balance:400800.25, hasSubAccounts:false, isActive:true, lastTransactionDate:'2026-11-14T12:15:00Z' },
+    { id:'account-payable-001', code:'2100', name:'Trade accounts payable', type:'LIABILITY', currency:'LKR', balance:327450.25, hasSubAccounts:false, isActive:true, lastTransactionDate:'2026-11-13T09:05:00Z' },
+    { id:'account-equity-001', code:'3100', name:'Retained earnings', type:'EQUITY', currency:'LKR', balance:580000, hasSubAccounts:false, isActive:true, lastTransactionDate:'2026-10-31T17:00:00Z' },
+    { id:'account-revenue-001', code:'4100', name:'Project revenue', type:'REVENUE', currency:'LKR', balance:2467880.75, hasSubAccounts:false, isActive:true, lastTransactionDate:'2026-11-12T10:45:00Z' },
+    { id:'account-expense-001', code:'5100', name:'Operating expenses', type:'EXPENSE', currency:'LKR', balance:578650.75, hasSubAccounts:false, isActive:false, lastTransactionDate:'2026-11-14T15:20:00Z' },
+    { id:'account-project-001', code:'P-2041', name:'Colombo Distribution Modernisation — Phase 2', type:'ASSET', currency:'LKR', balance:-125000.5, hasSubAccounts:false, isActive:true, projectId:'project-001', lastTransactionDate:'2026-11-15T11:05:00Z' },
+];
+const financeAccountLedger = [
+    { date:'2026-11-01', description:'Opening operating balance', reference:'OPEN-2026-11', debit:800000, credit:0, runningBalance:800000 },
+    { date:'2026-11-08', description:'Customer receipt · Colombo distribution project', reference:'RCPT-2026-1842', debit:175000.5, credit:0, runningBalance:975000.5 },
+    { date:'2026-11-15', description:'Supplier settlement · GRN-2026-001', reference:'PAY-2026-0921', debit:0, credit:125000, runningBalance:850000.5 },
+];
 const financeAssets = [{ id:'asset-001', purchaseDate:'2026-11-03', purchaseCost:650000, paidAmount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK', paymentHistory:[{ amount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' }] }];
 const financeLoans = [{ id:'loan-001', startDate:'2026-11-01', status:'ACTIVE', totalRepaid:95000, outstandingBalance:405000, repaymentHistory:[{ amount:95000, paymentMethod:'CHEQUE', paymentAccountType:'BANK' }] }];
 const inventoryDataQualityIssues = [{ source: 'Stock Batch', recordId: 'B-CP-001', reference: 'GRN-2026-001', productName: 'Copper Cable 10mm', productId: 'product-copper', issue: 'Missing expiry reference', impact: 'Excluded from expiry reporting' }];

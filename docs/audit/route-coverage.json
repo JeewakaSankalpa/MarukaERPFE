@@ -10157,22 +10157,35 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Chart of accounts",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [
+          "General and project accounts table",
+          "Transaction ledger table"
+        ],
+        "keyboardChecks": [
+          "Search control receives visible keyboard focus",
+          "Tabs and account status controls use native keyboard-operable controls",
+          "Local financial tables are keyboard reachable"
+        ],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/accounts-modernization.audit.spec.js",
+          "Isolated account and ledger fixtures",
+          "Responsive geometry, serious/critical axe, keyboard focus, search, and nested ledger checks"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
-      "notes": []
+      "notes": [
+        "No mutating account, transfer, deposit, status, or document workflow was executed."
+      ]
     },
     {
       "id": "ROUTE-finance-accounts-general-accounts-tab",
@@ -10214,22 +10227,36 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "General accounts",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [
+          "General accounts table",
+          "Sub-account summary table",
+          "Transaction ledger table"
+        ],
+        "keyboardChecks": [
+          "General accounts tab is keyboard operable",
+          "Search control receives visible keyboard focus",
+          "Local financial tables are keyboard reachable"
+        ],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/accounts-modernization.audit.spec.js",
+          "Hierarchy-aware account search",
+          "Parent sub-account summary and leaf transaction ledger review"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
-      "notes": []
+      "notes": [
+        "Financial mutations and real document links remain integration-only."
+      ]
     },
     {
       "id": "ROUTE-finance-accounts-project-accounts-tab",
@@ -10271,22 +10298,33 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Project accounts",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [
+          "Project accounts table"
+        ],
+        "keyboardChecks": [
+          "Project accounts tab is keyboard operable",
+          "Project account table is keyboard reachable"
+        ],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/accounts-modernization.audit.spec.js",
+          "Project Accounts tab interaction and populated project-account fixture",
+          "Responsive geometry and serious/critical axe checks"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
-      "notes": []
+      "notes": [
+        "Project-account mutations remain integration-only."
+      ]
     },
     {
       "id": "ROUTE-finance-journals-initial-route-state",

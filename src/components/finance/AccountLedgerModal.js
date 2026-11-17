@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, Table, message, Statistic, Card, Row, Col, Button } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { Modal, Table, message, Button, Empty } from 'antd';
 import api from '../../api/api';
 
 const AccountLedgerModal = ({ account, open, onCancel, onViewSubAccount }) => {
@@ -46,12 +45,12 @@ const AccountLedgerModal = ({ account, open, onCancel, onViewSubAccount }) => {
     }, [open, account, fetchData]);
 
     const columns = [
-        { title: 'Date', dataIndex: 'date' },
+        { title: 'Date', dataIndex: 'date', width: 120 },
         { title: 'Description', dataIndex: 'description' },
         { title: 'Reference', dataIndex: 'reference' },
-        { title: 'Debit', dataIndex: 'debit', render: v => v > 0 ? v.toFixed(2) : '-' },
-        { title: 'Credit', dataIndex: 'credit', render: v => v > 0 ? v.toFixed(2) : '-' },
-        { title: 'Balance', dataIndex: 'runningBalance', render: v => <strong style={{ color: v < 0 ? 'red' : 'green' }}>{v.toFixed(2)}</strong> },
+        { title: 'Debit', dataIndex: 'debit', align: 'right', render: v => <span className="accounts-ledger-money">{v > 0 ? formatMoney(v) : '—'}</span> },
+        { title: 'Credit', dataIndex: 'credit', align: 'right', render: v => <span className="accounts-ledger-money">{v > 0 ? formatMoney(v) : '—'}</span> },
+        { title: 'Balance', dataIndex: 'runningBalance', align: 'right', render: v => <strong className={`accounts-ledger-money ${v < 0 ? 'negative' : ''}`}>{formatMoney(v)}</strong> },
         { 
             title: 'Doc', 
             dataIndex: 'receiptUrl', 
@@ -66,7 +65,8 @@ const AccountLedgerModal = ({ account, open, onCancel, onViewSubAccount }) => {
             title: 'Current Balance', 
             dataIndex: 'balance', 
             key: 'balance',
-            render: v => <strong style={{ color: '#0d6efd' }}>{(v || 0).toLocaleString('en-US', { style: 'currency', currency: account?.currency || 'LKR' })}</strong>
+            align: 'right',
+            render: v => <strong className={`accounts-ledger-money ${Number(v) < 0 ? 'negative' : ''}`}>{formatMoney(v)}</strong>
         },
         {
             title: 'Actions',
@@ -77,57 +77,44 @@ const AccountLedgerModal = ({ account, open, onCancel, onViewSubAccount }) => {
         }
     ];
 
+    const formatMoney = (value) => Number(value || 0).toLocaleString('en-LK', {
+        style: 'currency', currency: account?.currency || 'LKR', minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+
     return (
         <Modal
-            title={account?.hasSubAccounts ? `${account?.name} - Sub-Accounts Summary` : `${account?.name} - Ledger`}
+            rootClassName="accounts-ledger-modal"
+            title={<div className="accounts-modal-title"><span>{account?.code} · {account?.currency || 'LKR'}</span><strong>{account?.name} · {account?.hasSubAccounts ? 'Sub-account summary' : 'Transaction ledger'}</strong></div>}
             open={open}
             onCancel={onCancel}
             footer={null}
-            width={1000}
+            width={1080}
         >
             {account?.hasSubAccounts ? (
                 <>
-                    <Card style={{ marginBottom: 16 }} size="small">
-                        <Statistic title="Aggregate Parent Balance" value={account.balance} precision={2} valueStyle={{ color: '#0d6efd' }} />
-                    </Card>
-                    <Table
+                    <div className="accounts-ledger-summary"><div className="accounts-ledger-stat"><span>Aggregate parent balance</span><strong>{formatMoney(account.balance)}</strong></div><div className="accounts-ledger-stat"><span>Sub-accounts</span><strong>{subAccounts.length}</strong></div></div>
+                    <div className="accounts-ledger-scroll" tabIndex="0" aria-label="Sub-accounts table. Scroll horizontally for more columns."><Table
                         dataSource={subAccounts}
                         columns={subAccountColumns}
                         rowKey="id"
                         loading={loading}
                         size="small"
                         pagination={false}
-                    />
+                        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No sub-accounts available" /> }}
+                    /></div>
                 </>
             ) : (
                 <>
-                    <div className="mb-3">
-                        <Row gutter={16}>
-                            <Col span={8}>
-                                <Card size="small">
-                                    <Statistic title="Total Debit" value={summary.debit} prefix={<ArrowUpOutlined />} valueStyle={{ color: 'green' }} precision={2} />
-                                </Card>
-                            </Col>
-                            <Col span={8}>
-                                <Card size="small">
-                                    <Statistic title="Total Credit" value={summary.credit} prefix={<ArrowDownOutlined />} valueStyle={{ color: 'red' }} precision={2} />
-                                </Card>
-                            </Col>
-                            <Col span={8}>
-                                <Card size="small">
-                                    <Statistic title="Current Balance" value={summary.balance} precision={2} />
-                                </Card>
-                            </Col>
-                        </Row>
-                    </div>
-                    <Table
+                    <div className="accounts-ledger-summary"><div className="accounts-ledger-stat debit"><span>Total debit</span><strong>{formatMoney(summary.debit)}</strong></div><div className="accounts-ledger-stat credit"><span>Total credit</span><strong>{formatMoney(summary.credit)}</strong></div><div className="accounts-ledger-stat"><span>Current balance</span><strong className={summary.balance < 0 ? 'negative' : ''}>{formatMoney(summary.balance)}</strong></div></div>
+                    <div className="accounts-ledger-scroll" tabIndex="0" aria-label="Transaction history table. Scroll horizontally for more columns."><Table
                         dataSource={transactions}
                         columns={columns}
                         rowKey={(r) => r.date + r.description + r.runningBalance}
                         loading={loading}
                         size="small"
                         pagination={{ pageSize: 20 }}
-                    />
+                        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No transactions recorded for this account" /> }}
+                    /></div>
                 </>
             )}
         </Modal>

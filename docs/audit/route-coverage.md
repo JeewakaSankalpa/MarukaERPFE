@@ -183,9 +183,9 @@ Generated from `src/App.js` at revision `20e3a0e42f3607d7ee6bb428ad602f4ae3b4341
 | ROUTE-invoices-id-credit-note-initial-route-state | `/invoices/:id/credit-note` | CreditNoteView | initial route state | projects | NOT TESTED |
 | ROUTE-reports-project-material-initial-route-state | `/reports/project-material` | ProjectMaterialReport | initial route state | projects | NOT TESTED |
 | ROUTE-finance-dashboard-initial-route-state | `/finance/dashboard` | FinanceDashboard | initial route state | finance | NOT TESTED |
-| ROUTE-finance-accounts-initial-route-state | `/finance/accounts` | AccountsPage | initial route state | finance | NOT TESTED |
-| ROUTE-finance-accounts-general-accounts-tab | `/finance/accounts` | AccountsPage | General Accounts tab | finance | NOT TESTED |
-| ROUTE-finance-accounts-project-accounts-tab | `/finance/accounts` | AccountsPage | Project Accounts tab | finance | NOT TESTED |
+| ROUTE-finance-accounts-initial-route-state | `/finance/accounts` | AccountsPage | initial route state | finance | MOCK-VERIFIED |
+| ROUTE-finance-accounts-general-accounts-tab | `/finance/accounts` | AccountsPage | General Accounts tab | finance | MOCK-VERIFIED |
+| ROUTE-finance-accounts-project-accounts-tab | `/finance/accounts` | AccountsPage | Project Accounts tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-journals-initial-route-state | `/finance/journals` | JournalEntryList | initial route state | finance | NOT TESTED |
 | ROUTE-finance-expenses-initial-route-state | `/finance/expenses` | ExpensesPage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-expenses-category-tab | `/finance/expenses` | ExpensesPage | category tab | finance | MOCK-VERIFIED |

@@ -1,11 +1,12 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Modal, Form, Input, Select, Badge, Tag, Row, Col, Statistic, Switch, Tooltip, Tabs } from 'antd';
-import { PlusOutlined, BankOutlined, DollarOutlined, BookOutlined, SwapOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Modal, Form, Input, Select, Badge, Tag, Row, Col, Switch, Tooltip, Tabs, Empty } from 'antd';
+import { PlusOutlined, DollarOutlined, BookOutlined, SwapOutlined, SearchOutlined, WalletOutlined } from '@ant-design/icons';
 import { InputNumber } from 'antd';
 import api from '../../api/api';
 import AccountLedgerModal from './AccountLedgerModal';
+import './AccountsPage.css';
 
 const { Option } = Select;
 
@@ -29,6 +30,9 @@ const AccountsPage = () => {
     const [transferVisible, setTransferVisible] = useState(false);
     const [transferLoading, setTransferLoading] = useState(false);
     const [transferForm] = Form.useForm();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [statusFilter, setStatusFilter] = useState('ALL');
 
     const fetchAccounts = async () => {
         setLoading(true);
@@ -121,6 +125,33 @@ const AccountsPage = () => {
         return rootNodes;
     }, [accounts]);
 
+    const visibleTreeData = React.useMemo(() => {
+        const query = searchTerm.trim().toLowerCase();
+        const matches = (account) => {
+            const matchesQuery = !query || [account.code, account.name, account.type, account.currency]
+                .some(value => String(value || '').toLowerCase().includes(query));
+            const matchesType = typeFilter === 'ALL' || account.type === typeFilter;
+            const matchesStatus = statusFilter === 'ALL' || (statusFilter === 'ACTIVE' ? account.isActive : !account.isActive);
+            return matchesQuery && matchesType && matchesStatus;
+        };
+        const filterBranch = (account) => {
+            const children = (account.children || []).map(filterBranch).filter(Boolean);
+            if (!matches(account) && children.length === 0) return null;
+            return children.length > 0 ? { ...account, children } : { ...account, children: undefined };
+        };
+        return treeData.map(filterBranch).filter(Boolean);
+    }, [treeData, searchTerm, typeFilter, statusFilter]);
+
+    const totals = React.useMemo(() => ['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'].reduce((result, type) => ({
+        ...result,
+        [type]: accounts.filter(account => account.type === type)
+            .reduce((sum, account) => sum + Number(account.balance || 0), 0)
+    }), {}), [accounts]);
+
+    const formatMoney = (value, currency = 'LKR') => Number(value || 0).toLocaleString('en-LK', {
+        style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+
     useEffect(() => {
         fetchAccounts();
     }, []);
@@ -146,17 +177,18 @@ const AccountsPage = () => {
             title: 'Code',
             dataIndex: 'code',
             key: 'code',
-            render: text => <Tag color="blue">{text}</Tag>
+            width: 112,
+            render: text => <span className="accounts-code">{text}</span>
         },
         {
             title: 'Name',
             dataIndex: 'name',
             key: 'name',
             render: (text, record) => (
-                <span style={{ fontWeight: record.hasSubAccounts ? 600 : 400 }}>
-                    {record.projectId ? <Tag color="orange">Project</Tag> : null} {text}
-                    {record.hasSubAccounts ? <Tag color="default" style={{ marginLeft: 8 }}>Parent</Tag> : null}
-                </span>
+                <div className="accounts-name-cell">
+                    <strong>{text}</strong>
+                    <span>{record.projectId ? 'Project account' : record.hasSubAccounts ? 'Parent account' : 'Posting account'}</span>
+                </div>
             )
         },
         {
@@ -178,7 +210,7 @@ const AccountsPage = () => {
                 if (type === 'EQUITY') color = 'purple';
                 if (type === 'REVENUE') color = 'cyan';
                 if (type === 'EXPENSE') color = 'volcano';
-                return <Tag color={color}>{type}</Tag>;
+                return <Tag color={color} className="accounts-type-tag">{type}</Tag>;
             }
         },
         {
@@ -186,8 +218,7 @@ const AccountsPage = () => {
             dataIndex: 'balance',
             key: 'balance',
             render: (val, record) => {
-                const amount = parseFloat(val).toLocaleString('en-US', { style: 'currency', currency: record.currency || 'LKR' });
-                return <span style={{ fontWeight: 'bold' }}>{amount}</span>;
+                return <span className={`accounts-balance ${Number(val) < 0 ? 'is-negative' : ''}`}>{formatMoney(val, record.currency || 'LKR')}</span>;
             }
         },
         {
@@ -199,20 +230,18 @@ const AccountsPage = () => {
                 const dateB = b.lastTransactionDate ? new Date(b.lastTransactionDate).getTime() : 0;
                 return dateA - dateB;
             },
-            render: val => val ? new Date(val).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'
+            width: 150,
+            render: val => <span className="accounts-last-transaction">{val ? new Date(val).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No activity'}</span>
         },
         {
             title: 'Status',
             dataIndex: 'isActive',
             key: 'isActive',
             render: (active, record) => (
-                <Tooltip title={active ? 'Click to deactivate' : 'Click to activate'}>
-                    <span
-                        onClick={() => handleToggleActive(record.id)}
-                        style={{ cursor: 'pointer' }}
-                    >
+                <Tooltip title={active ? 'Deactivate account' : 'Activate account'}>
+                    <button type="button" className="accounts-status-button" onClick={() => handleToggleActive(record.id)} aria-label={`${active ? 'Deactivate' : 'Activate'} ${record.name}`}>
                         <Badge status={active ? 'success' : 'default'} text={active ? 'Active' : 'Inactive'} />
-                    </span>
+                    </button>
                 </Tooltip>
             )
         },
@@ -220,7 +249,7 @@ const AccountsPage = () => {
             title: 'Actions',
             key: 'actions',
             render: (_, record) => (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="accounts-row-actions">
                     <Tooltip title="View Ledger">
                         <Button size="small" icon={<BookOutlined />} onClick={() => handleViewLedger(record)}>Ledger</Button>
                     </Tooltip>
@@ -231,7 +260,7 @@ const AccountsPage = () => {
                     </Tooltip>
                     {record.hasSubAccounts && (
                         <Tooltip title="Add Sub-Account">
-                            <Button size="small" icon={<PlusOutlined />} onClick={() => {
+                            <Button size="small" aria-label={`Add sub-account under ${record.name}`} icon={<PlusOutlined />} onClick={() => {
                                 form.resetFields();
                                 form.setFieldsValue({ parentAccountId: record.id, type: record.type, hasSubAccounts: false });
                                 setIsModalVisible(true);
@@ -243,86 +272,72 @@ const AccountsPage = () => {
         }
     ];
 
-    return (
-        <div style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0" style={{ margin: 0 }}><BankOutlined /> Chart of Accounts</h2>
-                        </div>
-                <Button
-                    icon={<SwapOutlined />}
-                    onClick={() => { transferForm.resetFields(); setTransferVisible(true); }}
-                    style={{ marginRight: 8 }}
-                >
-                    Transfer Between Accounts
-                </Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setIsModalVisible(true); }}>
-                    New Account
-                </Button>
-            </div>
-
-            <Row gutter={16} style={{ marginBottom: 24 }}>
-                <Col span={6}>
-                    <Card bordered={false}>
-                        <Statistic
-                            title="Total Assets"
-                            value={accounts.filter(a => a.type === 'ASSET').reduce((sum, a) => sum + (a.balance || 0), 0)}
-                            precision={2}
-                            valueStyle={{ color: '#3f8600' }}
-                            prefix={<DollarOutlined />}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card bordered={false}>
-                        <Statistic
-                            title="Total Liabilities"
-                            value={accounts.filter(a => a.type === 'LIABILITY').reduce((sum, a) => sum + (a.balance || 0), 0)}
-                            precision={2}
-                            valueStyle={{ color: '#cf1322' }}
-                            prefix={<DollarOutlined />}
-                        />
-                    </Card>
-                </Col>
-            </Row>
-
-            <Tabs 
-                defaultActiveKey="1" 
-                items={[
-                    {
-                        key: '1',
-                        label: 'General Accounts',
-                        children: (
-                            <Table
-                                dataSource={treeData.filter(a => !a.projectId)}
-                                columns={columns}
-                                rowKey="id"
-                                loading={loading}
-                                pagination={false}
-                                expandable={{ defaultExpandAllRows: true }}
-                            />
-                        )
-                    },
-                    {
-                        key: '2',
-                        label: 'Project Accounts',
-                        children: (
-                            <Table
-                                dataSource={treeData.filter(a => !!a.projectId)}
-                                columns={columns}
-                                rowKey="id"
-                                loading={loading}
-                                pagination={false}
-                                expandable={{ defaultExpandAllRows: true }}
-                            />
-                        )
-                    }
-                ]} 
+    const renderAccountTable = (projectAccounts) => {
+        const data = visibleTreeData.filter(account => projectAccounts ? !!account.projectId : !account.projectId);
+        return <div className="accounts-table-scroll" tabIndex="0" aria-label={`${projectAccounts ? 'Project' : 'General'} accounts table. Scroll horizontally for more columns.`}>
+            <Table
+                key={`${projectAccounts ? 'project' : 'general'}-${searchTerm}-${typeFilter}-${statusFilter}`}
+                className="accounts-table"
+                dataSource={data}
+                columns={columns}
+                rowKey="id"
+                loading={loading}
+                pagination={false}
+                expandable={{ defaultExpandAllRows: true }}
+                scroll={{ x: 1120 }}
+                locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={searchTerm || typeFilter !== 'ALL' || statusFilter !== 'ALL' ? 'No accounts match these filters' : 'No accounts available'} /> }}
             />
+        </div>;
+    };
+
+    return (
+        <main className="accounts-page">
+            <header className="accounts-header">
+                <div className="accounts-heading-group">
+                    <button type="button" className="accounts-back-button" onClick={() => navigate(-1)} aria-label="Go back"><ArrowLeft size={18} /></button>
+                    <div>
+                        <span className="accounts-eyebrow">Sales &amp; Finance</span>
+                        <h1>Chart of accounts</h1>
+                        <p>Review balances, account activity, and the structure behind financial reporting.</p>
+                    </div>
+                </div>
+                <div className="accounts-header-actions">
+                    <Button icon={<SwapOutlined />} onClick={() => { transferForm.resetFields(); setTransferVisible(true); }}>Transfer funds</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setIsModalVisible(true); }}>New account</Button>
+                </div>
+            </header>
+
+            <section className="accounts-summary-grid" aria-label="Account balance summary">
+                {[
+                    ['ASSET', 'Assets', 'Available and controlled resources'],
+                    ['LIABILITY', 'Liabilities', 'Current financial obligations'],
+                    ['EQUITY', 'Equity', 'Owner and retained value'],
+                    ['REVENUE', 'Revenue', 'Recognised operating income'],
+                    ['EXPENSE', 'Expenses', 'Recognised operating costs']
+                ].map(([type, label, description]) => <article className={`accounts-summary accounts-summary-${type.toLowerCase()}`} key={type}>
+                    <div className="accounts-summary-icon" aria-hidden="true">{type === 'ASSET' ? <WalletOutlined /> : <DollarOutlined />}</div>
+                    <div><span>{label}</span><strong>{formatMoney(totals[type])}</strong><small>{description}</small></div>
+                </article>)}
+            </section>
+
+            <section className="accounts-workspace" aria-labelledby="accounts-directory-heading">
+                <div className="accounts-workspace-heading">
+                    <div><h2 id="accounts-directory-heading">Account directory</h2><p>{accounts.length} accounts · {accounts.filter(account => account.isActive).length} active</p></div>
+                </div>
+                <div className="accounts-filters" role="search" aria-label="Filter accounts">
+                    <Input aria-label="Search accounts" prefix={<SearchOutlined />} allowClear value={searchTerm} onChange={event => setSearchTerm(event.target.value)} placeholder="Search by code, name, type, or currency" />
+                    <Select aria-label="Filter by account type" value={typeFilter} onChange={setTypeFilter} options={['ALL', 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'].map(value => ({ value, label: value === 'ALL' ? 'All account types' : value.charAt(0) + value.slice(1).toLowerCase() }))} />
+                    <Select aria-label="Filter by account status" value={statusFilter} onChange={setStatusFilter} options={[{ value: 'ALL', label: 'All statuses' }, { value: 'ACTIVE', label: 'Active' }, { value: 'INACTIVE', label: 'Inactive' }]} />
+                </div>
+                <Tabs className="accounts-tabs" defaultActiveKey="general" items={[
+                    { key: 'general', label: `General accounts (${visibleTreeData.filter(account => !account.projectId).length})`, children: renderAccountTable(false) },
+                    { key: 'project', label: `Project accounts (${visibleTreeData.filter(account => !!account.projectId).length})`, children: renderAccountTable(true) }
+                ]} />
+            </section>
 
             <Modal
-                title="Create New Account"
+                rootClassName="accounts-form-modal"
+                title={<div className="accounts-modal-title"><span>Account structure</span><strong>Create new account</strong></div>}
                 open={isModalVisible}
                 onCancel={() => setIsModalVisible(false)}
                 onOk={() => form.submit()}
@@ -434,7 +449,8 @@ const AccountsPage = () => {
 
             {/* Deposit Modal */}
             <Modal
-                title={`💰 Deposit / Add Funds — ${depositAccount?.name}`}
+                rootClassName="accounts-form-modal"
+                title={<div className="accounts-modal-title"><span>Account funding</span><strong>Deposit to {depositAccount?.name}</strong></div>}
                 open={!!depositAccount}
                 onCancel={() => setDepositAccount(null)}
                 onOk={handleDeposit}
@@ -466,7 +482,8 @@ const AccountsPage = () => {
 
             {/* Transfer Between Accounts Modal */}
             <Modal
-                title={<span><SwapOutlined /> Transfer Between Accounts</span>}
+                rootClassName="accounts-form-modal"
+                title={<div className="accounts-modal-title"><span>Internal movement</span><strong><SwapOutlined /> Transfer between accounts</strong></div>}
                 open={transferVisible}
                 onCancel={() => setTransferVisible(false)}
                 onOk={() => transferForm.submit()}
@@ -474,7 +491,7 @@ const AccountsPage = () => {
                 confirmLoading={transferLoading}
                 width={520}
             >
-                <p style={{ color: '#888', marginBottom: 16 }}>
+                <p className="accounts-modal-description">
                     Move funds between any two accounts. A balanced Journal Entry (Dr → To, Cr → From) will be posted automatically.
                 </p>
                 <Form form={transferForm} layout="vertical" onFinish={handleTransfer}>
@@ -526,7 +543,7 @@ const AccountsPage = () => {
                     </Form.Item>
                 </Form>
             </Modal>
-        </div>
+        </main>
     );
 };
 
