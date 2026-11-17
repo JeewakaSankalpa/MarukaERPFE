@@ -9,11 +9,11 @@ This dashboard distinguishes route/state coverage from component and interaction
 | Declared routes | 114 |
 | Unique declared paths | 112 |
 | Route/state combinations | 248 |
-| MOCK-VERIFIED | 70 |
+| MOCK-VERIFIED | 73 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 177 |
+| NOT TESTED | 174 |
 
 ## Sidebar-section modernization breakdown
 
@@ -29,7 +29,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
 | Reports | 10 | 0 | 0 | 10 | 13 | 0 | 23 | 0.0% | 0.0% |
-| Sales & Finance | 14 | 5 | 0 | 9 | 16 | 16 | 14 | 35.7% | 53.3% |
+| Sales & Finance | 14 | 6 | 0 | 8 | 16 | 19 | 11 | 42.9% | 63.3% |
 | Settings | 18 | 0 | 1 | 17 | 13 | 1 | 30 | 5.6% | 3.2% |
 
 Seven declared paths are outside this sidebar breakdown: public login/root and user-administration/profile routes. They remain in the route manifest and are not counted twice here.
@@ -53,7 +53,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - Accounts: five-category balance summaries, hierarchy-aware search, general and project tabs, parent sub-account summary, leaf transaction ledger, keyboard focus, responsive local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without executing financial mutations.
 - Journals: balanced period summaries, reference/account search, status filtering, expanded debit and credit lines, keyboard focus, responsive local table scrolling, and the posting form's read-only layout and accessibility passed at desktop, intermediate, and mobile widths without posting or opening external documents.
 - Financial Statements: income statement, balance sheet, and trial balance populated views, period controls, statement hierarchy, keyboard-focusable local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without financial mutations.
-- Migration: populated opening supplier payables and project receivables, financial summaries, invoice and project filtering, keyboard-focusable local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without financial mutations.
+- Migration and its `/finance/migration-payables` alias: populated opening supplier payables and project receivables, financial summaries, invoice and project filtering, keyboard-focusable local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without financial mutations.
 
 ## Shared components
 

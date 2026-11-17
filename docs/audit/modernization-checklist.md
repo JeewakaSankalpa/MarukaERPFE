@@ -54,7 +54,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/finance/journals` | JournalEntryList | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width journal register, balanced debit/credit summaries, responsive line details, filters, and accessible posting form |
 | `/finance/loans` | LoanManagement | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/finance/migration` | MigrationPayablesPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width opening balance migration workspace with financial summaries, responsive registers, accessible filters, and guarded opening-balance forms |
-| `/finance/migration-payables` | MigrationPayablesPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/finance/migration-payables` | MigrationPayablesPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Verified alias of the modernized opening balance migration workspace; shared read-only behavior matches `/finance/migration` |
 | `/finance/petty-cash-approvals` | PettyCashApprovalPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/reports` | FinanceReportsPage | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width financial statements workspace modernized |
 | `/finance/tax` | TaxPage | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |

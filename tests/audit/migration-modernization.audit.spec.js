@@ -3,8 +3,8 @@ const AxeBuilder = require('@axe-core/playwright').default;
 const { test, expect } = require('./support/mock-test');
 const { measureLayout } = require('./support/layout');
 
-test('@mock @layout @a11y Migration supports responsive read-only opening-balance review', async ({ mockPage: page }) => {
-    await page.goto('/#/finance/migration', { waitUntil: 'domcontentloaded' });
+const verifyMigrationWorkspace = async (page, route) => {
+    await page.goto(`/#${route}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Opening balance migration' })).toBeVisible();
     await expect(page.getByText('526,550.50').first()).toBeVisible();
     await expect(page.getByText('311,750.50').first()).toBeVisible();
@@ -32,4 +32,12 @@ test('@mock @layout @a11y Migration supports responsive read-only opening-balanc
 
     const axe = await new AxeBuilder({ page }).analyze();
     expect(axe.violations.filter(item => ['serious', 'critical'].includes(item.impact))).toEqual([]);
+};
+
+test('@mock @layout @a11y Migration supports responsive read-only opening-balance review', async ({ mockPage: page }) => {
+    await verifyMigrationWorkspace(page, '/finance/migration');
+});
+
+test('@mock @layout @a11y Migration payables alias preserves the verified workspace', async ({ mockPage: page }) => {
+    await verifyMigrationWorkspace(page, '/finance/migration-payables');
 });
