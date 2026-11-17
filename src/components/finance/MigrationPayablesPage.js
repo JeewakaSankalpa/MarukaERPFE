@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Card, Col, Form, Modal, Row, Spinner, Tab, Table, Tabs } from 'react-bootstrap';
-import { CreditCard, FileText, FileUp, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { ArrowLeft, CreditCard, FileText, FileUp, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../api/api';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import SafeSelect from '../ReusableComponents/SafeSelect';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
+import './MigrationPayablesPage.css';
+import './MigrationPayablesPage.css';
 
 const emptyPayableForm = {
     supplierId: '',
@@ -187,6 +190,7 @@ function storeMigrationReceivableInvoices(projectId, invoiceNumbers) {
 }
 
 export default function MigrationPayablesPage() {
+    const navigate = useNavigate();
     const [suppliers, setSuppliers] = useState([]);
     const [projects, setProjects] = useState([]);
     const [receivableCandidates, setReceivableCandidates] = useState([]);
@@ -194,9 +198,11 @@ export default function MigrationPayablesPage() {
     const [receivables, setReceivables] = useState([]);
     const [activeTab, setActiveTab] = useState('payables');
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState('');
 
     const loadData = useCallback(async () => {
         setLoading(true);
+        setLoadError('');
         try {
             const [supplierRes, projectRes, payablesRes, allReceivablesRes] = await Promise.all([
                 api.get('/suppliers', { params: { status: 'ACTIVE', page: 0, size: 1000, sort: 'name,asc' } }),
@@ -218,6 +224,7 @@ export default function MigrationPayablesPage() {
             setPayables(payablesRes.data || []);
             setReceivables(migrationReceivableRows);
         } catch (error) {
+            setLoadError('Migration balances could not be loaded. Check the connection and try again.');
             toast.error('Failed to load migration data');
         } finally {
             setLoading(false);
@@ -229,18 +236,36 @@ export default function MigrationPayablesPage() {
     }, [loadData]);
 
     return (
-        <div className="p-4 bg-white min-vh-100">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 className="mb-1">Migration</h2>
-                    <div className="text-muted">Bring opening supplier payables and project receivables into finance.</div>
+        <main className="migration-page" aria-labelledby="migration-heading" aria-busy={loading}>
+            <header className="migration-header">
+                <div className="migration-heading-group">
+                    <button type="button" className="migration-back" onClick={() => navigate(-1)} aria-label="Back to previous page">
+                        <ArrowLeft size={19} aria-hidden="true" />
+                    </button>
+                    <div>
+                        <span className="migration-eyebrow">Sales &amp; Finance</span>
+                        <h1 id="migration-heading">Opening balance migration</h1>
+                        <p>Bring verified supplier payables and project receivables into the finance ledger.</p>
+                    </div>
                 </div>
-                <Button variant="outline-primary" onClick={loadData} disabled={loading}>
-                    <RefreshCw size={16} className="me-2" /> Refresh
+                <Button variant="outline-primary" className="migration-refresh" onClick={loadData} disabled={loading}>
+                    <RefreshCw size={16} aria-hidden="true" /> {loading ? 'Refreshing…' : 'Refresh balances'}
                 </Button>
-            </div>
+            </header>
 
-            <Tabs activeKey={activeTab} onSelect={(key) => setActiveTab(key || 'payables')} className="mb-4">
+            <section className="migration-guidance" aria-label="Migration guidance">
+                <div><strong>Opening balances only</strong><span>Use this workspace for pre-existing obligations that are not already represented in finance.</span></div>
+                <div><strong>Read before posting</strong><span>Review supplier, project, invoice, dates, and supporting files before creating an entry.</span></div>
+            </section>
+
+            {loadError && (
+                <div className="migration-error" role="alert">
+                    <div><strong>Unable to load migration balances</strong><span>{loadError}</span></div>
+                    <Button type="button" variant="outline-danger" size="sm" onClick={loadData}>Try again</Button>
+                </div>
+            )}
+
+            <Tabs activeKey={activeTab} onSelect={(key) => setActiveTab(key || 'payables')} className="migration-tabs" aria-label="Opening balance type">
                 <Tab eventKey="payables" title="Payables">
                     <PayablesTab
                         suppliers={suppliers}
@@ -260,7 +285,7 @@ export default function MigrationPayablesPage() {
                     />
                 </Tab>
             </Tabs>
-        </div>
+        </main>
     );
 }
 
@@ -368,14 +393,14 @@ function PayablesTab({ suppliers, projects, rows, loading, onRefresh }) {
 
     return (
         <>
-            <Row className="g-3 mb-4">
+            <Row className="g-3 migration-summary-grid">
                 <Col md={4}><SummaryCard title="Opening Payables" value={money(totals.amount)} /></Col>
                 <Col md={4}><SummaryCard title="Paid" value={money(totals.paid)} tone="success" /></Col>
                 <Col md={4}><SummaryCard title="Outstanding" value={money(totals.balance)} tone="danger" /></Col>
             </Row>
 
-            <Card className="shadow-sm mb-4 border-start border-4 border-danger">
-                <Card.Header className="fw-semibold">Add Supplier Payable</Card.Header>
+            <Card className="migration-entry-card migration-entry-card--payable">
+                <Card.Header><div><span>Opening entry</span><strong>Add supplier payable</strong></div><small>Creates an opening obligation and does not record a payment.</small></Card.Header>
                 <Card.Body>
                     <Form onSubmit={submitBacklog}>
                         <Row className="g-3">
@@ -573,27 +598,27 @@ function ReceivablesTab({ candidates, rows, loading, onRefresh }) {
 
     return (
         <>
-            <Row className="g-3 mb-4">
+            <Row className="g-3 migration-summary-grid">
                 <Col md={4}><SummaryCard title="Opening Receivables" value={money(totals.value)} /></Col>
                 <Col md={4}><SummaryCard title="Received" value={money(totals.received)} tone="success" /></Col>
                 <Col md={4}><SummaryCard title="Balance Due" value={money(totals.balance)} tone="danger" /></Col>
             </Row>
 
-            <Card className="shadow-sm mb-4 border-start border-4 border-primary">
-                <Card.Header className="fw-semibold">Add Project Receivable</Card.Header>
+            <Card className="migration-entry-card migration-entry-card--receivable">
+                <Card.Header><div><span>Opening entry</span><strong>Add project receivable</strong></div><small>Records an existing customer balance against an eligible project.</small></Card.Header>
                 <Card.Body>
                     <Form onSubmit={submitReceivable}>
                         <Row className="g-3">
                             <Col md={4}>
                                 <Form.Label>Project</Form.Label>
-                                <SafeSelect value={form.projectId} onChange={e => setForm({ ...form, projectId: e.target.value })} isSearchable required>
+                                <SafeSelect aria-label="Project" value={form.projectId} onChange={e => setForm({ ...form, projectId: e.target.value })} isSearchable required>
                                     <option value="">Select project</option>
                                     {candidates.map(project => <option key={project.id} value={project.id}>{projectOptionLabel(project)}</option>)}
                                 </SafeSelect>
                             </Col>
                             <Col md={3}>
                                 <Form.Label>Project Value</Form.Label>
-                                <Form.Control type="number" min="0" step="0.01" value={form.totalValue} onChange={e => setForm({ ...form, totalValue: e.target.value })} required />
+                                <Form.Control aria-label="Project value" type="number" min="0" step="0.01" value={form.totalValue} onChange={e => setForm({ ...form, totalValue: e.target.value })} required />
                             </Col>
                             <Col md={3}>
                                 <InvoiceNumberList
@@ -604,7 +629,7 @@ function ReceivablesTab({ candidates, rows, loading, onRefresh }) {
                             </Col>
                             <Col md={2}>
                                 <Form.Label>Customer Invoice Files</Form.Label>
-                                <Form.Control type="file" multiple onChange={e => setDocs(Array.from(e.target.files || []))} />
+                                <Form.Control aria-label="Customer invoice files" type="file" multiple onChange={e => setDocs(Array.from(e.target.files || []))} />
                             </Col>
                             <Col md={12} className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <div className="text-muted small">Only projects without an estimation or existing value are shown. Payments are recorded from the project payments path after this one-time setup.</div>
@@ -617,30 +642,31 @@ function ReceivablesTab({ candidates, rows, loading, onRefresh }) {
                 </Card.Body>
             </Card>
 
-            <Card className="shadow-sm">
-                <Card.Header className="fw-semibold d-flex flex-wrap align-items-center gap-2 justify-content-between">
-                    <span>Migration Receivables Report</span>
-                    <div className="input-group input-group-sm" style={{ width: 260 }}>
+            <Card className="migration-report-card">
+                <Card.Header>
+                    <div><span>Receivables register</span><strong>Opening project receivables</strong><small>{filteredRows.length} of {rows.length} records</small></div>
+                    <div className="input-group input-group-sm migration-search">
                         <span className="input-group-text"><Search size={13} /></span>
                         <input
                             type="text"
                             className="form-control"
+                            aria-label="Search receivables by project, customer, or invoice"
                             placeholder="Search project / customer..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
                         {search && (
-                            <button className="btn btn-outline-secondary" type="button" onClick={() => setSearch('')}>
+                            <button className="btn btn-outline-secondary" type="button" aria-label="Clear receivables search" onClick={() => setSearch('')}>
                                 <X size={12} />
                             </button>
                         )}
                     </div>
                 </Card.Header>
-                <Card.Body className="p-0">
+                <Card.Body className="p-0 migration-table-scroll" role="region" aria-label="Opening receivables table" tabIndex="0">
                     {loading ? (
                         <div className="text-center py-5"><Spinner animation="border" /></div>
                     ) : (
-                        <Table responsive hover className="mb-0 align-middle">
+                        <Table hover className="mb-0 align-middle">
                             <thead className="table-light">
                                 <tr>
                                     <th>Project</th>
@@ -685,47 +711,49 @@ function ReceivablesTab({ candidates, rows, loading, onRefresh }) {
 
 function MigrationPayablesTable({ rows, allRows, loading, searchInvoice, searchJob, setSearchInvoice, setSearchJob, onPayment }) {
     return (
-        <Card className="shadow-sm">
-            <Card.Header className="fw-semibold d-flex flex-wrap align-items-center gap-2 justify-content-between">
-                <span>Migration Payables Report</span>
-                <div className="d-flex gap-2 flex-wrap">
-                    <div className="input-group input-group-sm" style={{ width: 220 }}>
+        <Card className="migration-report-card">
+            <Card.Header>
+                <div><span>Payables register</span><strong>Opening supplier payables</strong><small>{rows.length} of {allRows.length} records</small></div>
+                <div className="migration-filter-row">
+                    <div className="input-group input-group-sm migration-search">
                         <span className="input-group-text"><Search size={13} /></span>
                         <input
                             type="text"
                             className="form-control"
+                            aria-label="Search payables by invoice number"
                             placeholder="Search invoice no..."
                             value={searchInvoice}
                             onChange={e => setSearchInvoice(e.target.value)}
                         />
                         {searchInvoice && (
-                            <button className="btn btn-outline-secondary" type="button" onClick={() => setSearchInvoice('')}>
+                            <button className="btn btn-outline-secondary" type="button" aria-label="Clear invoice search" onClick={() => setSearchInvoice('')}>
                                 <X size={12} />
                             </button>
                         )}
                     </div>
-                    <div className="input-group input-group-sm" style={{ width: 220 }}>
+                    <div className="input-group input-group-sm migration-search">
                         <span className="input-group-text"><Search size={13} /></span>
                         <input
                             type="text"
                             className="form-control"
+                            aria-label="Search payables by job, project, or stock"
                             placeholder="Search job / project / stock..."
                             value={searchJob}
                             onChange={e => setSearchJob(e.target.value)}
                         />
                         {searchJob && (
-                            <button className="btn btn-outline-secondary" type="button" onClick={() => setSearchJob('')}>
+                            <button className="btn btn-outline-secondary" type="button" aria-label="Clear job and project search" onClick={() => setSearchJob('')}>
                                 <X size={12} />
                             </button>
                         )}
                     </div>
                 </div>
             </Card.Header>
-            <Card.Body className="p-0">
+            <Card.Body className="p-0 migration-table-scroll" role="region" aria-label="Opening payables table" tabIndex="0">
                 {loading ? (
                     <div className="text-center py-5"><Spinner animation="border" /></div>
                 ) : (
-                    <Table responsive hover className="mb-0 align-middle">
+                    <Table hover className="mb-0 align-middle">
                         <thead className="table-light">
                             <tr>
                                 <th>Invoice Numbers</th>
@@ -879,10 +907,11 @@ function documentLinks(docs = []) {
 
 function SummaryCard({ title, value, tone = 'primary' }) {
     return (
-        <Card className={`shadow-sm border-${tone}`}>
+        <Card className={`migration-summary migration-summary--${tone}`}>
             <Card.Body>
-                <div className="text-muted small">{title}</div>
-                <h4 className={`mb-0 text-${tone}`}>{value}</h4>
+                <span>{title}</span>
+                <strong>{value}</strong>
+                <small>LKR</small>
             </Card.Body>
         </Card>
     );

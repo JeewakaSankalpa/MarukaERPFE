@@ -11193,22 +11193,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Opening balance migration",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": ["Opening payables table", "Opening receivables table"],
+        "keyboardChecks": ["Payables and receivables tabs are keyboard operable", "Local financial tables are keyboard reachable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/migration-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["No migration entry, supplier payment, upload, fallback persistence, or other financial mutation was executed."]
     },
     {
       "id": "ROUTE-finance-migration-payables-tab",
@@ -11250,22 +11250,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Opening supplier payables",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": ["Opening payables table"],
+        "keyboardChecks": ["Invoice and job/project search controls are keyboard operable", "Opening payables table is keyboard reachable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/migration-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["Populated totals and filtered supplier payable review were verified without opening or submitting payment and creation workflows."]
     },
     {
       "id": "ROUTE-finance-migration-receivables-tab",
@@ -11307,22 +11307,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Opening project receivables",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": ["Opening receivables table"],
+        "keyboardChecks": ["Receivables search is keyboard operable", "Opening receivables table is keyboard reachable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/migration-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["Populated totals, tab interaction, invoice filtering, and responsive review were verified without submitting receivable creation or upload workflows."]
     },
     {
       "id": "ROUTE-finance-migration-payables-initial-route-state",

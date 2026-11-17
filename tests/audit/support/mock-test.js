@@ -42,6 +42,13 @@ const test = auditTest.extend({
             if (url.pathname === '/api/finance/reports/income-statement') return json(route, financeIncomeStatement);
             if (url.pathname === '/api/finance/reports/balance-sheet') return json(route, financeBalanceSheet);
             if (url.pathname === '/api/finance/reports/trial-balance') return json(route, financeTrialBalance);
+            if (url.pathname === '/api/suppliers') return json(route, { content: migrationSuppliers });
+            if (url.pathname === '/api/projects/search') return json(route, migrationProjects);
+            if (url.pathname === '/api/finance/migration-payables/report') return json(route, migrationPayables);
+            if (url.pathname === '/api/projects/receivables') return json(route, migrationReceivables);
+            if (url.pathname === '/api/estimations/by-project/project-migration-new') return json(route, {});
+            if (url.pathname === '/api/estimations/by-project/project-migration-existing') return json(route, {});
+            if (url.pathname === '/api/projects/project-migration-existing/files') return json(route, migrationReceivableDocuments);
             if (url.pathname === '/api/finance/accounts/account-bank-parent/subaccounts') return json(route, financeAccounts.filter(account => account.parentAccountId === 'account-bank-parent'));
             if (url.pathname === '/api/finance/reports/accounts/account-bank-001/ledger') return json(route, financeAccountLedger);
             if (url.pathname === '/api/finance/accounts/payment-accounts') return json(route, financePaymentAccounts);
@@ -196,6 +203,17 @@ const financeJournals = { content: [
 const financeIncomeStatement = { startDate:'2026-11-01', endDate:'2026-11-17', revenue:[{accountId:'revenue-1',accountName:'Project revenue',code:'4100',balance:2467880.75},{accountId:'revenue-2',accountName:'Service revenue',code:'4200',balance:382500}], expenses:[{accountId:'expense-1',accountName:'Operating expenses',code:'5100',balance:578650.75},{accountId:'expense-2',accountName:'Finance costs',code:'5200',balance:89450}], totalRevenue:2850380.75,totalExpenses:668100.75,netIncome:2182280 };
 const financeBalanceSheet = { asOfDate:'2026-11-17',assets:[{accountId:'asset-1',accountName:'Cash and bank',code:'1100',balance:1250800.75},{accountId:'asset-2',accountName:'Trade receivables',code:'1200',balance:756649.5}],liabilities:[{accountId:'liability-1',accountName:'Trade accounts payable',code:'2100',balance:327450.25}],equity:[{accountId:'equity-1',accountName:'Retained earnings',code:'3100',balance:1680000}],totalAssets:2007450.25,totalLiabilities:327450.25,totalEquity:1680000 };
 const financeTrialBalance = { startDate:'2026-11-01',endDate:'2026-11-17',isBalanced:true,totalDebit:3188450.5,totalCredit:3188450.5,lines:[{accountId:'asset-1',code:'1100',accountName:'Cash and bank',accountType:'ASSET',totalDebit:1250800.75,totalCredit:0,closingBalance:1250800.75},{accountId:'liability-1',code:'2100',accountName:'Trade accounts payable',accountType:'LIABILITY',totalDebit:0,totalCredit:327450.25,closingBalance:-327450.25},{accountId:'revenue-1',code:'4100',accountName:'Project revenue',accountType:'REVENUE',totalDebit:0,totalCredit:2467880.75,closingBalance:-2467880.75}] };
+const migrationSuppliers = [{ id:'supplier-001', name:'Colombo Industrial Supplies' },{ id:'supplier-002', name:'Precision Motion Lanka' }];
+const migrationProjects = [
+    { id:'project-migration-new', projectName:'Southern warehouse electrical upgrade', customerName:'Southern Logistics PLC', jobNumber:'MJN-2025-00314' },
+    { id:'project-migration-existing', projectName:'Kandy distribution control system', customerName:'Central Distribution Services', jobNumber:'MJN-2025-00241' }
+];
+const migrationPayables = [
+    { id:'migration-payable-001', invoiceNumbers:['CIS-INV-1842','CIS-INV-1851'], supplierName:'Colombo Industrial Supplies', targetType:'PROJECT', projects:[migrationProjects[1]], createdBy:'Nadeesha Perera', createdAt:'2026-10-30T08:15:00Z', payableDate:'2026-10-12', dueDate:'2026-11-12', amount:486750.5, paidAmount:175000, balance:311750.5, status:'PARTIALLY_PAID', documents:[{ fileName:'CIS-opening-invoices.pdf' }], transactions:[{ id:'migration-tx-001', amount:175000, paymentDate:'2026-11-05', addedBy:'Nadeesha Perera', reference:'BANK-1105', paymentMethod:'BANK_TRANSFER', documents:[] }] },
+    { id:'migration-payable-002', invoiceNumbers:['PML-9237'], supplierName:'Precision Motion Lanka', targetType:'STOCK', projects:[], createdBy:'Kasun Silva', createdAt:'2026-10-29T06:30:00Z', payableDate:'2026-09-28', dueDate:'2026-10-28', amount:214800, paidAmount:0, balance:214800, status:'UNPAID', documents:[], transactions:[] }
+];
+const migrationReceivables = [{ projectId:'project-migration-existing', projectName:'Kandy distribution control system', customerName:'Central Distribution Services', totalProjectValue:875000, totalReceived:325000, balance:550000 }];
+const migrationReceivableDocuments = [{ fileName:'CDS-opening-invoice.pdf', docType:'MIGRATION_RECEIVABLE', version:'CDS-2025-119', url:'' }];
 const financePaymentAccounts = [{ id:'account-bank-001', name:'Primary operating account', paymentAccountType:'BANK', balance:850000, hasSubAccounts:false }];
 const financeAccounts = [
     { id:'account-bank-parent', code:'1100', name:'Bank and cash accounts', type:'ASSET', currency:'LKR', balance:1250800.75, hasSubAccounts:true, isActive:true, lastTransactionDate:'2026-11-15T08:30:00Z' },

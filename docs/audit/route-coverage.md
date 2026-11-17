@@ -5,7 +5,7 @@ Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a9
 - Route declarations: 114
 - Unique declared paths: 112
 - Coverage rows including nested states: 248
-- Status counts: `MOCK-VERIFIED` 67, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 180
+- Status counts: `MOCK-VERIFIED` 70, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 177
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -200,9 +200,9 @@ Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a9
 | ROUTE-finance-reports-profit-and-loss-tab | `/finance/reports` | FinanceReportsPage | profit and loss tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-reports-balance-sheet-tab | `/finance/reports` | FinanceReportsPage | balance sheet tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-reports-trial-balance-tab | `/finance/reports` | FinanceReportsPage | trial balance tab | finance | MOCK-VERIFIED |
-| ROUTE-finance-migration-initial-route-state | `/finance/migration` | MigrationPayablesPage | initial route state | finance | NOT TESTED |
-| ROUTE-finance-migration-payables-tab | `/finance/migration` | MigrationPayablesPage | payables tab | finance | NOT TESTED |
-| ROUTE-finance-migration-receivables-tab | `/finance/migration` | MigrationPayablesPage | receivables tab | finance | NOT TESTED |
+| ROUTE-finance-migration-initial-route-state | `/finance/migration` | MigrationPayablesPage | initial route state | finance | MOCK-VERIFIED |
+| ROUTE-finance-migration-payables-tab | `/finance/migration` | MigrationPayablesPage | payables tab | finance | MOCK-VERIFIED |
+| ROUTE-finance-migration-receivables-tab | `/finance/migration` | MigrationPayablesPage | receivables tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-migration-payables-initial-route-state | `/finance/migration-payables` | MigrationPayablesPage | initial route state | finance | NOT TESTED |
 | ROUTE-finance-migration-payables-payables-tab | `/finance/migration-payables` | MigrationPayablesPage | payables tab | finance | NOT TESTED |
 | ROUTE-finance-migration-payables-receivables-tab | `/finance/migration-payables` | MigrationPayablesPage | receivables tab | finance | NOT TESTED |
