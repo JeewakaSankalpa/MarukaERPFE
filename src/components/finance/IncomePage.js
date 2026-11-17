@@ -1,6 +1,6 @@
-import { ArrowLeft, FileCheck2, Info, WalletCards } from 'lucide-react';
+import { ArrowLeft, FileCheck2, Info, RefreshCw, Search, WalletCards } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { Container, Table, Card, Badge, Form, Row, Col, InputGroup } from 'react-bootstrap';
+import { Table, Card, Badge, Form, Row, Col, InputGroup, Button } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useNavigate,  Link } from 'react-router-dom';
 import {
@@ -10,6 +10,7 @@ import {
 import ResponsiveContainer from "../ReusableComponents/SafeResponsiveContainer";
 import api from '../../api/api';
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import './IncomePage.css';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
 
@@ -18,6 +19,7 @@ export default function IncomePage() {
     const [invoices, setInvoices] = useState([]);
     const [projectReceivables, setProjectReceivables] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState('');
 
     // Filters
     const [filterStatus, setFilterStatus] = useState('ALL');
@@ -31,6 +33,7 @@ export default function IncomePage() {
     const loadInvoices = async () => {
         try {
             setLoading(true);
+            setLoadError('');
             const [invoiceRes, receivableRes] = await Promise.all([
                 api.get('/invoices'),
                 api.get('/projects/receivables')
@@ -39,6 +42,7 @@ export default function IncomePage() {
             setProjectReceivables(receivableRes.data || []);
         } catch (e) {
             console.error(e);
+            setLoadError('Income records could not be loaded. Check the connection and try again.');
             toast.error("Failed to load income data");
         } finally {
             setLoading(false);
@@ -111,57 +115,62 @@ export default function IncomePage() {
 
 
     return (
-        <Container fluid className="py-4">
-            <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0">Income Management</h2>
-                        </div>
+        <main className="income-page" aria-labelledby="income-heading" aria-busy={loading}>
+            <header className="income-header">
+                <div className="income-heading-group">
+                    <button type="button" className="income-back" onClick={() => navigate(-1)} aria-label="Back to previous page"><ArrowLeft size={19} aria-hidden="true" /></button>
+                    <div><span className="income-eyebrow">Sales &amp; Finance</span><h1 id="income-heading">Income and receivables</h1><p>Review invoiced revenue, allocated receipts, unallocated project payments, and outstanding balances.</p></div>
+                </div>
+                <Button type="button" variant="outline-primary" className="income-refresh" onClick={loadInvoices} disabled={loading}><RefreshCw size={16} aria-hidden="true" />{loading ? 'Refreshing…' : 'Refresh income'}</Button>
+            </header>
+
+            {loadError && <div className="income-error" role="alert"><div><strong>Unable to load income records</strong><span>{loadError}</span></div><Button type="button" size="sm" variant="outline-danger" onClick={loadInvoices}>Try again</Button></div>}
 {/* Summary Cards */}
-            <Row className="mb-4 g-3">
+            <Row className="income-summary-grid g-3">
                 <Col md={3}>
-                    <Card className="text-center shadow-sm border-0 bg-primary text-white h-100">
+                    <Card className="income-summary income-summary--invoiced">
                         <Card.Body>
-                            <h6>Total Invoiced</h6>
-                            <h3>{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <h2>Total invoiced</h2>
+                            <strong>{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                             <small>Invoice amounts</small>
                         </Card.Body>
                     </Card>
                 </Col>
                 <Col md={3}>
-                    <Card className="text-center shadow-sm border-0 bg-success text-white h-100">
+                    <Card className="income-summary income-summary--received">
                         <Card.Body>
-                            <h6><FileCheck2 size={15} className="me-1" aria-hidden="true" />Invoice Payments</h6>
-                            <h3>{totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <h2><FileCheck2 size={15} aria-hidden="true" />Invoice payments</h2>
+                            <strong>{totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                             <small>Allocated to invoices</small>
                         </Card.Body>
                     </Card>
                 </Col>
                 <Col md={3}>
-                    <Card className="text-center shadow-sm border-0 bg-info text-white h-100">
+                    <Card className="income-summary income-summary--project">
                         <Card.Body>
-                            <h6><WalletCards size={15} className="me-1" aria-hidden="true" />Project Payments</h6>
-                            <h3>{projectPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <h2><WalletCards size={15} aria-hidden="true" />Project payments</h2>
+                            <strong>{projectPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                             <small>Received for projects, not invoices</small>
                         </Card.Body>
                     </Card>
                 </Col>
                 <Col md={3}>
-                    <Card className="text-center shadow-sm border-0 bg-warning text-dark h-100">
+                    <Card className="income-summary income-summary--outstanding">
                         <Card.Body>
-                            <h6>Outstanding</h6>
-                            <h3>{totalPending.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                            <h2>Outstanding</h2>
+                            <strong>{totalPending.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                             <small>Invoice balances only</small>
                         </Card.Body>
                     </Card>
                 </Col>
             </Row>
 
-            <Card className="mb-4 border-0 shadow-sm" aria-label="Income totals explanation">
+            <Card className="income-guidance" aria-label="Income totals explanation">
                 <Card.Body className="d-flex align-items-start gap-3 py-3">
                     <Info className="text-primary flex-shrink-0 mt-1" size={20} aria-hidden="true" />
                     <div>
-                        <div className="fw-semibold">How to read these totals</div>
-                        <div className="text-muted small">
+                            <strong>How to read these totals</strong>
+                        <div>
                             Invoice Payments are linked to a specific invoice. Project Payments are receipts recorded
                             in Project Finance and remain unallocated until someone assigns them to an invoice.
                             They are shown separately so the same payment is not counted twice.
@@ -171,11 +180,11 @@ export default function IncomePage() {
             </Card>
 
             {/* Charts Section */}
-            <Row className="mb-4 g-3">
+            <Row className="income-visual-grid g-3">
                 <Col md={8}>
-                    <Card className="shadow-sm border-0 h-100">
-                        <Card.Header className="bg-white fw-bold">Income Trend</Card.Header>
-                        <Card.Body style={{ height: 300 }}>
+                    <Card className="income-chart-card">
+                        <Card.Header><div><span>Period movement</span><strong>Invoiced income trend</strong></div><small>Filtered invoice value by issue month</small></Card.Header>
+                        <Card.Body className="income-chart-body" role="img" aria-label="Bar chart of invoiced income by month">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -190,9 +199,9 @@ export default function IncomePage() {
                     </Card>
                 </Col>
                 <Col md={4}>
-                    <Card className="shadow-sm border-0 h-100">
-                        <Card.Header className="bg-white fw-bold">Status Distribution</Card.Header>
-                        <Card.Body style={{ height: 300 }}>
+                    <Card className="income-chart-card">
+                        <Card.Header><div><span>Invoice mix</span><strong>Status distribution</strong></div><small>Count of filtered invoices by status</small></Card.Header>
+                        <Card.Body className="income-chart-body" role="img" aria-label="Donut chart of invoice counts by status">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -219,13 +228,15 @@ export default function IncomePage() {
             </Row>
 
             {/* Invoices List */}
-            <Card className="shadow-sm border-0">
-                <Card.Header className="bg-white py-3">
-                    <Row className="g-2 align-items-center">
+            <Card className="income-register">
+                <Card.Header>
+                    <div className="income-register-heading"><div><span>Invoice register</span><strong>Income records</strong></div><small>Showing {filteredInvoices.length} of {invoices.length} invoices</small></div>
+                    <Row className="g-2 income-filters">
                         <Col md={3}>
                             <InputGroup>
-                                <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
+                                <InputGroup.Text><Search size={15} aria-hidden="true" /></InputGroup.Text>
                                 <Form.Control
+                                    aria-label="Search invoices by project or invoice number"
                                     placeholder="Search Project / Invoice..."
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
@@ -234,6 +245,7 @@ export default function IncomePage() {
                         </Col>
                         <Col md={3}>
                             <Form.Control
+                                aria-label="Filter invoices by issue month"
                                 type="month"
                                 value={filterMonth}
                                 onChange={e => setFilterMonth(e.target.value)}
@@ -241,7 +253,7 @@ export default function IncomePage() {
                             />
                         </Col>
                         <Col md={3}>
-                            <SafeSelect value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                            <SafeSelect aria-label="Filter invoices by status" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                                 <option value="ALL">All Statuses</option>
                                 <option value="PAID">Paid</option>
                                 <option value="PENDING">Pending</option>
@@ -250,13 +262,10 @@ export default function IncomePage() {
                                 <option value="CANCELLED">Cancelled</option>
                             </SafeSelect>
                         </Col>
-                        <Col className="text-end">
-                            <small className="text-muted">Showing {filteredInvoices.length} invoices</small>
-                        </Col>
                     </Row>
                 </Card.Header>
-                <Card.Body className="p-0">
-                    <Table hover responsive striped className="mb-0 align-middle">
+                <Card.Body className="p-0 income-table-scroll" role="region" aria-label="Income invoice table" tabIndex="0">
+                    <Table hover className="mb-0 align-middle">
                         <thead className="bg-light">
                             <tr>
                                 <th className="ps-4">Invoice #</th>
@@ -271,7 +280,7 @@ export default function IncomePage() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="8" className="text-center py-4">Loading...</td></tr>
+                                <tr><td colSpan="8" className="income-loading"><span className="income-loading-line" /><span className="income-loading-line" /><span className="income-loading-line" /><span className="visually-hidden">Loading income records</span></td></tr>
                             ) : filteredInvoices.length === 0 ? (
                                 <tr><td colSpan="8" className="text-center py-4 text-muted">No invoices found.</td></tr>
                             ) : (
@@ -299,6 +308,6 @@ export default function IncomePage() {
                     </Table>
                 </Card.Body>
             </Card>
-        </Container>
+        </main>
     );
 }

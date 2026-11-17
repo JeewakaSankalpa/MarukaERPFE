@@ -10900,22 +10900,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Income and receivables",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": ["Income invoice table"],
+        "keyboardChecks": ["Invoice search and status filter are keyboard operable", "Income invoice table is keyboard reachable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/income-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["No financial mutation or project destination workflow was executed; network-failure loading/error behavior remains integration-only."]
     },
     {
       "id": "ROUTE-finance-reports-initial-route-state",

@@ -42,6 +42,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/finance/reports/income-statement') return json(route, financeIncomeStatement);
             if (url.pathname === '/api/finance/reports/balance-sheet') return json(route, financeBalanceSheet);
             if (url.pathname === '/api/finance/reports/trial-balance') return json(route, financeTrialBalance);
+            if (url.pathname === '/api/invoices') return json(route, financeIncomeInvoices);
             if (url.pathname === '/api/suppliers') return json(route, { content: migrationSuppliers });
             if (url.pathname === '/api/projects/search') return json(route, migrationProjects);
             if (url.pathname === '/api/finance/migration-payables/report') return json(route, migrationPayables);
@@ -203,6 +204,12 @@ const financeJournals = { content: [
 const financeIncomeStatement = { startDate:'2026-11-01', endDate:'2026-11-17', revenue:[{accountId:'revenue-1',accountName:'Project revenue',code:'4100',balance:2467880.75},{accountId:'revenue-2',accountName:'Service revenue',code:'4200',balance:382500}], expenses:[{accountId:'expense-1',accountName:'Operating expenses',code:'5100',balance:578650.75},{accountId:'expense-2',accountName:'Finance costs',code:'5200',balance:89450}], totalRevenue:2850380.75,totalExpenses:668100.75,netIncome:2182280 };
 const financeBalanceSheet = { asOfDate:'2026-11-17',assets:[{accountId:'asset-1',accountName:'Cash and bank',code:'1100',balance:1250800.75},{accountId:'asset-2',accountName:'Trade receivables',code:'1200',balance:756649.5}],liabilities:[{accountId:'liability-1',accountName:'Trade accounts payable',code:'2100',balance:327450.25}],equity:[{accountId:'equity-1',accountName:'Retained earnings',code:'3100',balance:1680000}],totalAssets:2007450.25,totalLiabilities:327450.25,totalEquity:1680000 };
 const financeTrialBalance = { startDate:'2026-11-01',endDate:'2026-11-17',isBalanced:true,totalDebit:3188450.5,totalCredit:3188450.5,lines:[{accountId:'asset-1',code:'1100',accountName:'Cash and bank',accountType:'ASSET',totalDebit:1250800.75,totalCredit:0,closingBalance:1250800.75},{accountId:'liability-1',code:'2100',accountName:'Trade accounts payable',accountType:'LIABILITY',totalDebit:0,totalCredit:327450.25,closingBalance:-327450.25},{accountId:'revenue-1',code:'4100',accountName:'Project revenue',accountType:'REVENUE',totalDebit:0,totalCredit:2467880.75,closingBalance:-2467880.75}] };
+const financeIncomeInvoices = [
+    { id:'invoice-income-001', invoiceNumber:'INV-2026-1042', projectId:'project-001', issuedDate:'2026-11-04', dueDate:'2026-12-04', totalAmount:486750.5, paidAmount:175000, status:'PARTIALLY_PAID' },
+    { id:'invoice-income-002', invoiceNumber:'INV-2026-0988', projectId:'project-migration-existing', issuedDate:'2026-10-16', dueDate:'2026-11-16', totalAmount:214800, paidAmount:214800, status:'PAID' },
+    { id:'invoice-income-003', invoiceNumber:'INV-2026-1061', projectId:'project-southern-warehouse', issuedDate:'2026-11-12', dueDate:'2026-12-12', totalAmount:328450.75, paidAmount:0, status:'PENDING' },
+    { id:'invoice-income-004', invoiceNumber:'INV-2026-0914', projectId:'project-cancelled', issuedDate:'2026-09-08', dueDate:'2026-10-08', totalAmount:98500, paidAmount:0, status:'CANCELLED' }
+];
 const migrationSuppliers = [{ id:'supplier-001', name:'Colombo Industrial Supplies' },{ id:'supplier-002', name:'Precision Motion Lanka' }];
 const migrationProjects = [
     { id:'project-migration-new', projectName:'Southern warehouse electrical upgrade', customerName:'Southern Logistics PLC', jobNumber:'MJN-2025-00314' },

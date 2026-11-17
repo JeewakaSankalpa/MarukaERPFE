@@ -50,7 +50,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/finance/accounts` | AccountsPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width account directory, five-category balance summary, nested ledger review, filters, responsive tables, and accessible financial presentation |
 | `/finance/dashboard` | FinanceDashboard | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/finance/expenses` | ExpensesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width expense review workspace modernized |
-| `/finance/income` | IncomePage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/finance/income` | IncomePage | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width income and receivables review with financial hierarchy, responsive charts and register, accessible filtering, and guarded loading/error presentation |
 | `/finance/journals` | JournalEntryList | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width journal register, balanced debit/credit summaries, responsive line details, filters, and accessible posting form |
 | `/finance/loans` | LoanManagement | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/finance/migration` | MigrationPayablesPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width opening balance migration workspace with financial summaries, responsive registers, accessible filters, and guarded opening-balance forms |
