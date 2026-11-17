@@ -38,6 +38,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/transfers') return json(route, pendingTransfers);
             if (url.pathname === '/api/finance/expenses') return json(route, financeExpenses);
             if (url.pathname === '/api/finance/accounts') return json(route, financeAccounts);
+            if (url.pathname === '/api/finance/journals') return json(route, financeJournals);
             if (url.pathname === '/api/finance/accounts/account-bank-parent/subaccounts') return json(route, financeAccounts.filter(account => account.parentAccountId === 'account-bank-parent'));
             if (url.pathname === '/api/finance/reports/accounts/account-bank-001/ledger') return json(route, financeAccountLedger);
             if (url.pathname === '/api/finance/accounts/payment-accounts') return json(route, financePaymentAccounts);
@@ -175,6 +176,20 @@ const financeExpenses = [
     { id:'expense-003', title:'Supplier payment · GRN-2026-001', description:'Copper cable delivery settlement', category:'SUPPLIER_PAYMENT', amount:245000, expenseDate:'2026-11-14', status:'PAID', paymentMethod:'CARD', paymentAccountType:'CREDIT_CARD', projectId:'grn-001' },
     { id:'expense-004', title:'Workshop rental', description:'Monthly workshop premises rent', category:'RENT', amount:185000, expenseDate:'2026-10-02', status:'PAID', paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' },
 ];
+const financeJournals = { content: [
+    { id:'journal-001', date:'2026-11-15', reference:'PAY-2026-0921', description:'Supplier settlement for copper cable delivery', status:'POSTED', lines:[
+        { accountId:'account-payable-001', accountName:'Trade accounts payable', description:'Clear supplier liability', debit:125000, credit:0 },
+        { accountId:'account-bank-001', accountName:'Primary operating account', description:'Bank settlement', debit:0, credit:125000 }
+    ] },
+    { id:'journal-002', date:'2026-11-08', reference:'RCPT-2026-1842', description:'Customer receipt for Colombo distribution project', status:'POSTED', lines:[
+        { accountId:'account-bank-001', accountName:'Primary operating account', description:'Customer funds received', debit:175000.5, credit:0, receiptUrl:'https://audit-files.invalid/receipt-1842.pdf' },
+        { accountId:'account-revenue-001', accountName:'Project revenue', description:'Recognise project revenue', debit:0, credit:175000.5 }
+    ] },
+    { id:'journal-003', date:'2026-11-01', reference:'OPEN-2026-11', description:'Opening operating balance', status:'POSTED', lines:[
+        { accountId:'account-bank-001', accountName:'Primary operating account', description:'Opening bank balance', debit:800000, credit:0 },
+        { accountId:'account-equity-001', accountName:'Retained earnings', description:'Opening equity position', debit:0, credit:800000 }
+    ] }
+] };
 const financePaymentAccounts = [{ id:'account-bank-001', name:'Primary operating account', paymentAccountType:'BANK', balance:850000, hasSubAccounts:false }];
 const financeAccounts = [
     { id:'account-bank-parent', code:'1100', name:'Bank and cash accounts', type:'ASSET', currency:'LKR', balance:1250800.75, hasSubAccounts:true, isActive:true, lastTransactionDate:'2026-11-15T08:30:00Z' },

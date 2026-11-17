@@ -3,8 +3,8 @@
 Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nested-state metadata. It tracks modernization separately from browser coverage; a loaded route is never automatically modernized or verified.
 
 - Unique declared paths: 112
-- Route/state combinations: 246
-- Generated: 2026-11-16T17:39:48.089Z
+- Route/state combinations: 248
+- Generated: 2026-11-17
 
 ## Status vocabulary
 
@@ -51,7 +51,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/finance/dashboard` | FinanceDashboard | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/finance/expenses` | ExpensesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width expense review workspace modernized |
 | `/finance/income` | IncomePage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
-| `/finance/journals` | JournalEntryList | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/finance/journals` | JournalEntryList | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width journal register, balanced debit/credit summaries, responsive line details, filters, and accessible posting form |
 | `/finance/loans` | LoanManagement | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/finance/migration` | MigrationPayablesPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/finance/migration-payables` | MigrationPayablesPage | 2 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |

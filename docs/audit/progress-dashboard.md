@@ -8,12 +8,12 @@ This dashboard distinguishes route/state coverage from component and interaction
 |---|---:|
 | Declared routes | 114 |
 | Unique declared paths | 112 |
-| Route/state combinations | 246 |
-| MOCK-VERIFIED | 60 |
+| Route/state combinations | 248 |
+| MOCK-VERIFIED | 63 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 185 |
+| NOT TESTED | 184 |
 
 ## Sidebar-section modernization breakdown
 
@@ -29,7 +29,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
 | Reports | 10 | 0 | 0 | 10 | 13 | 0 | 23 | 0.0% | 0.0% |
-| Sales & Finance | 14 | 2 | 0 | 12 | 14 | 6 | 22 | 14.3% | 21.4% |
+| Sales & Finance | 14 | 3 | 0 | 11 | 16 | 9 | 21 | 21.4% | 30.0% |
 | Settings | 18 | 0 | 1 | 17 | 13 | 1 | 30 | 5.6% | 3.2% |
 
 Seven declared paths are outside this sidebar breakdown: public login/root and user-administration/profile routes. They remain in the route manifest and are not counted twice here.
@@ -51,6 +51,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - Transfers Inbox: populated and searched queues, expanded item and batch details, decimal quantities, and QR verification feedback; responsive geometry, keyboard-reachable local table scrolling, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without accepting or rejecting stock.
 - Expenses: financial summaries, category and payment-method breakdowns, manual record search, responsive transaction presentation, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without executing financial mutations.
 - Accounts: five-category balance summaries, hierarchy-aware search, general and project tabs, parent sub-account summary, leaf transaction ledger, keyboard focus, responsive local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without executing financial mutations.
+- Journals: balanced period summaries, reference/account search, status filtering, expanded debit and credit lines, keyboard focus, responsive local table scrolling, and the posting form's read-only layout and accessibility passed at desktop, intermediate, and mobile widths without posting or opening external documents.
 
 ## Shared components
 
@@ -75,8 +76,8 @@ The Project Stores component has no application route, import, or menu entry. Th
 
 ## Browser regression matrix
 
-- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Expenses and Accounts.
-- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Expenses and Accounts.
+- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Expenses, Accounts, and Journals.
+- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Expenses, Accounts, and Journals.
 - Pending Purchases state and interaction checks: empty, loading, draft, supplier/quotation, and 300-row baseline passed; API error behavior is an expected failure.
 - Firefox/WebKit coverage for the new operational batch remains pending.
 

@@ -5,6 +5,7 @@ module.exports = {
     HRConfiguration: ['schedule tab', 'leave tab', 'audit tab', 'notifications tab', 'tax tab', 'roles tab'],
     SalaryManagement: ['processing tab', 'config tab', 'attendance tab'],
     AccountsPage: ['General Accounts tab', 'Project Accounts tab'],
+    JournalEntryList: ['expanded journal details', 'new journal form'],
     ExpensesPage: ['category tab', 'method tab'],
     FinanceReportsPage: ['profit and loss tab', 'balance sheet tab', 'trial balance tab'],
     MigrationPayablesPage: ['payables tab', 'receivables tab'],

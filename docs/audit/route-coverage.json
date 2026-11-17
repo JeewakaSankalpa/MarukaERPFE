@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-16T17:39:46.813Z",
-  "sourceRevision": "20e3a0e42f3607d7ee6bb428ad602f4ae3b43414",
+  "generatedAt": "2026-11-17T07:21:22.994Z",
+  "sourceRevision": "c25878a9f555c9262328101ac83eb3b3a613f192",
   "schemaVersion": 1,
   "allowedStatuses": [
     "MOCK-VERIFIED",
@@ -22,7 +22,7 @@
         "declarations": 2
       }
     ],
-    "coverageRows": 246,
+    "coverageRows": 248,
     "navigationTargetsWithoutExactRoute": 4
   },
   "rows": [
@@ -10373,15 +10373,144 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/journals-modernization.audit.spec.js",
+          "output/playwright/results.json"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
-      "notes": []
+      "notes": [
+        "Read-only isolated mock verification; posting and external document opening remain integration-only."
+      ]
+    },
+    {
+      "id": "ROUTE-finance-journals-expanded-journal-details",
+      "path": "/finance/journals",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 413,
+        "duplicateIndex": 1
+      },
+      "component": "JournalEntryList",
+      "componentSource": "./components/finance/JournalEntryList",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "finance"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "expanded journal details",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/journals-modernization.audit.spec.js",
+          "output/playwright/results.json"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-17"
+      },
+      "notes": [
+        "Expanded debit and credit lines were verified without opening external documents."
+      ]
+    },
+    {
+      "id": "ROUTE-finance-journals-new-journal-form",
+      "path": "/finance/journals",
+      "declaration": {
+        "source": "src/App.js",
+        "line": 413,
+        "duplicateIndex": 1
+      },
+      "component": "JournalEntryList",
+      "componentSource": "./components/finance/JournalEntryList",
+      "gate": {
+        "authenticated": true,
+        "roles": [],
+        "modules": [
+          "finance"
+        ]
+      },
+      "entry": {
+        "menu": true,
+        "workflow": false,
+        "parameters": [],
+        "query": []
+      },
+      "state": {
+        "name": "new journal form",
+        "kind": "tab-or-state",
+        "fixture": null,
+        "mutationAllowed": false
+      },
+      "surfaces": {
+        "forms": true,
+        "tables": true,
+        "modals": true,
+        "drawers": false,
+        "dropdowns": true,
+        "loading": true,
+        "empty": false,
+        "error": true
+      },
+      "expectations": {
+        "identity": null,
+        "pageOverflowAllowed": false,
+        "permittedLocalScrollers": [],
+        "keyboardChecks": [],
+        "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
+      },
+      "coverage": {
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/journals-modernization.audit.spec.js",
+          "output/playwright/results.json"
+        ],
+        "blocker": null,
+        "verifiedAt": "2026-11-17"
+      },
+      "notes": [
+        "Form layout, focus, Escape close, overflow, and accessibility were verified without posting."
+      ]
     },
     {
       "id": "ROUTE-finance-expenses-initial-route-state",

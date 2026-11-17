@@ -1,11 +1,11 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `20e3a0e42f3607d7ee6bb428ad602f4ae3b43414`.
+Generated from `src/App.js` at revision `c25878a9f555c9262328101ac83eb3b3a613f192`.
 
 - Route declarations: 114
 - Unique declared paths: 112
-- Coverage rows including nested states: 246
-- Status counts: `MOCK-VERIFIED` 57, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 188
+- Coverage rows including nested states: 248
+- Status counts: `MOCK-VERIFIED` 63, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 184
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -186,7 +186,9 @@ Generated from `src/App.js` at revision `20e3a0e42f3607d7ee6bb428ad602f4ae3b4341
 | ROUTE-finance-accounts-initial-route-state | `/finance/accounts` | AccountsPage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-accounts-general-accounts-tab | `/finance/accounts` | AccountsPage | General Accounts tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-accounts-project-accounts-tab | `/finance/accounts` | AccountsPage | Project Accounts tab | finance | MOCK-VERIFIED |
-| ROUTE-finance-journals-initial-route-state | `/finance/journals` | JournalEntryList | initial route state | finance | NOT TESTED |
+| ROUTE-finance-journals-initial-route-state | `/finance/journals` | JournalEntryList | initial route state | finance | MOCK-VERIFIED |
+| ROUTE-finance-journals-expanded-journal-details | `/finance/journals` | JournalEntryList | expanded journal details | finance | MOCK-VERIFIED |
+| ROUTE-finance-journals-new-journal-form | `/finance/journals` | JournalEntryList | new journal form | finance | MOCK-VERIFIED |
 | ROUTE-finance-expenses-initial-route-state | `/finance/expenses` | ExpensesPage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-expenses-category-tab | `/finance/expenses` | ExpensesPage | category tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-expenses-method-tab | `/finance/expenses` | ExpensesPage | method tab | finance | MOCK-VERIFIED |
