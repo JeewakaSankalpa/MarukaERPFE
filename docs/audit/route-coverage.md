@@ -5,7 +5,7 @@ Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a9
 - Route declarations: 114
 - Unique declared paths: 112
 - Coverage rows including nested states: 248
-- Status counts: `MOCK-VERIFIED` 79, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 168
+- Status counts: `MOCK-VERIFIED` 80, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 167
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -208,7 +208,7 @@ Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a9
 | ROUTE-finance-migration-payables-receivables-tab | `/finance/migration-payables` | MigrationPayablesPage | receivables tab | finance | MOCK-VERIFIED |
 | ROUTE-reports-payables-initial-route-state | `/reports/payables` | PayablesReport | initial route state | finance | NOT TESTED |
 | ROUTE-reports-receivables-initial-route-state | `/reports/receivables` | ReceivablesReport | initial route state | finance | NOT TESTED |
-| ROUTE-assets-initial-route-state | `/assets` | AssetRegister | initial route state | finance | NOT TESTED |
+| ROUTE-assets-initial-route-state | `/assets` | AssetRegister | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-petty-cash-approvals-initial-route-state | `/finance/petty-cash-approvals` | PettyCashApprovalPage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-petty-cash-approvals-fund-requests-tab | `/finance/petty-cash-approvals` | PettyCashApprovalPage | Fund Requests tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-petty-cash-approvals-pending-expenses-tab | `/finance/petty-cash-approvals` | PettyCashApprovalPage | Pending Expenses tab | finance | MOCK-VERIFIED |

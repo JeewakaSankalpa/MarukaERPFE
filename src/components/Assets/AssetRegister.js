@@ -1,16 +1,20 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Building2, CalendarClock, MapPin, Plus, RefreshCw, Search, TrendingDown, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Badge, Container, Row, Col } from "react-bootstrap";
+import { Table, Button, Modal, Form, Badge, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import api from "../../api/api";
 import PaymentAccountPicker from "../ReusableComponents/PaymentAccountPicker";
 import SafeSelect from "../ReusableComponents/SafeSelect";
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
+import './AssetRegister.css';
 
 const AssetRegister = () => {
     const navigate = useNavigate();
     const [assets, setAssets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+    const [query, setQuery] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState(null);
     const [formData, setFormData] = useState({
@@ -40,11 +44,16 @@ const AssetRegister = () => {
     }, []);
 
     const fetchAssets = async () => {
+        setLoading(true);
+        setLoadError('');
         try {
             const res = await api.get("/assets");
-            setAssets(res.data);
+            setAssets(Array.isArray(res.data) ? res.data : []);
         } catch (e) {
+            setLoadError('The asset register could not be loaded. Retry when the finance service is available.');
             toast.error("Failed to load assets");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -116,20 +125,45 @@ const AssetRegister = () => {
         setAttachUrl('');
     };
 
-    return (
-        <Container fluid className="p-4">
-            <div className="d-flex justify-content-between mb-4">
-                <div className="d-flex align-items-center mb-4">
-                <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                <h2 className="mb-0">Fixed Assets Register</h2>
-                        </div>
-<div className="d-flex gap-2">
-                    <Button variant="warning" onClick={runDepreciation}>Update Depreciation</Button>
-                    <Button variant="primary" onClick={() => { setEditing(null); setMaintenance([]); setAttachments([]); setShowModal(true); }}>+ Add Asset</Button>
-                </div>
-            </div>
+    const money = (value) => new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR', minimumFractionDigits: 2 }).format(Number(value || 0));
+    const totalCost = assets.reduce((sum, asset) => sum + Number(asset.purchaseCost || 0), 0);
+    const currentValue = assets.reduce((sum, asset) => sum + Number(asset.currentValue || 0), 0);
+    const accumulatedDepreciation = Math.max(0, totalCost - currentValue);
+    const categories = new Set(assets.map(asset => asset.category).filter(Boolean)).size;
+    const normalizedQuery = query.trim().toLowerCase();
+    const visibleAssets = assets.filter(asset => !normalizedQuery || [asset.name, asset.category, asset.serialNumber, asset.location]
+        .some(value => String(value || '').toLowerCase().includes(normalizedQuery)));
 
-            <Table striped hover responsive className="bg-white shadow-sm">
+    return (
+        <main className="asset-register-page">
+            <header className="asset-register-header">
+                <div className="asset-register-heading">
+                    <button type="button" className="asset-register-back" aria-label="Go back" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
+                    <div><span className="asset-register-eyebrow">Sales &amp; Finance · Asset control</span><h1>Fixed assets register</h1><p>Review acquisition cost, depreciation exposure, and the current carrying value of operational assets.</p></div>
+                </div>
+                <div className="asset-register-actions">
+                    <Button variant="outline-secondary" onClick={fetchAssets} disabled={loading}><RefreshCw size={16} aria-hidden="true" /> Refresh</Button>
+                    <Button variant="warning" onClick={runDepreciation}><CalendarClock size={16} aria-hidden="true" /> Update depreciation</Button>
+                    <Button variant="primary" onClick={() => { setEditing(null); setMaintenance([]); setAttachments([]); setShowModal(true); }}><Plus size={16} aria-hidden="true" /> Add asset</Button>
+                </div>
+            </header>
+
+            {loadError && <Alert variant="danger" className="asset-register-error"><div><strong>Asset data unavailable</strong><span>{loadError}</span></div><Button variant="outline-danger" size="sm" onClick={fetchAssets}>Retry</Button></Alert>}
+
+            <section className="asset-register-summary" aria-label="Asset portfolio summary">
+                <article><WalletCards size={18} aria-hidden="true" /><span>Acquisition cost</span><strong>{money(totalCost)}</strong><small>{assets.length} registered assets</small></article>
+                <article><Building2 size={18} aria-hidden="true" /><span>Current carrying value</span><strong>{money(currentValue)}</strong><small>After recorded depreciation</small></article>
+                <article><TrendingDown size={18} aria-hidden="true" /><span>Accumulated depreciation</span><strong>{money(accumulatedDepreciation)}</strong><small>{totalCost ? `${((accumulatedDepreciation / totalCost) * 100).toFixed(1)}% of acquisition cost` : 'No acquisition value'}</small></article>
+                <article><MapPin size={18} aria-hidden="true" /><span>Portfolio coverage</span><strong>{categories} categories</strong><small>{new Set(assets.map(asset => asset.location).filter(Boolean)).size} operating locations</small></article>
+            </section>
+
+            <section className="asset-register-panel" aria-labelledby="asset-register-title">
+                <div className="asset-register-toolbar">
+                    <div><span>Portfolio register</span><h2 id="asset-register-title">Assets and carrying values</h2><small>{visibleAssets.length} of {assets.length} assets shown</small></div>
+                    <div className="asset-register-search"><Search size={16} aria-hidden="true" /><Form.Control aria-label="Search assets" placeholder="Search name, serial, category, or location" value={query} onChange={event => setQuery(event.target.value)} /></div>
+                </div>
+                <div className="asset-register-table" role="region" aria-label="Fixed assets table" tabIndex="0">
+            <Table hover className="mb-0">
                 <thead className="table-dark">
                     <tr>
                         <th>Name</th>
@@ -144,23 +178,26 @@ const AssetRegister = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {assets.map(a => (
+                    {loading ? <tr><td colSpan="9" className="asset-register-state"><Spinner animation="border" size="sm" /> Loading asset register…</td></tr> : visibleAssets.map(a => (
                         <tr key={a.id}>
-                            <td>{a.name}</td>
+                            <td><strong>{a.name}</strong><small className="d-block">{a.id}</small></td>
                             <td><Badge bg="secondary">{a.category}</Badge></td>
                             <td>{a.serialNumber}</td>
                             <td>{a.purchaseDate}</td>
-                            <td className="text-end">{a.purchaseCost?.toLocaleString()}</td>
+                            <td className="text-end">{money(a.purchaseCost)}</td>
                             <td className="text-end">{a.depreciationRate}%</td>
-                            <td className="text-end fw-bold">{a.currentValue?.toLocaleString()}</td>
+                            <td className="text-end fw-bold">{money(a.currentValue)}</td>
                             <td>{a.location}</td>
                             <td>
                                 <Button size="sm" variant="outline-primary" onClick={() => openEdit(a)}>Edit</Button>
                             </td>
                         </tr>
                     ))}
+                    {!loading && visibleAssets.length === 0 && <tr><td colSpan="9" className="asset-register-state"><strong>No matching assets</strong><span>Adjust the search to view another part of the portfolio.</span></td></tr>}
                 </tbody>
             </Table>
+                </div>
+            </section>
 
             <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
                 <Modal.Header closeButton><Modal.Title>{editing ? "Edit Asset" : "New Asset"}</Modal.Title></Modal.Header>
@@ -270,7 +307,7 @@ const AssetRegister = () => {
                 </Modal.Body>
             </Modal>
             <ToastContainer />
-        </Container>
+        </main>
     );
 };
 

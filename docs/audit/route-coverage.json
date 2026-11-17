@@ -11644,27 +11644,38 @@
         "modals": true,
         "drawers": false,
         "dropdowns": false,
-        "loading": false,
-        "empty": false,
+        "loading": true,
+        "empty": true,
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Fixed assets register",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [
+          "Fixed assets table"
+        ],
+        "keyboardChecks": [
+          "asset search",
+          "fixed assets table"
+        ],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/assets-modernization.audit.spec.js",
+          "output/playwright/results.json"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17"
       },
-      "notes": []
+      "notes": [
+        "Read-only mock verification covered financial summaries, portfolio search, keyboard focus, responsive local table scrolling, overflow geometry, and serious/critical accessibility checks.",
+        "Depreciation calculation, asset saving, payment-account initialization, maintenance and document edits, permissions, and real financial integration were not executed."
+      ]
     },
     {
       "id": "ROUTE-finance-petty-cash-approvals-initial-route-state",

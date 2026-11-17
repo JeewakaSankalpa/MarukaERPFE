@@ -247,7 +247,11 @@ const financeAccountLedger = [
     { date:'2026-11-08', description:'Customer receipt · Colombo distribution project', reference:'RCPT-2026-1842', debit:175000.5, credit:0, runningBalance:975000.5 },
     { date:'2026-11-15', description:'Supplier settlement · GRN-2026-001', reference:'PAY-2026-0921', debit:0, credit:125000, runningBalance:850000.5 },
 ];
-const financeAssets = [{ id:'asset-001', purchaseDate:'2026-11-03', purchaseCost:650000, paidAmount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK', paymentHistory:[{ amount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' }] }];
+const financeAssets = [
+    { id:'asset-001', name:'CNC panel fabrication machine', category:'MACHINERY', serialNumber:'CNC-PFM-2026-001', purchaseDate:'2024-03-15', purchaseCost:6500000, depreciationRate:15, currentValue:4550000, location:'Main workshop', maintenanceHistory:[{ date:'2026-08-12', description:'Annual spindle service', cost:78500 }], attachments:[] },
+    { id:'asset-002', name:'Service vehicle · Western region', category:'VEHICLE', serialNumber:'WP-CAB-4281', purchaseDate:'2025-06-02', purchaseCost:8750000, depreciationRate:20, currentValue:7000000, location:'Colombo operations', maintenanceHistory:[], attachments:[] },
+    { id:'asset-003', name:'Engineering workstation', category:'PC', serialNumber:'WS-ENG-019', purchaseDate:'2026-01-10', purchaseCost:485000, depreciationRate:20, currentValue:388000, location:'Design office', maintenanceHistory:[], attachments:[] }
+];
 const financeLoans = [
     { id:'loan-001', loanDirection:'COMPANY_BORROWED', counterpartyName:'National Development Bank', bankName:'National Development Bank', loanReference:'NDB-TERM-2026-18', principalAmount:500000, interestRate:12.5, interestMethod:'REDUCING_BALANCE', durationMonths:24, startDate:'2026-11-01', status:'ACTIVE', totalRepaid:95000, totalInterestPaid:18500, outstandingBalance:405000, repaymentHistory:[{ amount:95000, paymentMethod:'CHEQUE', paymentAccountType:'BANK' }] },
     { id:'loan-002', loanDirection:'EMPLOYEE_LOAN', counterpartyName:'Amara Perera', loanReference:'EMP-2026-0042', principalAmount:180000, interestRate:0, interestMethod:'NO_INTEREST', durationMonths:12, startDate:'2026-10-15', status:'ACTIVE', totalRepaid:45000, totalInterestPaid:0, outstandingBalance:135000, repaymentHistory:[{ amount:45000, paymentMethod:'SALARY_DEDUCTION', paymentAccountType:'PAYROLL' }] }
