@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Select, Input, Tag, Card, Tabs } from 'antd';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, ExternalLink, RefreshCw, Search, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import dayjs from 'dayjs';
-
-const { TabPane } = Tabs;
+import './PettyCashApprovalPage.css';
 
 const PettyCashApprovalPage = () => {
     const navigate = useNavigate();
@@ -14,6 +13,9 @@ const PettyCashApprovalPage = () => {
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [accounts, setAccounts] = useState([]);
+    const [loadError, setLoadError] = useState('');
+    const [requestSearch, setRequestSearch] = useState('');
+    const [expenseSearch, setExpenseSearch] = useState('');
 
     // Approval Modal for Requests
     const [approvalVisible, setApprovalVisible] = useState(false);
@@ -25,11 +27,11 @@ const PettyCashApprovalPage = () => {
     const [expenseApprovalVisible, setExpenseApprovalVisible] = useState(false);
     const [currentExpense, setCurrentExpense] = useState(null);
     const [expenseApprovalLoading, setExpenseApprovalLoading] = useState(false);
-    const [expenseForm] = Form.useForm();
 
     const fetchRequestsAndExpenses = async () => {
         try {
             setLoading(true);
+            setLoadError('');
             const [reqsRes, expRes] = await Promise.all([
                 api.get('/project-accounts/petty-cash/requests'),
                 api.get('/project-accounts/petty-cash/expenses/pending')
@@ -39,6 +41,7 @@ const PettyCashApprovalPage = () => {
         } catch (e) {
             console.error("Fetch error:", e);
             if (e.response && e.response.status !== 404) {
+                setLoadError('Approval queues could not be loaded. Check the connection and try again.');
                 toast.error("Failed to load petty cash data");
             }
         } finally {
@@ -119,6 +122,19 @@ const PettyCashApprovalPage = () => {
         setCurrentExpense(record);
         setExpenseApprovalVisible(true);
     };
+
+    const filteredRequests = requests.filter(record => {
+        const query = requestSearch.trim().toLowerCase();
+        return !query || [record.projectName, record.requestedBy, record.category, record.description]
+            .some(value => String(value || '').toLowerCase().includes(query));
+    });
+    const filteredExpenses = expenses.filter(record => {
+        const query = expenseSearch.trim().toLowerCase();
+        return !query || [record.projectId, record.title, record.description]
+            .some(value => String(value || '').toLowerCase().includes(query));
+    });
+    const requestedTotal = requests.reduce((sum, record) => sum + Number(record.amount || 0), 0);
+    const expenseTotal = expenses.reduce((sum, record) => sum + Number(record.amount || 0), 0);
 
     const onExpenseApprove = async () => {
         try {
@@ -258,34 +274,28 @@ const PettyCashApprovalPage = () => {
             }
         ];
 
-        return (
-            <div className="container py-4">
-                <div className="d-flex align-items-center mb-4">
-                    <Button type="text" icon={<ArrowLeft size={18} />} onClick={() => navigate(-1)} className="me-2" />
-                    <h3 className="mb-0">Petty Cash Approvals</h3>
-                </div>
+        const approvalTabs = [
+            { key:'1', label:<span>Fund requests <b>{requests.length}</b></span>, children:<><div className="petty-approval-toolbar"><div><strong>Pending fund requests</strong><span>Requests awaiting a source account and finance decision.</span></div><Input allowClear prefix={<Search size={15} aria-hidden="true" />} aria-label="Search fund requests" placeholder="Search project, requester, or category" value={requestSearch} onChange={event=>setRequestSearch(event.target.value)} /></div><div className="petty-approval-table" role="region" aria-label="Petty cash fund requests table" tabIndex="0"><Table dataSource={filteredRequests} columns={columns} rowKey="id" loading={loading} pagination={{pageSize:15}} locale={{emptyText:requestSearch?'No fund requests match your search':'No pending fund requests'}} /></div></> },
+            { key:'2', label:<span>Pending expenses <b>{expenses.length}</b></span>, children:<><div className="petty-approval-toolbar"><div><strong>Submitted expenses</strong><span>Receipts awaiting ledger approval.</span></div><Input allowClear prefix={<Search size={15} aria-hidden="true" />} aria-label="Search pending expenses" placeholder="Search project or expense" value={expenseSearch} onChange={event=>setExpenseSearch(event.target.value)} /></div><div className="petty-approval-table" role="region" aria-label="Pending petty cash expenses table" tabIndex="0"><Table dataSource={filteredExpenses} columns={expenseColumns} rowKey="id" loading={loading} pagination={{pageSize:15}} locale={{emptyText:expenseSearch?'No expenses match your search':'No pending expenses'}} /></div></> }
+        ];
 
-                <Card className="shadow-sm">
-                    <Tabs defaultActiveKey="1">
-                        <TabPane tab="Fund Requests" key="1">
-                            <Table 
-                                dataSource={requests} 
-                                columns={columns} 
-                                rowKey="id" 
-                                loading={loading}
-                                pagination={{ pageSize: 15 }}
-                            />
-                        </TabPane>
-                        <TabPane tab="Pending Expenses" key="2">
-                            <Table 
-                                dataSource={expenses} 
-                                columns={expenseColumns} 
-                                rowKey="id" 
-                                loading={loading}
-                                pagination={{ pageSize: 15 }}
-                            />
-                        </TabPane>
-                    </Tabs>
+        return (
+            <main className="petty-approval-page" aria-labelledby="petty-approval-heading" aria-busy={loading}>
+                <header className="petty-approval-header">
+                    <div className="petty-approval-heading-group"><button type="button" className="petty-approval-back" onClick={() => navigate(-1)} aria-label="Back to previous page"><ArrowLeft size={19} aria-hidden="true" /></button><div><span className="petty-approval-eyebrow">Sales &amp; Finance</span><h1 id="petty-approval-heading">Petty cash approvals</h1><p>Review fund requests and submitted expenses before they affect cash accounts or the ledger.</p></div></div>
+                    <Button className="petty-approval-refresh" icon={<RefreshCw size={16} aria-hidden="true" />} onClick={fetchRequestsAndExpenses} loading={loading}>Refresh queues</Button>
+                </header>
+
+                {loadError && <div className="petty-approval-error" role="alert"><div><strong>Unable to load approval queues</strong><span>{loadError}</span></div><Button danger onClick={fetchRequestsAndExpenses}>Try again</Button></div>}
+
+                <section className="petty-approval-summary" aria-label="Pending petty cash summary">
+                    <article><ClipboardCheck size={18} aria-hidden="true" /><div><span>Fund requests</span><strong>{requests.length}</strong><small>LKR {requestedTotal.toLocaleString(undefined,{minimumFractionDigits:2})}</small></div></article>
+                    <article><WalletCards size={18} aria-hidden="true" /><div><span>Pending expenses</span><strong>{expenses.length}</strong><small>LKR {expenseTotal.toLocaleString(undefined,{minimumFractionDigits:2})}</small></div></article>
+                    <aside><strong>Review control</strong><span>Opening a review is safe. Approve and reject actions post financial changes and remain integration-only.</span></aside>
+                </section>
+
+                <Card className="petty-approval-workspace">
+                    <Tabs defaultActiveKey="1" className="petty-approval-tabs" items={approvalTabs} />
                 </Card>
 
             <Modal
@@ -293,7 +303,7 @@ const PettyCashApprovalPage = () => {
                 open={approvalVisible}
                 onCancel={() => setApprovalVisible(false)}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
             >
                 <div className="mb-3">
                     <p><strong>Description:</strong> {currentRequest?.description}</p>
@@ -329,7 +339,7 @@ const PettyCashApprovalPage = () => {
                 open={expenseApprovalVisible}
                 onCancel={() => setExpenseApprovalVisible(false)}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
             >
                 <div className="mb-4">
                     <p><strong>Expense Title:</strong> {currentExpense?.title}</p>
@@ -349,7 +359,7 @@ const PettyCashApprovalPage = () => {
                     <Button type="primary" onClick={onExpenseApprove} loading={expenseApprovalLoading}>Approve & Post</Button>
                 </div>
             </Modal>
-        </div>
+        </main>
     );
 };
 

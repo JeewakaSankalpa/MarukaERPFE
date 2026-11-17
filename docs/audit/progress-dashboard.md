@@ -9,11 +9,11 @@ This dashboard distinguishes route/state coverage from component and interaction
 | Declared routes | 114 |
 | Unique declared paths | 112 |
 | Route/state combinations | 248 |
-| MOCK-VERIFIED | 74 |
+| MOCK-VERIFIED | 77 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 173 |
+| NOT TESTED | 170 |
 
 ## Sidebar-section modernization breakdown
 
@@ -29,7 +29,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
 | Reports | 10 | 0 | 0 | 10 | 13 | 0 | 23 | 0.0% | 0.0% |
-| Sales & Finance | 14 | 7 | 0 | 7 | 16 | 20 | 10 | 50.0% | 66.7% |
+| Sales & Finance | 14 | 8 | 0 | 6 | 16 | 23 | 7 | 57.1% | 76.7% |
 | Settings | 18 | 0 | 1 | 17 | 13 | 1 | 30 | 5.6% | 3.2% |
 
 Seven declared paths are outside this sidebar breakdown: public login/root and user-administration/profile routes. They remain in the route manifest and are not counted twice here.
@@ -55,6 +55,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - Financial Statements: income statement, balance sheet, and trial balance populated views, period controls, statement hierarchy, keyboard-focusable local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without financial mutations.
 - Migration and its `/finance/migration-payables` alias: populated opening supplier payables and project receivables, financial summaries, invoice and project filtering, keyboard-focusable local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without financial mutations.
 - Income: invoiced revenue, allocated invoice receipts, unallocated project payments, outstanding balances, cancelled-invoice exclusion, chart presentation, invoice and status filtering, keyboard-focusable local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without financial mutations.
+- Petty Cash Approvals: fund-request and pending-expense totals, queue search, tab navigation, read-only review dialogs, keyboard-focusable local table scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without approving, rejecting, or posting ledger changes.
 
 ## Shared components
 
@@ -79,8 +80,8 @@ The Project Stores component has no application route, import, or menu entry. Th
 
 ## Browser regression matrix
 
-- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, and Income.
-- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, and Income.
+- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, and Petty Cash Approvals.
+- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, and Petty Cash Approvals.
 - Pending Purchases state and interaction checks: empty, loading, draft, supplier/quotation, and 300-row baseline passed; API error behavior is an expected failure.
 - Firefox/WebKit coverage for the new operational batch remains pending.
 

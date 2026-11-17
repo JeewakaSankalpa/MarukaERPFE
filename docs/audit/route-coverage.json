@@ -11706,22 +11706,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Petty cash approvals",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": ["Petty cash fund requests table", "Pending petty cash expenses table"],
+        "keyboardChecks": ["Fund Requests and Pending Expenses tabs are keyboard operable", "Local approval tables are keyboard reachable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/petty-cash-approvals-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["No approve, reject, source-account, receipt-opening, or ledger-posting action was executed."]
     },
     {
       "id": "ROUTE-finance-petty-cash-approvals-fund-requests-tab",
@@ -11763,22 +11763,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Pending fund requests",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": ["Petty cash fund requests table"],
+        "keyboardChecks": ["Fund request search is keyboard operable", "Fund requests table is keyboard reachable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/petty-cash-approvals-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["Search and the request review dialog were exercised without approving, rejecting, or selecting a source account."]
     },
     {
       "id": "ROUTE-finance-petty-cash-approvals-pending-expenses-tab",
@@ -11820,22 +11820,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Submitted expenses",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": ["Pending petty cash expenses table"],
+        "keyboardChecks": ["Pending expense search is keyboard operable", "Pending expenses table is keyboard reachable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/petty-cash-approvals-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["Tab navigation, search, and the expense review dialog were exercised without approving, rejecting, opening receipts, or posting to the ledger."]
     },
     {
       "id": "ROUTE-reports-stock-control-initial-route-state",

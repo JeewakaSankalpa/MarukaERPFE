@@ -43,6 +43,8 @@ const test = auditTest.extend({
             if (url.pathname === '/api/finance/reports/balance-sheet') return json(route, financeBalanceSheet);
             if (url.pathname === '/api/finance/reports/trial-balance') return json(route, financeTrialBalance);
             if (url.pathname === '/api/invoices') return json(route, financeIncomeInvoices);
+            if (url.pathname === '/api/project-accounts/petty-cash/requests') return json(route, pettyCashRequests);
+            if (url.pathname === '/api/project-accounts/petty-cash/expenses/pending') return json(route, pettyCashExpenses);
             if (url.pathname === '/api/suppliers') return json(route, { content: migrationSuppliers });
             if (url.pathname === '/api/projects/search') return json(route, migrationProjects);
             if (url.pathname === '/api/finance/migration-payables/report') return json(route, migrationPayables);
@@ -209,6 +211,14 @@ const financeIncomeInvoices = [
     { id:'invoice-income-002', invoiceNumber:'INV-2026-0988', projectId:'project-migration-existing', issuedDate:'2026-10-16', dueDate:'2026-11-16', totalAmount:214800, paidAmount:214800, status:'PAID' },
     { id:'invoice-income-003', invoiceNumber:'INV-2026-1061', projectId:'project-southern-warehouse', issuedDate:'2026-11-12', dueDate:'2026-12-12', totalAmount:328450.75, paidAmount:0, status:'PENDING' },
     { id:'invoice-income-004', invoiceNumber:'INV-2026-0914', projectId:'project-cancelled', issuedDate:'2026-09-08', dueDate:'2026-10-08', totalAmount:98500, paidAmount:0, status:'CANCELLED' }
+];
+const pettyCashRequests = [
+    { id:'petty-request-001', requestDate:'2026-11-15T08:30:00Z', projectName:'Colombo distribution modernisation', requestedBy:'Amara Perera', category:'SITE_OPERATIONS', description:'Emergency access equipment and local transport', amount:87500.75, status:'PENDING', receiptUrl:'' },
+    { id:'petty-request-002', requestDate:'2026-11-14T06:15:00Z', projectName:'Kandy control system upgrade', requestedBy:'Nimal Fernando', category:'MATERIALS', description:'Urgent consumables for panel installation', amount:46250, status:'PENDING', receiptUrl:'https://audit-files.invalid/request-002.pdf' }
+];
+const pettyCashExpenses = [
+    { id:'petty-expense-001', expenseDate:'2026-11-16', projectId:'MJN-2026-00481', title:'Site access equipment hire', description:'Daily hire charge with operator', amount:28450.5, status:'PENDING_APPROVAL', attachmentUrl:'' },
+    { id:'petty-expense-002', expenseDate:'2026-11-15', projectId:'MJN-2025-00241', title:'Panel wiring consumables', description:'Ferrules, labels, and cable ties', amount:12780.25, status:'PENDING_APPROVAL', attachmentUrl:'https://audit-files.invalid/expense-002.pdf' }
 ];
 const migrationSuppliers = [{ id:'supplier-001', name:'Colombo Industrial Supplies' },{ id:'supplier-002', name:'Precision Motion Lanka' }];
 const migrationProjects = [
