@@ -5,7 +5,7 @@ Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a9
 - Route declarations: 114
 - Unique declared paths: 112
 - Coverage rows including nested states: 248
-- Status counts: `MOCK-VERIFIED` 77, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 170
+- Status counts: `MOCK-VERIFIED` 79, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 168
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -193,8 +193,8 @@ Generated from `src/App.js` at revision `245df3d7734206481e3ab104e0b0a250787d1a9
 | ROUTE-finance-expenses-category-tab | `/finance/expenses` | ExpensesPage | category tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-expenses-method-tab | `/finance/expenses` | ExpensesPage | method tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-tax-initial-route-state | `/finance/tax` | TaxPage | initial route state | finance | NOT TESTED |
-| ROUTE-finance-loans-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | NOT TESTED |
-| ROUTE-finance-loans-duplicate-2-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | NOT TESTED |
+| ROUTE-finance-loans-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | MOCK-VERIFIED |
+| ROUTE-finance-loans-duplicate-2-initial-route-state | `/finance/loans` | LoanManagement | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-income-initial-route-state | `/finance/income` | IncomePage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-reports-initial-route-state | `/finance/reports` | FinanceReportsPage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-reports-profit-and-loss-tab | `/finance/reports` | FinanceReportsPage | profit and loss tab | finance | MOCK-VERIFIED |

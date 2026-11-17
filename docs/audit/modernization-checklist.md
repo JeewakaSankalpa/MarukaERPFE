@@ -52,7 +52,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/finance/expenses` | ExpensesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width expense review workspace modernized |
 | `/finance/income` | IncomePage | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width income and receivables review with financial hierarchy, responsive charts and register, accessible filtering, and guarded loading/error presentation |
 | `/finance/journals` | JournalEntryList | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width journal register, balanced debit/credit summaries, responsive line details, filters, and accessible posting form |
-| `/finance/loans` | LoanManagement | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/finance/loans` | LoanManagement | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width company and employee loan portfolio with separated financial exposure, accessible filters, responsive cards, and guarded transaction dialogs |
 | `/finance/migration` | MigrationPayablesPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width opening balance migration workspace with financial summaries, responsive registers, accessible filters, and guarded opening-balance forms |
 | `/finance/migration-payables` | MigrationPayablesPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Verified alias of the modernized opening balance migration workspace; shared read-only behavior matches `/finance/migration` |
 | `/finance/petty-cash-approvals` | PettyCashApprovalPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width approval queues, financial summaries, searchable responsive tables, accessible tabs, and guarded review dialogs |

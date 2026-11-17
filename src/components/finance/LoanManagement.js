@@ -1,13 +1,14 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React, { useMemo, useState, useEffect } from 'react';
-import { Container, Button, Modal, Form, Badge, Row, Col, Card, Alert, ButtonGroup } from 'react-bootstrap';
+import { Button, Modal, Form, Badge, Row, Col, Card, Alert, ButtonGroup } from 'react-bootstrap';
 import api from '../../api/api';
 import { toast } from 'react-toastify';
 import PaymentAccountPicker from '../ReusableComponents/PaymentAccountPicker';
 import OverdraftConfirmModal from '../ReusableComponents/OverdraftConfirmModal';
 import SafeDatePicker from '../ReusableComponents/SafeDatePicker';
 import SafeSelect from '../ReusableComponents/SafeSelect';
+import './LoanManagement.css';
 
 const emptyLoanForm = () => ({
     loanDirection: 'COMPANY_BORROWED',
@@ -62,6 +63,8 @@ export default function LoanManagement() {
     const [repayment, setRepayment] = useState(emptyRepaymentForm());
     const [showOverdraftModal, setShowOverdraftModal] = useState(false);
     const [accountBalance, setAccountBalance] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState('');
 
     useEffect(() => { loadData(); }, []);
 
@@ -92,6 +95,8 @@ export default function LoanManagement() {
 
     const loadData = async () => {
         try {
+            setLoading(true);
+            setLoadError('');
             const [loanRes, employeeRes] = await Promise.all([
                 api.get('/finance/loans'),
                 api.get('/employee/all').catch(() => ({ data: [] }))
@@ -99,7 +104,10 @@ export default function LoanManagement() {
             setLoans(loanRes.data || []);
             setEmployees(employeeRes.data || []);
         } catch (e) {
+            setLoadError('Loan records could not be loaded. Check the connection and try again.');
             toast.error('Failed to load loans');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -237,51 +245,42 @@ export default function LoanManagement() {
 
     return (
         <>
-            <Container className="py-4">
-                <div className="d-flex justify-content-between align-items-start mb-4">
-                    <div className="d-flex align-items-center">
-                        <button type="button" className="btn btn-light me-3" onClick={() => navigate(-1)}><ArrowLeft size={18} /></button>
-                        <div>
-                            <h2 className="mb-1">Loan Management</h2>
-                            <div className="text-muted small">Company borrowings and employee loans are tracked separately.</div>
-                        </div>
-                    </div>
-                    <Button onClick={() => setShowAdd(true)}>+ Add New Loan</Button>
-                </div>
+            <main className="loan-page" aria-labelledby="loan-heading" aria-busy={loading}>
+                <header className="loan-header"><div className="loan-heading-group"><button type="button" className="loan-back" onClick={() => navigate(-1)} aria-label="Back to previous page"><ArrowLeft size={19} aria-hidden="true" /></button><div><span className="loan-eyebrow">Sales &amp; Finance</span><h1 id="loan-heading">Loan management</h1><p>Track company borrowings and employee loan receivables without mixing payable and receivable balances.</p></div></div><div className="loan-header-actions"><Button variant="outline-primary" onClick={loadData} disabled={loading}><RefreshCw size={16} aria-hidden="true" />{loading?'Refreshing…':'Refresh loans'}</Button><Button onClick={() => setShowAdd(true)}><Plus size={16} aria-hidden="true" />Add loan</Button></div></header>
 
-                <Row className="g-3 mb-3">
+                {loadError && <div className="loan-error" role="alert"><div><strong>Unable to load loan records</strong><span>{loadError}</span></div><Button size="sm" variant="outline-danger" onClick={loadData}>Try again</Button></div>}
+
+                <Row className="g-3 loan-summary-grid">
                     <Col md={6}>
-                        <Card className="border-0 shadow-sm">
+                        <Card className="loan-summary loan-summary--payable">
                             <Card.Body>
-                                <div className="text-muted small text-uppercase">Company Loans Payable</div>
-                                <h4 className="mb-0">{formatMoney(summary.companyPayable)}</h4>
+                                <span>Company loans payable</span><strong>{formatMoney(summary.companyPayable)}</strong><small>Outstanding company borrowings</small>
                             </Card.Body>
                         </Card>
                     </Col>
                     <Col md={6}>
-                        <Card className="border-0 shadow-sm">
+                        <Card className="loan-summary loan-summary--receivable">
                             <Card.Body>
-                                <div className="text-muted small text-uppercase">Employee Loans Receivable</div>
-                                <h4 className="mb-0">{formatMoney(summary.employeeReceivable)}</h4>
+                                <span>Employee loans receivable</span><strong>{formatMoney(summary.employeeReceivable)}</strong><small>Outstanding employee principal</small>
                             </Card.Body>
                         </Card>
                     </Col>
                 </Row>
 
-                <ButtonGroup className="mb-4">
-                    <Button variant={filter === 'ALL' ? 'primary' : 'outline-primary'} onClick={() => setFilter('ALL')}>All</Button>
-                    <Button variant={filter === 'COMPANY_BORROWED' ? 'primary' : 'outline-primary'} onClick={() => setFilter('COMPANY_BORROWED')}>Company Borrowed</Button>
-                    <Button variant={filter === 'EMPLOYEE_LOAN' ? 'primary' : 'outline-primary'} onClick={() => setFilter('EMPLOYEE_LOAN')}>Employee Loans</Button>
+                <ButtonGroup className="loan-filters" aria-label="Filter loan register">
+                    <Button aria-pressed={filter==='ALL'} variant={filter === 'ALL' ? 'primary' : 'outline-primary'} onClick={() => setFilter('ALL')}>All loans</Button>
+                    <Button aria-pressed={filter==='COMPANY_BORROWED'} variant={filter === 'COMPANY_BORROWED' ? 'primary' : 'outline-primary'} onClick={() => setFilter('COMPANY_BORROWED')}>Company borrowed</Button>
+                    <Button aria-pressed={filter==='EMPLOYEE_LOAN'} variant={filter === 'EMPLOYEE_LOAN' ? 'primary' : 'outline-primary'} onClick={() => setFilter('EMPLOYEE_LOAN')}>Employee loans</Button>
                 </ButtonGroup>
 
-                <Row>
+                <section aria-label="Loan register"><Row className="loan-grid">
                     {filteredLoans.map(loan => {
                         const isEmployeeLoan = loan.loanDirection === 'EMPLOYEE_LOAN';
                         const counterparty = loan.counterpartyName || loan.bankName || 'Unknown';
                         return (
                             <Col md={6} lg={4} key={loan.id} className="mb-4">
-                                <Card className="shadow-sm border-0 h-100">
-                                    <Card.Header className="bg-white d-flex justify-content-between align-items-start gap-2">
+                                <Card className={`loan-card ${isEmployeeLoan?'loan-card--employee':'loan-card--company'}`}>
+                                    <Card.Header>
                                         <div>
                                             <strong>{counterparty}</strong>
                                             <div className="small text-muted">{isEmployeeLoan ? 'Employee loan' : 'Company borrowing'}</div>
@@ -290,8 +289,8 @@ export default function LoanManagement() {
                                     </Card.Header>
                                     <Card.Body>
                                         <div className="mb-2 text-muted small">Ref: {loan.loanReference || '-'}</div>
-                                        <h4 className={isEmployeeLoan ? 'text-success' : 'text-primary'}>{formatMoney(loan.outstandingBalance)}</h4>
-                                        <div className="small text-muted mb-3">{isEmployeeLoan ? 'Receivable Balance' : 'Outstanding Balance'}</div>
+                                        <strong className="loan-balance">{formatMoney(loan.outstandingBalance)}</strong>
+                                        <div className="loan-balance-label">{isEmployeeLoan ? 'Receivable balance' : 'Outstanding balance'}</div>
 
                                         <Row className="g-2 small mb-3">
                                             <Col xs={6}>Principal: {formatMoney(loan.principalAmount)}</Col>
@@ -312,10 +311,10 @@ export default function LoanManagement() {
                             </Col>
                         );
                     })}
-                </Row>
+                </Row></section>
 
                 {filteredLoans.length === 0 && (
-                    <Alert variant="light" className="border">No loans found for this filter.</Alert>
+                    <Alert variant="light" className="loan-empty">{loading?'Loading loan records…':'No loans found for this filter.'}</Alert>
                 )}
 
                 <Modal show={showAdd} onHide={() => setShowAdd(false)} size="lg">
@@ -478,7 +477,7 @@ export default function LoanManagement() {
                         <Button variant="success" onClick={handleRepay}>{selectedLoanIsEmployee ? 'Save Collection' : 'Save Repayment'}</Button>
                     </Modal.Footer>
                 </Modal>
-            </Container>
+            </main>
 
             <OverdraftConfirmModal
                 show={showOverdraftModal}

@@ -10786,22 +10786,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Loan management",
         "pageOverflowAllowed": false,
         "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "keyboardChecks": ["Loan direction filters are keyboard operable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/loans-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["Add-loan, repayment, collection, overdraft, and payment-account-backed workflows were not opened or executed."]
     },
     {
       "id": "ROUTE-finance-loans-duplicate-2-initial-route-state",
@@ -10843,22 +10843,22 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Loan management",
         "pageOverflowAllowed": false,
         "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "keyboardChecks": ["Loan direction filters are keyboard operable"],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": ["tests/audit/loans-modernization.audit.spec.js", "output/playwright/results.json"],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-17T00:00:00.000Z"
       },
-      "notes": []
+      "notes": ["Duplicate declaration shares the verified component and route; no mutation-backed workflow was executed."]
     },
     {
       "id": "ROUTE-finance-income-initial-route-state",

@@ -248,7 +248,10 @@ const financeAccountLedger = [
     { date:'2026-11-15', description:'Supplier settlement · GRN-2026-001', reference:'PAY-2026-0921', debit:0, credit:125000, runningBalance:850000.5 },
 ];
 const financeAssets = [{ id:'asset-001', purchaseDate:'2026-11-03', purchaseCost:650000, paidAmount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK', paymentHistory:[{ amount:250000, paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' }] }];
-const financeLoans = [{ id:'loan-001', startDate:'2026-11-01', status:'ACTIVE', totalRepaid:95000, outstandingBalance:405000, repaymentHistory:[{ amount:95000, paymentMethod:'CHEQUE', paymentAccountType:'BANK' }] }];
+const financeLoans = [
+    { id:'loan-001', loanDirection:'COMPANY_BORROWED', counterpartyName:'National Development Bank', bankName:'National Development Bank', loanReference:'NDB-TERM-2026-18', principalAmount:500000, interestRate:12.5, interestMethod:'REDUCING_BALANCE', durationMonths:24, startDate:'2026-11-01', status:'ACTIVE', totalRepaid:95000, totalInterestPaid:18500, outstandingBalance:405000, repaymentHistory:[{ amount:95000, paymentMethod:'CHEQUE', paymentAccountType:'BANK' }] },
+    { id:'loan-002', loanDirection:'EMPLOYEE_LOAN', counterpartyName:'Amara Perera', loanReference:'EMP-2026-0042', principalAmount:180000, interestRate:0, interestMethod:'NO_INTEREST', durationMonths:12, startDate:'2026-10-15', status:'ACTIVE', totalRepaid:45000, totalInterestPaid:0, outstandingBalance:135000, repaymentHistory:[{ amount:45000, paymentMethod:'SALARY_DEDUCTION', paymentAccountType:'PAYROLL' }] }
+];
 const inventoryDataQualityIssues = [{ source: 'Stock Batch', recordId: 'B-CP-001', reference: 'GRN-2026-001', productName: 'Copper Cable 10mm', productId: 'product-copper', issue: 'Missing expiry reference', impact: 'Excluded from expiry reporting' }];
 const stockTakingBatches = [
     { id: 'batch-copper-001', product: { id: 'product-copper', name: 'Copper Cable 10mm — high-temperature insulated run' }, batchNumber: 'B-CP-001', batchNo: 'B-CP-001', locationId: 'LOC_STORES_MAIN', expiryDate: '2028-11-01', quantity: 840.5 },
