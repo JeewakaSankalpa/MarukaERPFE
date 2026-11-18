@@ -1,21 +1,25 @@
 import React, { useState, useEffect, useMemo } from "react";
 import api from "../../../api/api";
 import { Button, Form, Table, Spinner, Row, Col } from "react-bootstrap";
+import { AlertCircle, ArrowLeft, CalendarRange, Clock3, Printer, ReceiptText, RefreshCw, WalletCards } from "lucide-react";
 import ReportLayout from "../../ReusableComponents/ReportLayout";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import SafeDatePicker from '../../ReusableComponents/SafeDatePicker';
 import QuickDateRangeButtons from '../../ReusableComponents/QuickDateRangeButtons';
+import './PayablesReport.css';
 
 const PayablesReport = () => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [error, setError] = useState("");
     const navigate = useNavigate();
 
     const fetchReport = async (range = { startDate, endDate }) => {
         setLoading(true);
+        setError("");
         try {
             const params = {};
             if (range.startDate) params.startDate = range.startDate;
@@ -25,6 +29,7 @@ const PayablesReport = () => {
             setData(res.data || []);
         } catch (error) {
             toast.error("Failed to load payables");
+            setError("We couldn't load the supplier payables. Check the due-date range and try again.");
         } finally {
             setLoading(false);
         }
@@ -32,7 +37,9 @@ const PayablesReport = () => {
 
     useEffect(() => {
         fetchReport();
-    }, []); // Load initial (all) on mount
+        // The initial all-dates report should load once; later requests are user initiated.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const applyQuickRange = (range) => {
         setStartDate(range.startDate);
@@ -122,44 +129,71 @@ const PayablesReport = () => {
 
     const percentage = (value) => totals.balance > 0 ? `${((Number(value || 0) / totals.balance) * 100).toFixed(1)}%` : "0.0%";
 
-    return (
-        <div className="p-4 bg-white min-vh-100">
-            <div className="d-flex justify-content-between mb-3 no-print">
-                <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
-                <div>
-                    <h4 className="mb-0">Payables Report</h4>
-                </div>
-                <Button variant="primary" onClick={() => window.print()}>Print / PDF</Button>
-            </div>
+    const clearFilters = () => {
+        setStartDate("");
+        setEndDate("");
+        fetchReport({ startDate: "", endDate: "" });
+    };
 
-            <div className="mb-4 p-3 bg-light rounded no-print">
-                <Row className="align-items-end">
-                    <Col md={3}>
+    const summaryCards = [
+        { label: "Outstanding payable", value: money(totals.balance), detail: `${agingRows.length} supplier balance${agingRows.length === 1 ? "" : "s"}`, icon: WalletCards, tone: "primary" },
+        { label: "Paid against invoices", value: money(totals.paidAmount), detail: `of LKR ${money(totals.invoiceAmount)} invoiced`, icon: ReceiptText, tone: "settled" },
+        { label: "Over 90 days", value: money(totals.age90Plus), detail: `${percentage(totals.age90Plus)} of outstanding`, icon: Clock3, tone: "overdue" }
+    ];
+
+    return (
+        <main className="payables-page bg-white min-vh-100">
+            <header className="payables-header no-print">
+                <div className="payables-heading-group">
+                    <button type="button" className="payables-back" onClick={() => navigate(-1)} aria-label="Back to previous page"><ArrowLeft size={18} /></button>
+                    <div>
+                        <span className="payables-eyebrow">Sales &amp; Finance</span>
+                        <h1>Supplier payables</h1>
+                        <p>Review outstanding supplier balances and identify aging exposure before payment planning.</p>
+                    </div>
+                </div>
+                <Button variant="outline-primary" onClick={() => window.print()}><Printer size={16} />Print / PDF</Button>
+            </header>
+
+            <section className="payables-filter-panel no-print" aria-labelledby="payables-filter-heading">
+                <div className="payables-filter-intro">
+                    <span className="payables-filter-icon" aria-hidden="true"><CalendarRange size={19} /></span>
+                    <div><h2 id="payables-filter-heading">Due-date range</h2><p>Use invoice due dates to focus the aging view.</p></div>
+                </div>
+                <Row className="align-items-end g-3 payables-filter-row">
+                    <Col lg={3} md={4}>
                         <Form.Group>
                             <Form.Label>Start Due Date</Form.Label>
                             <SafeDatePicker name="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} />
                         </Form.Group>
                     </Col>
-                    <Col md={3}>
+                    <Col lg={3} md={4}>
                         <Form.Group>
                             <Form.Label>End Due Date</Form.Label>
                             <SafeDatePicker name="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} />
                         </Form.Group>
                     </Col>
-                    <Col md={2}>
-                        <Button variant="info" className="w-100" onClick={fetchReport}>Filter</Button>
-                    </Col>
-                    <Col md={2}>
-                        <Button variant="outline-secondary" className="w-100" onClick={() => { setStartDate(""); setEndDate(""); fetchReport({ startDate: "", endDate: "" }); }}>Clear</Button>
+                    <Col lg={3} md={4}>
+                        <div className="payables-filter-actions">
+                            <Button variant="primary" onClick={fetchReport} disabled={loading}><RefreshCw size={16} className={loading ? "payables-spin" : ""} />{loading ? "Filtering" : "Apply range"}</Button>
+                            <Button variant="outline-secondary" onClick={clearFilters} disabled={loading}>Clear</Button>
+                        </div>
                     </Col>
                 </Row>
-                <div className="d-flex align-items-center gap-2 mt-3 flex-wrap">
-                    <span className="text-muted small fw-semibold">Quick due range:</span>
+                <div className="payables-quick-ranges">
+                    <span>Quick due range</span>
                     <QuickDateRangeButtons mode="future" onSelect={applyQuickRange} />
                 </div>
-            </div>
+            </section>
 
-            {loading ? <div className="text-center p-5"><Spinner animation="border" /></div> : (
+            {error && <div className="payables-error no-print" role="alert"><AlertCircle size={20} /><div><strong>Payables unavailable</strong><span>{error}</span></div><Button variant="outline-danger" size="sm" onClick={() => fetchReport()}>Retry</Button></div>}
+
+            {!loading && !error && <section className="payables-summary no-print" aria-label="Payables exposure summary">
+                {summaryCards.map(({ label, value, detail, icon: Icon, tone }) => <article className={`payables-summary-card payables-summary-card--${tone}`} key={label}><div><span>{label}</span><Icon size={19} /></div><strong>{value}</strong><small>{detail}</small></article>)}
+            </section>}
+
+            {loading ? <div className="payables-loading no-print" role="status" aria-label="Loading supplier payables"><Spinner animation="border" /><span>Loading supplier payables…</span></div> : (
+                <div className="payables-report-canvas" role="region" aria-label="Supplier aging report" tabIndex="0">
                 <ReportLayout title="Supplier Aging Details" orientation="landscape">
                     <div className="mb-3 small">
                         <div><strong>Aged as of:</strong> {asOfDate.toLocaleDateString()}</div>
@@ -235,8 +269,9 @@ const PayablesReport = () => {
                         }
                     `}</style>
                 </ReportLayout>
+                </div>
             )}
-        </div>
+        </main>
     );
 };
 

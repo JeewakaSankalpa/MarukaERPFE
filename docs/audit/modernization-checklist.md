@@ -4,7 +4,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 - Unique declared paths: 112
 - Route/state combinations: 248
-- Generated: 2026-11-17
+- Generated: 2026-11-18
 
 ## Status vocabulary
 
@@ -58,7 +58,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/finance/petty-cash-approvals` | PettyCashApprovalPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width approval queues, financial summaries, searchable responsive tables, accessible tabs, and guarded review dialogs |
 | `/finance/reports` | FinanceReportsPage | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width financial statements workspace modernized |
 | `/finance/tax` | TaxPage | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/reports/payables` | PayablesReport | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/reports/payables` | PayablesReport | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width supplier aging and payables review workspace with screen-only exposure summaries, accessible due-date controls, and responsive report scrolling |
 | `/reports/receivables` | ReceivablesReport | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 
 ## Human resources

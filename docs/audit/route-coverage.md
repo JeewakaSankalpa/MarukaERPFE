@@ -1,11 +1,11 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `0d788e9f15799046dae7e9ac795e1245bd160e93`.
+Generated from `src/App.js` at revision `fac773720060fd477639d52540434515bcb1fe92`.
 
 - Route declarations: 114
 - Unique declared paths: 112
 - Coverage rows including nested states: 248
-- Status counts: `MOCK-VERIFIED` 81, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 166
+- Status counts: `MOCK-VERIFIED` 82, `STAGING-VERIFIED` 0, `FAILED` 1, `BLOCKED` 0, `NOT TESTED` 165
 
 | ID | Path | Component | State | Gate | Status |
 |---|---|---|---|---|---|
@@ -206,7 +206,7 @@ Generated from `src/App.js` at revision `0d788e9f15799046dae7e9ac795e1245bd160e9
 | ROUTE-finance-migration-payables-initial-route-state | `/finance/migration-payables` | MigrationPayablesPage | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-migration-payables-payables-tab | `/finance/migration-payables` | MigrationPayablesPage | payables tab | finance | MOCK-VERIFIED |
 | ROUTE-finance-migration-payables-receivables-tab | `/finance/migration-payables` | MigrationPayablesPage | receivables tab | finance | MOCK-VERIFIED |
-| ROUTE-reports-payables-initial-route-state | `/reports/payables` | PayablesReport | initial route state | finance | NOT TESTED |
+| ROUTE-reports-payables-initial-route-state | `/reports/payables` | PayablesReport | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-reports-receivables-initial-route-state | `/reports/receivables` | ReceivablesReport | initial route state | finance | NOT TESTED |
 | ROUTE-assets-initial-route-state | `/assets` | AssetRegister | initial route state | finance | MOCK-VERIFIED |
 | ROUTE-finance-petty-cash-approvals-initial-route-state | `/finance/petty-cash-approvals` | PettyCashApprovalPage | initial route state | finance | MOCK-VERIFIED |

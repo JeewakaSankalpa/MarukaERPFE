@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-17T08:43:00.035Z",
-  "sourceRevision": "245df3d7734206481e3ab104e0b0a250787d1a96",
+  "generatedAt": "2026-11-18T00:00:00.000Z",
+  "sourceRevision": "fac773720060fd477639d52540434515bcb1fe92",
   "schemaVersion": 1,
   "allowedStatuses": [
     "MOCK-VERIFIED",
@@ -11545,15 +11545,19 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/payables-report-modernization.audit.spec.js"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-18T00:00:00.000Z"
       },
-      "notes": []
+      "notes": [
+        "Supplier aging exposure, due-date controls, responsive keyboard-focusable report scrolling, overflow, and serious/critical accessibility checks were verified with isolated data; printing, document links, real finance data, permissions, and payment workflows remain integration-only."
+      ]
     },
     {
       "id": "ROUTE-reports-receivables-initial-route-state",

@@ -37,6 +37,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/procurement/dashboard-stats') return json(route, procurementDashboardStats);
             if (url.pathname === '/api/transfers') return json(route, pendingTransfers);
             if (url.pathname === '/api/finance/expenses') return json(route, financeExpenses);
+            if (url.pathname === '/api/reports/payables') return json(route, financePayables);
             if (url.pathname === '/api/finance/reports/summary') return json(route, financeDashboardSummary);
             if (url.pathname === '/api/finance/accounts') return json(route, financeAccounts);
             if (url.pathname === '/api/finance/journals') return json(route, financeJournals);
@@ -189,6 +190,11 @@ const financeExpenses = [
     { id:'expense-002', title:'November office electricity', description:'Head office utility invoice', category:'UTILITIES', amount:127840.5, expenseDate:'2026-11-08', status:'PENDING', paymentMethod:'CHEQUE', paymentAccountType:'BANK' },
     { id:'expense-003', title:'Supplier payment · GRN-2026-001', description:'Copper cable delivery settlement', category:'SUPPLIER_PAYMENT', amount:245000, expenseDate:'2026-11-14', status:'PAID', paymentMethod:'CARD', paymentAccountType:'CREDIT_CARD', projectId:'grn-001' },
     { id:'expense-004', title:'Workshop rental', description:'Monthly workshop premises rent', category:'RENT', amount:185000, expenseDate:'2026-10-02', status:'PAID', paymentMethod:'BANK_TRANSFER', paymentAccountType:'BANK' },
+];
+const financePayables = [
+    { invoiceNumbers:['INV-CIS-2026-184','INV-CIS-2026-191'], documents:[{ fileName:'supplier-invoice-184.pdf', url:'https://example.test/invoice-184.pdf' }], source:'GRN', supplierName:'Colombo Industrial Supplies', dueDate:'2026-11-05', invoiceAmount:485000.75, paidAmount:125000, balance:360000.75 },
+    { invoiceNumber:'INV-PML-2026-077', source:'Opening balance', supplierName:'Precision Motion Lanka', dueDate:'2026-09-01', invoiceAmount:284500, paidAmount:64500, balance:220000 },
+    { grnNumber:'GRN-2026-00418', source:'GRN', supplierName:'Island Electrical & Engineering Supplies', dueDate:'2026-07-15', invoiceAmount:198740.5, paidAmount:48740.5, balance:150000 }
 ];
 const financeDashboardSummary = {
     totalInflow: 2980740.75,
