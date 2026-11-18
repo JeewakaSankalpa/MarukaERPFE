@@ -38,6 +38,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/transfers') return json(route, pendingTransfers);
             if (url.pathname === '/api/finance/expenses') return json(route, financeExpenses);
             if (url.pathname === '/api/reports/payables') return json(route, financePayables);
+            if (url.pathname === '/api/reports/receivables') return json(route, financeReceivables);
             if (url.pathname === '/api/finance/reports/summary') return json(route, financeDashboardSummary);
             if (url.pathname === '/api/finance/accounts') return json(route, financeAccounts);
             if (url.pathname === '/api/finance/journals') return json(route, financeJournals);
@@ -195,6 +196,11 @@ const financePayables = [
     { invoiceNumbers:['INV-CIS-2026-184','INV-CIS-2026-191'], documents:[{ fileName:'supplier-invoice-184.pdf', url:'https://example.test/invoice-184.pdf' }], source:'GRN', supplierName:'Colombo Industrial Supplies', dueDate:'2026-11-05', invoiceAmount:485000.75, paidAmount:125000, balance:360000.75 },
     { invoiceNumber:'INV-PML-2026-077', source:'Opening balance', supplierName:'Precision Motion Lanka', dueDate:'2026-09-01', invoiceAmount:284500, paidAmount:64500, balance:220000 },
     { grnNumber:'GRN-2026-00418', source:'GRN', supplierName:'Island Electrical & Engineering Supplies', dueDate:'2026-07-15', invoiceAmount:198740.5, paidAmount:48740.5, balance:150000 }
+];
+const financeReceivables = [
+    { invoiceNumber:'INV-2026-1042', customerName:'Colombo Distribution Partners', startDate:'2026-09-14', endDate:'2026-10-14', totalAmount:485000.75, paidAmount:125000, balance:360000.75 },
+    { invoiceNumber:'INV-2026-0988', customerName:'Lanka Engineering Services', startDate:'2026-07-01', endDate:'2026-08-01', totalAmount:284500, paidAmount:64500, balance:220000 },
+    { invoiceNumber:'INV-2026-0901', customerName:'Southern Automation Works', startDate:'2026-04-10', endDate:'2026-05-10', totalAmount:198740.5, paidAmount:48740.5, balance:150000 }
 ];
 const financeDashboardSummary = {
     totalInflow: 2980740.75,

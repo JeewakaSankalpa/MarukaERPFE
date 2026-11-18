@@ -9,11 +9,11 @@ This dashboard distinguishes route/state coverage from component and interaction
 | Declared routes | 114 |
 | Unique declared paths | 112 |
 | Route/state combinations | 248 |
-| MOCK-VERIFIED | 82 |
+| MOCK-VERIFIED | 83 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 165 |
+| NOT TESTED | 164 |
 
 ## Sidebar-section modernization breakdown
 
@@ -29,7 +29,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
 | Reports | 10 | 0 | 0 | 10 | 13 | 0 | 23 | 0.0% | 0.0% |
-| Sales & Finance | 14 | 12 | 0 | 2 | 16 | 28 | 2 | 85.7% | 93.3% |
+| Sales & Finance | 14 | 13 | 0 | 1 | 16 | 29 | 1 | 92.9% | 96.7% |
 | Settings | 18 | 0 | 1 | 17 | 13 | 1 | 30 | 5.6% | 3.2% |
 
 Seven declared paths are outside this sidebar breakdown: public login/root and user-administration/profile routes. They remain in the route manifest and are not counted twice here.
@@ -60,6 +60,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - Asset Register: acquisition cost, carrying value, accumulated depreciation, portfolio search, responsive local table scrolling, keyboard focus, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without calculating depreciation or saving asset changes.
 - Finance Dashboard: reporting-period controls, cash-flow summaries, inflow and outflow breakdowns, workspace navigation, keyboard focus, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without financial mutations.
 - Supplier Payables: payable exposure summaries, due-date controls, populated supplier aging, keyboard-focusable local report scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without printing, opening documents, or executing financial mutations.
+- Customer Receivables: receivable exposure summaries, customer-query and due-date controls, populated and empty aging states, keyboard-focusable local report scrolling, overflow, and serious/critical accessibility checks passed at desktop, intermediate, and mobile widths without printing or executing financial mutations.
 
 ## Shared components
 
@@ -84,8 +85,8 @@ The Project Stores component has no application route, import, or menu entry. Th
 
 ## Browser regression matrix
 
-- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, and Supplier Payables.
-- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, and Supplier Payables.
+- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, Supplier Payables, and Customer Receivables.
+- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, Supplier Payables, and Customer Receivables.
 - Pending Purchases state and interaction checks: empty, loading, draft, supplier/quotation, and 300-row baseline passed; API error behavior is an expected failure.
 - Firefox/WebKit coverage for the new operational batch remains pending.
 

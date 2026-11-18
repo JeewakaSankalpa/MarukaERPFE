@@ -11599,22 +11599,31 @@
         "error": true
       },
       "expectations": {
-        "identity": null,
+        "identity": "Customer receivables",
         "pageOverflowAllowed": false,
-        "permittedLocalScrollers": [],
-        "keyboardChecks": [],
+        "permittedLocalScrollers": [
+          ".receivables-report-canvas"
+        ],
+        "keyboardChecks": [
+          "customer filter",
+          "aging report region"
+        ],
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
-        "zoom": null,
-        "evidence": [],
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
+        "zoom": "100%",
+        "evidence": [
+          "tests/audit/receivables-modernization.audit.spec.js"
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-18T00:00:00.000Z"
       },
-      "notes": []
+      "notes": [
+        "Customer aging exposure, customer-query filtering, populated and empty states, responsive keyboard-focusable report scrolling, overflow, and serious/critical accessibility checks were verified with isolated data; printing, real finance data, permissions, network-error automation, and collection workflows remain integration-only."
+      ]
     },
     {
       "id": "ROUTE-assets-initial-route-state",

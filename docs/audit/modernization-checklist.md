@@ -4,7 +4,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 - Unique declared paths: 112
 - Route/state combinations: 248
-- Generated: 2026-11-18
+- Generated: 2026-11-18T13:34:36.751Z
 
 ## Status vocabulary
 
@@ -46,20 +46,20 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 | Route | Component | Nested states | Coverage | Priority | Modernization | Assessment |
 |---|---|---:|---|---|---|---|
-| `/assets` | AssetRegister | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width fixed asset portfolio with financial summaries, accessible search, responsive register, and guarded mutation workflows |
-| `/finance/accounts` | AccountsPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width account directory, five-category balance summary, nested ledger review, filters, responsive tables, and accessible financial presentation |
+| `/assets` | AssetRegister | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width fixed asset portfolio workspace modernized |
+| `/finance/accounts` | AccountsPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width chart of accounts workspace modernized |
 | `/finance/dashboard` | FinanceDashboard | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width finance cash-flow dashboard modernized |
 | `/finance/expenses` | ExpensesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width expense review workspace modernized |
-| `/finance/income` | IncomePage | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width income and receivables review with financial hierarchy, responsive charts and register, accessible filtering, and guarded loading/error presentation |
-| `/finance/journals` | JournalEntryList | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width journal register, balanced debit/credit summaries, responsive line details, filters, and accessible posting form |
-| `/finance/loans` | LoanManagement | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width company and employee loan portfolio with separated financial exposure, accessible filters, responsive cards, and guarded transaction dialogs |
-| `/finance/migration` | MigrationPayablesPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width opening balance migration workspace with financial summaries, responsive registers, accessible filters, and guarded opening-balance forms |
-| `/finance/migration-payables` | MigrationPayablesPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Verified alias of the modernized opening balance migration workspace; shared read-only behavior matches `/finance/migration` |
-| `/finance/petty-cash-approvals` | PettyCashApprovalPage | 2 | MOCK-VERIFIED (3/3 states) | MONITOR | MODERNIZED | Full-width approval queues, financial summaries, searchable responsive tables, accessible tabs, and guarded review dialogs |
+| `/finance/income` | IncomePage | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width income and receivables workspace modernized |
+| `/finance/journals` | JournalEntryList | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width journal register and posting review workspace modernized |
+| `/finance/loans` | LoanManagement | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width loan portfolio workspace modernized |
+| `/finance/migration` | MigrationPayablesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width opening balance migration workspace modernized |
+| `/finance/migration-payables` | MigrationPayablesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Verified alias of the modernized opening balance migration workspace |
+| `/finance/petty-cash-approvals` | PettyCashApprovalPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width petty cash approval queues modernized |
 | `/finance/reports` | FinanceReportsPage | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width financial statements workspace modernized |
 | `/finance/tax` | TaxPage | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/reports/payables` | PayablesReport | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width supplier aging and payables review workspace with screen-only exposure summaries, accessible due-date controls, and responsive report scrolling |
-| `/reports/receivables` | ReceivablesReport | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/reports/payables` | PayablesReport | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width supplier aging and payables review workspace modernized |
+| `/reports/receivables` | ReceivablesReport | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width customer aging and receivables review workspace modernized |
 
 ## Human resources
 
@@ -90,8 +90,8 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/inventory/return-to-inventory` | ReturnToInventory | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/inventory/returns/approvals` | InternalReturnApprovals | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/inventory/search` | InventoryView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Products-benchmark inventory workspace redesign complete |
-| `/inventory/stock-taking` | StockTakingPage | 2 | MOCK-VERIFIED (3/3 states) | HIGH | MODERNIZED | Full-width stock count workspace, discrepancy tabs, responsive batch table, and accessible quantity controls |
-| `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | 3 | MOCK-VERIFIED (4/4 states) | MONITOR | MODERNIZED | Full-width approval queues, readable quantity and financial review, responsive return cards, filtering, and accessible settlement history |
+| `/inventory/stock-taking` | StockTakingPage | 2 | MOCK-VERIFIED | HIGH | NOT ASSESSED | CANDIDATE |
+| `/inventory/supplier-returns/approvals` | SupplierReturnApprovals | 3 | MOCK-VERIFIED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/inventory/view` | InventoryView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Shared InventoryView modernized |
 | `/item/add` | ItemAdd | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/item/my-requests` | MyRequestList | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Products-benchmark request workspace redesign complete |
@@ -116,9 +116,9 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 | Route | Component | Nested states | Coverage | Priority | Modernization | Assessment |
 |---|---|---:|---|---|---|---|
-| `/grn` | GRNRouteWrapper | 0 | MOCK-VERIFIED | HIGH | MODERNIZED | Receive GRN full-width receiving workspace, responsive batch table, scoped payable summary, and accessible receipt controls |
+| `/grn` | GRNRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/grns` | GRNListView | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | GRN History operational workspace redesigned |
-| `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | 0 | MOCK-VERIFIED | HIGH | MODERNIZED | Full-width correction workspace, readable financial review, responsive impact sections, and accessible admin controls; apply workflows remain integration-only |
+| `/grns/:grnId/rate-correction` | GRNRateCorrectionPage | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/pos` | POListRouteWrapper | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Previously modernized PO list |
 | `/pos/:id` | PurchaseOrderDetails | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | PO Detail workspace redesigned |
 | `/pos/:id/edit` | POEditManualRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
@@ -127,7 +127,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/procurement/dashboard` | ProcurementDashboard | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Procurement operational dashboard redesigned |
 | `/stores/pending-to-po` | PendingToPOPage | 11 | FAILED | MONITOR | IMPROVED | Shared workspace repair complete |
 | `/stores/planning` | StoresPlanningPage | 4 | NOT TESTED | MONITOR | MODERNIZED | Products-benchmark operational redesign complete |
-| `/transfers/inbox` | TransfersInbox | 4 | MOCK-VERIFIED (5/5 states) | MONITOR | MODERNIZED | Full-width transfer review workspace, visible source/destination routing, decimal quantities, responsive item details, filtering, and accessible batch verification |
+| `/transfers/inbox` | TransfersInbox | 4 | NOT TESTED | MONITOR | MODERNIZED | Transfer acceptance workspace redesigned |
 
 ## Projects
 
@@ -141,7 +141,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/projects/edit/:id` | ProjectCreate | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/projects/estimation` | ProjectEstimationPage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/projects/estimation/:id` | ProjectEstimationRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/projects/manage/:id` | ProjectDetails | 7 | MOCK-VERIFIED (3/8 states) | HIGH | MODERNIZED | Project workspace, saved financial summary, and revisions verified; workflow-dependent tabs and writes remain integration-only. |
+| `/projects/manage/:id` | ProjectDetails | 7 | NOT TESTED | MONITOR | MODERNIZED | Project Manage operational workspace modernized |
 | `/projects/search` | ProjectSearch | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/projects/tasks` | TaskControlCenter | 9 | NOT TESTED | MONITOR | MODERNIZED | Task Control Center responsive workspace and accessibility improvements verified |
 | `/projects/view/:id` | ProjectCreate | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
@@ -152,8 +152,8 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 | Route | Component | Nested states | Coverage | Priority | Modernization | Assessment |
 |---|---|---:|---|---|---|---|
-| `/` | Navigate | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/login` | Login | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/` | Navigate | 0 | MOCK-VERIFIED | LOW | NOT ASSESSED | CANDIDATE |
+| `/login` | Login | 0 | MOCK-VERIFIED | MEDIUM | NOT ASSESSED | CANDIDATE |
 
 ## Reports
 
