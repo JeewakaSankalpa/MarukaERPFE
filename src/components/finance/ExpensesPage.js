@@ -383,6 +383,7 @@ export default function ExpensesPage() {
                                                     cx="50%" cy="45%"
                                                     innerRadius={70} outerRadius={95}
                                                     paddingAngle={3} dataKey="paid" nameKey="name"
+                                                    isAnimationActive={false}
                                                     labelLine={false} label={<CustomPctLabel />}
                                                 >
                                                     {outflowCategories.filter(d => d.paid > 0).map((e, i) => (
@@ -430,6 +431,7 @@ export default function ExpensesPage() {
                                                     cx="50%" cy="45%"
                                                     innerRadius={70} outerRadius={95}
                                                     paddingAngle={3} dataKey="paid" nameKey="name"
+                                                    isAnimationActive={false}
                                                     labelLine={false} label={<CustomPctLabel />}
                                                 >
                                                     {methodCategories.map((e, i) => (
@@ -484,7 +486,7 @@ export default function ExpensesPage() {
                                 formatter={(v) => [`Rs. ${fmt(v)}`, 'Manual Expenses']} 
                                 contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
                             />
-                            <Bar dataKey="amount" fill="#0d6efd" radius={[4, 4, 0, 0]} barSize={40} />
+                            <Bar dataKey="amount" fill="#1769aa" radius={[4, 4, 0, 0]} barSize={40} isAnimationActive={false} />
                         </BarChart>
                     </ResponsiveContainer>
                 </Card.Body>

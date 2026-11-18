@@ -228,6 +228,15 @@ object {
     max-width: 100%;
 }
 
+/* Recharts 3 inserts a measurement wrapper between ResponsiveContainer and
+   the chart. Give that wrapper the measured area instead of allowing its
+   shrink-to-fit width to collapse the plotted SVG to zero. */
+.recharts-responsive-container > div {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0;
+}
+
 .page-content :where(.nav, .nav-tabs, .nav-pills, .pagination, .breadcrumb) {
     max-width: 100%;
     flex-wrap: wrap;

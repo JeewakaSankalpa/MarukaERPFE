@@ -192,7 +192,7 @@ export default function IncomePage() {
                                     <YAxis />
                                     <Tooltip formatter={(val) => val.toLocaleString()} />
                                     <Legend />
-                                    <Bar dataKey="amount" fill="#0088FE" name="Invoiced Amount" />
+                                    <Bar dataKey="amount" fill="#1769aa" name="Invoiced Amount" isAnimationActive={false} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </Card.Body>
@@ -213,6 +213,7 @@ export default function IncomePage() {
                                         fill="#8884d8"
                                         paddingAngle={5}
                                         dataKey="value"
+                                        isAnimationActive={false}
                                     >
                                         {pieChartData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

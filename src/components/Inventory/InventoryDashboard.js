@@ -290,7 +290,7 @@ const InventoryDashboard = () => {
                     contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     cursor={{ fill: 'transparent' }}
                   />
-                  <Bar dataKey="value" name="Items Issued" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
+                  <Bar dataKey="value" name="Items Issued" fill="#2879c7" radius={[4, 4, 0, 0]} barSize={40} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </Card.Body>
@@ -324,7 +324,7 @@ const InventoryDashboard = () => {
                     tickFormatter={(value) => value.length > 15 ? `${value.substring(0, 15)}...` : value}
                   />
                   <Tooltip />
-                  <Bar dataKey="totalOut" name="Qty Out" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                  <Bar dataKey="totalOut" name="Qty Out" fill="#16836a" radius={[0, 4, 4, 0]} barSize={20} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </Card.Body>
