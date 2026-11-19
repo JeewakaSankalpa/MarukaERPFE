@@ -1,0 +1,61 @@
+.po-print-page .print-container {
+    width: 100%;
+}
+
+.po-print-page .table-responsive {
+    max-width: 100%;
+}
+
+.po-print-items {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+}
+
+.po-print-items :where(th, td) {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere !important;
+    word-break: normal;
+    vertical-align: top;
+}
+
+.po-print-items :where(th, td):first-child {
+    width: auto;
+}
+
+.po-print-items :where(th, td):nth-child(2) {
+    width: 12%;
+}
+
+.po-print-items :where(th, td):nth-child(3) {
+    width: 18%;
+}
+
+.po-print-items :where(th, td):nth-child(4) {
+    width: 20%;
+}
+
+.po-print-items :where(th, td):not(:first-child) {
+    font-variant-numeric: tabular-nums;
+}
+
+@media print {
+    .po-print-page {
+        padding: 0 !important;
+    }
+
+    .po-print-items thead {
+        display: table-header-group;
+    }
+
+    .po-print-items tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .po-print-items :where(th, td) {
+        overflow: visible !important;
+    }
+}

@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import logo from "../../assets/logo.jpeg";
 import signature from "../../assets/signature.png";
 import { formatPurchaseForText, orderedQty, formatQty, allocationQty, getDisplayPOItems } from "./poDisplay";
+import "./POPrint.css";
 
 const cleanText = (value) => String(value || "").trim();
 
@@ -89,7 +90,7 @@ const POPrint = () => {
     const hasCustomShippingAddress = shippingAddressLines.length > 0;
 
     return (
-        <div className="bg-white min-vh-100 p-4" style={{ color: "#000", fontFamily: "Arial, sans-serif" }}>
+        <div className="po-print-page bg-white min-vh-100 p-4" style={{ color: "#000", fontFamily: "Arial, sans-serif" }}>
             {/* Action Bar - Hidden in Print */}
             <div className="d-flex justify-content-between mb-4 no-print">
                 <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
@@ -208,7 +209,7 @@ const POPrint = () => {
                 </div>
 
                 {/* Items Table */}
-                <Table borderless responsive className="mb-4">
+                <Table borderless responsive className="po-print-items mb-4">
                     <thead style={{ backgroundColor: "#d1ecf1", color: "#0c5460" }}>
                         <tr>
                             <th style={{ padding: "8px 12px" }}>DESCRIPTION</th>
@@ -382,6 +383,16 @@ const POPrint = () => {
                             max-width: none !important;
                             margin: 0 !important;
                             padding: 5mm !important;
+                        }
+                        .po-print-page .table-responsive {
+                            width: 100% !important;
+                            max-width: none !important;
+                            overflow: visible !important;
+                        }
+                        .po-print-items {
+                            width: 100% !important;
+                            min-width: 0 !important;
+                            table-layout: fixed !important;
                         }
                         body {
                             background: #fff !important;
