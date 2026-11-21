@@ -57,7 +57,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/finance/migration-payables` | MigrationPayablesPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Verified alias of the modernized opening balance migration workspace |
 | `/finance/petty-cash-approvals` | PettyCashApprovalPage | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width petty cash approval queues modernized |
 | `/finance/reports` | FinanceReportsPage | 3 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width financial statements workspace modernized |
-| `/finance/tax` | TaxPage | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
+| `/finance/tax` | TaxPage | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width read-only tax configuration workspace modernized |
 | `/reports/payables` | PayablesReport | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width supplier aging and payables review workspace modernized |
 | `/reports/receivables` | ReceivablesReport | 0 | MOCK-VERIFIED | MONITOR | MODERNIZED | Full-width customer aging and receivables review workspace modernized |
 

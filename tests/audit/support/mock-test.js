@@ -40,6 +40,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/reports/payables') return json(route, financePayables);
             if (url.pathname === '/api/reports/receivables') return json(route, financeReceivables);
             if (url.pathname === '/api/finance/reports/summary') return json(route, financeDashboardSummary);
+            if (url.pathname === '/api/settings') return json(route, financeTaxSettings);
             if (url.pathname === '/api/finance/accounts') return json(route, financeAccounts);
             if (url.pathname === '/api/finance/journals') return json(route, financeJournals);
             if (url.pathname === '/api/finance/reports/income-statement') return json(route, financeIncomeStatement);
@@ -214,6 +215,10 @@ const financeDashboardSummary = {
     totalAssetPayments: 128500,
     totalLoanRepayments: 90000,
 };
+const financeTaxSettings = [
+    { key: 'GLOBAL_VAT_PERCENT', value: '18' },
+    { key: 'GLOBAL_TAX_PERCENT', value: '2.5' },
+];
 const financeJournals = { content: [
     { id:'journal-001', date:'2026-11-15', reference:'PAY-2026-0921', description:'Supplier settlement for copper cable delivery', status:'POSTED', lines:[
         { accountId:'account-payable-001', accountName:'Trade accounts payable', description:'Clear supplier liability', debit:125000, credit:0 },

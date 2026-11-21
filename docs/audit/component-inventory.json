@@ -991,14 +991,14 @@
       "source": "src/components/finance/TaxPage.js",
       "surfaces": {
         "forms": false,
-        "tables": false,
+        "tables": true,
         "modals": false,
         "drawers": false,
         "dropdowns": false,
         "tabs": false,
-        "loading": false,
+        "loading": true,
         "empty": false,
-        "error": false
+        "error": true
       },
       "dynamicRegistration": false,
       "coverage": {
