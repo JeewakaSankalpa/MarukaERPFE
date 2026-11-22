@@ -368,7 +368,7 @@ function Dashboard({ onLogout }) {
       <div className="dashboard-content">
         <header className="dashboard-hero" aria-labelledby="main-dashboard-heading">
           <div>
-            <p className="dashboard-eyebrow">Workspace overview</p>
+            <p className="dashboard-context-label">Main dashboard</p>
             <h1 id="main-dashboard-heading">Good day, {displayName}</h1>
             <p className="dashboard-subtitle">Keep your projects, tasks, approvals, and finance work moving.</p>
           </div>
@@ -380,7 +380,27 @@ function Dashboard({ onLogout }) {
           </div>
         </header>
 
-        {/* WIDGETS SECTION (Moved to Top) */}
+        <section className="dashboard-quick-section" aria-labelledby="dashboard-quick-heading">
+          <div className="dashboard-section-heading">
+            <div>
+              <h2 id="dashboard-quick-heading">Quick access</h2>
+              <p className="dashboard-section-hint mb-0">Common actions available for your role</p>
+            </div>
+          </div>
+          <div className="dashboard-quick-grid" aria-label="Quick access actions">
+            {projects.map((project) => (
+              <ProjectCard key={project.path} {...project} />
+            ))}
+          </div>
+        </section>
+
+        <div className="dashboard-section-heading dashboard-work-heading">
+          <div>
+            <h2>My work</h2>
+            <p className="dashboard-section-hint mb-0">Attendance, assigned work, and approvals needing attention</p>
+          </div>
+        </div>
+
         <section className="dashboard-widget-grid mb-4" aria-label="Personal work overview">
           {/* My Attendance */}
           {hasAccess({ id: 'dashboard.my_attendance' }) && (
@@ -393,6 +413,13 @@ function Dashboard({ onLogout }) {
           {hasAccess({ id: 'projects' }) && (
             <div className="dashboard-widget-cell dashboard-widget-tasks">
               <MyTasksWidget />
+            </div>
+          )}
+
+          {/* HR Widget */}
+          {hasAccess({ id: 'hr' }) && (
+            <div className="dashboard-widget-cell dashboard-widget-hr">
+              <EmployeeHRWidget />
             </div>
           )}
 
@@ -409,13 +436,6 @@ function Dashboard({ onLogout }) {
               <PayablesWidget />
             </div>
           )}
-
-          {/* HR Widget */}
-          {hasAccess({ id: 'hr' }) && (
-            <div className="dashboard-widget-cell dashboard-widget-hr">
-              <EmployeeHRWidget />
-            </div>
-          )}
         </section>
 
         {/* STATS ROW */}
@@ -427,7 +447,9 @@ function Dashboard({ onLogout }) {
               <Card.Header className="dashboard-card-header d-flex justify-content-between align-items-center bg-white">
                 <div className="d-flex align-items-center gap-3">
                   <span className="fw-bold">Ongoing Projects</span>
-                  <span role="button" className="text-muted small" onClick={loadStats}>{loadingStats ? "…" : "↻"}</span>
+                  <button type="button" className="dashboard-icon-button" onClick={loadStats} disabled={loadingStats} aria-label="Refresh ongoing projects">
+                    {loadingStats ? "…" : "↻"}
+                  </button>
                 </div>
               </Card.Header>
               <Card.Body style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -476,13 +498,13 @@ function Dashboard({ onLogout }) {
                       {acc.projectPayables.map((item, idx) => (
                         <tr key={idx}>
                           <td data-label="Project">{item.projectName}</td>
-                          <td data-label="Outstanding" className="text-end fw-bold text-danger">₹ {money(item.amount)}</td>
+                          <td data-label="Outstanding" className="text-end fw-bold text-danger">LKR {money(item.amount)}</td>
                         </tr>
                       ))}
                       {/* Total Row */}
                       <tr className="table-light fw-bold">
                         <td data-label="Summary">Total Outstanding</td>
-                        <td data-label="Outstanding" className="text-end">₹ {money(acc.outstanding)}</td>
+                        <td data-label="Outstanding" className="text-end">LKR {money(acc.outstanding)}</td>
                       </tr>
                     </tbody>
                   </Table>
@@ -492,20 +514,6 @@ function Dashboard({ onLogout }) {
           </Col>
         </Row>
         </section>
-
-
-        <div className="dashboard-section-heading">
-          <div>
-            <p className="dashboard-eyebrow">Shortcuts</p>
-            <h2>Quick access</h2>
-          </div>
-          <span className="dashboard-section-hint">Common actions for your role</span>
-        </div>
-        <div className="dashboard-quick-grid" aria-label="Quick access actions">
-          {projects.map((project, index) => (
-            <ProjectCard key={index} {...project} />
-          ))}
-        </div>
 
       </div>
     </Container>

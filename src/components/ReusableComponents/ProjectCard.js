@@ -65,9 +65,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-const ProjectCard = ({ title, team, timeLeft, progress, icon, path }) => {
+const ProjectCard = ({ title, team, icon, path }) => {
   const navigate = useNavigate();
-  const safeProgress = Math.max(0, Math.min(progress, 100));
 
   const handleCardClick = () => {
     if (path) {
@@ -76,45 +75,22 @@ const ProjectCard = ({ title, team, timeLeft, progress, icon, path }) => {
   };
 
   return (
-    <div
+    <button
+      type="button"
+      className="dashboard-quick-action"
       onClick={handleCardClick}
-      style={{
-        backgroundColor: "#ffffff",
-        padding: "16px",
-        borderRadius: "12px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-start",
-        width: "256px", // approx w-64
-        boxSizing: "border-box",
-      }}
+      disabled={!path}
+      aria-label={`${title}: ${team}`}
     >
-      <div
-        style={{
-          width: "40px",
-          height: "40px",
-          backgroundColor: "#e5e7eb", // gray-200
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: "8px",
-        }}
-      >
+      <span className="dashboard-quick-icon" aria-hidden="true">
         {icon}
-      </div>
-      <h3 style={{ fontWeight: "600", fontSize: "18px", margin: "0 0 4px 0" }}>
-        {title}
-      </h3>
-      <p style={{ color: "#6b7280", fontSize: "14px", margin: "0 0 4px 0" }}>
-        {team}
-      </p>
-      <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "8px" }}>
-        {timeLeft} Left
-      </p>
-
-    </div>
+      </span>
+      <span className="dashboard-quick-copy">
+        <strong>{title}</strong>
+        <span>{team}</span>
+      </span>
+      <span className="dashboard-quick-arrow" aria-hidden="true">→</span>
+    </button>
   );
 };
 

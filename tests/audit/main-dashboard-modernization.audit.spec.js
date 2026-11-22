@@ -64,6 +64,8 @@ test('@mock @layout @a11y main dashboard keeps its work overview responsive', as
     await page.goto('/#/dashboard', { waitUntil: 'networkidle' });
     await expect(page.getByRole('heading', { name: 'Good day, Amara' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Quick access' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /New Project: Create a new project/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Stock Search: Check inventory levels/ })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Refresh dashboard summary' })).toBeVisible();
     await expect(page.getByText('Colombo distribution modernisation').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Check In' })).toBeVisible();
@@ -82,14 +84,18 @@ test('@mock @layout @a11y main dashboard keeps its work overview responsive', as
         documentScrollWidth: document.documentElement.scrollWidth,
         payablesClientWidth: element.querySelector('.dashboard-widget-payables').clientWidth,
         payablesScrollWidth: element.querySelector('.dashboard-widget-payables').scrollWidth,
+        quickActionColumns: getComputedStyle(element.querySelector('.dashboard-quick-grid')).gridTemplateColumns.split(' ').length,
     }));
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
     expect(layout.documentScrollWidth).toBeLessThanOrEqual(layout.documentClientWidth + 1);
     expect(layout.payablesScrollWidth).toBeLessThanOrEqual(layout.payablesClientWidth + 1);
     expect(layout.widgetColumns).toBeTruthy();
+    const viewportWidth = page.viewportSize().width;
+    expect(layout.quickActionColumns).toBe(viewportWidth >= 1400 ? 6 : viewportWidth >= 992 ? 3 : 2);
 
-    await page.keyboard.press('Tab');
-    await expect(page.locator(':focus')).toBeVisible();
+    const stockSearchShortcut = page.getByRole('button', { name: /Stock Search: Check inventory levels/ });
+    await stockSearchShortcut.focus();
+    await expect(stockSearchShortcut).toBeFocused();
 
     const axe = await new AxeBuilder({ page }).analyze();
     expect(axe.violations.filter(item => ['serious', 'critical'].includes(item.impact))).toEqual([]);
