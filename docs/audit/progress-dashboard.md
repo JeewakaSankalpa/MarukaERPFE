@@ -9,11 +9,11 @@ This dashboard distinguishes route/state coverage from component and interaction
 | Declared routes | 114 |
 | Unique declared paths | 112 |
 | Route/state combinations | 248 |
-| MOCK-VERIFIED | 84 |
+| MOCK-VERIFIED | 85 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 163 |
+| NOT TESTED | 162 |
 
 ## Sidebar-section modernization breakdown
 
@@ -21,7 +21,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 
 | Section | Routes | Modernized | Improved | Not assessed | Nested | Mock verified | Untested/failed | Modernization | Verification |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Dashboard | 1 | 0 | 0 | 1 | 2 | 0 | 3 | 0.0% | 0.0% |
+| Dashboard | 1 | 1 | 0 | 0 | 2 | 1 | 2 | 100.0% | 25.0% |
 | Sales User Dashboard (Executive Dashboard) | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Project Summary Dashboard | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Projects | 13 | 2 | 0 | 11 | 18 | 11 | 20 | 15.4% | 35.5% |

@@ -362,16 +362,23 @@ function Dashboard({ onLogout }) {
 
   return (
     <Container fluid className="dashboard-container p-0">
-      <div
-        className="dashboard-content"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          padding: "24px",
-        }}
-      >
+      <div className="dashboard-content">
+        <header className="dashboard-hero" aria-labelledby="main-dashboard-heading">
+          <div>
+            <p className="dashboard-eyebrow">Workspace overview</p>
+            <h1 id="main-dashboard-heading">Good day, {user.firstName || "there"}</h1>
+            <p className="dashboard-subtitle">Keep your projects, tasks, approvals, and finance work moving.</p>
+          </div>
+          <div className="dashboard-hero-meta">
+            <time dateTime={currentTime.toISOString()}>{currentTime.toLocaleString()}</time>
+            <Button variant="outline-primary" size="sm" onClick={loadStats} disabled={loadingStats} aria-label="Refresh dashboard summary">
+              {loadingStats ? "Refreshing…" : "Refresh summary"}
+            </Button>
+          </div>
+        </header>
+
         {/* WIDGETS SECTION (Moved to Top) */}
-        <div className="dashboard-widget-grid mb-4">
+        <section className="dashboard-widget-grid mb-4" aria-label="Personal work overview">
           {/* My Attendance */}
           {hasAccess({ id: 'dashboard.my_attendance' }) && (
             <div className="dashboard-widget-cell">
@@ -406,9 +413,10 @@ function Dashboard({ onLogout }) {
               <EmployeeHRWidget />
             </div>
           )}
-        </div>
+        </section>
 
         {/* STATS ROW */}
+        <section aria-label="Project and finance summary">
         <Row className="g-3 mb-4">
           {/* Project Stats - Detailed List */}
           <Col lg={6} md={12}>
@@ -480,18 +488,17 @@ function Dashboard({ onLogout }) {
             </Card>
           </Col>
         </Row>
+        </section>
 
 
-        <h1
-          style={{
-            fontSize: "24px",
-            fontWeight: "700",
-            marginBottom: "16px",
-          }}
-        >
-          Quick Access
-        </h1>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+        <div className="dashboard-section-heading">
+          <div>
+            <p className="dashboard-eyebrow">Shortcuts</p>
+            <h2>Quick access</h2>
+          </div>
+          <span className="dashboard-section-hint">Common actions for your role</span>
+        </div>
+        <div className="dashboard-quick-grid" aria-label="Quick access actions">
           {projects.map((project, index) => (
             <ProjectCard key={index} {...project} />
           ))}

@@ -4,7 +4,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 
 - Unique declared paths: 112
 - Route/state combinations: 248
-- Generated: 2026-11-18T13:34:36.751Z
+- Generated: 2026-11-22T04:15:06.832Z
 
 ## Status vocabulary
 
@@ -30,15 +30,15 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/admin/item-request-trace` | ItemRequestTraceAdminPage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/admin/portal-preview/customer/:id` | PortalPreviewRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/admin/portal-preview/supplier/:id` | PortalPreviewRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/dashboard` | Dashboard | 2 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/dashboard` | Dashboard | 2 | NOT TESTED | MONITOR | MODERNIZED | Main Dashboard workspace modernized |
 | `/dashboard/interactive` | InteractiveDashboard | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/employee/profile` | EmployeeProfile | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
-| `/executive-dashboard` | ExecutiveDashboard | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/executive-dashboard` | ExecutiveDashboard | 0 | NOT TESTED | MEDIUM | COMPLETED | APPROVED AS-IS |
 | `/my-notifications` | MyNotificationsPage | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/notifications` | NotificationsPage | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/portal/customer` | PortalDashboard | 3 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/portal/supplier` | PortalDashboard | 3 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
-| `/project-summary-dashboard` | ProjectSummaryDashboard | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
+| `/project-summary-dashboard` | ProjectSummaryDashboard | 0 | NOT TESTED | MEDIUM | COMPLETED | APPROVED AS-IS |
 | `/settings` | SettingsPage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/user/profile` | EmployeeProfile | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 
@@ -187,3 +187,4 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 2. `/projects/*` operational detail and task-control surfaces.
 3. `/finance/*` data-entry and approval surfaces.
 4. `/inventory/pr` — populated state is presently blocked by a write-shaped summary request in the read-only harness.
+

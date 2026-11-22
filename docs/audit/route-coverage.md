@@ -1,6 +1,6 @@
 # Route coverage manifest
 
-Generated from `src/App.js` at revision `0432816d0c2516b613624bad8b0cb1d72b25eebd`.
+Generated from `src/App.js` at revision `ca2e2b942af4114009bea4e83184055471de73f2`.
 
 - Route declarations: 114
 - Unique declared paths: 112

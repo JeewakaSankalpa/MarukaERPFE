@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-17T08:43:00.096Z",
-  "sourceRevision": "245df3d7734206481e3ab104e0b0a250787d1a96",
+  "generatedAt": "2026-11-22T04:14:54.238Z",
+  "sourceRevision": "ca2e2b942af4114009bea4e83184055471de73f2",
   "scope": "All component source files. Runtime reachability and descendant relationships require browser verification.",
   "files": [
     {
@@ -84,7 +84,7 @@
         "drawers": false,
         "dropdowns": false,
         "tabs": false,
-        "loading": false,
+        "loading": true,
         "empty": false,
         "error": true
       },
@@ -900,7 +900,7 @@
         "drawers": false,
         "dropdowns": true,
         "tabs": false,
-        "loading": false,
+        "loading": true,
         "empty": false,
         "error": true
       },
