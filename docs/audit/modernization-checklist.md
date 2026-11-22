@@ -30,7 +30,7 @@ Generated from `docs/audit/route-coverage.json`, `src/App.js`, and existing nest
 | `/admin/item-request-trace` | ItemRequestTraceAdminPage | 0 | NOT TESTED | HIGH | NOT ASSESSED | CANDIDATE |
 | `/admin/portal-preview/customer/:id` | PortalPreviewRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/admin/portal-preview/supplier/:id` | PortalPreviewRouteWrapper | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
-| `/dashboard` | Dashboard | 2 | NOT TESTED | MONITOR | MODERNIZED | Main Dashboard workspace modernized |
+| `/dashboard` | Dashboard | 2 | MOCK-VERIFIED | MONITOR | MODERNIZED | Main Dashboard workspace refined and responsive |
 | `/dashboard/interactive` | InteractiveDashboard | 0 | NOT TESTED | LOW | NOT ASSESSED | CANDIDATE |
 | `/employee/profile` | EmployeeProfile | 0 | NOT TESTED | MEDIUM | NOT ASSESSED | CANDIDATE |
 | `/executive-dashboard` | ExecutiveDashboard | 0 | NOT TESTED | MEDIUM | COMPLETED | APPROVED AS-IS |

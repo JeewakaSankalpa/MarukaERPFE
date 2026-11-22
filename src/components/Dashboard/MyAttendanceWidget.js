@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, Button, Badge, Spinner } from "react-bootstrap";
-import { FaClock, FaSignInAlt, FaSignOutAlt, FaCalendarCheck } from "react-icons/fa";
+import { FaSignInAlt, FaSignOutAlt } from "react-icons/fa";
 import api from "../../api/api";
 import { toast } from "react-toastify";
 import { formatAttendanceTime, getOfficeTodayString } from "../../utils/attendanceTime";
@@ -72,14 +72,17 @@ export default function MyAttendanceWidget() {
     const isCheckedOut = todayRecord?.checkOutTime != null;
 
     return (
-        <Card className="h-100 shadow-sm border-0" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)' }}>
-            <Card.Body className="d-flex flex-column align-items-center justify-content-center text-center p-4">
-                <div className="mb-3">
+        <Card className="h-100 shadow-sm border-0 dashboard-widget-card dashboard-attendance-card">
+            <Card.Body className="d-flex flex-column p-3">
+                <div className="dashboard-attendance-heading">
+                    <div><span className="dashboard-widget-kicker">Today</span><h5 className="mb-0">Check In</h5></div>
+                    <div className="text-end">
                     <h2 className="mb-0 fw-bold text-dark">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</h2>
                     <small className="text-muted">{currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</small>
+                    </div>
                 </div>
 
-                <div className="mb-4 w-100">
+                <div className="my-3 w-100">
                     {isCheckedIn ? (
                         <div className="p-3 bg-white rounded shadow-sm border">
                             <div className="d-flex justify-content-between align-items-center mb-2">

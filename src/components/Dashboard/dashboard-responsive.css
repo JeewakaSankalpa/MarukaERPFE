@@ -52,10 +52,16 @@
 
 .dashboard-widget-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: clamp(0.75rem, 1.6vw, 1.5rem);
-    align-items: stretch;
+    align-items: start;
 }
+
+.dashboard-widget-attendance { grid-column: span 4; }
+.dashboard-widget-tasks { grid-column: span 8; }
+.dashboard-widget-hr { grid-column: span 4; }
+.dashboard-widget-approvals { grid-column: span 8; }
+.dashboard-widget-payables { grid-column: 1 / -1; }
 
 .dashboard-widget-cell > .card,
 .dashboard-container .card {
@@ -82,6 +88,102 @@
     max-width: 100%;
 }
 
+.dashboard-widget-card {
+    overflow: hidden;
+    background: #fff;
+}
+
+.dashboard-widget-state {
+    min-height: 8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .65rem;
+    padding: 1.25rem;
+    color: #68778b;
+    text-align: center;
+}
+
+.dashboard-widget-state-error {
+    flex-direction: column;
+    color: #9f2f2f;
+}
+
+.dashboard-widget-kicker {
+    display: block;
+    margin-bottom: .15rem;
+    color: #2563a8;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.dashboard-attendance-card {
+    background: linear-gradient(145deg, #fff 0%, #f1f7fd 100%);
+}
+
+.dashboard-attendance-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.dashboard-attendance-heading h2 { font-size: 1.45rem; }
+
+.dashboard-task-body,
+.pending-approval-list {
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.dashboard-task-link {
+    max-width: 18rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-task-actions { white-space: nowrap; }
+
+.dashboard-payables-table { font-size: .9rem; }
+.dashboard-payables-table th:first-child { width: 42%; }
+.dashboard-payables-table th:nth-child(2) { width: 18%; }
+.dashboard-payables-table th:nth-child(3) { width: 22%; }
+.dashboard-payables-table th:last-child { width: 18%; }
+
+.dashboard-hr-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+}
+
+.dashboard-hr-section {
+    width: 100%;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+.dashboard-hr-section + .dashboard-hr-section {
+    padding-top: 1rem !important;
+    border-top: 1px solid #e8eef5 !important;
+}
+
+.dashboard-container button:focus-visible,
+.dashboard-container [role="button"]:focus-visible,
+.dashboard-container a:focus-visible {
+    outline: 3px solid rgba(37, 99, 168, .35);
+    outline-offset: 2px;
+}
+
+@media (max-width: 74.98rem) {
+    .dashboard-widget-attendance,
+    .dashboard-widget-hr { grid-column: span 5; }
+    .dashboard-widget-tasks { grid-column: span 7; }
+    .dashboard-widget-approvals,
+    .dashboard-widget-payables { grid-column: 1 / -1; }
+}
+
 @media (max-width: 47.98rem) {
     .dashboard-hero { align-items: flex-start; flex-direction: column; }
     .dashboard-hero-meta { justify-content: space-between; width: 100%; text-align: left; }
@@ -89,6 +191,15 @@
     .dashboard-widget-grid {
         grid-template-columns: minmax(0, 1fr);
     }
+
+    .dashboard-widget-attendance,
+    .dashboard-widget-tasks,
+    .dashboard-widget-approvals,
+    .dashboard-widget-payables,
+    .dashboard-widget-hr { grid-column: 1; }
+
+    .dashboard-attendance-heading { align-items: flex-end; }
+    .dashboard-attendance-heading small { display: block; max-width: 10rem; }
 
     .dashboard-container .card-body {
         min-width: 0;
@@ -129,5 +240,25 @@
 
     .dashboard-compact-table tbody td[colspan] {
         display: block;
+    }
+
+    .dashboard-task-body,
+    .pending-approval-list { max-height: none; }
+
+    .dashboard-task-actions {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-container *,
+    .dashboard-container *::before,
+    .dashboard-container *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
     }
 }

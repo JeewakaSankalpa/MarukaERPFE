@@ -73,7 +73,7 @@ function Dashboard({ onLogout }) {
   const [hoveredMenu, setHoveredMenu] = useState(null);
 
   const [activeSection, setActiveSection] = useState(null);
-  const { logout } = useAuth();
+  const { username: authenticatedUsername, isAuthenticated } = useAuth();
 
   // Stats Logic
   const [statsData, setStatsData] = useState(null);
@@ -135,11 +135,14 @@ function Dashboard({ onLogout }) {
   // Render is at line ~441.
   // So it is fine to keep the second one and delete the first one.
 
-  const [user, setUser] = useState({
-    firstName: localStorage.getItem("firstName") || "Guest",
-    lastName: localStorage.getItem("lastName") || "",
-    store: localStorage.getItem("store") || "",
-  });
+  const storedFirstName = localStorage.getItem("firstName")?.trim();
+  const storedUsername = localStorage.getItem("username")?.trim();
+  const displayName = (
+    (storedFirstName && storedFirstName.toLowerCase() !== "guest" ? storedFirstName : "")
+    || authenticatedUsername?.trim()
+    || storedUsername
+    || (isAuthenticated ? "Signed-in user" : "there")
+  );
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -366,7 +369,7 @@ function Dashboard({ onLogout }) {
         <header className="dashboard-hero" aria-labelledby="main-dashboard-heading">
           <div>
             <p className="dashboard-eyebrow">Workspace overview</p>
-            <h1 id="main-dashboard-heading">Good day, {user.firstName || "there"}</h1>
+            <h1 id="main-dashboard-heading">Good day, {displayName}</h1>
             <p className="dashboard-subtitle">Keep your projects, tasks, approvals, and finance work moving.</p>
           </div>
           <div className="dashboard-hero-meta">
@@ -381,35 +384,35 @@ function Dashboard({ onLogout }) {
         <section className="dashboard-widget-grid mb-4" aria-label="Personal work overview">
           {/* My Attendance */}
           {hasAccess({ id: 'dashboard.my_attendance' }) && (
-            <div className="dashboard-widget-cell">
+            <div className="dashboard-widget-cell dashboard-widget-attendance">
               <MyAttendanceWidget />
             </div>
           )}
 
           {/* Tasks */}
           {hasAccess({ id: 'projects' }) && (
-            <div className="dashboard-widget-cell">
+            <div className="dashboard-widget-cell dashboard-widget-tasks">
               <MyTasksWidget />
             </div>
           )}
 
           {/* Pending Approvals */}
           {hasAccess({ id: 'dashboard.pending_approvals' }) && (
-            <div className="dashboard-widget-cell">
+            <div className="dashboard-widget-cell dashboard-widget-approvals">
               <PendingApprovalsWidget />
             </div>
           )}
 
           {/* Payables (Finance) */}
           {hasAccess({ id: 'finance' }) && (
-            <div className="dashboard-widget-cell">
+            <div className="dashboard-widget-cell dashboard-widget-payables">
               <PayablesWidget />
             </div>
           )}
 
           {/* HR Widget */}
           {hasAccess({ id: 'hr' }) && (
-            <div className="dashboard-widget-cell">
+            <div className="dashboard-widget-cell dashboard-widget-hr">
               <EmployeeHRWidget />
             </div>
           )}
@@ -431,7 +434,7 @@ function Dashboard({ onLogout }) {
                 {!proj?.ongoingList || proj.ongoingList.length === 0 ? (
                   <div className="text-muted small">No ongoing projects</div>
                 ) : (
-                  <Table size="sm" hover responsive className="mb-0 small dashboard-compact-table">
+                  <Table size="sm" hover className="mb-0 small dashboard-compact-table">
                     <thead>
                       <tr>
                         <th>Project</th>
@@ -462,7 +465,7 @@ function Dashboard({ onLogout }) {
                 {!acc?.projectPayables || acc.projectPayables.length === 0 ? (
                   <div className="text-muted small">No outstanding payables</div>
                 ) : (
-                  <Table size="sm" hover responsive className="mb-0 small dashboard-compact-table">
+                  <Table size="sm" hover className="mb-0 small dashboard-compact-table">
                     <thead>
                       <tr>
                         <th>Project</th>

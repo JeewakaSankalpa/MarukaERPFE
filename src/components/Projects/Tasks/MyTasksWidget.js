@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, Table, Button, Badge, Modal, Form } from "react-bootstrap";
-import { FaPlay, FaPause, FaCheck, FaClock } from "react-icons/fa";
+import { FaClock } from "react-icons/fa";
 import { toast } from "react-toastify";
 import api from "../../../api/api"; // Adjust path as needed
 import { useNavigate } from "react-router-dom";
@@ -55,16 +55,15 @@ const MyTasksWidget = () => {
         navigate(`/projects/manage/${task.projectId}?tab=TASKS`);
     };
 
-    if (loading) return <div>Loading tasks...</div>;
-
     return (
-        <Card className="shadow-sm h-100">
+        <Card className="shadow-sm h-100 dashboard-widget-card dashboard-tasks-card">
             <Card.Header className="bg-white border-bottom-0 d-flex justify-content-between align-items-center">
                 <h5 className="mb-0"><FaClock className="me-2 text-primary" />My Assigned Tasks</h5>
                 <Button variant="link" size="sm" onClick={fetchMyTasks}>Refresh</Button>
             </Card.Header>
-            <Card.Body className="p-0 table-responsive" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                <Table hover className="mb-0 text-nowrap">
+            <Card.Body className="p-0 dashboard-task-body">
+                {loading ? <div className="dashboard-widget-state" role="status">Loading tasks…</div> : (
+                <Table hover className="mb-0 dashboard-compact-table dashboard-task-table">
                     <thead className="table-light">
                         <tr>
                             <th>Task</th>
@@ -76,15 +75,14 @@ const MyTasksWidget = () => {
                     </thead>
                     <tbody>
                         {tasks.length === 0 ? (
-                            <tr><td colSpan="5" className="text-center text-muted">No active tasks assigned.</td></tr>
+                            <tr><td colSpan="5" className="text-center text-muted py-4">You have no active assigned tasks.</td></tr>
                         ) : (
                             tasks.map(t => (
                                 <tr key={t.id}>
-                                    <td>
+                                    <td data-label="Task">
                                         <button
                                             type="button"
-                                            className="btn btn-link p-0 fw-bold text-start text-truncate"
-                                            style={{ maxWidth: '150px' }}
+                                            className="btn btn-link p-0 fw-bold text-start dashboard-task-link"
                                             onClick={() => openTask(t)}
                                             title="Open task project"
                                         >
@@ -98,14 +96,14 @@ const MyTasksWidget = () => {
                                             {t.projectName || t.projectId || "Project"}
                                         </button>
                                     </td>
-                                    <td><Badge bg={getStatusBadge(t.status)}>{t.status}</Badge></td>
-                                    <td>
+                                    <td data-label="Status"><Badge bg={getStatusBadge(t.status)}>{t.status}</Badge></td>
+                                    <td data-label="Priority">
                                         <Badge bg={t.priority === 'HIGH' ? 'danger' : t.priority === 'MEDIUM' ? 'warning' : 'info'}>
                                             {t.priority}
                                         </Badge>
                                     </td>
-                                    <td>{t.dueDate}</td>
-                                    <td>
+                                    <td data-label="Due">{t.dueDate}</td>
+                                    <td data-label="Action" className="dashboard-task-actions">
                                         <Button size="sm" variant="outline-primary" className="me-2" onClick={() => openTask(t)}>
                                             Open
                                         </Button>
@@ -122,6 +120,7 @@ const MyTasksWidget = () => {
                         )}
                     </tbody>
                 </Table>
+                )}
             </Card.Body>
 
             <Modal show={showLogModal} onHide={() => setShowLogModal(false)} centered>

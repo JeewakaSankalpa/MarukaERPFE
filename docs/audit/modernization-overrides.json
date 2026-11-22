@@ -1,5 +1,5 @@
 {
-  "/dashboard": { "assessment": "Main Dashboard workspace modernized", "modernization": "MODERNIZED", "notes": "Mock-verified responsive work overview, summary tables, quick access, refresh interaction, and no page overflow at 1440px, 1024px, and 390px; live data and destination workflows remain integration-only." },
+  "/dashboard": { "assessment": "Main Dashboard workspace refined and responsive", "modernization": "MODERNIZED", "notes": "Mock-verified authenticated greeting, content-weighted widget composition, readable payables, populated/empty/loading/error states, keyboard focus, serious/critical axe checks, refresh interaction, and no page overflow at 1440px, 1024px, and 390px; live data and destination workflows remain integration-only." },
   "/executive-dashboard": { "assessment": "APPROVED AS-IS", "modernization": "COMPLETED" },
   "/project-summary-dashboard": { "assessment": "APPROVED AS-IS", "modernization": "COMPLETED" },
   "/product/create": { "assessment": "BENCHMARK — completed at commit 31f557f", "modernization": "MODERNIZED", "notes": "Inventory → Products is the quality reference and must not be changed without a verified regression." },

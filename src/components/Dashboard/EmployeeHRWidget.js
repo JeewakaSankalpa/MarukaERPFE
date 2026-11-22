@@ -63,12 +63,12 @@ export default function EmployeeHRWidget({ user }) {
     if (!localStorage.getItem("employeeId")) return null; // Hide if not an employee
 
     return (
-        <Card className="h-100 shadow-sm border-0">
+        <Card className="h-100 shadow-sm border-0 dashboard-widget-card dashboard-hr-card">
             <Card.Header className="bg-white fw-bold text-primary">HR & Attendance</Card.Header>
             <Card.Body>
                 {loading ? <Spinner size="sm" /> : (
-                    <Row>
-                        <Col md={6} className="border-end">
+                    <Row className="dashboard-hr-grid">
+                        <Col className="dashboard-hr-section">
                             <h6 className="text-muted">Today's Attendance</h6>
                             {attendance ? (
                                 <div>
@@ -88,7 +88,7 @@ export default function EmployeeHRWidget({ user }) {
                                 </div>
                             )}
                         </Col>
-                        <Col md={6}>
+                        <Col className="dashboard-hr-section">
                             <h6 className="text-muted">Leave Balance</h6>
                             {leave ? (
                                 <div className="small">
