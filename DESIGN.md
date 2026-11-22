@@ -96,6 +96,8 @@ Supporting colors are for status meaning only: success, warning, danger, neutral
 
 ## Last updated
 
+2026-11-22 by Codex: My Projects now uses a full-width operational directory with labeled filters, compact result counts, keyboard-operable sorting, responsive project records, and explicit loading, empty, and recoverable error states. Preserve the debounced project search APIs, inquiry/job ID visibility control, 44px mobile actions, and direct Manage workflow.
+
 2026-11-14 by Codex: Inventory Products now uses a full-width operational workspace with a compact labeled filter bar, scan-friendly desktop table, stacked mobile product rows, explicit loading/empty/error states, and fully associated product-form labels. Preserve document-level overflow containment, 44px mobile actions, Enter-key search, and the existing blue ERP palette.
 
 2026-11-10 by Codex: added application-wide responsive foundations for 320px through large desktop layouts. Preserve local horizontal containment for dense ERP tables and workspaces, viewport-safe Bootstrap/Ant Design dialogs, wrapping page headers/actions/tabs, measurable responsive chart frames, 44px mobile controls, dynamic viewport shell sizing, reduced-motion behavior, and keyboard-operable mobile navigation without changing business workflows or permissions.

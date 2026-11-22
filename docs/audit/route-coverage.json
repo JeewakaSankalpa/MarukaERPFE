@@ -307,15 +307,20 @@
         "networkPolicy": "GET_HEAD_OPTIONS_ONLY"
       },
       "coverage": {
-        "status": "NOT TESTED",
-        "browser": null,
-        "viewport": null,
+        "status": "MOCK-VERIFIED",
+        "browser": "Chromium",
+        "viewport": "1440x900, 1024x768, 390x844",
         "zoom": null,
-        "evidence": [],
+        "evidence": [
+          "tests/audit/project-search-modernization.audit.spec.js",
+          "Populated directory, filters, ID-column switching, sorting, keyboard focus, responsive geometry, mobile actions, empty and recoverable error states, and serious/critical accessibility checks passed in isolated mocks."
+        ],
         "blocker": null,
-        "verifiedAt": null
+        "verifiedAt": "2026-11-22"
       },
-      "notes": []
+      "notes": [
+        "Project search operational workspace modernized; create and manage navigation destinations were not executed."
+      ]
     },
     {
       "id": "ROUTE-portal-customer-visibility-dependent-tab",

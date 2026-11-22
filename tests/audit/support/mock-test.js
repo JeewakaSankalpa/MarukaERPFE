@@ -50,6 +50,7 @@ const test = auditTest.extend({
             if (url.pathname === '/api/project-accounts/petty-cash/requests') return json(route, pettyCashRequests);
             if (url.pathname === '/api/project-accounts/petty-cash/expenses/pending') return json(route, pettyCashExpenses);
             if (url.pathname === '/api/suppliers') return json(route, { content: migrationSuppliers });
+            if (url.pathname === '/api/workflow/stages') return json(route, ['INQUIRY', 'ESTIMATION', 'ACTIVE', 'COMPLETED']);
             if (url.pathname === '/api/projects/search') return json(route, migrationProjects);
             if (url.pathname === '/api/finance/migration-payables/report') return json(route, migrationPayables);
             if (url.pathname === '/api/projects/receivables') return json(route, migrationReceivables);
@@ -252,8 +253,9 @@ const pettyCashExpenses = [
 ];
 const migrationSuppliers = [{ id:'supplier-001', name:'Colombo Industrial Supplies' },{ id:'supplier-002', name:'Precision Motion Lanka' }];
 const migrationProjects = [
-    { id:'project-migration-new', projectName:'Southern warehouse electrical upgrade', customerName:'Southern Logistics PLC', jobNumber:'MJN-2025-00314' },
-    { id:'project-migration-existing', projectName:'Kandy distribution control system', customerName:'Central Distribution Services', jobNumber:'MJN-2025-00241' }
+    { id:'project-migration-new', projectName:'Southern warehouse electrical upgrade', customerName:'Southern Logistics PLC', salesRepName:'Amara Perera', inquiryType:'JOB', status:'ACTIVE', jobNumber:'MJN-2025-00314' },
+    { id:'project-migration-existing', projectName:'Kandy distribution control system', customerName:'Central Distribution Services', salesRepName:'Nimal Fernando', inquiryType:'MAINTENANCE', status:'ESTIMATION', jobNumber:'MJN-2025-00241' },
+    { id:'project-inquiry-only', projectName:'Galle retail fit-out inquiry with a resilient project title', customerName:'Coastal Retail Holdings', salesRepName:'Amara Perera', inquiryType:'RETAIL_SALE', status:'INQUIRY', jobNumber:'' }
 ];
 const migrationPayables = [
     { id:'migration-payable-001', invoiceNumbers:['CIS-INV-1842','CIS-INV-1851'], supplierName:'Colombo Industrial Supplies', targetType:'PROJECT', projects:[migrationProjects[1]], createdBy:'Nadeesha Perera', createdAt:'2026-10-30T08:15:00Z', payableDate:'2026-10-12', dueDate:'2026-11-12', amount:486750.5, paidAmount:175000, balance:311750.5, status:'PARTIALLY_PAID', documents:[{ fileName:'CIS-opening-invoices.pdf' }], transactions:[{ id:'migration-tx-001', amount:175000, paymentDate:'2026-11-05', addedBy:'Nadeesha Perera', reference:'BANK-1105', paymentMethod:'BANK_TRANSFER', documents:[] }] },

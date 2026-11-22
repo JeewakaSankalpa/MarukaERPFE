@@ -9,11 +9,11 @@ This dashboard distinguishes route/state coverage from component and interaction
 | Declared routes | 114 |
 | Unique declared paths | 112 |
 | Route/state combinations | 248 |
-| MOCK-VERIFIED | 85 |
+| MOCK-VERIFIED | 86 |
 | STAGING-VERIFIED | 0 |
 | FAILED | 1 |
 | BLOCKED | 0 |
-| NOT TESTED | 162 |
+| NOT TESTED | 161 |
 
 ## Sidebar-section modernization breakdown
 
@@ -24,7 +24,7 @@ Routes are deduplicated by declared path. “Nested” excludes each route’s i
 | Dashboard | 1 | 1 | 0 | 0 | 2 | 1 | 2 | 100.0% | 25.0% |
 | Sales User Dashboard (Executive Dashboard) | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
 | Project Summary Dashboard | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 0.0% | 0.0% |
-| Projects | 13 | 2 | 0 | 11 | 18 | 11 | 20 | 15.4% | 35.5% |
+| Projects | 13 | 3 | 0 | 10 | 18 | 12 | 19 | 23.1% | 38.7% |
 | Inventory & Procurement | 31 | 17 | 3 | 11 | 51 | 41 | 41 | 64.5% | 50.0% |
 | HR & Team | 12 | 0 | 0 | 12 | 11 | 0 | 23 | 0.0% | 0.0% |
 | Partners | 8 | 0 | 0 | 8 | 8 | 0 | 16 | 0.0% | 0.0% |
@@ -43,6 +43,7 @@ Seven declared paths are outside this sidebar breakdown: public login/root and u
 - Departments: populated first page.
 - Task Control Center: overview, list, Kanban, Gantt, workforce, calendar, reports, and the read-only task-detail drawer at desktop, laptop, and mobile widths.
 - Project Manage: dashboard, persisted estimation summary, email-modal opening, and revisions at desktop, laptop, and mobile widths.
+- My Projects: populated directory, labeled filters, ID-column switching, sorting, keyboard focus, empty and recoverable error states, responsive geometry, mobile actions, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 - Receive GRN: PO loading, receipt details, batch-entry interaction, local table scrolling, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 - GRN Rate Correction: selected-batch review, VAT/rate validation, read-only impact analysis, financial hierarchy, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
 - Stock Taking: All Batches and Changed Items states, physical quantity discrepancy review, local table scrolling, responsive geometry, and serious/critical accessibility checks at desktop, intermediate, and mobile widths.
@@ -86,8 +87,8 @@ The Project Stores component has no application route, import, or menu entry. Th
 
 ## Browser regression matrix
 
-- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, Supplier Payables, Customer Receivables, and Tax & VAT Management.
-- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, Supplier Payables, Customer Receivables, and Tax & VAT Management.
+- Chromium 1440, 1024, and 390: operational workspace geometry passed for the current batches, including My Projects, Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, Supplier Payables, Customer Receivables, and Tax & VAT Management.
+- Chromium 1440, 1024, and 390: serious/critical automated accessibility checks passed for the current batches, including My Projects, Expenses, Accounts, Journals, Financial Statements, Migration, Income, Petty Cash Approvals, Loan Management, Asset Register, Finance Dashboard, Supplier Payables, Customer Receivables, and Tax & VAT Management.
 - Pending Purchases state and interaction checks: empty, loading, draft, supplier/quotation, and 300-row baseline passed; API error behavior is an expected failure.
 - Firefox/WebKit coverage for the new operational batch remains pending.
 
