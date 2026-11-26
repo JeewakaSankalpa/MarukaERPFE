@@ -26,6 +26,7 @@ export default function SystemConfiguration() {
         "app.company.address": "",
         "app.company.phone": "",
         "app.company.email": "",
+        "app.company.tin": "",
         "app.notification.hr.email": "",
         "app.notification.from.email": "",
         "app.notification.enable.store.procurement": "true",
@@ -468,6 +469,21 @@ export default function SystemConfiguration() {
                                     value={config["app.company.email"] || ""}
                                     onChange={handleChange}
                                 />
+                            </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                            <Form.Group>
+                                <Form.Label>TIN number</Form.Label>
+                                <Form.Control
+                                    name="app.company.tin"
+                                    value={config["app.company.tin"] || ""}
+                                    onChange={handleChange}
+                                    placeholder="Enter tax identification number"
+                                    autoComplete="off"
+                                />
+                                <Form.Text className="text-muted">
+                                    Used on company reports and documents. Leave blank if your business does not have a TIN.
+                                </Form.Text>
                             </Form.Group>
                         </Col>
                     </Row>

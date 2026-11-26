@@ -240,7 +240,7 @@ const fallbackCompany = {
     address: "558/7 ,  Sethsiri Place\nPannipitiya, Sri Lanka  10230",
     email: "rohan@maruka.lk",
     phone: "",
-    vatNo: "174038295-7000",
+    tin: "",
 };
 
 const bankDetails = [
@@ -1106,7 +1106,8 @@ const InvoiceView = () => {
         addressLines: splitLines(settings["app.company.address"] || fallbackCompany.address),
         email: settings["app.company.email"] || fallbackCompany.email,
         phone: settings["app.company.phone"] || fallbackCompany.phone,
-        vatNo: settings["app.company.vatNo"] || settings["app.company.vat"] || fallbackCompany.vatNo,
+        // Keep legacy saved keys readable, but do not fall back to a hardcoded TIN.
+        tin: settings["app.company.tin"] || settings["app.company.vatNo"] || settings["app.company.vat"] || fallbackCompany.tin,
     };
     const estimationTerms = estimation?.terms || [];
     const paymentTermText = getTermValueByLabel(estimationTerms, ["payment", "credit"]);
@@ -2280,7 +2281,7 @@ const InvoiceView = () => {
                             <span className="tax-value">{invoiceNo}</span>
                         </div>
                         <div className="tax-box tax-party-box">
-                            <TaxPartyRow label="Supplier's TIN">{company.vatNo || "-"}</TaxPartyRow>
+                            <TaxPartyRow label="Supplier's TIN">{company.tin || "-"}</TaxPartyRow>
                             <TaxPartyRow label="Supplier's Name">{company.name}</TaxPartyRow>
                             <TaxPartyRow label="Address">{company.addressLines.join("\n")}</TaxPartyRow>
                             <TaxPartyRow label="Telephone No">{company.phone || "-"}</TaxPartyRow>
@@ -2469,7 +2470,7 @@ const InvoiceView = () => {
                         {company.addressLines.map((line) => <div key={line}>{line}</div>)}
                         {company.phone && <div>{company.phone}</div>}
                         {company.email && <div>{company.email}</div>}
-                        {company.vatNo && <div>Govt. UID VAT Reg: {company.vatNo}</div>}
+                        {company.tin && <div>TIN: {company.tin}</div>}
                     </div>
                     <div className="invoice-logo-wrap">
                         <img className="invoice-logo" src={logo} alt="Maruka Technologies" />

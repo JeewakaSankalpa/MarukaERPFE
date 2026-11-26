@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import logo from "../../assets/logo.jpeg";
 import Colors from "../../resources/Colors";
+import api from "../../api/api";
 
 /**
  * A reusable layout for printing reports.
@@ -10,16 +11,35 @@ import Colors from "../../resources/Colors";
  *    <Table>...</Table>
  * </ReportLayout>
  */
-const company = {
+const DEFAULT_COMPANY = {
     name: "Maruka Technologies (Pvt) Ltd",
     address: "558/7, Sethsiri Place, Pannipitiya, Sri Lanka 10230",
     email: "rohan@maruka.lk",
-    vatNo: "174038295-7000",
+    tin: "",
 };
 
 const ReportLayout = ({ title, subtitle, children, orientation = "portrait" }) => {
+    const [company, setCompany] = useState(DEFAULT_COMPANY);
     const user = localStorage.getItem("username") || "System User";
     const date = new Date().toLocaleString();
+
+    useEffect(() => {
+        let mounted = true;
+        api.get("/admin/config")
+            .then(({ data }) => {
+                if (!mounted) return;
+                setCompany({
+                    name: data?.["app.company.name"] || DEFAULT_COMPANY.name,
+                    address: data?.["app.company.address"] || DEFAULT_COMPANY.address,
+                    email: data?.["app.company.email"] || DEFAULT_COMPANY.email,
+                    tin: data?.["app.company.tin"] || "",
+                });
+            })
+            .catch(() => {
+                // Keep the safe local defaults if configuration is unavailable.
+            });
+        return () => { mounted = false; };
+    }, []);
 
     return (
         <div className="report-container">
@@ -136,7 +156,7 @@ const ReportLayout = ({ title, subtitle, children, orientation = "portrait" }) =
                         <h2>{company.name}</h2>
                         <p>{company.address}</p>
                         <p>Email: {company.email}</p>
-                        <p>VAT Reg No: {company.vatNo}</p>
+                        {company.tin && <p>TIN: {company.tin}</p>}
                     </div>
                 </div>
                 <div className="text-end report-title">
