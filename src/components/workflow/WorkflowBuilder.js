@@ -710,7 +710,7 @@ export default function WorkflowBuilder() {
                         { label: 'Purchase Order Approvers', field: 'purchaseOrderApproverRoles', quorum: true },
                         { label: 'Stock Audit Approvers', field: 'stockAuditApproverRoles', quorum: true },
                         { label: 'Payroll Approvers', field: 'payrollApproverRoles', quorum: true },
-                        { label: 'Quotation Acceptance Approvers', field: 'quotationAcceptanceRoles', quorum: true },
+                        { label: 'Quotation Acceptance Approvers', field: 'quotationAcceptanceRoles', quorum: true, note: 'Only users with one of these roles can record and upload a customer PO. Leave empty to disable the action.' },
                         { label: 'Project Revision Approvers', field: 'projectRevisionApproverRoles', quorum: true, note: 'Project revision controls are always enabled. Select who can approve revisions.' },
                         { label: 'GRN Acceptance Approvers', field: 'grnAcceptanceRoles', quorum: true, note: 'Users in these workflow roles can accept posted GRNs so supplier payments can be added.' },
                         { label: 'GRN Payment Verifiers', field: 'grnPaymentVerifierRoles', quorum: true, note: 'Users in these workflow roles can verify each added supplier payment before it counts as paid.' },
